@@ -25,7 +25,7 @@
   --pl-accent: oklch(0.55 0.12 60);
   --pl-accent-subtle: oklch(0.93 0.04 75);
 
-  --pl-positive: oklch(0.55 0.12 150);
+  --pl-positive: oklch(0.5 0.13 150);
   --pl-critical: oklch(0.5 0.14 30);
   --pl-critical-subtle: oklch(0.94 0.03 30);
 
