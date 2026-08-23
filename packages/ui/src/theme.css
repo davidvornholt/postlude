@@ -6,13 +6,16 @@
  */
 
 :root {
+  /* Both palettes are real, so browser chrome follows the user's preference. */
+  color-scheme: light dark;
+
   --pl-background: oklch(0.97 0.008 85);
   --pl-surface: oklch(0.99 0.005 90);
   --pl-surface-sunken: oklch(0.94 0.01 85);
 
   --pl-ink: oklch(0.25 0.02 60);
   --pl-ink-muted: oklch(0.45 0.02 60);
-  --pl-ink-faint: oklch(0.55 0.015 60);
+  --pl-ink-faint: oklch(0.52 0.015 60);
 
   --pl-primary: oklch(0.45 0.09 155);
   --pl-primary-strong: oklch(0.38 0.09 155);
@@ -40,7 +43,7 @@
 
     --pl-ink: oklch(0.92 0.012 80);
     --pl-ink-muted: oklch(0.74 0.015 75);
-    --pl-ink-faint: oklch(0.6 0.015 70);
+    --pl-ink-faint: oklch(0.65 0.015 70);
 
     --pl-primary: oklch(0.72 0.1 155);
     --pl-primary-strong: oklch(0.8 0.1 155);

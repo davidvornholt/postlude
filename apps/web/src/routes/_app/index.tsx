@@ -1,5 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
 
+import { pageTitle } from '#/shared/ui/page-title.ts';
+
 /** Placeholder until the writing page lands with the chosen theme. */
 const TodayPage = () => (
   <section>
@@ -13,4 +15,5 @@ const TodayPage = () => (
 
 export const Route = createFileRoute('/_app/')({
   component: TodayPage,
+  head: () => ({ meta: [{ title: pageTitle('Today') }] }),
 });

@@ -2,6 +2,7 @@ import { createRouter as createTanStackRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
 
 import { createQueryContext } from '#/shared/query/query-context.ts';
+import { RouterError, RouterNotFound } from '#/shared/ui/router-fallbacks.tsx';
 import { routeTree } from './routeTree.gen';
 
 export const getRouter = () => {
@@ -13,6 +14,8 @@ export const getRouter = () => {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    defaultErrorComponent: RouterError,
+    defaultNotFoundComponent: RouterNotFound,
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient });

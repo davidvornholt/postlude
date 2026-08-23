@@ -30,4 +30,6 @@ Everything except `PORT` is validated by `src/shared/env.ts` when the app boots;
 
 ## Accessibility
 
-`bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans the unauthenticated routes for WCAG 2.2 AA violations.
+`bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans the unauthenticated routes for WCAG 2.2 AA violations: sign-in, the redirect from `/`, and the not-found page, each under both `prefers-color-scheme: light` and `prefers-color-scheme: dark` on desktop and mobile Chromium.
+
+The signed-in shell (`src/routes/_app.tsx`) is not reachable from the scan, because signing in requires a real GitHub OAuth round trip. Its navigation, skip link, and sign-out control are unguarded by automated accessibility coverage until that changes.

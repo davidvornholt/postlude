@@ -25,13 +25,13 @@ const darkBlock = blockOf(
 );
 
 it('every semantic color is defined in both light and dark mode', () => {
-  const light = new Set(tokenDefinitions(lightBlock));
-  const dark = tokenDefinitions(darkBlock);
-  expect(light.size).toBeGreaterThan(0);
-  expect(dark.length).toBeGreaterThan(0);
-  for (const token of dark) {
-    expect(light).toContain(token);
-  }
+  // Sorted whole-list equality, not one-way containment: a token dropped from
+  // either block has to fail, because a token missing from dark silently
+  // inherits the light value (and the reverse leaves dark unreachable).
+  const light = tokenDefinitions(lightBlock).toSorted();
+  const dark = tokenDefinitions(darkBlock).toSorted();
+  expect(light.length).toBeGreaterThan(0);
+  expect(dark).toEqual(light);
 });
 
 it('every mapped Tailwind color resolves to a defined token', () => {

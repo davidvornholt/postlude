@@ -10,16 +10,26 @@ import { expect, test } from '@playwright/test';
 const routes = [
   { name: 'Sign in', path: '/login' },
   { name: 'Home (redirects to /login)', path: '/' },
+  { name: 'Not found', path: '/this-page-does-not-exist' },
 ] as const;
 
-for (const route of routes) {
-  test(`${route.name} has no automated WCAG 2.2 AA violations`, async ({
-    page,
-  }) => {
-    await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto(route.path);
+/**
+ * The theme ships a full `prefers-color-scheme: dark` palette, and Playwright
+ * would otherwise only ever render the light one, leaving half the tokens
+ * unscanned.
+ */
+const colorSchemes = ['light', 'dark'] as const;
 
-    await expect(page.locator('main')).toBeVisible();
-    expect(await scanWcag22AaViolations(page)).toEqual([]);
-  });
+for (const route of routes) {
+  for (const colorScheme of colorSchemes) {
+    test(`${route.name} has no automated WCAG 2.2 AA violations in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await page.goto(route.path);
+
+      await expect(page.locator('main')).toBeVisible();
+      expect(await scanWcag22AaViolations(page)).toEqual([]);
+    });
+  }
 }

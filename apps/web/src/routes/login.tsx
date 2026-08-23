@@ -34,9 +34,17 @@ const SignInPage = () => {
           notes, and a quiet archive.
         </p>
         <button
+          // Staying enabled keeps focus on the button while the request is in
+          // flight; disabling it here would drop focus to <body> and announce
+          // the new label to nobody.
+          aria-busy={signInMutation.isPending}
           className={`${primaryButtonClass} mt-8 w-full py-3`}
-          disabled={signInMutation.isPending}
-          onClick={() => signInMutation.mutate()}
+          onClick={() => {
+            if (signInMutation.isPending) {
+              return;
+            }
+            signInMutation.mutate();
+          }}
           type="button"
         >
           {signInMutation.isPending
