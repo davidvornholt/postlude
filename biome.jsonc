@@ -116,13 +116,35 @@
       }
     },
     {
+      // Same class of operational tooling that biome.base.jsonc already exempts
+      // (root `scripts/**`, packages/a11y-testing, packages/standards-cli), for
+      // the app-owned path the canonical list cannot name. The production
+      // server resolves real paths through `node:fs/promises` to keep a symlink
+      // inside dist/client from escaping it, and reports a failed boot through
+      // `node:process`; both run only under Bun, never in a browser or on an
+      // edge runtime, which is what noNodejsModules protects.
+      "includes": ["apps/web/scripts/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          }
+        }
+      }
+    },
+    {
       // App- and package-owned operational scripts are Bun boundaries like
       // the canonical root scripts covered by biome.base.jsonc: the `Bun`
-      // global comes from the Bun runtime (typed via @types/bun). These
-      // scripts are launched directly (`bun run start`, the migration
-      // container's entrypoint) rather than as Turbo tasks, so turbo.json env
-      // declarations cannot describe the PORT and DATABASE_URL they read and
-      // noUndeclaredEnvVars has nothing to check them against.
+      // global comes from the Bun runtime (typed via @types/bun). What they
+      // read from the environment is handed to the process at launch rather
+      // than inherited from a Turbo task: PORT comes from `bun run start` on a
+      // deployed host, from `bun --env-file=.env.a11y run start` for the
+      // Playwright web server the test:a11y task boots, and from the explicit
+      // child env the boot tests spawn servers with; DATABASE_URL comes from
+      // the migration container's entrypoint; TMPDIR comes from the shell that
+      // runs the tests. A turbo.json `env` entry declares the ambient
+      // variables a task's cache key depends on, which none of these reads
+      // are, so noUndeclaredEnvVars has nothing to check them against.
       "includes": ["apps/web/scripts/**", "packages/db/scripts/**"],
       "javascript": {
         "globals": ["Bun"]

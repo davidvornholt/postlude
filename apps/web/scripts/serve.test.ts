@@ -1,10 +1,9 @@
-import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { rm, symlink } from 'node:fs/promises';
 
 import { createFetchHandler } from './serve.ts';
 
 const okStatus = 200;
-const serverErrorStatus = 500;
-const debugPageFloor = 1024;
 
 const ssrMarker = 'ssr-handled';
 const assetPath = '/assets/app-abcd1234.js';
@@ -14,22 +13,23 @@ const secretBody = 'outside-the-client-directory';
 const root = `${Bun.env.TMPDIR ?? '/tmp'}/postlude-serve-${crypto.randomUUID()}`;
 const clientDir = `${root}/client`;
 
-const handler = createFetchHandler(
+await Bun.write(`${clientDir}/index.html`, '<!doctype html>index');
+await Bun.write(`${clientDir}/favicon.svg`, '<svg />');
+await Bun.write(`${clientDir}${assetPath}`, 'globalThis.ok = true;');
+await Bun.write(`${root}/outside-secret.txt`, secretBody);
+await Bun.write(`${root}/outside/secret.txt`, secretBody);
+await symlink(`${root}/outside-secret.txt`, `${clientDir}/linked-file.txt`);
+await symlink(`${root}/outside`, `${clientDir}/linked-dir`);
+
+const handler = await createFetchHandler(
   clientDir,
   (request) => new Response(`${ssrMarker} ${new URL(request.url).pathname}`),
 );
 
 const get = (path: string) => handler(new Request(`http://127.0.0.1${path}`));
 
-beforeAll(async () => {
-  await Bun.write(`${clientDir}/index.html`, '<!doctype html>index');
-  await Bun.write(`${clientDir}/favicon.svg`, '<svg />');
-  await Bun.write(`${clientDir}${assetPath}`, 'globalThis.ok = true;');
-  await Bun.write(`${root}/outside-secret.txt`, secretBody);
-});
-
 afterAll(async () => {
-  await Bun.$`rm -rf ${root}`.quiet();
+  await rm(root, { recursive: true, force: true });
 });
 
 describe('createFetchHandler', () => {
@@ -49,8 +49,14 @@ describe('createFetchHandler', () => {
     expect(response.headers.get('cache-control')).toBeNull();
   });
 
+  /**
+   * Handler-level behavior only. On the wire these paths reach the handler
+   * unchanged (serve-boot.test.ts pins that), and the shipped SSR bundle
+   * answers the undecodable ones with its own 400 — which is why this file
+   * asserts the fallthrough rather than a status the real app would return.
+   */
   it.each(['/a%2Fb', '/foo%00', '/%zz', '/%'])(
-    'falls through to the SSR handler for the malformed path %s',
+    'hands the malformed path %s to the SSR handler',
     async (path) => {
       const response = await get(path);
 
@@ -65,6 +71,10 @@ describe('createFetchHandler', () => {
     '/%2e%2e%2foutside-secret.txt',
     '/%252e%252e/outside-secret.txt',
     '/..%2f..%2foutside-secret.txt',
+    // Containment is resolved, not lexical: a link stored inside the client
+    // directory stays inside it or is not served.
+    '/linked-file.txt',
+    '/linked-dir/secret.txt',
   ])('cannot escape the client directory through %s', async (path) => {
     const response = await get(path);
     const body = await response.text();
@@ -81,49 +91,4 @@ describe('createFetchHandler', () => {
       expect(await response.text()).toContain(ssrMarker);
     },
   );
-});
-
-/**
- * The failing handler has to run in its own process: `bun test` attributes an
- * error thrown inside a fetch handler to the surrounding test and fails it.
- */
-const bootFailingServer = async () => {
-  const source = [
-    `import { createFetchHandler } from ${JSON.stringify(new URL('./serve.ts', import.meta.url).href)};`,
-    'const server = Bun.serve({',
-    '  port: 0,',
-    '  development: false,',
-    `  fetch: createFetchHandler(${JSON.stringify(clientDir)}, () => {`,
-    "    throw new Error('ssr entry blew up');",
-    '  }),',
-    '});',
-    'console.log(server.url.href);',
-  ].join('\n');
-  const child = Bun.spawn(['bun', '-e', source], {
-    stdout: 'pipe',
-    stderr: 'ignore',
-  });
-  const reader = child.stdout.getReader();
-  const { value } = await reader.read();
-  reader.releaseLock();
-  return { child, url: new TextDecoder().decode(value).trim() };
-};
-
-describe('the production server', () => {
-  it('answers a thrown SSR error without leaking source or paths', async () => {
-    const { child, url } = await bootFailingServer();
-
-    try {
-      const response = await fetch(new URL('/boom', url));
-      const body = await response.text();
-
-      expect(response.status).toBe(serverErrorStatus);
-      expect(body.length).toBeLessThan(debugPageFloor);
-      expect(body).not.toContain('createFetchHandler');
-      expect(body).not.toContain(clientDir);
-    } finally {
-      child.kill();
-      await child.exited;
-    }
-  });
 });

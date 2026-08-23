@@ -29,12 +29,14 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 | `BETTER_AUTH_URL`           | config/dev.yaml  | Yes               | Public base URL for OAuth callbacks, validated as a URL |
 | `GITHUB_CLIENT_ID`          | config/dev.yaml  | Yes               | GitHub OAuth app client ID (public value)               |
 | `GITHUB_CLIENT_SECRET`      | secrets/dev.yaml | Yes               | GitHub OAuth app client secret                          |
-| `GITHUB_ALLOWED_ACCOUNT_ID` | config/dev.yaml  | Yes               | The only GitHub account allowed in, digits only         |
+| `GITHUB_ALLOWED_ACCOUNT_ID` | config/dev.yaml  | Yes               | The only GitHub account allowed in, digits with no leading zero |
 | `PORT`                      | process env      | No (default 3000) | Port the production server binds                        |
 
-Everything except `PORT` is validated by `src/shared/env.ts` when the app boots; a missing or malformed value fails the boot instead of degrading.
+Everything except `PORT` is validated by `src/shared/env.ts`, which parses the whole set the first time it is imported. The built server bundle imports it as it loads, so a missing or malformed value makes `bun run start` name the offending variable and exit non-zero before it binds a port.
 
-`PORT` is read only by `scripts/serve.ts`, the production server; the dev server takes its port from the `dev` script. It must be an integer from 1 to 65535, an empty value counts as unset, and anything else fails the boot. `.env.a11y` sets 3100 so the accessibility scan stays clear of local listeners on 3000.
+`scripts/serve.ts` then proves the process can answer a request at all. Before it listens, it sends one in-process request to `/api/healthz` — the liveness route, which touches neither database nor OAuth — through the same handler the network would reach, and exits non-zero with a message unless the answer is 200. A process that stays up while it cannot serve a single page would otherwise report itself healthy to a container healthcheck.
+
+`PORT` is read only by `scripts/serve.ts`; the dev server takes its port from the `dev` script. It must be plain digits with no leading zero, between 1 and 65535. An empty or whitespace-only value counts as unset and means 3000; anything else — `0x1f5`, `1e3`, `0080`, `65536`, `abc` — fails the boot before the server loads anything else. `.env.a11y` sets 3100 so the accessibility scan stays clear of local listeners on 3000.
 
 ## Accessibility
 
