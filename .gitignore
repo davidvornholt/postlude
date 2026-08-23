@@ -23,3 +23,7 @@ config/dev.local.yaml
 
 # Deliberately not ignored: sync-standards.lock. Consumers commit their lock —
 # it is the drift baseline that `standards check` verifies against.
+
+# Playwright outputs
+playwright-report
+test-results

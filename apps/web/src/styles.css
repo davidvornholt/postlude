@@ -1,0 +1,19 @@
+@import "tailwindcss";
+@import "@postlude/ui/theme.css";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--pl-background);
+  color: var(--pl-ink);
+  font-family: var(--font-sans);
+}
