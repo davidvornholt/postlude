@@ -9,11 +9,19 @@ CREATE TABLE "entry" (
 	"scripture_verse_start" integer,
 	"scripture_verse_end" integer,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "entry_journal_word_count_non_negative" CHECK ("entry"."journal_word_count" >= 0),
+	CONSTRAINT "entry_scripture_word_count_non_negative" CHECK ("entry"."scripture_word_count" >= 0),
+	CONSTRAINT "entry_scripture_reference_complete" CHECK (num_nonnulls("entry"."scripture_book", "entry"."scripture_chapter", "entry"."scripture_verse_start") in (0, 3)),
+	CONSTRAINT "entry_scripture_verse_end_after_start" CHECK ("entry"."scripture_verse_end" is null or ("entry"."scripture_verse_start" is not null and "entry"."scripture_verse_end" >= "entry"."scripture_verse_start")),
+	CONSTRAINT "entry_scripture_chapter_positive" CHECK ("entry"."scripture_chapter" is null or "entry"."scripture_chapter" >= 1),
+	CONSTRAINT "entry_scripture_verse_start_positive" CHECK ("entry"."scripture_verse_start" is null or "entry"."scripture_verse_start" >= 1),
+	CONSTRAINT "entry_scripture_verse_end_positive" CHECK ("entry"."scripture_verse_end" is null or "entry"."scripture_verse_end" >= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "account" (
 	"id" text PRIMARY KEY NOT NULL,
+	"issuer" text NOT NULL,
 	"account_id" text NOT NULL,
 	"provider_id" text NOT NULL,
 	"user_id" text NOT NULL,
@@ -61,4 +69,5 @@ CREATE TABLE "verification" (
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;
+ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE UNIQUE INDEX "account_issuer_account_id_unique" ON "account" USING btree ("issuer","account_id");

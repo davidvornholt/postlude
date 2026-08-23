@@ -25,11 +25,31 @@ it('both sections carry a persisted word count for the heatmap', () => {
   }
 });
 
-it('the scripture reference is structured, never parsed from markdown', () => {
+it('stamps updated_at on every write, not just on insert', () => {
   const config = getTableConfig(entry);
-  const names = config.columns.map((column) => column.name);
-  expect(names).toContain('scripture_book');
-  expect(names).toContain('scripture_chapter');
-  expect(names).toContain('scripture_verse_start');
-  expect(names).toContain('scripture_verse_end');
+  const updatedAt = config.columns.find(
+    (column) => column.name === 'updated_at',
+  );
+  const createdAt = config.columns.find(
+    (column) => column.name === 'created_at',
+  );
+  expect(updatedAt?.onUpdateFn?.()).toBeInstanceOf(Date);
+  expect(createdAt?.onUpdateFn).toBeUndefined();
+});
+
+const expectedChecks: ReadonlyArray<string> = [
+  'entry_journal_word_count_non_negative',
+  'entry_scripture_word_count_non_negative',
+  'entry_scripture_reference_complete',
+  'entry_scripture_verse_end_after_start',
+  'entry_scripture_chapter_positive',
+  'entry_scripture_verse_start_positive',
+  'entry_scripture_verse_end_positive',
+];
+
+it('the database rejects incoherent word counts and scripture references', () => {
+  const config = getTableConfig(entry);
+  const names = config.checks.map((constraint) => constraint.name);
+  const byName = (a: string, b: string) => a.localeCompare(b);
+  expect(names.toSorted(byName)).toEqual([...expectedChecks].toSorted(byName));
 });
