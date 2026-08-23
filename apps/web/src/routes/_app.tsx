@@ -9,7 +9,7 @@ import {
 
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
-import { getSessionFn } from '#/shared/auth/session-fn.ts';
+import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
 
 const navItems = [
   { to: '/', label: 'Today' },
@@ -87,11 +87,9 @@ const AppShell = () => {
 
 export const Route = createFileRoute('/_app')({
   beforeLoad: async () => {
-    const session = await getSessionFn();
-    if (session === null) {
+    if (!(await hasAuthorizedSessionFn())) {
       throw redirect({ to: '/login' });
     }
-    return { session };
   },
   component: AppShell,
 });

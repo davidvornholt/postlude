@@ -1,6 +1,6 @@
 import { APIError } from 'better-auth/api';
 
-export const githubProviderId = 'github';
+const githubProviderId = 'github';
 
 type GitHubProfile = {
   readonly id: number | string;
@@ -25,7 +25,7 @@ type SessionAuthorization = {
   readonly revokeSession: () => Promise<unknown>;
 };
 
-export const isAllowedGitHubAccount = (
+const isAllowedGitHubAccount = (
   account: LinkedAccount,
   allowedAccountId: string,
 ) =>

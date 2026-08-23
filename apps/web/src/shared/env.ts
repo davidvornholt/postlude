@@ -12,7 +12,7 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.url(),
     BETTER_AUTH_SECRET: z.string().min(minSecretLength),
-    BETTER_AUTH_URL: z.url().optional(),
+    BETTER_AUTH_URL: z.url(),
     GITHUB_CLIENT_ID: z.string().min(1),
     GITHUB_CLIENT_SECRET: z.string().min(1),
     /** Positive decimal GitHub account ID of the only allowed account. */

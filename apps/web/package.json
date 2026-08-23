@@ -18,8 +18,6 @@
     "test:a11y": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
-    "@effect/sql": "^0.52.0",
-    "@effect/sql-pg": "^0.53.0",
     "@postlude/db": "workspace:*",
     "@postlude/ui": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
@@ -30,8 +28,6 @@
     "@tanstack/react-start": "^1.168.49",
     "better-auth": "^1.7.1",
     "drizzle-orm": "^0.45.2",
-    "effect": "^3.22.1",
-    "pg": "^8.23.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3",
@@ -45,7 +41,6 @@
     "@tanstack/router-cli": "^1.167.33",
     "@types/bun": "^1.4.0",
     "@types/node": "^26.2.0",
-    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.1.0",
