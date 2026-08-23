@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 
-import { contrastRatio, srgbHex } from './oklch-contrast.ts';
+import { contrastRatio, srgbChannels, srgbHex } from './oklch-contrast.ts';
 
 /*
  * The expected hexes are what Chromium paints for these oklch values, read back
@@ -22,6 +22,39 @@ it('converts oklch to the sRGB a browser paints', () => {
   expect(
     chromiumHexes.map(([value]) => [value, srgbHex(value)] as const),
   ).toEqual(chromiumHexes.map(([value, hex]) => [value, hex] as const));
+});
+
+/*
+ * The one value in `theme.css` Chromium does not agree on, pinned from both
+ * sides rather than left out of the list above. The red channel of light mode's
+ * `--pl-background` lands 0.006 of a step past a rounding boundary, and
+ * Chromium's own arithmetic settles on the other side of it. Pinning the gap
+ * is what makes a change that moved or widened it fail here, which dropping the
+ * value from the list would not.
+ */
+const roundingBoundary = {
+  chromium: '#f7f5ef',
+  here: '#f8f5ef',
+  value: 'oklch(0.97 0.008 85)',
+} as const;
+
+const hexadecimal = 16;
+
+/** The `rr`, `gg` and `bb` of a `#rrggbb` string, as numbers. */
+const channelsOf = (hex: string): ReadonlyArray<number> =>
+  Array.from(hex.matchAll(/[\da-f]{2}/gu), ([channel]) =>
+    Number.parseInt(channel, hexadecimal),
+  );
+
+it('differs from Chromium by one step on one channel of one theme value', () => {
+  expect(srgbHex(roundingBoundary.value)).toBe(roundingBoundary.here);
+
+  const painted = channelsOf(roundingBoundary.chromium);
+  expect(
+    srgbChannels(roundingBoundary.value).map(
+      (channel, index) => channel - painted[index],
+    ),
+  ).toEqual([1, 0, 0]);
 });
 
 const maximumContrast = 21;

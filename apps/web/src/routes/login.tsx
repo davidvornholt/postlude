@@ -49,11 +49,22 @@ const SignInPage = () => {
         {/* No `role="alert"`: this notice is in the server-rendered markup of a
             freshly loaded page, not inserted into a page the reader is already
             on, so there is nothing for a live region to announce. Reading order
-            right after the heading is what carries it instead. */}
+            right after the heading is what carries it instead.
+
+            One wording for every code better-auth can put in `?error=`. The one
+            this app produces itself, `account_not_allowed`, is permanent: the
+            account gate turns the same GitHub account away every time, so copy
+            that told the reader to try again would send them round a loop that
+            cannot end. The rest — a cancelled consent screen, an expired or
+            mismatched sign-in state, a failed token exchange — are transient,
+            and for those the button below is right there. So the notice states
+            what happened, names the one condition that makes another attempt
+            pointless, and promises nothing either way. */}
         {error === undefined ? null : (
           <p className={noticeClass}>
-            GitHub sign-in did not finish, so you are still signed out. Try
-            again below.
+            Sign-in did not go through, so you are still signed out. If the
+            GitHub account you used is not the one with access, trying again
+            will end the same way.
           </p>
         )}
         <p className="mt-3 text-ink-muted">

@@ -12,11 +12,11 @@
  * and the fallback picks its wrapper from that.
  */
 
-import { Link } from '@tanstack/react-router';
 import { createContext, type ReactNode, useContext, useEffect } from 'react';
 
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { pageTitle } from '#/shared/ui/page-title.ts';
+import { UnmarkedLink } from '#/shared/ui/unmarked-link.tsx';
 
 const MainLandmarkContext = createContext(false);
 
@@ -50,9 +50,16 @@ const FallbackCard = ({ heading, message }: FallbackContent) => {
         {heading}
       </h1>
       <p className="mt-3 text-ink-muted">{message}</p>
-      <Link className={`${primaryButtonClass} mt-8 w-full`} to="/">
+      {/* The way back is an action, and the failing address can be "/" itself
+          — a bad search param on the home page, or an error inside it — so it
+          goes through the link that never marks itself as the current page. */}
+      <UnmarkedLink
+        activeProps={{ className: '' }}
+        className={`${primaryButtonClass} mt-8 w-full`}
+        to="/"
+      >
         Back to Postlude
-      </Link>
+      </UnmarkedLink>
     </div>
   );
 };

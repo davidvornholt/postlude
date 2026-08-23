@@ -5,8 +5,13 @@
  * value goes through the same pipeline the browser does before the ratio is
  * taken: OKLab to linear sRGB, per-channel clamp into the display gamut, gamma
  * encode, round to 8 bits. Chromium's canvas conversion agrees channel for
- * channel on the theme's colours (one token lands on a rounding boundary and
- * can differ by 1/255, which moves a ratio by well under 0.01).
+ * channel on every value in `theme.css` but one: the red channel of light
+ * mode's `--pl-background` lands 0.006 of a step past a rounding boundary,
+ * close enough that Chromium's own arithmetic settles on the other side of it
+ * and paints 247 where this gives 248. That 1/255 difference moves the ratio of
+ * a pair drawn on `--pl-background` by up to 0.03, and the closest such pair
+ * clears the 4.5 minimum by 0.68, so it cannot change a verdict.
+ * `oklch-contrast.test.ts` pins both sides of it.
  *
  * The coefficients below are the published constants of the standards named
  * with each group; they are transcribed, not derived here.
@@ -128,9 +133,9 @@ const relativeLuminance = (value: string): number => {
     decodeGamma(channel / channelMaximum),
   );
   return (
-    luminanceWeights.red * (red ?? 0) +
-    luminanceWeights.green * (green ?? 0) +
-    luminanceWeights.blue * (blue ?? 0)
+    luminanceWeights.red * red +
+    luminanceWeights.green * green +
+    luminanceWeights.blue * blue
   );
 };
 
