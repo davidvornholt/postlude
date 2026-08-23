@@ -13,3 +13,7 @@ The four better-auth tables declare their timestamp columns as `timestamp` witho
 ### D-002 (2026-08-23, decided) — Root test:a11y script is required by the standards structure check
 
 The review flagged the root `test:a11y` Turbo alias as duplicating what the root `check` script already runs. The alias stays: the standards structure gate hard-fails without it, observed while scaffolding this repository. Revisit only if the standards template drops the requirement.
+
+### D-003 (2026-08-23, decided) — Word counts are not database-constrained against the markdown they count
+
+The `entry` table stores `journal_word_count` and `scripture_word_count` as plain numbers next to the markdown they describe, and no database constraint ties one to the other, so a wrong number would make the archive heatmap show a day as heavier or lighter than it was. This is accepted. A CHECK constraint can only compare values already in the row, and counting words in markdown means tokenising prose, which is not something SQL can express as a constraint. The app write path is the only writer to `entry` and therefore owns the invariant: it computes both counts from the same markdown it saves in the same statement. Tests for that write path will pin the invariant when the write path lands. Revisit if a second write path to `entry` appears — an importer, a migration backfill, or manual SQL — because the invariant then has no single owner.

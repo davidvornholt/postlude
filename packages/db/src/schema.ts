@@ -21,7 +21,13 @@ import {
  *
  * The check constraints keep a partially filled reference out of the table: a
  * verse range with no book cannot be rendered or linked, so the database
- * refuses it rather than leaving the UI to guess.
+ * refuses it rather than leaving the UI to guess. A book that is present but
+ * holds no non-whitespace character is refused for the same reason: it counts
+ * as filled in yet renders as nothing.
+ *
+ * Both timestamps come from the database clock: `created_at` defaults to
+ * `now()` and `updated_at` is restamped with `now()` on update, so the pair can
+ * never invert because an app process disagrees with the database about time.
  */
 export const entry = pgTable(
   'entry',
@@ -41,7 +47,7 @@ export const entry = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
       .defaultNow()
-      .$onUpdate(() => new Date()),
+      .$onUpdate(() => sql`now()`),
   },
   (table) => [
     check(
@@ -69,8 +75,8 @@ export const entry = pgTable(
       sql`${table.scriptureVerseStart} is null or ${table.scriptureVerseStart} >= 1`,
     ),
     check(
-      'entry_scripture_verse_end_positive',
-      sql`${table.scriptureVerseEnd} is null or ${table.scriptureVerseEnd} >= 1`,
+      'entry_scripture_book_not_blank',
+      sql`${table.scriptureBook} is null or ${table.scriptureBook} ~ '[^[:space:]]'`,
     ),
   ],
 );

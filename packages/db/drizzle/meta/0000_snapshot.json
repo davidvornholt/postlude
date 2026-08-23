@@ -1,5 +1,5 @@
 {
-  "id": "19d64f2d-ed56-4870-89b3-c1682a0d4828",
+  "id": "b5867603-9111-45d1-b806-b11f4b8ecf48",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -109,9 +109,9 @@
           "name": "entry_scripture_verse_start_positive",
           "value": "\"entry\".\"scripture_verse_start\" is null or \"entry\".\"scripture_verse_start\" >= 1"
         },
-        "entry_scripture_verse_end_positive": {
-          "name": "entry_scripture_verse_end_positive",
-          "value": "\"entry\".\"scripture_verse_end\" is null or \"entry\".\"scripture_verse_end\" >= 1"
+        "entry_scripture_book_not_blank": {
+          "name": "entry_scripture_book_not_blank",
+          "value": "\"entry\".\"scripture_book\" is null or \"entry\".\"scripture_book\" ~ '[^[:space:]]'"
         }
       },
       "isRLSEnabled": false

@@ -2,7 +2,7 @@
 
 Drizzle schema, migrations, and the shared Postgres pool factory.
 
-- `src/schema.ts` — the `entry` table: one row per journal day, keyed by calendar date, with journal and scripture sections plus persisted word counts for the archive heatmap. Check constraints reject negative word counts and half-filled scripture references.
+- `src/schema.ts` — the `entry` table: one row per journal day, keyed by calendar date, with journal and scripture sections plus persisted word counts for the archive heatmap. Check constraints reject negative word counts, half-filled scripture references, and a scripture book that holds no non-whitespace character. `created_at` and `updated_at` are both stamped by the database clock — `updated_at` is restamped with `now()` on every update — so the pair cannot invert when an app process disagrees with the database about the time.
 - `src/auth-schema.ts` — better-auth tables (user, session, account, verification). The shape is dictated by better-auth's `getAuthTables()`; `account` carries `issuer` plus a unique index over (`issuer`, `account_id`), which better-auth reads on every OAuth callback.
 - `src/pool.ts` — `createPool(connectionString)`; one shared pool per process, with an `error` listener so a dropped idle connection is logged instead of crashing the process.
 - `src/postgres-date.ts` — `preservePostgresDates()`; installs pg's global DATE parser so a calendar date never passes through a timezone. It applies only to raw `pool.query` reads: Drizzle attaches its own per-query parser that already returns DATE as text, and a per-query parser wins over the global one. Nothing in the app reads outside Drizzle today, so the guard exists to make the first raw query correct by default.
