@@ -16,7 +16,7 @@ CREATE TABLE "entry" (
 	CONSTRAINT "entry_scripture_verse_end_after_start" CHECK ("entry"."scripture_verse_end" is null or ("entry"."scripture_verse_start" is not null and "entry"."scripture_verse_end" >= "entry"."scripture_verse_start")),
 	CONSTRAINT "entry_scripture_chapter_positive" CHECK ("entry"."scripture_chapter" is null or "entry"."scripture_chapter" >= 1),
 	CONSTRAINT "entry_scripture_verse_start_positive" CHECK ("entry"."scripture_verse_start" is null or "entry"."scripture_verse_start" >= 1),
-	CONSTRAINT "entry_scripture_book_not_blank" CHECK ("entry"."scripture_book" is null or "entry"."scripture_book" ~ '[^[:space:]]')
+	CONSTRAINT "entry_scripture_book_not_blank" CHECK ("entry"."scripture_book" is null or "entry"."scripture_book" ~ '[[:alpha:]]')
 );
 --> statement-breakpoint
 CREATE TABLE "account" (

@@ -22,12 +22,17 @@ import {
  * The check constraints keep a partially filled reference out of the table: a
  * verse range with no book cannot be rendered or linked, so the database
  * refuses it rather than leaving the UI to guess. A book that is present but
- * holds no non-whitespace character is refused for the same reason: it counts
- * as filled in yet renders as nothing.
+ * holds no letter is refused for the same reason: it counts as filled in yet
+ * renders as nothing a reader could recognise as a book. Every book name
+ * carries letters, so requiring one also rejects a book built only from invisible
+ * characters — a non-breaking space, a zero-width space, a soft hyphen — which
+ * a whitespace-only test lets through because Postgres counts none of them as
+ * `[:space:]`.
  *
- * Both timestamps come from the database clock: `created_at` defaults to
- * `now()` and `updated_at` is restamped with `now()` on update, so the pair can
- * never invert because an app process disagrees with the database about time.
+ * Both timestamps carry the database clock's `now()`: `created_at` from its
+ * column default, `updated_at` from the `now()` that Drizzle writes into every
+ * update it issues. Neither reads an app process's clock, so the pair cannot
+ * invert because a process disagrees with the database about the time.
  */
 export const entry = pgTable(
   'entry',
@@ -76,7 +81,7 @@ export const entry = pgTable(
     ),
     check(
       'entry_scripture_book_not_blank',
-      sql`${table.scriptureBook} is null or ${table.scriptureBook} ~ '[^[:space:]]'`,
+      sql`${table.scriptureBook} is null or ${table.scriptureBook} ~ '[[:alpha:]]'`,
     ),
   ],
 );

@@ -77,9 +77,12 @@ const expectedChecks: ReadonlyArray<readonly [string, string]> = [
     'entry_scripture_verse_start_positive',
     '"entry"."scripture_verse_start" is null or "entry"."scripture_verse_start" >= 1',
   ],
+  // Requires a letter rather than a non-`[:space:]` character: Postgres does
+  // not count a non-breaking space, a zero-width space, or a soft hyphen as
+  // `[:space:]`, so a whitespace-only test accepts a book that renders blank.
   [
     'entry_scripture_book_not_blank',
-    `"entry"."scripture_book" is null or "entry"."scripture_book" ~ '[^[:space:]]'`,
+    `"entry"."scripture_book" is null or "entry"."scripture_book" ~ '[[:alpha:]]'`,
   ],
 ];
 

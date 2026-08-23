@@ -1,5 +1,5 @@
 {
-  "id": "b5867603-9111-45d1-b806-b11f4b8ecf48",
+  "id": "f2a84bf4-eee8-4b58-ad7a-3e6eaf70702d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -111,7 +111,7 @@
         },
         "entry_scripture_book_not_blank": {
           "name": "entry_scripture_book_not_blank",
-          "value": "\"entry\".\"scripture_book\" is null or \"entry\".\"scripture_book\" ~ '[^[:space:]]'"
+          "value": "\"entry\".\"scripture_book\" is null or \"entry\".\"scripture_book\" ~ '[[:alpha:]]'"
         }
       },
       "isRLSEnabled": false
