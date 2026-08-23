@@ -10,10 +10,11 @@
 # only sign-in fails until the real value lands here.
 apps:
   web:
-    DATABASE_URL: postgresql://postlude:postlude@127.0.0.1:15433/postlude_dev
+    DATABASE_URL: &databaseUrl postgresql://postlude:postlude@127.0.0.1:15433/postlude_dev
     BETTER_AUTH_URL: http://localhost:3000
     GITHUB_CLIENT_ID: replace-after-creating-the-dev-github-oauth-app
     GITHUB_ALLOWED_ACCOUNT_ID: "157214705"
 packages:
   db:
-    DATABASE_URL: postgresql://postlude:postlude@127.0.0.1:15433/postlude_dev
+    # The app and the migration tooling share one local database.
+    DATABASE_URL: *databaseUrl

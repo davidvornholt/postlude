@@ -44,14 +44,10 @@
       }
     },
     {
-      // Designated environment boundaries: env.ts reads process.env exactly
-      // once and validates it; drizzle.config.ts runs in drizzle-kit's CLI
-      // context (also inside the migration container, where only
-      // DATABASE_URL exists) and must not pull the full app env. Its
-      // DATABASE_URL read is migrate-runtime-only, never a cached Turbo
-      // task input, so it does not belong in turbo.json env declarations.
-      // The UPPER_SNAKE keys are the dotenv wire format, not naming choices.
-      "includes": ["apps/web/src/shared/env.ts", "packages/db/drizzle.config.ts"],
+      // Designated environment boundary: env.ts reads process.env exactly once
+      // and validates it. The UPPER_SNAKE keys are the dotenv wire format, not
+      // naming choices.
+      "includes": ["apps/web/src/shared/env.ts"],
       "linter": {
         "rules": {
           "correctness": {
@@ -60,6 +56,27 @@
           "style": {
             "noProcessEnv": "off",
             "useNamingConvention": "off"
+          },
+          "suspicious": {
+            "noUndeclaredEnvVars": "off"
+          }
+        }
+      }
+    },
+    {
+      // drizzle.config.ts runs in drizzle-kit's CLI context (also inside the
+      // migration container, where only DATABASE_URL exists) and must not pull
+      // the full app env. Its DATABASE_URL read is migrate-runtime-only, never
+      // a cached Turbo task input, so it does not belong in turbo.json env
+      // declarations.
+      "includes": ["packages/db/drizzle.config.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noProcessGlobal": "off"
+          },
+          "style": {
+            "noProcessEnv": "off"
           },
           "suspicious": {
             "noUndeclaredEnvVars": "off"
@@ -101,18 +118,17 @@
     {
       // App- and package-owned operational scripts are Bun boundaries like
       // the canonical root scripts covered by biome.base.jsonc: the `Bun`
-      // global comes from the Bun runtime (typed via @types/bun), and
-      // PORT/DATABASE_URL are runtime-only settings, not Turborepo build
-      // inputs.
-      "includes": ["apps/*/scripts/**", "packages/*/scripts/**"],
+      // global comes from the Bun runtime (typed via @types/bun). These
+      // scripts are launched directly (`bun run start`, the migration
+      // container's entrypoint) rather than as Turbo tasks, so turbo.json env
+      // declarations cannot describe the PORT and DATABASE_URL they read and
+      // noUndeclaredEnvVars has nothing to check them against.
+      "includes": ["apps/web/scripts/**", "packages/db/scripts/**"],
       "javascript": {
         "globals": ["Bun"]
       },
       "linter": {
         "rules": {
-          "correctness": {
-            "noNodejsModules": "off"
-          },
           "suspicious": {
             "noUndeclaredEnvVars": "off"
           }

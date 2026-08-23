@@ -10,6 +10,10 @@ describe('parsePort', () => {
     expect(parsePort(undefined)).toBe(defaultPort);
   });
 
+  it.each(['', '   '])('treats PORT=%p as unset', (value) => {
+    expect(parsePort(value)).toBe(defaultPort);
+  });
+
   it('accepts a valid override', () => {
     expect(parsePort(String(validPort))).toBe(validPort);
   });
