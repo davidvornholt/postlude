@@ -6,11 +6,26 @@ import { expect, test } from '@playwright/test';
  * through GitHub OAuth, so there is (yet) no way to reach the signed-in pages
  * in the test. "/" is listed anyway because the redirect to /login should be
  * covered too.
+ *
+ * Every route carries the status and heading that identify it, because a scan
+ * of the wrong page still passes. The not-found path in particular has to prove
+ * it reached the themed not-found page with an HTTP 404 rather than some other
+ * page the server happened to answer with.
  */
 const routes = [
-  { name: 'Sign in', path: '/login' },
-  { name: 'Home (redirects to /login)', path: '/' },
-  { name: 'Not found', path: '/this-page-does-not-exist' },
+  { name: 'Sign in', path: '/login', status: 200, heading: 'Postlude' },
+  {
+    name: 'Home (redirects to /login)',
+    path: '/',
+    status: 200,
+    heading: 'Postlude',
+  },
+  {
+    name: 'Not found',
+    path: '/this-page-does-not-exist',
+    status: 404,
+    heading: 'Page not found',
+  },
 ] as const;
 
 /**
@@ -26,9 +41,16 @@ for (const route of routes) {
       page,
     }) => {
       await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-      await page.goto(route.path);
+      const response = await page.goto(route.path);
 
-      await expect(page.locator('main')).toBeVisible();
+      expect(response?.status()).toBe(route.status);
+      await expect(
+        page.getByRole('heading', { level: 1, name: route.heading }),
+      ).toBeVisible();
+      // A page gets exactly one main landmark. Duplicate-landmark rules are
+      // axe best-practice rather than WCAG, so the scan below cannot see a
+      // second one.
+      await expect(page.locator('main')).toHaveCount(1);
       expect(await scanWcag22AaViolations(page)).toEqual([]);
     });
   }

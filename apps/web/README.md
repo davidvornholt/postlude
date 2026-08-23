@@ -42,4 +42,6 @@ Everything except `PORT` is validated by `src/shared/env.ts`, which parses the w
 
 `bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans the unauthenticated routes for WCAG 2.2 AA violations: sign-in, the redirect from `/`, and the not-found page, each under both `prefers-color-scheme: light` and `prefers-color-scheme: dark` on desktop and mobile Chromium.
 
+Each case also pins the HTTP status and the `h1` of the page it scanned, because a scan of the wrong page still passes — the not-found case in particular has to prove it got an HTTP 404 and the themed not-found page. It asserts a single `main` landmark too: axe classes duplicate-landmark rules as best practice rather than WCAG, so the violation scan itself cannot see a second `main`.
+
 The signed-in shell (`src/routes/_app.tsx`) is not reachable from the scan, because signing in requires a real GitHub OAuth round trip. Its navigation, skip link, and sign-out control are unguarded by automated accessibility coverage until that changes.

@@ -6,12 +6,14 @@ import {
   redirect,
   useRouter,
 } from '@tanstack/react-router';
-import { useId } from 'react';
+import { type RefObject, useId, useRef } from 'react';
 
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
+import { BrandLink } from '#/shared/ui/brand-link.tsx';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 
 const navItems = [
   { to: '/', label: 'Today' },
@@ -36,10 +38,24 @@ const skipLinkClass =
 const AppShell = () => {
   const mainId = useId();
   const router = useRouter();
+  // A ref rather than `isPending`: mutation state lands in a later render, so
+  // two activations inside one React batch would both read "not pending" and
+  // fire the request twice. Flipping a ref before the call closes that window.
+  const signOutStarted: RefObject<boolean> = useRef(false);
   const signOutMutation = useMutation({
     mutationFn: () => authClient.signOut().then(rejectAuthError),
     onSuccess: () => router.navigate({ to: '/login' }),
+    onSettled: () => {
+      signOutStarted.current = false;
+    },
   });
+  const startSignOut = () => {
+    if (signOutStarted.current) {
+      return;
+    }
+    signOutStarted.current = true;
+    signOutMutation.mutate();
+  };
 
   return (
     <div className="relative min-h-svh bg-background">
@@ -49,12 +65,7 @@ const AppShell = () => {
       <header className="border-border border-b bg-surface">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 pt-4 sm:px-6">
           <p className="font-display text-2xl text-ink tracking-tight">
-            <Link
-              className="focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
-              to="/"
-            >
-              Postlude
-            </Link>
+            <BrandLink>Postlude</BrandLink>
           </p>
           <button
             // Staying enabled keeps focus on the button while the request is
@@ -62,12 +73,7 @@ const AppShell = () => {
             // announce the new label to nobody.
             aria-busy={signOutMutation.isPending}
             className={quietButtonClass}
-            onClick={() => {
-              if (signOutMutation.isPending) {
-                return;
-              }
-              signOutMutation.mutate();
-            }}
+            onClick={startSignOut}
             type="button"
           >
             {signOutMutation.isPending ? 'Signing out …' : 'Sign out'}
@@ -108,7 +114,12 @@ const AppShell = () => {
         id={mainId}
         tabIndex={-1}
       >
-        <Outlet />
+        {/* A route that fails renders its fallback here, in place of the page
+            it replaces, so the fallback has to know it is already inside the
+            one main landmark this page gets. */}
+        <InsideMainLandmark>
+          <Outlet />
+        </InsideMainLandmark>
       </main>
     </div>
   );

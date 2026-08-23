@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
+import { type RefObject, useRef } from 'react';
 
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
@@ -13,6 +14,11 @@ const noticeClass =
 
 const SignInPage = () => {
   const { error } = Route.useSearch();
+  // A ref rather than `isPending`: mutation state lands in a later render, so
+  // two activations inside one React batch would both read "not pending" and
+  // open the OAuth redirect twice. Flipping a ref before the call closes that
+  // window.
+  const signInStarted: RefObject<boolean> = useRef(false);
   const signInMutation = useMutation({
     mutationFn: () =>
       authClient.signIn
@@ -22,13 +28,34 @@ const SignInPage = () => {
           errorCallbackURL: '/login',
         })
         .then(rejectAuthError),
+    onSettled: () => {
+      signInStarted.current = false;
+    },
   });
+  const startSignIn = () => {
+    if (signInStarted.current) {
+      return;
+    }
+    signInStarted.current = true;
+    signInMutation.mutate();
+  };
+
   return (
     <main className="flex min-h-svh items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm border border-border bg-surface p-8 shadow-card">
         <h1 className="font-display text-4xl text-ink tracking-tight">
           Postlude
         </h1>
+        {/* No `role="alert"`: this notice is in the server-rendered markup of a
+            freshly loaded page, not inserted into a page the reader is already
+            on, so there is nothing for a live region to announce. Reading order
+            right after the heading is what carries it instead. */}
+        {error === undefined ? null : (
+          <p className={noticeClass}>
+            GitHub sign-in did not finish, so you are still signed out. Try
+            again below.
+          </p>
+        )}
         <p className="mt-3 text-ink-muted">
           A calm place to close out the day: evening writing, morning scripture
           notes, and a quiet archive.
@@ -39,29 +66,21 @@ const SignInPage = () => {
           // the new label to nobody.
           aria-busy={signInMutation.isPending}
           className={`${primaryButtonClass} mt-8 w-full py-3`}
-          onClick={() => {
-            if (signInMutation.isPending) {
-              return;
-            }
-            signInMutation.mutate();
-          }}
+          onClick={startSignIn}
           type="button"
         >
           {signInMutation.isPending
             ? 'Opening GitHub sign-in …'
             : 'Sign in with GitHub'}
         </button>
+        {/* This one keeps `role="alert"`: it appears in response to the reader
+            pressing the button, on a page they are already reading. */}
         {signInMutation.isError ? (
           <p className={noticeClass} role="alert">
             GitHub sign-in could not be started. Check your connection and try
             again.
           </p>
         ) : null}
-        {error === undefined ? null : (
-          <p className={noticeClass} role="alert">
-            Sign-in failed. This journal is private.
-          </p>
-        )}
         <p className="mt-4 text-ink-faint text-sm">
           Private access: only the allowed GitHub account can sign in.
         </p>
