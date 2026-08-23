@@ -1,199 +1,189 @@
 import { describe, expect, it } from 'bun:test';
 import { file, Glob, Transpiler } from 'bun';
 
+import {
+  type Module,
+  type Surface,
+  scanModules,
+} from './sensitive-server-fns-scan.ts';
+
 /**
  * Enumerates the server surfaces under `apps/web/src` — server functions and
- * the request handlers a file route declares — and asks which are reachable
- * without a session. It scans what Bun's transpiler emits rather than the file
- * as written, so a chain quoted in a doc comment can neither pose as a
- * declaration nor supply a guard, and it resolves every marker through the
- * importing file's own bindings, so a local rename hides nothing.
+ * the request handlers a file route declares — and pins the ones reachable
+ * without a session to an allowlist. The allowlist names each surface, not just
+ * the file it sits in, so a second function added beside an exempt one is never
+ * exempt by association.
+ *
+ * Three rules decide what the scan credits. A surface counts as guarded only
+ * when `sessionRequired` comes from `shared/auth/auth-middleware.ts` itself and
+ * is chained onto the very call that declares the surface. A declaration is any
+ * local name standing for `createServerFn` or `createFileRoute`, from whichever
+ * module it was imported, so a local re-export of the framework hides nothing.
+ * A route serves requests unless it can be proven not to: everything under
+ * `routes/api/` does, as does any route whose options so much as mention
+ * `server` or `handlers`.
+ *
+ * The fixtures below are the shapes that used to slip past those rules.
  */
 
 const sourceRoot = new URL('../../', import.meta.url);
-
-const startModule = '@tanstack/react-start';
-const routerModule = '@tanstack/react-router';
-const middlewareModule = '/auth-middleware.ts';
-
 const testFile = /\.test\.tsx?$/u;
-const importStatement =
-  /import\s*(?:type\s+)?(?:\{(?<clause>[^}]*)\}|\*\s*as\s+(?<namespace>[$\p{ID_Start}][$\p{ID_Continue}]*))\s*from\s*['"](?<specifier>[^'"]+)['"]/gu;
-const importAlias = /\s+as\s+/u;
-const partOfIdentifier = /[$.\p{ID_Continue}]/u;
-const callAhead = /^\s*\(/u;
-const middlewareCalls = /\.middleware\s*\(/gu;
-const serverKey = /\bserver\s*:/u;
-const handlersKey = /\bhandlers\s*:/u;
-
-/**
- * Server functions that must answer while signed out. `hasAuthorizedSessionFn`
- * is the signed-in check itself, so the login route calls it before any session
- * exists. Every other server function carries `sessionRequired`.
- */
-const publicServerFunctionFiles = ['shared/auth/session-fn.ts'];
-
-/**
- * Route files whose request handlers answer without a session, each because it
- * owns that decision itself. `routes/api/healthz.ts` is the container liveness
- * probe: it has to answer before anyone signs in and returns a fixed status
- * with no data behind it. `routes/api/auth/$.ts` is better-auth's catch-all,
- * where signing in happens and where better-auth authenticates every request it
- * handles. A route that grows handlers without being listed here fails the
- * scan, so exposing one stays a deliberate decision.
- */
-const publicRouteHandlerFiles = [
-  'routes/api/auth/$.ts',
-  'routes/api/healthz.ts',
-];
 
 const transpilers = {
   ts: new Transpiler({ loader: 'ts' }),
   tsx: new Transpiler({ loader: 'tsx' }),
 };
 
-const codeOf = (path: string, source: string) =>
-  transpilers[path.endsWith('.tsx') ? 'tsx' : 'ts'].transformSync(source);
+const moduleOf = (path: string, source: string): Module => ({
+  path,
+  code: transpilers[path.endsWith('.tsx') ? 'tsx' : 'ts'].transformSync(source),
+});
+
+const reachableSignedOut = (surfaces: ReadonlyArray<Surface>) =>
+  surfaces
+    .filter(({ guarded }) => !guarded)
+    .map(({ path, name }) => ({ path, name }));
 
 /**
- * Every local name a file binds to `exportName` from a module the predicate
- * accepts — the plain import, the `as` alias, and the qualified name a
- * namespace import introduces.
+ * Server functions that must answer while signed out. `hasAuthorizedSessionFn`
+ * is the signed-in check itself, so the login route calls it before any session
+ * exists. Every other server function carries `sessionRequired`.
  */
-const localNamesOf = (
-  code: string,
-  exportName: string,
-  isModule: (specifier: string) => boolean,
-): ReadonlyArray<string> =>
-  [...code.matchAll(importStatement)]
-    .flatMap(({ groups }) => (groups ? [groups] : []))
-    .filter(({ specifier }) => isModule(specifier))
-    .flatMap(({ clause, namespace }) =>
-      namespace
-        ? [`${namespace}.${exportName}`]
-        : clause
-            .split(',')
-            .map((binding) => binding.trim().split(importAlias))
-            .filter(([imported]) => imported === exportName)
-            .map(([imported, local = imported]) => local),
-    );
-
-/** Offsets where `name` stands alone rather than inside a longer identifier. */
-const identifierOffsets = (
-  code: string,
-  name: string,
-): ReadonlyArray<number> => {
-  const offsets: Array<number> = [];
-  let from = 0;
-  for (;;) {
-    const at = code.indexOf(name, from);
-    if (at === -1) {
-      return offsets;
-    }
-    from = at + name.length;
-    const around = code.slice(at - 1, at) + code.slice(from, from + 1);
-    if (!partOfIdentifier.test(around)) {
-      offsets.push(at);
-    }
-  }
-};
+const publicServerFunctions = [
+  { path: 'shared/auth/session-fn.ts', name: 'hasAuthorizedSessionFn' },
+];
 
 /**
- * The source of each call to one of `names`, running to the next such call or
- * to the end of the file. Everything chained onto a call — `.middleware([…])`,
- * `.handler(…)`, a route's options object — sits inside that span whatever
- * line breaks the formatter chose.
+ * Request handlers that answer without a session, each because it owns that
+ * decision itself. `routes/api/healthz.ts` is the container liveness probe: it
+ * answers before anyone signs in and returns a fixed status with no data behind
+ * it. `routes/api/auth/$.ts` is better-auth's catch-all, where signing in
+ * happens and where better-auth authenticates every request it handles. A verb
+ * that appears without being listed here fails the scan.
  */
-const declarationsOf = (
-  code: string,
-  names: ReadonlyArray<string>,
-): ReadonlyArray<string> => {
-  const starts = names
-    .flatMap((name) =>
-      identifierOffsets(code, name).filter((offset) =>
-        callAhead.test(code.slice(offset + name.length)),
+const publicRouteHandlers = [
+  { path: 'routes/api/auth/$.ts', name: 'GET' },
+  { path: 'routes/api/auth/$.ts', name: 'POST' },
+  { path: 'routes/api/healthz.ts', name: 'GET' },
+];
+
+const app = scanModules(
+  await Promise.all(
+    [...new Glob('**/*.{ts,tsx}').scanSync({ cwd: sourceRoot.pathname })]
+      .filter((path) => !testFile.test(path))
+      .map(async (path) =>
+        moduleOf(path, await file(new URL(path, sourceRoot)).text()),
       ),
-    )
-    .sort((left, right) => left - right);
-  return starts.map((start, index) => code.slice(start, starts.at(index + 1)));
-};
-
-/**
- * What each `.middleware(…)` in the chain was passed. Paren depth finds the end
- * of the list — it holds identifiers, arrays and calls — so the handler body
- * stays out: a guard merely mentioned there is not attached to anything.
- */
-const middlewareLists = (declaration: string): ReadonlyArray<string> =>
-  [...declaration.matchAll(middlewareCalls)].map(({ 0: call, index }) => {
-    const open = index + call.length - 1;
-    let depth = 0;
-    for (let at = open; at < declaration.length; at += 1) {
-      depth +=
-        Number(declaration[at] === '(') - Number(declaration[at] === ')');
-      if (depth === 0) {
-        return declaration.slice(open + 1, at);
-      }
-    }
-    return declaration.slice(open + 1);
-  });
-
-const scanFile = async (path: string) => {
-  const code = codeOf(path, await file(new URL(path, sourceRoot)).text());
-  const guards = localNamesOf(code, 'sessionRequired', (specifier) =>
-    specifier.endsWith(middlewareModule),
-  );
-  const isStart = (specifier: string) => specifier === startModule;
-  const isRouter = (specifier: string) => specifier === routerModule;
-  return {
-    path,
-    guarded: declarationsOf(
-      code,
-      localNamesOf(code, 'createServerFn', isStart),
-    ).map((declaration) =>
-      middlewareLists(declaration).some((list) =>
-        guards.some((guard) => identifierOffsets(list, guard).length > 0),
-      ),
-    ),
-    handlerRoutes: declarationsOf(
-      code,
-      localNamesOf(code, 'createFileRoute', isRouter),
-    ).filter(
-      (declaration) =>
-        serverKey.test(declaration) && handlersKey.test(declaration),
-    ).length,
-  };
-};
-
-const scan = await Promise.all(
-  [...new Glob('**/*.{ts,tsx}').scanSync({ cwd: sourceRoot.pathname })]
-    .filter((path) => !testFile.test(path))
-    .sort((left, right) => left.localeCompare(right))
-    .map(scanFile),
+  ),
 );
 
+const startImport = `import { createServerFn } from '@tanstack/react-start';`;
+const guardImport = `import { sessionRequired } from '#/shared/auth/auth-middleware.ts';`;
+
+const fixtures: Record<string, string> = {
+  'journal/trailing-middleware.ts': `${startImport}
+import { createMiddleware } from '@tanstack/react-start';
+${guardImport}
+export const readJournal = createServerFn({ method: 'GET' }).handler(() => 'secret');
+export const auditLogged = createMiddleware({ type: 'function' }).middleware([sessionRequired]).server(({ next }) => next());
+`,
+  'journal/guarded.ts': `${startImport}
+${guardImport}
+export const guardedFn = createServerFn({ method: 'GET' }).middleware([sessionRequired]).handler(() => 'secret');
+`,
+  'journal/unguarded.ts': `${startImport}
+export const unguardedFn = createServerFn({ method: 'GET' }).handler(() => 'secret');
+`,
+  'journal/unguarded-then-guarded.ts': `${startImport}
+${guardImport}
+export const firstFn = createServerFn({ method: 'GET' }).handler(() => 'secret');
+export const secondFn = createServerFn({ method: 'POST' }).middleware([sessionRequired]).handler(() => 'secret');
+`,
+  'routes/api/shorthand-options.ts': `import { createFileRoute } from '@tanstack/react-router';
+const server = { handlers: { GET: () => Response.json({ ok: true }) } };
+export const Route = createFileRoute('/api/shorthand-options')({ server });
+`,
+  'journal/re-exported-marker.ts': `import { createServerFn } from '#/shared/start-re-export.ts';
+export const reExportedFn = createServerFn({ method: 'GET' }).handler(() => 'secret');
+`,
+  'journal/decoy-guard.ts': `${startImport}
+import { sessionRequired } from './decoy/auth-middleware.ts';
+export const decoyGuardedFn = createServerFn({ method: 'GET' }).middleware([sessionRequired]).handler(() => 'secret');
+`,
+  'shared/auth/relative-guard.ts': `${startImport}
+import { sessionRequired } from './auth-middleware.ts';
+export const relativeGuardedFn = createServerFn({ method: 'GET' }).middleware([sessionRequired]).handler(() => 'secret');
+`,
+  'shared/auth/session-fn.ts': `${startImport}
+export const hasAuthorizedSessionFn = createServerFn({ method: 'GET' }).handler(() => true);
+export const deleteEverythingFn = createServerFn({ method: 'POST' }).handler(() => true);
+`,
+};
+
+const fixture = scanModules(
+  Object.entries(fixtures).map(([path, source]) => moduleOf(path, source)),
+);
+
+const surfacesAt = (surfaces: ReadonlyArray<Surface>, path: string) =>
+  surfaces
+    .filter((surface) => surface.path === path)
+    .map(({ name, guarded }) => ({ name, guarded }));
+
+const serverFunctionsAt = (path: string) =>
+  surfacesAt(fixture.serverFunctions, path);
+
 describe('sensitive server surfaces', () => {
-  it('keeps the public server-function allowlist exact', () => {
-    const declared = scan
-      .filter(({ guarded }) => guarded.length > 0)
-      .map(({ path }) => path);
-    expect(
-      declared.filter((path) => publicServerFunctionFiles.includes(path)),
-    ).toEqual(publicServerFunctionFiles);
-  });
-
-  it('requires the session guard on every other server function', () => {
-    const unguarded = scan.flatMap(({ path, guarded }) =>
-      publicServerFunctionFiles.includes(path)
-        ? []
-        : guarded.filter((isSafe) => !isSafe).map(() => path),
+  it('lists every server function reachable signed out on the allowlist', () => {
+    expect(reachableSignedOut(app.serverFunctions)).toEqual(
+      publicServerFunctions,
     );
-    expect(unguarded).toEqual([]);
   });
 
-  it('keeps the public route-handler allowlist exact', () => {
-    const withHandlers = scan
-      .filter(({ handlerRoutes }) => handlerRoutes > 0)
-      .map(({ path }) => path);
-    expect(withHandlers).toEqual(publicRouteHandlerFiles);
+  it('lists every route handler reachable signed out on the allowlist', () => {
+    expect(reachableSignedOut(app.routeHandlers)).toEqual(publicRouteHandlers);
+  });
+
+  it('credits a guard only to the declaration it is chained onto', () => {
+    expect(serverFunctionsAt('journal/trailing-middleware.ts')).toEqual([
+      { name: 'readJournal', guarded: false },
+    ]);
+    expect(serverFunctionsAt('journal/guarded.ts')).toEqual([
+      { name: 'guardedFn', guarded: true },
+    ]);
+    expect(serverFunctionsAt('journal/unguarded.ts')).toEqual([
+      { name: 'unguardedFn', guarded: false },
+    ]);
+    expect(serverFunctionsAt('journal/unguarded-then-guarded.ts')).toEqual([
+      { name: 'firstFn', guarded: false },
+      { name: 'secondFn', guarded: true },
+    ]);
+  });
+
+  it('treats an api route as serving requests however its options are written', () => {
+    expect(
+      surfacesAt(fixture.routeHandlers, 'routes/api/shorthand-options.ts'),
+    ).toEqual([{ name: '(unreadable handlers)', guarded: false }]);
+  });
+
+  it('resolves the marker from any module and the guard from only one', () => {
+    expect(serverFunctionsAt('journal/re-exported-marker.ts')).toEqual([
+      { name: 'reExportedFn', guarded: false },
+    ]);
+    expect(serverFunctionsAt('journal/decoy-guard.ts')).toEqual([
+      { name: 'decoyGuardedFn', guarded: false },
+    ]);
+    expect(serverFunctionsAt('shared/auth/relative-guard.ts')).toEqual([
+      { name: 'relativeGuardedFn', guarded: true },
+    ]);
+  });
+
+  it('names each server function, so a listed file exempts only what it lists', () => {
+    expect(serverFunctionsAt('shared/auth/session-fn.ts')).toEqual([
+      { name: 'deleteEverythingFn', guarded: false },
+      { name: 'hasAuthorizedSessionFn', guarded: false },
+    ]);
+    expect(publicServerFunctions.map(({ name }) => name)).not.toContain(
+      'deleteEverythingFn',
+    );
   });
 });
