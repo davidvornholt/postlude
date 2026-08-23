@@ -1,0 +1,100 @@
+/*
+ * Placeholder theme for the scaffold: warm paper light mode, warm dark mode.
+ * The design comparison PR replaces the values under /heirloom and
+ * /warm-print; the winning seed becomes the real theme via design-init.
+ * Only these semantic tokens may color the app — the Tailwind palette is off.
+ */
+
+:root {
+  /* Both palettes are real, so browser chrome follows the user's preference. */
+  color-scheme: light dark;
+
+  --pl-background: oklch(0.97 0.008 85);
+  --pl-surface: oklch(0.99 0.005 90);
+  --pl-surface-sunken: oklch(0.94 0.01 85);
+
+  --pl-ink: oklch(0.25 0.02 60);
+  --pl-ink-muted: oklch(0.45 0.02 60);
+  --pl-ink-faint: oklch(0.51 0.015 60);
+
+  --pl-primary: oklch(0.45 0.09 155);
+  --pl-primary-strong: oklch(0.38 0.09 155);
+  --pl-on-primary: oklch(0.98 0.01 90);
+  --pl-primary-subtle: oklch(0.93 0.03 155);
+
+  --pl-accent: oklch(0.51 0.115 60);
+  --pl-accent-subtle: oklch(0.93 0.04 75);
+
+  --pl-positive: oklch(0.5 0.13 150);
+  --pl-critical: oklch(0.5 0.14 30);
+  --pl-critical-subtle: oklch(0.94 0.03 30);
+
+  --pl-border: oklch(0.87 0.015 80);
+  --pl-border-strong: oklch(0.78 0.02 78);
+  --pl-shadow-card: none;
+  --pl-shadow-featured: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pl-background: oklch(0.22 0.012 60);
+    --pl-surface: oklch(0.26 0.014 60);
+    --pl-surface-sunken: oklch(0.19 0.01 60);
+
+    --pl-ink: oklch(0.92 0.012 80);
+    --pl-ink-muted: oklch(0.74 0.015 75);
+    --pl-ink-faint: oklch(0.69 0.015 70);
+
+    --pl-primary: oklch(0.72 0.1 155);
+    --pl-primary-strong: oklch(0.8 0.1 155);
+    --pl-on-primary: oklch(0.2 0.03 155);
+    --pl-primary-subtle: oklch(0.3 0.04 155);
+
+    --pl-accent: oklch(0.75 0.1 70);
+    --pl-accent-subtle: oklch(0.3 0.04 70);
+
+    --pl-positive: oklch(0.72 0.1 150);
+    --pl-critical: oklch(0.71 0.14 30);
+    --pl-critical-subtle: oklch(0.3 0.04 30);
+
+    --pl-border: oklch(0.33 0.014 62);
+    --pl-border-strong: oklch(0.42 0.016 65);
+    --pl-shadow-card: none;
+    --pl-shadow-featured: none;
+  }
+}
+
+@theme {
+  /* Default palette off — the semantic tokens below are the only colors. */
+  --color-*: initial;
+
+  /* System stacks until the design comparison settles the real faces. */
+  --font-display: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --font-sans: system-ui, sans-serif;
+
+  /* The single easing curve. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --shadow-card: var(--pl-shadow-card);
+  --shadow-featured: var(--pl-shadow-featured);
+}
+
+@theme inline {
+  --color-background: var(--pl-background);
+  --color-surface: var(--pl-surface);
+  --color-surface-sunken: var(--pl-surface-sunken);
+  --color-ink: var(--pl-ink);
+  --color-ink-muted: var(--pl-ink-muted);
+  --color-ink-faint: var(--pl-ink-faint);
+  --color-primary: var(--pl-primary);
+  --color-primary-strong: var(--pl-primary-strong);
+  --color-on-primary: var(--pl-on-primary);
+  --color-primary-subtle: var(--pl-primary-subtle);
+  --color-accent: var(--pl-accent);
+  --color-accent-subtle: var(--pl-accent-subtle);
+  --color-positive: var(--pl-positive);
+  --color-critical: var(--pl-critical);
+  --color-critical-subtle: var(--pl-critical-subtle);
+  --color-border: var(--pl-border);
+  --color-border-strong: var(--pl-border-strong);
+}

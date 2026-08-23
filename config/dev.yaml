@@ -4,3 +4,17 @@
 # broker-owned S3 pairs referenced by a plain layer. The local layer overrides
 # the shared layers. A key never lives in both this file and secrets/dev.yaml.
 # This file is seeded once and then owned by your repo.
+#
+# GITHUB_CLIENT_ID is a placeholder until the dev GitHub OAuth app exists
+# (callback http://localhost:3000/api/auth/callback/github); the app boots,
+# only sign-in fails until the real value lands here.
+apps:
+  web:
+    DATABASE_URL: &databaseUrl postgresql://postlude:postlude@127.0.0.1:15433/postlude_dev
+    BETTER_AUTH_URL: http://localhost:3000
+    GITHUB_CLIENT_ID: replace-after-creating-the-dev-github-oauth-app
+    GITHUB_ALLOWED_ACCOUNT_ID: "157214705"
+packages:
+  db:
+    # The app and the migration tooling share one local database.
+    DATABASE_URL: *databaseUrl

@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@postlude/ui/theme.css";
+
+body {
+  background-color: var(--pl-background);
+  color: var(--pl-ink);
+  font-family: var(--font-sans);
+}

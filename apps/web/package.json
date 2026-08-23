@@ -1,0 +1,50 @@
+{
+  "name": "@postlude/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "vite dev --port 3000",
+    "generate-routes": "tsr generate",
+    "build": "vite build",
+    "start": "bun run scripts/serve.ts",
+    "check-types": "tsc --noEmit",
+    "lint": "biome check --error-on-warnings .",
+    "lint:fix": "biome check --write --error-on-warnings .",
+    "test": "bun test",
+    "test:a11y": "playwright test --config playwright.config.ts"
+  },
+  "dependencies": {
+    "@postlude/db": "workspace:*",
+    "@postlude/ui": "workspace:*",
+    "@t3-oss/env-core": "^0.13.11",
+    "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/react-query": "^5.102.1",
+    "@tanstack/react-router": "^1.170.32",
+    "@tanstack/react-router-ssr-query": "^1.167.1",
+    "@tanstack/react-start": "^1.168.49",
+    "better-auth": "^1.7.1",
+    "drizzle-orm": "^0.45.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@davidvornholt/a11y-testing": "workspace:*",
+    "@davidvornholt/typescript-config": "workspace:*",
+    "@playwright/test": "^1.61.1",
+    "@tanstack/router-cli": "^1.167.33",
+    "@types/bun": "^1.4.0",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.1.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.2"
+  }
+}
