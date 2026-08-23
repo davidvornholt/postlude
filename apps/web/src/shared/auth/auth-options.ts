@@ -1,7 +1,7 @@
 import type { BetterAuthOptions } from 'better-auth';
 import { tanstackStartCookies } from 'better-auth/tanstack-start';
 
-import { createGitHubProfileMapper } from './authorization.ts';
+import { createGitHubAccountGate } from './authorization.ts';
 
 type AuthOptionsInput = {
   readonly allowedGitHubAccountId: string;
@@ -28,12 +28,9 @@ export const createAuthOptions = ({
     secret,
     baseURL,
     socialProviders: {
-      github: {
-        clientId: githubClientId,
-        clientSecret: githubClientSecret,
-        mapProfileToUser: createGitHubProfileMapper(allowedGitHubAccountId),
-      },
+      github: { clientId: githubClientId, clientSecret: githubClientSecret },
     },
+    user: { validateUserInfo: createGitHubAccountGate(allowedGitHubAccountId) },
     /** Provider access tokens are encrypted with `secret` before they are stored. */
     account: { encryptOAuthTokens: true },
     plugins: [tanstackStartCookies()],

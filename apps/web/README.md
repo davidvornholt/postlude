@@ -12,6 +12,14 @@ bun run dev             # vite dev server on port 3000
 
 `config/dev.yaml` still carries a placeholder `GITHUB_CLIENT_ID`. The app boots and every unauthenticated page works, but sign-in fails until a real dev GitHub OAuth app value lands there.
 
+## Access control
+
+Exactly one GitHub account can sign in. `GITHUB_ALLOWED_ACCOUNT_ID` holds its numeric GitHub account ID, and `src/shared/auth/authorization.ts` enforces it on both the way in and the way back out.
+
+The way in is better-auth's `user.validateUserInfo` gate. better-auth calls it before it creates a user row, before it links a provider account, and again on every returning sign-in, so narrowing the allowed account locks the previous one out on its next attempt rather than only at first link. A rejected attempt writes no rows and issues no session; better-auth redirects the browser to `/login?error=account_not_allowed`, where the sign-in page shows one quiet sentence. Enforcing it here rather than in the provider's `mapProfileToUser` hook is what makes that redirect possible: better-auth does not catch a `mapProfileToUser` failure, so rejecting there ends the flow as raw JSON on the callback URL.
+
+The way back out is `authorizeSession`. Every session check re-reads the linked GitHub accounts and revokes a session that no longer belongs to the allowed account.
+
 ## Environment
 
 | Variable                    | Source           | Required          | Purpose                                                 |
