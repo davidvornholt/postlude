@@ -1,9 +1,11 @@
 import { afterAll, describe, expect, it } from 'bun:test';
 import { rm, symlink } from 'node:fs/promises';
 
-import { createFetchHandler } from './serve.ts';
+import { bootSelfCheckFailure, createFetchHandler } from './serve.ts';
 
 const okStatus = 200;
+const emptyStatus = 204;
+const serverErrorStatus = 500;
 
 const ssrMarker = 'ssr-handled';
 const assetPath = '/assets/app-abcd1234.js';
@@ -91,4 +93,60 @@ describe('createFetchHandler', () => {
       expect(await response.text()).toContain(ssrMarker);
     },
   );
+});
+
+const bootPort = 3000;
+// Long enough that a settled handler always wins the race, short enough that
+// the never-settling case costs the suite nothing.
+const timeoutMs = 50;
+const neverSettles = new Promise<Response>(() => undefined);
+
+describe('bootSelfCheckFailure', () => {
+  it('passes when both checked routes answer 200', async () => {
+    const failure = await bootSelfCheckFailure(
+      () => new Response('ok'),
+      bootPort,
+      timeoutMs,
+    );
+
+    expect(failure).toBeNull();
+  });
+
+  it('reports the liveness route and never reaches the page', async () => {
+    const asked: Array<string> = [];
+    const failure = await bootSelfCheckFailure(
+      (request) => {
+        asked.push(new URL(request.url).pathname);
+        return new Response(null, { status: emptyStatus });
+      },
+      bootPort,
+      timeoutMs,
+    );
+
+    expect(failure).toBe('/api/healthz answered 204 instead of 200');
+    expect(asked).toEqual(['/api/healthz']);
+  });
+
+  it('reports the page when liveness answers but the page render fails', async () => {
+    const failure = await bootSelfCheckFailure(
+      (request) =>
+        new URL(request.url).pathname === '/api/healthz'
+          ? Response.json({ status: 'ok' })
+          : new Response('render failed', { status: serverErrorStatus }),
+      bootPort,
+      timeoutMs,
+    );
+
+    expect(failure).toBe('/login answered 500 instead of 200');
+  });
+
+  it('reports a timeout instead of hanging when the handler never settles', async () => {
+    const failure = await bootSelfCheckFailure(
+      () => neverSettles,
+      bootPort,
+      timeoutMs,
+    );
+
+    expect(failure).toBe(`/api/healthz timed out after ${timeoutMs}ms`);
+  });
 });

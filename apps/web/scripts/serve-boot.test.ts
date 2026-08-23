@@ -1,5 +1,14 @@
 import { afterAll, describe, expect, it } from 'bun:test';
-import { mkdir, rm, symlink } from 'node:fs/promises';
+import { rm, symlink } from 'node:fs/promises';
+
+import {
+  createSandbox,
+  emptyAnswerBundle,
+  healthyBundle,
+  root,
+  ssrMarker,
+  throwingBundle,
+} from './serve-boot-test-support.ts';
 
 const okStatus = 200;
 const serverErrorStatus = 500;
@@ -7,63 +16,14 @@ const successExit = 0;
 /** Bun's development-mode debug page is ~67 KB; a plain 500 is a few dozen bytes. */
 const debugPageFloor = 1024;
 
-const ssrMarker = 'ssr-handled';
+const bindAttempts = 4;
 const secretBody = 'outside-the-client-directory';
-
-const root = `${Bun.env.TMPDIR ?? '/tmp'}/postlude-boot-${crypto.randomUUID()}`;
-const scriptsDir = new URL('.', import.meta.url);
-const workspaceModules = Bun.fileURLToPath(
-  new URL('../node_modules', scriptsDir),
-);
-
-const healthyBundle = `
-export default {
-  fetch(request) {
-    const { pathname } = new URL(request.url);
-    if (pathname === '/api/healthz') return Response.json({ status: 'ok' });
-    if (pathname === '/boom') throw new Error('ssr entry blew up');
-    return new Response(${JSON.stringify(ssrMarker)} + ' ' + pathname);
-  },
-};
-`;
-
-const bundleAnswering = (statement: string) =>
-  `export default { fetch() { ${statement} } };`;
-
-/** What a misconfigured deployment did before the boot self-check existed. */
-const emptyAnswerBundle = bundleAnswering(
-  'return new Response(null, { status: 204 });',
-);
-const throwingBundle = bundleAnswering(
-  "throw new Error('Invalid environment variables');",
-);
+const builtAsset = 'globalThis.built = true;';
 
 /**
- * serve.ts resolves dist relative to its own file, so booting it against a
- * fixture dist means running its source from a sandbox that has one. The
- * scripts are copied at test time: an edit to serve.ts changes what every test
- * below runs.
+ * A port that was free a moment ago. The boots that abort never reach the bind,
+ * so a lost port cannot change their outcome; the boot that serves retries.
  */
-const createSandbox = async (ssrBundle: string | null): Promise<string> => {
-  const dir = `${root}/${crypto.randomUUID()}`;
-  await Promise.all(
-    ['serve.ts', 'server-config.ts'].map((script) =>
-      Bun.write(
-        `${dir}/scripts/${script}`,
-        Bun.file(new URL(script, scriptsDir)),
-      ),
-    ),
-  );
-  if (ssrBundle !== null) {
-    await Bun.write(`${dir}/dist/server/server.js`, ssrBundle);
-  }
-  await mkdir(`${dir}/dist/client`, { recursive: true });
-  // zod, imported by server-config.ts, resolves from the copied script's path.
-  await symlink(workspaceModules, `${dir}/node_modules`);
-  return dir;
-};
-
-/** A port nothing is listening on, so a boot that should fail cannot fail on the bind. */
 const freePort = async (): Promise<string> => {
   const probe = Bun.serve({ port: 0, fetch: () => new Response() });
   const { port } = probe.url;
@@ -84,17 +44,35 @@ const spawnServer = (dir: string, portValue: string) =>
     stderr: 'pipe',
   });
 
-const readStartupLine = async (
-  child: ReturnType<typeof spawnServer>,
-): Promise<string> => {
+type SandboxServer = ReturnType<typeof spawnServer>;
+
+/** The line the server prints once it listens, or null if it died first. */
+const readStartup = async (child: SandboxServer): Promise<string | null> => {
   const reader = child.stdout.getReader();
   const { value } = await reader.read();
   reader.releaseLock();
-  if (value === undefined) {
-    const stderr = await new Response(child.stderr).text();
-    throw new Error(`the sandbox server exited during boot: ${stderr}`);
+  return value === undefined ? null : new TextDecoder().decode(value).trim();
+};
+
+/**
+ * Another process can take the probed port before the child binds it, so a
+ * boot that dies that way is retried on a fresh one. Reaching the startup line
+ * is what proves this child owns the port the tests below talk to.
+ */
+const startServing = async (
+  dir: string,
+  attemptsLeft: number,
+): Promise<{ readonly child: SandboxServer; readonly origin: string }> => {
+  const port = await freePort();
+  const child = spawnServer(dir, port);
+  if ((await readStartup(child)) !== null) {
+    return { child, origin: `http://127.0.0.1:${port}` };
   }
-  return new TextDecoder().decode(value).trim();
+  const failure = await new Response(child.stderr).text();
+  if (attemptsLeft > 1 && failure.includes('EADDRINUSE')) {
+    return startServing(dir, attemptsLeft - 1);
+  }
+  throw new Error(`the sandbox server exited during boot: ${failure}`);
 };
 
 const bootFailure = async (ssrBundle: string | null, portValue: string) => {
@@ -107,12 +85,18 @@ const bootFailure = async (ssrBundle: string | null, portValue: string) => {
   return { exitCode, stderr };
 };
 
-const port = await freePort();
 const sandbox = await createSandbox(healthyBundle);
-const server = spawnServer(sandbox, port);
-const origin = `http://127.0.0.1:${port}`;
-// Blocks until the server reports the address it listens on.
-await readStartupLine(server);
+// The release layout a deployment actually has: dist/client is a link, and the
+// built files live outside dist. The server resolves that link once at startup,
+// which is the only reason anything under it is inside the root it compares
+// against.
+const releaseClient = `${root}/release-client`;
+await rm(`${sandbox}/dist/client`, { recursive: true });
+await Bun.write(`${releaseClient}/assets/app.js`, builtAsset);
+await symlink(releaseClient, `${sandbox}/dist/client`);
+
+// Blocks until the server reports that it listens.
+const { child: server, origin } = await startServing(sandbox, bindAttempts);
 
 afterAll(async () => {
   server.kill();
@@ -121,6 +105,13 @@ afterAll(async () => {
 });
 
 describe('the production server', () => {
+  it('serves a built asset through the dist/client link', async () => {
+    const response = await fetch(`${origin}/assets/app.js`);
+
+    expect(response.status).toBe(okStatus);
+    expect(await response.text()).toBe(builtAsset);
+  });
+
   it('answers a thrown SSR error without leaking source or paths', async () => {
     const response = await fetch(`${origin}/boom`);
     const body = await response.text();
@@ -145,12 +136,9 @@ describe('the production server', () => {
     },
   );
 
-  it('does not follow a symlink that leaves the client directory', async () => {
+  it('does not follow a symlink out of the resolved client directory', async () => {
     await Bun.write(`${root}/spawned-outside.txt`, secretBody);
-    await symlink(
-      `${root}/spawned-outside.txt`,
-      `${sandbox}/dist/client/escape.txt`,
-    );
+    await symlink(`${root}/spawned-outside.txt`, `${releaseClient}/escape.txt`);
 
     const response = await fetch(`${origin}/escape.txt`);
     const body = await response.text();

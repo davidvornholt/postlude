@@ -7,22 +7,32 @@ import { expect, test } from '@playwright/test';
  * in the test. "/" is listed anyway because the redirect to /login should be
  * covered too.
  *
- * Every route carries the status and heading that identify it, because a scan
- * of the wrong page still passes. The not-found path in particular has to prove
- * it reached the themed not-found page with an HTTP 404 rather than some other
- * page the server happened to answer with.
+ * Every route carries the status, the landing path, and the heading that
+ * identify it, because a scan of the wrong page still passes. "/" lands on
+ * /login, and only asserting that proves the redirect ran rather than quietly
+ * scanning the sign-in page twice. The not-found path in particular has to
+ * prove it reached the themed not-found page with an HTTP 404 rather than some
+ * other page the server happened to answer with.
  */
 const routes = [
-  { name: 'Sign in', path: '/login', status: 200, heading: 'Postlude' },
+  {
+    name: 'Sign in',
+    path: '/login',
+    landsOn: '/login',
+    status: 200,
+    heading: 'Postlude',
+  },
   {
     name: 'Home (redirects to /login)',
     path: '/',
+    landsOn: '/login',
     status: 200,
     heading: 'Postlude',
   },
   {
     name: 'Not found',
     path: '/this-page-does-not-exist',
+    landsOn: '/this-page-does-not-exist',
     status: 404,
     heading: 'Page not found',
   },
@@ -44,6 +54,7 @@ for (const route of routes) {
       const response = await page.goto(route.path);
 
       expect(response?.status()).toBe(route.status);
+      expect(new URL(page.url()).pathname).toBe(route.landsOn);
       await expect(
         page.getByRole('heading', { level: 1, name: route.heading }),
       ).toBeVisible();

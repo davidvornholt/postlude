@@ -21,6 +21,8 @@ type StartServerEntry = {
 const immutableCache = 'public, max-age=31536000, immutable';
 const okStatus = 200;
 const healthPath = '/api/healthz';
+const pagePath = '/login';
+const selfCheckTimeout = 10_000;
 
 const openClientFile = (pathname: string, clientDirUrl: URL) => {
   try {
@@ -110,29 +112,55 @@ const loadSsrFetch = async (entryUrl: URL): Promise<FetchHandler> => {
   }
 };
 
+const timedOut = Symbol('boot self-check timeout');
+
 /**
  * One in-process request through the composed handler, before the port is
- * bound. The liveness route touches neither database nor OAuth, so anything
- * other than 200 means the process cannot serve requests at all — and a
- * process that stays up in that state answers health checks with a lie.
+ * bound. A handler that never settles loses the race with the timeout, so a
+ * stuck boot reports itself instead of hanging in a state no supervisor can
+ * tell apart from slow startup.
  */
-const bootSelfCheckFailure = async (
+const requestFailure = async (
   handler: FetchHandler,
   port: number,
+  path: string,
+  timeoutMs: number,
 ): Promise<string | null> => {
   try {
-    const response = await handler(
-      new Request(`http://127.0.0.1:${port}${healthPath}`),
-    );
-    return response.status === okStatus
+    const answer = await Promise.race([
+      handler(new Request(`http://127.0.0.1:${port}${path}`)),
+      // Annotated: a unique symbol widens out of a callback, losing the check.
+      Bun.sleep(timeoutMs).then((): typeof timedOut => timedOut),
+    ]);
+    if (answer === timedOut) {
+      return `${path} timed out after ${timeoutMs}ms`;
+    }
+    return answer.status === okStatus
       ? null
-      : `answered ${response.status} instead of ${okStatus}`;
+      : `${path} answered ${answer.status} instead of ${okStatus}`;
   } catch (error) {
-    return `threw: ${describeError(error)}`;
+    return `${path} threw: ${describeError(error)}`;
   }
 };
 
-// Only the script entry point boots a server; tests import the factory above.
+/**
+ * What the process proves before it listens: the liveness route answers, and a
+ * real page renders. Liveness runs first as the cheaper check; it touches
+ * neither database nor OAuth. The sign-in page then covers what it never
+ * reaches — router, React render, document shell — and needs no database
+ * either: its session lookup fails closed and renders signed out. Anything
+ * else means the process cannot serve requests, and one that stays up in that
+ * state answers health checks with a lie.
+ */
+export const bootSelfCheckFailure = async (
+  handler: FetchHandler,
+  port: number,
+  timeoutMs: number,
+): Promise<string | null> =>
+  (await requestFailure(handler, port, healthPath, timeoutMs)) ??
+  (await requestFailure(handler, port, pagePath, timeoutMs));
+
+// Only the script entry point boots a server; tests import the exports above.
 if (import.meta.main) {
   // Cheapest precondition first: an unusable PORT must not cost an SSR bundle
   // load before it is reported.
@@ -150,10 +178,10 @@ if (import.meta.main) {
       ),
   );
 
-  const selfCheckFailure = await bootSelfCheckFailure(handler, port);
-  if (selfCheckFailure !== null) {
+  const failure = await bootSelfCheckFailure(handler, port, selfCheckTimeout);
+  if (failure !== null) {
     await abortBoot(
-      `the boot self-check request to ${healthPath} ${selfCheckFailure}. Check the environment values documented in apps/web/README.md.`,
+      `the boot self-check request to ${failure}. Check the environment values documented in apps/web/README.md.`,
     );
   }
 
