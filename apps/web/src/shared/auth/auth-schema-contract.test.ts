@@ -46,6 +46,26 @@ const columnNameOf = (fieldKey: string, field: DBFieldAttribute) =>
 /** Fields are required unless better-auth explicitly marks them optional. */
 const isRequired = (field: DBFieldAttribute) => field.required !== false;
 
+/**
+ * better-auth names a field's type in its own vocabulary; Drizzle reports the
+ * column's `dataType` in Drizzle's. The two line up for the primitives the
+ * adapter reads and writes. A type that is not mapped here is reported as a
+ * mismatch rather than skipped, so a field type a future better-auth release
+ * introduces has to be decided on instead of passing unnoticed.
+ */
+const drizzleDataTypes: Record<string, string | undefined> = {
+  boolean: 'boolean',
+  date: 'date',
+  json: 'json',
+  number: 'number',
+  string: 'string',
+};
+
+const expectedDataType = (field: DBFieldAttribute) => {
+  const declared = String(field.type);
+  return drizzleDataTypes[declared] ?? `unmapped better-auth type ${declared}`;
+};
+
 const modelsUnderContract = Object.entries(requiredTables).flatMap(
   ([model, definition]) => {
     const table = drizzleSchema[model];
@@ -86,6 +106,28 @@ describe('better-auth table contract', () => {
         .map((column) => `${definition.modelName}.${column}`);
     });
     expect(missing).toEqual([]);
+  });
+
+  it('stores every field in a column of the type better-auth writes', () => {
+    const columnTypes = modelsUnderContract.flatMap(({ definition, table }) => {
+      const columns = getTableColumns(table);
+      return Object.entries(definition.fields).flatMap(([fieldKey, field]) => {
+        const columnName = columnNameOf(fieldKey, field);
+        const column = columns[columnName];
+        const label = `${definition.modelName}.${columnName}`;
+        return column === undefined
+          ? []
+          : [
+              {
+                expected: `${label}: ${expectedDataType(field)}`,
+                actual: `${label}: ${column.dataType}`,
+              },
+            ];
+      });
+    });
+    expect(columnTypes.map(({ actual }) => actual)).toEqual(
+      columnTypes.map(({ expected }) => expected),
+    );
   });
 
   it('marks every field better-auth requires as NOT NULL', () => {
