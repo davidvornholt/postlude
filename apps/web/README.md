@@ -12,6 +12,10 @@ bun run dev             # vite dev server on port 3000
 
 `config/dev.yaml` still carries a placeholder `GITHUB_CLIENT_ID`. The app boots and every unauthenticated page works, but sign-in fails until a real dev GitHub OAuth app value lands there.
 
+## Design comparison
+
+`/heirloom` and `/warm-print` each render the two pages the product is being designed around: the day you write on and the archive. Both route trees use the same made-up content with no database or sign-in behind it. They are public, so anyone with a link sees sample entries, never a real one. `src/features/design-comparison/` holds the sample day, the seeded year of activity, and the heatmap both candidates share. `packages/ui/src/comparison-heirloom.css` and `packages/ui/src/comparison-warm-print.css` each redefine the `--pl-*` tokens under their own wrapper class. `src/styles.css` loads both token overrides globally, but they remain inert outside `.theme-heirloom` and `.theme-warm-print`. Each layout loads only the font files for its own candidate. Nothing under `_app` reads the sample content, so the comparison can be deleted in one commit once the design is chosen.
+
 ## Access control
 
 Exactly one GitHub account can sign in. `GITHUB_ALLOWED_ACCOUNT_ID` holds its numeric GitHub account ID, and `src/shared/auth/authorization.ts` enforces it on both the way in and the way back out.
@@ -42,7 +46,7 @@ Everything except `PORT` is validated by `src/shared/env.ts`, which parses the w
 
 ## Accessibility
 
-`bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans the unauthenticated routes for WCAG 2.2 AA violations: sign-in, the redirect from `/`, and the not-found page, each under both `prefers-color-scheme: light` and `prefers-color-scheme: dark` on desktop and mobile Chromium.
+`bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans the unauthenticated routes for WCAG 2.2 AA violations: sign-in, the redirect from `/`, the not-found page, and the two design-comparison pages, each under both `prefers-color-scheme: light` and `prefers-color-scheme: dark` on desktop and mobile Chromium.
 
 Each case also pins the HTTP status, the path it landed on, and the `h1` of the page it scanned, because a scan of the wrong page still passes — the `/` case has to prove it was redirected to `/login`, and the not-found case has to prove it got an HTTP 404 and the themed not-found page. It asserts a single `main` landmark too: axe classes duplicate-landmark rules as best practice rather than WCAG, so the violation scan itself cannot see a second `main`.
 

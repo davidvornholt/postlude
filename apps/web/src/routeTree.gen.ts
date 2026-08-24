@@ -10,19 +10,35 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as HeirloomRouteImport } from './routes/heirloom'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as WarmPrintRouteImport } from './routes/warm-print'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppArchiveRouteImport } from './routes/_app/archive'
 import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
+import { Route as HeirloomIndexRouteImport } from './routes/heirloom/index'
+import { Route as HeirloomArchiveRouteImport } from './routes/heirloom/archive'
+import { Route as WarmPrintIndexRouteImport } from './routes/warm-print/index'
+import { Route as WarmPrintArchiveRouteImport } from './routes/warm-print/archive'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HeirloomRoute = HeirloomRouteImport.update({
+  id: '/heirloom',
+  path: '/heirloom',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WarmPrintRoute = WarmPrintRouteImport.update({
+  id: '/warm-print',
+  path: '/warm-print',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -40,6 +56,26 @@ const ApiHealthzRoute = ApiHealthzRouteImport.update({
   path: '/api/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HeirloomIndexRoute = HeirloomIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HeirloomRoute,
+} as any)
+const HeirloomArchiveRoute = HeirloomArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => HeirloomRoute,
+} as any)
+const WarmPrintIndexRoute = WarmPrintIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WarmPrintRoute,
+} as any)
+const WarmPrintArchiveRoute = WarmPrintArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => WarmPrintRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -48,45 +84,89 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/heirloom': typeof HeirloomRouteWithChildren
   '/login': typeof LoginRoute
+  '/warm-print': typeof WarmPrintRouteWithChildren
   '/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/heirloom/archive': typeof HeirloomArchiveRoute
+  '/warm-print/archive': typeof WarmPrintArchiveRoute
+  '/heirloom/': typeof HeirloomIndexRoute
+  '/warm-print/': typeof WarmPrintIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/heirloom/archive': typeof HeirloomArchiveRoute
+  '/warm-print/archive': typeof WarmPrintArchiveRoute
   '/': typeof AppIndexRoute
+  '/heirloom': typeof HeirloomIndexRoute
+  '/warm-print': typeof WarmPrintIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/heirloom': typeof HeirloomRouteWithChildren
   '/login': typeof LoginRoute
+  '/warm-print': typeof WarmPrintRouteWithChildren
   '/_app/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/heirloom/archive': typeof HeirloomArchiveRoute
+  '/warm-print/archive': typeof WarmPrintArchiveRoute
   '/_app/': typeof AppIndexRoute
+  '/heirloom/': typeof HeirloomIndexRoute
+  '/warm-print/': typeof WarmPrintIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/archive' | '/api/healthz' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/heirloom'
+    | '/login'
+    | '/warm-print'
+    | '/archive'
+    | '/api/healthz'
+    | '/heirloom/archive'
+    | '/warm-print/archive'
+    | '/heirloom/'
+    | '/warm-print/'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/archive' | '/api/healthz' | '/' | '/api/auth/$'
+  to:
+    | '/login'
+    | '/archive'
+    | '/api/healthz'
+    | '/heirloom/archive'
+    | '/warm-print/archive'
+    | '/'
+    | '/heirloom'
+    | '/warm-print'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/_app'
+    | '/heirloom'
     | '/login'
+    | '/warm-print'
     | '/_app/archive'
     | '/api/healthz'
+    | '/heirloom/archive'
+    | '/warm-print/archive'
     | '/_app/'
+    | '/heirloom/'
+    | '/warm-print/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  HeirloomRoute: typeof HeirloomRouteWithChildren
   LoginRoute: typeof LoginRoute
+  WarmPrintRoute: typeof WarmPrintRouteWithChildren
   ApiHealthzRoute: typeof ApiHealthzRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -100,11 +180,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/heirloom': {
+      id: '/heirloom'
+      path: '/heirloom'
+      fullPath: '/heirloom'
+      preLoaderRoute: typeof HeirloomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/warm-print': {
+      id: '/warm-print'
+      path: '/warm-print'
+      fullPath: '/warm-print'
+      preLoaderRoute: typeof WarmPrintRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -128,6 +222,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/heirloom/': {
+      id: '/heirloom/'
+      path: '/'
+      fullPath: '/heirloom/'
+      preLoaderRoute: typeof HeirloomIndexRouteImport
+      parentRoute: typeof HeirloomRoute
+    }
+    '/heirloom/archive': {
+      id: '/heirloom/archive'
+      path: '/archive'
+      fullPath: '/heirloom/archive'
+      preLoaderRoute: typeof HeirloomArchiveRouteImport
+      parentRoute: typeof HeirloomRoute
+    }
+    '/warm-print/': {
+      id: '/warm-print/'
+      path: '/'
+      fullPath: '/warm-print/'
+      preLoaderRoute: typeof WarmPrintIndexRouteImport
+      parentRoute: typeof WarmPrintRoute
+    }
+    '/warm-print/archive': {
+      id: '/warm-print/archive'
+      path: '/archive'
+      fullPath: '/warm-print/archive'
+      preLoaderRoute: typeof WarmPrintArchiveRouteImport
+      parentRoute: typeof WarmPrintRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -150,9 +272,39 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface HeirloomRouteChildren {
+  HeirloomArchiveRoute: typeof HeirloomArchiveRoute
+  HeirloomIndexRoute: typeof HeirloomIndexRoute
+}
+
+const HeirloomRouteChildren: HeirloomRouteChildren = {
+  HeirloomArchiveRoute: HeirloomArchiveRoute,
+  HeirloomIndexRoute: HeirloomIndexRoute,
+}
+
+const HeirloomRouteWithChildren = HeirloomRoute._addFileChildren(
+  HeirloomRouteChildren,
+)
+
+interface WarmPrintRouteChildren {
+  WarmPrintArchiveRoute: typeof WarmPrintArchiveRoute
+  WarmPrintIndexRoute: typeof WarmPrintIndexRoute
+}
+
+const WarmPrintRouteChildren: WarmPrintRouteChildren = {
+  WarmPrintArchiveRoute: WarmPrintArchiveRoute,
+  WarmPrintIndexRoute: WarmPrintIndexRoute,
+}
+
+const WarmPrintRouteWithChildren = WarmPrintRoute._addFileChildren(
+  WarmPrintRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  HeirloomRoute: HeirloomRouteWithChildren,
   LoginRoute: LoginRoute,
+  WarmPrintRoute: WarmPrintRouteWithChildren,
   ApiHealthzRoute: ApiHealthzRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
