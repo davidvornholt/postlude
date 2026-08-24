@@ -8,6 +8,7 @@ import {
 } from '#/features/design-comparison/archive-data.ts';
 
 import {
+  activityDescription,
   activitySummary,
   heatmapWeeks,
   monthSegments,
@@ -86,6 +87,29 @@ describe('activitySummary', () => {
   it('says in one sentence what the grid shows', () => {
     expect(activitySummary(heatmapDays)).toBe(
       `Journal activity from August 2025 to August 2026: ${writtenDays(heatmapDays).length} days written`,
+    );
+  });
+
+  it('distinguishes same-count years by monthly distribution and volume', () => {
+    const first: ReadonlyArray<JournalDay> = [
+      { date: '2026-01-01', words: 200 },
+      { date: '2026-01-02', words: 0 },
+      { date: '2026-02-01', words: 300 },
+      { date: '2026-02-02', words: 0 },
+    ];
+    const second: ReadonlyArray<JournalDay> = [
+      { date: '2026-01-01', words: 0 },
+      { date: '2026-01-02', words: 0 },
+      { date: '2026-02-01', words: 100 },
+      { date: '2026-02-02', words: 900 },
+    ];
+
+    expect(writtenDays(first)).toHaveLength(writtenDays(second).length);
+    expect(activityDescription(first)).toBe(
+      'Monthly breakdown. January 2026: 1 of 2 days written, 200 words. February 2026: 1 of 2 days written, 300 words.',
+    );
+    expect(activityDescription(second)).toBe(
+      'Monthly breakdown. January 2026: 0 of 2 days written, 0 words. February 2026: 2 of 2 days written, 1,000 words.',
     );
   });
 });

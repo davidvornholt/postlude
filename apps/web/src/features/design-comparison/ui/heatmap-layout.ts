@@ -1,7 +1,7 @@
 /**
  * Shaping the year of days into what the heatmap draws: columns of whole
- * weeks, the month labels that sit above them, and the sentence a screen
- * reader gets in place of the grid.
+ * weeks, the month labels that sit above them, and the summary a screen reader
+ * gets in place of the grid.
  *
  * Month names are a fixed list rather than `Intl.DateTimeFormat`, because the
  * server rendering the page and the browser hydrating it must agree on every
@@ -15,6 +15,7 @@ import {
   quartiles,
   writtenDays,
 } from '#/features/design-comparison/archive-data.ts';
+import { groupDigits } from '#/features/design-comparison/content.ts';
 
 export type HeatmapCell = {
   readonly date: string;
@@ -25,6 +26,13 @@ export type MonthSegment = {
   readonly key: string;
   readonly label: string;
   readonly weeks: number;
+};
+
+type MonthActivity = {
+  readonly date: string;
+  readonly days: number;
+  readonly written: number;
+  readonly words: number;
 };
 
 const daysPerWeek = 7;
@@ -121,6 +129,39 @@ export const activitySummary = (days: ReadonlyArray<JournalDay>): string => {
   const first = monthYearLabel(days[0]?.date ?? '');
   const last = monthYearLabel(days.at(-1)?.date ?? '');
   return `Journal activity from ${first} to ${last}: ${writtenDays(days).length} days written`;
+};
+
+/** Monthly distribution and volume, compact enough to replace 371 cells. */
+export const activityDescription = (
+  days: ReadonlyArray<JournalDay>,
+): string => {
+  const months: Array<MonthActivity> = [];
+  for (const day of days) {
+    const open = months.at(-1);
+    const month = day.date.slice(0, isoMonthEnd);
+    if (open?.date.slice(0, isoMonthEnd) === month) {
+      months[months.length - 1] = {
+        ...open,
+        days: open.days + 1,
+        written: open.written + Number(day.words > 0),
+        words: open.words + day.words,
+      };
+    } else {
+      months.push({
+        date: day.date,
+        days: 1,
+        written: Number(day.words > 0),
+        words: day.words,
+      });
+    }
+  }
+
+  return `Monthly breakdown. ${months
+    .map(
+      (month) =>
+        `${monthYearLabel(month.date)}: ${month.written} of ${month.days} days written, ${groupDigits(month.words)} words`,
+    )
+    .join('. ')}.`;
 };
 
 /**

@@ -50,10 +50,11 @@
   --pl-shadow-featured: none;
 
   --pl-heat-none: oklch(0.93 0.015 85);
-  --pl-heat-q1: oklch(0.7 0.07 155);
-  --pl-heat-q2: oklch(0.6 0.085 155);
-  --pl-heat-q3: oklch(0.5 0.09 155);
-  --pl-heat-q4: oklch(0.4 0.085 155);
+  --pl-heat-none-mark: oklch(0.6 0.02 80);
+  --pl-heat-q1: oklch(0.6 0.07 155);
+  --pl-heat-q2: oklch(0.52 0.085 155);
+  --pl-heat-q3: oklch(0.44 0.09 155);
+  --pl-heat-q4: oklch(0.36 0.085 155);
 
   /* The deep register: the one inverse surface, dark ink-ground under light
      type, kept to a section or two a page. */
@@ -97,10 +98,11 @@
 
     /* The ramp climbs here: the ground is the dark end in this scheme. */
     --pl-heat-none: oklch(0.2 0.014 55);
-    --pl-heat-q1: oklch(0.45 0.08 155);
-    --pl-heat-q2: oklch(0.55 0.085 155);
-    --pl-heat-q3: oklch(0.65 0.09 155);
-    --pl-heat-q4: oklch(0.75 0.095 155);
+    --pl-heat-none-mark: oklch(0.52 0.022 65);
+    --pl-heat-q1: oklch(0.52 0.08 155);
+    --pl-heat-q2: oklch(0.6 0.085 155);
+    --pl-heat-q3: oklch(0.68 0.09 155);
+    --pl-heat-q4: oklch(0.76 0.095 155);
 
     --pl-deep-ground: oklch(0.96 0.015 85);
     --pl-deep-ink: oklch(0.25 0.02 50);

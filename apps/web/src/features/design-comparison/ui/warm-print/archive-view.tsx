@@ -68,8 +68,8 @@ export const WarmPrintArchive = () => {
             A year of days
           </h2>
           <p className="mt-3 max-w-prose text-ink-muted text-sm">
-            {groupDigits(written)} days written since August 2025. Darker
-            squares are longer entries.
+            {groupDigits(written)} days written since August 2025. Squares
+            farther along the scale mark longer entries.
           </p>
           <div className="mt-8">
             <ActivityHeatmap days={archiveSample.days} />

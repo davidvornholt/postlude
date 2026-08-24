@@ -5,6 +5,7 @@ import {
   rampFindings,
   type Scheme,
   schemeDeclarations,
+  shadowTokenNames,
   textPairFindings,
 } from './theme-audit.ts';
 
@@ -57,9 +58,23 @@ for (const theme of palettes) {
     expect(colorTokenNames(theme.light)).toEqual(colorTokenNames(base));
     expect(colorTokenNames(theme.dark)).toEqual(colorTokenNames(base));
     expect(faces(theme.light)).toEqual(faces(base));
+    expect(shadowTokenNames(theme.light)).toEqual(shadowTokenNames(base));
+    expect(shadowTokenNames(theme.dark)).toEqual(
+      shadowTokenNames(schemeDeclarations(baseCss, ':root', 'dark')),
+    );
     // Faces stay out of the dark block for the reason they do in the base
     // theme: a color scheme does not change which typeface is right.
     expect(faces(theme.dark)).toEqual([]);
+  });
+
+  it(`${theme.name} rejects either shadow token when it is omitted`, () => {
+    for (const token of shadowTokenNames(base)) {
+      const withoutToken = { ...theme.light };
+      delete withoutToken[token];
+      expect(shadowTokenNames(withoutToken)).not.toEqual(
+        shadowTokenNames(base),
+      );
+    }
   });
 
   it(`${theme.name} authors every color in oklch`, () => {

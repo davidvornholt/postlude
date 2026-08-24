@@ -59,8 +59,8 @@ export const HeirloomArchive = () => {
             A year of days
           </h2>
           <p className="mt-1 text-ink-muted text-sm">
-            {groupDigits(written)} days written since August 2025. Darker
-            squares are longer entries.
+            {groupDigits(written)} days written since August 2025. Squares
+            farther along the scale mark longer entries.
           </p>
           <div className="mt-6">
             <ActivityHeatmap days={archiveSample.days} />

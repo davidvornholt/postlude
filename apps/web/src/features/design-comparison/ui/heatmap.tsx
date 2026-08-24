@@ -4,16 +4,18 @@
  * It carries no colours or faces of its own: every fill is a semantic heat
  * utility, so the theme wrapper the page sits in decides what it looks like.
  *
- * Two rules from the data side shape the markup. The ramp is sequential — one
- * hue getting darker with the word count — so a cell can only be compared with
- * its neighbours if the surface shows between them, which is what the gap
- * between cells is for. And a day with no entry is not a paler day of writing,
- * so it is drawn as an outline rather than as the lightest step of the ramp.
+ * Two rules from the data side shape the markup. The ramp is sequential, so a
+ * cell can only be compared with its neighbours if the surface shows between
+ * them, which is what the gap between cells is for. And a day with no entry is
+ * not a paler day of writing, so it is drawn as an outline rather than as the
+ * lightest step of the ramp.
  *
- * The grid is one image to a screen reader rather than 371 unlabelled cells:
- * the summary says what the picture says, and the page prints the streaks and
- * the total beside it, so nothing here is known by colour alone.
+ * The grid is one image to a screen reader rather than 371 unlabelled cells.
+ * Its description groups the same activity into months, preserving when and
+ * how much someone wrote without making every cell a stop.
  */
+
+import { useId } from 'react';
 
 import type {
   HeatLevel,
@@ -21,6 +23,7 @@ import type {
 } from '#/features/design-comparison/archive-data.ts';
 
 import {
+  activityDescription,
   activitySummary,
   heatmapWeeks,
   monthColumnLabels,
@@ -30,7 +33,7 @@ import {
 const cellClass: Record<HeatLevel, string> = {
   // A hairline, not a fill: "nothing written" has to read as a different kind
   // of thing from "a little written", not as less of it.
-  none: 'size-3 border border-border bg-heat-none',
+  none: 'size-3 border border-heat-none-mark bg-heat-none',
   q1: 'size-3 bg-heat-q1',
   q2: 'size-3 bg-heat-q2',
   q3: 'size-3 bg-heat-q3',
@@ -50,6 +53,7 @@ export const ActivityHeatmap = ({
 }: {
   readonly days: ReadonlyArray<JournalDay>;
 }) => {
+  const descriptionId = useId();
   const weeks = heatmapWeeks(days);
   const labels = monthColumnLabels(weeks);
   const columns = weeks.map((cells, week) => ({
@@ -76,6 +80,7 @@ export const ActivityHeatmap = ({
             ))}
           </div>
           <div
+            aria-describedby={descriptionId}
             aria-label={activitySummary(days)}
             className="flex gap-0.5"
             role="img"
@@ -97,6 +102,9 @@ export const ActivityHeatmap = ({
           </div>
         </div>
       </section>
+      <p hidden={true} id={descriptionId}>
+        {activityDescription(days)}
+      </p>
       <figcaption className="mt-3 flex items-center gap-1 text-ink-faint text-xs">
         <span className="mr-1">Less</span>
         {legendSteps.map((step) => (

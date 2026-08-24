@@ -78,6 +78,9 @@ const routes = [
  * unscanned.
  */
 const colorSchemes = ['light', 'dark'] as const;
+const activityName = /Journal activity from August 2025 to August 2026/u;
+const monthlyDescription =
+  /Monthly breakdown\. August 2025: \d+ of 15 days written, [\d,]+ words\..*August 2026: \d+ of 22 days written, [\d,]+ words\./u;
 
 for (const route of routes) {
   for (const colorScheme of colorSchemes) {
@@ -99,4 +102,20 @@ for (const route of routes) {
       expect(await scanWcag22AaViolations(page)).toEqual([]);
     });
   }
+}
+
+const archiveRoutes = [
+  { name: 'Heirloom archive', path: '/heirloom/archive' },
+  { name: 'Warm print archive', path: '/warm-print/archive' },
+] as const;
+
+for (const archive of archiveRoutes) {
+  test(`${archive.name} exposes monthly activity to assistive technology`, async ({
+    page,
+  }) => {
+    await page.goto(archive.path);
+    const activity = page.getByRole('img', { name: activityName });
+
+    await expect(activity).toHaveAccessibleDescription(monthlyDescription);
+  });
 }

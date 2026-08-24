@@ -83,3 +83,15 @@ it('the activity ramp stays readable as a sequence', () => {
     ...rampFindings('dark', 'dark', dark),
   ]).toEqual([]);
 });
+
+it('rejects activity marks that blend into the page', () => {
+  for (const token of ['--pl-heat-q1', '--pl-heat-none-mark']) {
+    const mutated = {
+      ...light,
+      [token]: light['--pl-background'],
+    };
+    expect(rampFindings(`mutated ${token}`, 'light', mutated)).toContain(
+      `mutated ${token}: ${token} on --pl-background = 1.000:1`,
+    );
+  }
+});

@@ -72,6 +72,12 @@ export const colorTokenNames = (palette: Palette): ReadonlyArray<string> =>
     )
     .toSorted();
 
+/** Shadow tokens are audited separately because their values are not colors. */
+export const shadowTokenNames = (palette: Palette): ReadonlyArray<string> =>
+  Object.keys(palette)
+    .filter((token) => token.startsWith('--pl-shadow-'))
+    .toSorted();
+
 /*
  * Every surface text can sit on, against every color text can be set in. The
  * only pairings left out are the ones the palette makes impossible:
@@ -142,15 +148,17 @@ const rampSteps = [
   '--pl-heat-q3',
   '--pl-heat-q4',
 ] as const;
+const activityMarks = ['--pl-heat-none-mark', ...rampSteps] as const;
 const minimumLightnessStep = 0.06;
-const markMinimum = 2;
+const markMinimum = 3;
 const stepDecimals = 3;
 
 /**
  * The ramp is sequential, so it is judged on order rather than on the
  * categorical distinctness a series palette needs: lightness has to move one
- * way only, far enough per step to be seen, and its light end has to stay
- * visible against the ground it is drawn on.
+ * way only and far enough per step to be seen. Every filled step and the empty
+ * day's outline must also clear WCAG's non-text contrast minimum against the
+ * page beneath the grid.
  */
 export const rampFindings = (
   label: string,
@@ -180,11 +188,13 @@ export const rampFindings = (
         ];
   });
 
-  const lightEnd = ratio(palette, '--pl-heat-q1', '--pl-background');
-  return lightEnd >= markMinimum
-    ? order
-    : [
-        ...order,
-        `${label}: --pl-heat-q1 on --pl-background = ${lightEnd.toFixed(reportedDecimals)}:1`,
-      ];
+  const contrast = activityMarks.flatMap((mark) => {
+    const measured = ratio(palette, mark, '--pl-background');
+    return measured >= markMinimum
+      ? []
+      : [
+          `${label}: ${mark} on --pl-background = ${measured.toFixed(reportedDecimals)}:1`,
+        ];
+  });
+  return [...order, ...contrast];
 };
