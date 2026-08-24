@@ -11,6 +11,7 @@ import {
   quartiles,
   writtenDays,
 } from './archive-data.ts';
+import { countWords, journalText, sampleDay } from './content.ts';
 
 const dayInMilliseconds = 86_400_000;
 const utcSunday = 0;
@@ -19,6 +20,7 @@ const fewestWrittenDays = 180;
 const mostWrittenDays = 230;
 const fewestWords = 80;
 const mostWords = 900;
+const sampleDayTotalWords = 254;
 /** A run this short on average would mean writing at random, not in spells. */
 const shortestBelievableMeanRun = 3;
 
@@ -36,6 +38,23 @@ describe('generateHeatmapDays', () => {
     expect(heatmapDays.at(-1)?.date).toBe('2026-08-22');
     expect(weekdayOf(heatmapDays[0]?.date ?? '')).toBe(utcSunday);
     expect(weekdayOf(heatmapDays.at(-1)?.date ?? '')).toBe(utcSaturday);
+  });
+
+  it('ends with the same date, word count, and heat level as the sample day', () => {
+    const sampleDayWords =
+      countWords(journalText) +
+      sampleDay.scripture.notes.reduce(
+        (total, note) => total + countWords(note),
+        0,
+      );
+    const finalDay = heatmapDays.at(-1);
+
+    expect(finalDay).toEqual({
+      date: sampleDay.isoDate,
+      words: sampleDayWords,
+    });
+    expect(sampleDayWords).toBe(sampleDayTotalWords);
+    expect(heatLevel(finalDay?.words ?? 0, quartiles(heatmapDays))).toBe('q1');
   });
 
   it('runs one calendar day at a time, with no gap or repeat', () => {

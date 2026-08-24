@@ -4,7 +4,7 @@ Design tokens for Postlude.
 
 `src/theme.css` defines the semantic `--pl-*` tokens (oklch only, light plus `prefers-color-scheme: dark`) and maps them into Tailwind via `@theme`. The default Tailwind palette is disabled, so components color themselves exclusively through these tokens. `:root` also declares `color-scheme: light dark` so browser-painted chrome (scrollbars, form controls, the canvas behind the page) follows the same preference the dark palette does.
 
-The type faces resolve through tokens too — `--pl-font-display` and `--pl-font-sans` — and the Tailwind mapping is `@theme inline`, which substitutes each `var(--pl-*)` at the element that uses the utility instead of resolving it once at `:root`. That is what lets a wrapper class re-skin a whole subtree: redefine the tokens under `.theme-heirloom` and every `bg-background`, `text-ink`, `font-display` and `shadow-card` inside it changes with them, while the rest of the app keeps the base palette.
+The type faces resolve through `--pl-font-display` and `--pl-font-sans`. The Tailwind mapping is `@theme inline`, which substitutes each `var(--pl-*)` at the element that uses the utility instead of resolving it once at `:root`. Each comparison stylesheet redefines the tokens under its own wrapper class. Utilities such as `bg-background`, `text-ink`, `font-display`, and `shadow-card` then resolve to the candidate values inside that wrapper while the rest of the app keeps the base palette.
 
 ## Token groups
 
@@ -25,6 +25,10 @@ The browser accessibility scan does not cover this and cannot. `apps/web` scans 
 
 ## Comparison themes
 
-`src/comparison-heirloom.css` defines `.theme-heirloom`: warm cream grounds, warm espresso inks, one forest green primary, burnished brass as the sparing accent, Spectral over Hanken Grotesk, square corners, real (quiet) shadows in light mode and raised surface tones instead of shadows in dark. `apps/web` imports it from the `/heirloom` layout route so Vite scopes it to that route's chunk.
+`src/comparison-heirloom.css` defines `.theme-heirloom`: warm cream grounds, warm espresso inks, one forest green primary, burnished brass as the sparing accent, Spectral over Hanken Grotesk, square corners, quiet shadows in light mode, and raised surface tones instead of shadows in dark.
+
+`src/comparison-warm-print.css` defines `.theme-warm-print`: paper grounds, carbon inks, oxblood primary, blue pencil accent, Fraunces over Inter, square corners, and no shadows.
+
+`apps/web/src/styles.css` imports both comparison stylesheets into the global base stylesheet. Their selectors do nothing until a route layout adds `.theme-heirloom` or `.theme-warm-print`. The `/heirloom` and `/warm-print` layouts each link only the font files used by that candidate.
 
 The base values in `src/theme.css` are a scaffold placeholder. The design comparison (`/heirloom` vs `/warm-print`) supplies the real candidates; the winning seed replaces this file via design-init.

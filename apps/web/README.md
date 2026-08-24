@@ -14,7 +14,7 @@ bun run dev             # vite dev server on port 3000
 
 ## Design comparison
 
-`/heirloom` renders the two pages the product is being designed around — the day you write on and the archive — in one candidate design, on made-up content, with no database or sign-in behind it. It is there to be looked at and compared, so it is public: anyone with the link sees sample entries, never a real one. `src/features/design-comparison/` holds the sample day, the seeded year of activity the archive draws, and the heatmap both candidates share; `packages/ui/src/comparison-heirloom.css` holds the palette, as one wrapper class that redefines the `--pl-*` tokens for everything inside it. Nothing under `_app` reads any of it, so the comparison can be deleted in one commit once the design is chosen.
+`/heirloom` and `/warm-print` each render the two pages the product is being designed around: the day you write on and the archive. Both route trees use the same made-up content with no database or sign-in behind it. They are public, so anyone with a link sees sample entries, never a real one. `src/features/design-comparison/` holds the sample day, the seeded year of activity, and the heatmap both candidates share. `packages/ui/src/comparison-heirloom.css` and `packages/ui/src/comparison-warm-print.css` each redefine the `--pl-*` tokens under their own wrapper class. `src/styles.css` loads both token overrides globally, but they remain inert outside `.theme-heirloom` and `.theme-warm-print`. Each layout loads only the font files for its own candidate. Nothing under `_app` reads the sample content, so the comparison can be deleted in one commit once the design is chosen.
 
 ## Access control
 

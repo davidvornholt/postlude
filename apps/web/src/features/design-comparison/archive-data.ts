@@ -1,3 +1,5 @@
+import { sampleDayWordCount } from './content.ts';
+
 /**
  * The archive sample both comparison themes render: a year of journal activity,
  * two streaks, and the entry from a year ago today.
@@ -86,10 +88,16 @@ export const generateHeatmapDays = (
   written[streakStart - 1] = false;
 
   const wordSpread = maximumWords - minimumWords + 1;
-  return written.map((wroteToday, index) => ({
-    date: dateAt(index),
-    words: wroteToday ? minimumWords + Math.floor(random() * wordSpread) : 0,
-  }));
+  return written.map((wroteToday, index) => {
+    const generatedWords = wroteToday
+      ? minimumWords + Math.floor(random() * wordSpread)
+      : 0;
+    return {
+      date: dateAt(index),
+      words:
+        index === heatmapDayCount - 1 ? sampleDayWordCount : generatedWords,
+    };
+  });
 };
 
 export const heatmapDays = generateHeatmapDays(heatmapSeed);

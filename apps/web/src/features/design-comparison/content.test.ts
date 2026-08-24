@@ -6,6 +6,7 @@ import {
   groupDigits,
   journalText,
   sampleDay,
+  scriptureHref,
   scriptureReference,
 } from './content.ts';
 
@@ -46,6 +47,13 @@ describe('groupDigits', () => {
 
 it('reads a passage reference the way it is spoken', () => {
   expect(scriptureReference(sampleDay.scripture)).toBe('Proverbs 12:5-13');
+});
+
+it('links the structured passage reference to its exact verse range', () => {
+  expect(sampleDay.scripture.href).toBe(scriptureHref(sampleDay.scripture));
+  expect(sampleDay.scripture.href).toBe(
+    'https://www.bibleserver.com/NeÜ/Proverbs12,5-13',
+  );
 });
 
 it('holds the sample day as one document the counts can run over', () => {

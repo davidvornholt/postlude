@@ -7,17 +7,23 @@
  * evening's writing.
  */
 
-export type ScripturePassage = {
+export type ScriptureReference = {
   readonly book: string;
   readonly chapter: number;
   readonly verses: string;
   readonly translation: string;
+};
+
+export type ScripturePassage = ScriptureReference & {
   readonly href: string;
   readonly notes: ReadonlyArray<string>;
 };
 
-export const scriptureReference = (passage: ScripturePassage): string =>
+export const scriptureReference = (passage: ScriptureReference): string =>
   `${passage.book} ${passage.chapter}:${passage.verses}`;
+
+export const scriptureHref = (passage: ScriptureReference): string =>
+  `https://www.bibleserver.com/${passage.translation}/${passage.book}${passage.chapter},${passage.verses}`;
 
 const whitespaceRun = /\s+/u;
 /** Every position that has three digits, or a multiple of three, after it. */
@@ -51,16 +57,21 @@ const journalParagraphs = [
   'Ate late with the window open and the kitchen light off. Grateful for cold water at the standpipe, for a father who would rather discuss a fence than his own week, and for a day that asked me to decide nothing.',
 ] as const;
 
+const sampleScriptureReference = {
+  book: 'Proverbs',
+  chapter: 12,
+  verses: '5-13',
+  translation: 'NeÜ',
+} as const;
+
 export const sampleDay = {
+  isoDate: '2026-08-22',
   weekdayLabel: 'Saturday evening',
   dateLabel: '22 August 2026',
   autosaveState: 'Saved just now',
   scripture: {
-    book: 'Proverbs',
-    chapter: 12,
-    verses: '5-13',
-    translation: 'NeÜ',
-    href: 'https://www.bibleserver.com/NeÜ/Proverbs12',
+    ...sampleScriptureReference,
+    href: scriptureHref(sampleScriptureReference),
     notes: [
       'v.9 — better a nobody with a servant than a somebody with nothing to eat. The cost of looking capable.',
       'v.10 — the line about caring for your animals sits oddly among the courtroom verses. Measured where nobody is watching.',
@@ -69,6 +80,7 @@ export const sampleDay = {
   },
   journalParagraphs,
 } as const satisfies {
+  readonly isoDate: string;
   readonly weekdayLabel: string;
   readonly dateLabel: string;
   readonly autosaveState: string;
@@ -78,3 +90,10 @@ export const sampleDay = {
 
 /** What the editor holds: the paragraphs as one document, blank line between. */
 export const journalText = journalParagraphs.join('\n\n');
+
+export const sampleDayWordCount =
+  countWords(journalText) +
+  sampleDay.scripture.notes.reduce(
+    (total, note) => total + countWords(note),
+    0,
+  );
