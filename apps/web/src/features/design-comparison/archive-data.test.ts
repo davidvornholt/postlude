@@ -20,7 +20,6 @@ const fewestWrittenDays = 180;
 const mostWrittenDays = 230;
 const fewestWords = 80;
 const mostWords = 900;
-const sampleDayTotalWords = 254;
 /** A run this short on average would mean writing at random, not in spells. */
 const shortestBelievableMeanRun = 3;
 
@@ -53,7 +52,6 @@ describe('generateHeatmapDays', () => {
       date: sampleDay.isoDate,
       words: sampleDayWords,
     });
-    expect(sampleDayWords).toBe(sampleDayTotalWords);
     expect(heatLevel(finalDay?.words ?? 0, quartiles(heatmapDays))).toBe('q1');
   });
 

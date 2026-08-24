@@ -112,6 +112,36 @@ describe('activitySummary', () => {
       'Monthly breakdown. January 2026: 0 of 2 days written, 0 words. February 2026: 2 of 2 days written, 1,000 words.',
     );
   });
+
+  it('preserves daily gaps and intensity when monthly totals are identical', () => {
+    const separated: ReadonlyArray<JournalDay> = [
+      { date: '2026-01-01', words: 100 },
+      { date: '2026-01-02', words: 0 },
+      { date: '2026-01-03', words: 0 },
+      { date: '2026-01-04', words: 900 },
+    ];
+    const adjacent: ReadonlyArray<JournalDay> = [
+      { date: '2026-01-01', words: 0 },
+      { date: '2026-01-02', words: 500 },
+      { date: '2026-01-03', words: 500 },
+      { date: '2026-01-04', words: 0 },
+    ];
+
+    expect(activityDescription(separated)).toBe(activityDescription(adjacent));
+    expect(heatmapWeeks(separated).flat()).not.toEqual(
+      heatmapWeeks(adjacent).flat(),
+    );
+    expect(
+      heatmapWeeks(separated)
+        .flat()
+        .map(({ date, level, words }) => ({ date, level, words })),
+    ).toEqual([
+      { date: '2026-01-01', level: 'q1', words: 100 },
+      { date: '2026-01-02', level: 'none', words: 0 },
+      { date: '2026-01-03', level: 'none', words: 0 },
+      { date: '2026-01-04', level: 'q3', words: 900 },
+    ]);
+  });
 });
 
 it('names the month and year a date falls in', () => {

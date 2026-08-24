@@ -11,8 +11,9 @@
  * lightest step of the ramp.
  *
  * The grid is one image to a screen reader rather than 371 unlabelled cells.
- * Its description groups the same activity into months, preserving when and
- * how much someone wrote without making every cell a stop.
+ * Its description groups the activity into months. A collapsed daily table
+ * preserves every gap and intensity band without adding them to the default
+ * focus path.
  */
 
 import { useId } from 'react';
@@ -21,6 +22,7 @@ import type {
   HeatLevel,
   JournalDay,
 } from '#/features/design-comparison/archive-data.ts';
+import { groupDigits } from '#/features/design-comparison/content.ts';
 
 import {
   activityDescription,
@@ -61,6 +63,7 @@ export const ActivityHeatmap = ({
     label: labels[week] ?? '',
     start: cells[0]?.date ?? '',
   }));
+  const dailyActivity = weeks.flat();
 
   return (
     <figure className="m-0">
@@ -112,6 +115,47 @@ export const ActivityHeatmap = ({
         ))}
         <span className="ml-1">More</span>
       </figcaption>
+      <details className="mt-5 border-border border-t pt-4 text-sm">
+        <summary className="w-fit cursor-pointer text-primary underline decoration-1 underline-offset-4 focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2">
+          Daily activity details
+        </summary>
+        <section
+          aria-label="Scrollable daily activity table"
+          className="mt-4 max-h-96 overflow-auto border border-border focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+          // biome-ignore lint/a11y/noNoninteractiveTabindex: the opened table scrolls in two directions on small screens, so keyboard users need a focusable scroll region.
+          tabIndex={0}
+        >
+          <table className="w-full min-w-lg border-collapse text-left">
+            <caption className="sr-only">Daily journal activity</caption>
+            <thead className="sticky top-0 bg-surface text-ink-muted">
+              <tr>
+                <th className="px-3 py-2 font-medium" scope="col">
+                  Date
+                </th>
+                <th className="px-3 py-2 font-medium" scope="col">
+                  Activity
+                </th>
+                <th className="px-3 py-2 text-right font-medium" scope="col">
+                  Words
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {dailyActivity.map((day) => (
+                <tr className="border-border border-t" key={day.date}>
+                  <td className="px-3 py-2 text-ink tabular-nums">
+                    <time dateTime={day.date}>{day.date}</time>
+                  </td>
+                  <td className="px-3 py-2 text-ink-muted">{day.levelLabel}</td>
+                  <td className="px-3 py-2 text-right text-ink tabular-nums">
+                    {groupDigits(day.words)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </details>
     </figure>
   );
 };

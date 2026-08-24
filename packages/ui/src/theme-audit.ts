@@ -148,7 +148,7 @@ const rampSteps = [
   '--pl-heat-q3',
   '--pl-heat-q4',
 ] as const;
-const activityMarks = ['--pl-heat-none-mark', ...rampSteps] as const;
+export const activityMarkNames = ['--pl-heat-none-mark', ...rampSteps] as const;
 const minimumLightnessStep = 0.06;
 const markMinimum = 3;
 const stepDecimals = 3;
@@ -158,12 +158,13 @@ const stepDecimals = 3;
  * categorical distinctness a series palette needs: lightness has to move one
  * way only and far enough per step to be seen. Every filled step and the empty
  * day's outline must also clear WCAG's non-text contrast minimum against the
- * page beneath the grid.
+ * surface beneath the grid.
  */
 export const rampFindings = (
   label: string,
   scheme: Scheme,
   palette: Palette,
+  ground: string,
 ): ReadonlyArray<string> => {
   const lightnesses = rampSteps.map((token) =>
     oklchLightness(palette[token] ?? ''),
@@ -188,12 +189,12 @@ export const rampFindings = (
         ];
   });
 
-  const contrast = activityMarks.flatMap((mark) => {
-    const measured = ratio(palette, mark, '--pl-background');
+  const contrast = activityMarkNames.flatMap((mark) => {
+    const measured = ratio(palette, mark, ground);
     return measured >= markMinimum
       ? []
       : [
-          `${label}: ${mark} on --pl-background = ${measured.toFixed(reportedDecimals)}:1`,
+          `${label}: ${mark} on ${ground} = ${measured.toFixed(reportedDecimals)}:1`,
         ];
   });
   return [...order, ...contrast];

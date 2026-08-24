@@ -19,7 +19,9 @@ import { groupDigits } from '#/features/design-comparison/content.ts';
 
 export type HeatmapCell = {
   readonly date: string;
+  readonly words: number;
   readonly level: HeatLevel;
+  readonly levelLabel: string;
 };
 
 export type MonthSegment = {
@@ -42,6 +44,14 @@ const isoMonthEnd = 7;
 /** A month narrower than this cannot hold its own label without colliding. */
 const minimumLabelledWeeks = 2;
 const monthAbbreviationLength = 3;
+
+const heatLevelLabels: Record<HeatLevel, string> = {
+  none: 'No entry',
+  q1: 'Lowest quarter',
+  q2: 'Lower-middle quarter',
+  q3: 'Upper-middle quarter',
+  q4: 'Highest quarter',
+};
 
 const monthNames = [
   'January',
@@ -71,10 +81,15 @@ export const heatmapWeeks = (
   days: ReadonlyArray<JournalDay>,
 ): ReadonlyArray<ReadonlyArray<HeatmapCell>> => {
   const thresholds = quartiles(days);
-  const cells = days.map((day) => ({
-    date: day.date,
-    level: heatLevel(day.words, thresholds),
-  }));
+  const cells = days.map((day) => {
+    const level = heatLevel(day.words, thresholds);
+    return {
+      date: day.date,
+      words: day.words,
+      level,
+      levelLabel: heatLevelLabels[level],
+    };
+  });
   return Array.from(
     { length: Math.ceil(cells.length / daysPerWeek) },
     (_unused, week) =>

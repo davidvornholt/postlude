@@ -81,6 +81,13 @@ const colorSchemes = ['light', 'dark'] as const;
 const activityName = /Journal activity from August 2025 to August 2026/u;
 const monthlyDescription =
   /Monthly breakdown\. August 2025: \d+ of 15 days written, [\d,]+ words\..*August 2026: \d+ of 22 days written, [\d,]+ words\./u;
+const activityLevelNames = [
+  'No entry',
+  'Lowest quarter',
+  'Lower-middle quarter',
+  'Upper-middle quarter',
+  'Highest quarter',
+] as const;
 
 for (const route of routes) {
   for (const colorScheme of colorSchemes) {
@@ -110,12 +117,33 @@ const archiveRoutes = [
 ] as const;
 
 for (const archive of archiveRoutes) {
-  test(`${archive.name} exposes monthly activity to assistive technology`, async ({
-    page,
-  }) => {
-    await page.goto(archive.path);
-    const activity = page.getByRole('img', { name: activityName });
+  for (const colorScheme of colorSchemes) {
+    test(`${archive.name} exposes daily activity in ${colorScheme} mode`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await page.goto(archive.path);
+      const activity = page.getByRole('img', { name: activityName });
+      const disclosure = page.getByText('Daily activity details', {
+        exact: true,
+      });
+      const table = page.getByRole('table', {
+        name: 'Daily journal activity',
+      });
 
-    await expect(activity).toHaveAccessibleDescription(monthlyDescription);
-  });
+      await expect(activity).toHaveAccessibleDescription(monthlyDescription);
+      await expect(table).not.toBeVisible();
+      await disclosure.press('Enter');
+      await expect(table).toBeVisible();
+      const levelCounts = await Promise.all(
+        activityLevelNames.map((level) =>
+          table.getByRole('row', { name: new RegExp(level, 'u') }).count(),
+        ),
+      );
+      for (const count of levelCounts) {
+        expect(count).toBeGreaterThan(0);
+      }
+      expect(await scanWcag22AaViolations(page)).toEqual([]);
+    });
+  }
 }

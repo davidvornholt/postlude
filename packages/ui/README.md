@@ -10,12 +10,12 @@ The type faces resolve through `--pl-font-display` and `--pl-font-sans`. The Tai
 
 Surfaces (`background`, `surface`, `surface-sunken`), inks (`ink`, `ink-muted`, `ink-faint`), the primary and accent families, `positive` / `critical`, borders, and two shadow tokens (`shadow-card`, `shadow-featured`, both `none` in the scaffold). Two groups exist for the pages the design comparison builds:
 
-- **The activity ramp** — `heat-none` plus `heat-q1` … `heat-q4`. Sequential by design: one hue, lightness moving one way only, so a darker cell always means a longer entry. `heat-none` is the unwritten day and sits with the surfaces rather than on the ramp, because "no entry" must not read as a lighter shade of "entry" — the hairline border a cell carries is what marks it empty.
-- **The deep register** — `deep-ground`, `deep-ink`, `deep-ink-muted`, `deep-rule`. An inverted panel that stays dark in both color schemes instead of following the ground.
+- **The activity ramp.** `heat-q1` through `heat-q4` form one sequential hue whose lightness moves toward more activity. The direction reverses with the color scheme, so order carries the meaning rather than darkness alone. `heat-none` fills an unwritten day, while `heat-none-mark` draws the contrasting outline that separates no entry from the ramp.
+- **The deep register.** `deep-ground`, `deep-ink`, `deep-ink-muted`, and `deep-rule` define an inverted panel that stays dark in both color schemes instead of following the page.
 
 ## Audits
 
-Both palettes carry the same accessibility bar, and the numeric audits hold it. `src/theme-audit.ts` owns the machinery: it reads the `--pl-*` declarations of a selector in one color scheme straight out of the CSS, recomputes the WCAG contrast ratio of every token pair that can carry normal-size text (each text color against each surface it can sit on, `--pl-on-primary` on the filled primary control, and the deep register's two inks on `deep-ground`), and checks the ramp for monotone lightness, a visible step between neighbours, and a light end that still reads against the ground. Ratios come from `src/oklch-contrast.ts`, which converts oklch the way a browser does (OKLab to linear sRGB, clamp into gamut, gamma encode, round to 8 bits) and is pinned against colors read back from Chromium.
+Both color schemes carry the same accessibility bar, and the numeric audits hold it. `src/theme-audit.ts` reads the `--pl-*` declarations of a selector straight from the CSS. It recomputes the WCAG contrast ratio for every token pair that can carry normal-size text. It also checks the activity ramp for monotone lightness and a visible step between neighbours. Every q1 through q4 fill and the `heat-none-mark` outline must clear 3:1 against the ground where that theme renders the heatmap. Heirloom uses `surface`; Warm Print and the scaffold use `background`. Ratios come from `src/oklch-contrast.ts`, which converts oklch through OKLab and sRGB in the same sequence as the browser. Chromium fixtures pin the conversion.
 
 `src/theme-contract.test.ts` runs those audits on the base tokens and adds the structural rules: light and dark declare exactly the same color token set in both directions, the faces are declared once outside the schemes, and every `var(--pl-*)` reference resolves.
 
@@ -27,7 +27,7 @@ The browser accessibility scan does not cover this and cannot. `apps/web` scans 
 
 `src/comparison-heirloom.css` defines `.theme-heirloom`: warm cream grounds, warm espresso inks, one forest green primary, burnished brass as the sparing accent, Spectral over Hanken Grotesk, square corners, quiet shadows in light mode, and raised surface tones instead of shadows in dark.
 
-`src/comparison-warm-print.css` defines `.theme-warm-print`: paper grounds, carbon inks, oxblood primary, blue pencil accent, Fraunces over Inter, square corners, and no shadows.
+`src/comparison-warm-print.css` defines `.theme-warm-print`: paper grounds, carbon inks, a green primary, and a warm clay accent in both color schemes. It pairs Fraunces with Inter, keeps square corners, and casts no shadows.
 
 `apps/web/src/styles.css` imports both comparison stylesheets into the global base stylesheet. Their selectors do nothing until a route layout adds `.theme-heirloom` or `.theme-warm-print`. The `/heirloom` and `/warm-print` layouts each link only the font files used by that candidate.
 

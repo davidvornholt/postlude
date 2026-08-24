@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 
 import {
+  activityMarkNames,
   colorTokenNames,
   rampFindings,
   type Scheme,
@@ -19,11 +20,13 @@ const themes = [
     name: 'heirloom',
     file: 'comparison-heirloom.css',
     selector: '.theme-heirloom',
+    activityGround: '--pl-surface',
   },
   {
     name: 'warm-print',
     file: 'comparison-warm-print.css',
     selector: '.theme-warm-print',
+    activityGround: '--pl-background',
   },
 ] as const;
 
@@ -39,6 +42,7 @@ const palettes = await Promise.all(
     ).text();
     return {
       name: theme.name,
+      activityGround: theme.activityGround,
       light: schemeDeclarations(css, theme.selector, 'light'),
       dark: schemeDeclarations(css, theme.selector, 'dark'),
     };
@@ -97,8 +101,34 @@ for (const theme of palettes) {
   it(`${theme.name} keeps the activity ramp readable as a sequence`, () => {
     expect(
       schemes.flatMap((scheme) =>
-        rampFindings(`${theme.name} ${scheme}`, scheme, theme[scheme]),
+        rampFindings(
+          `${theme.name} ${scheme}`,
+          scheme,
+          theme[scheme],
+          theme.activityGround,
+        ),
       ),
     ).toEqual([]);
+  });
+
+  it(`${theme.name} rejects every activity mark that blends into its rendered ground`, () => {
+    for (const scheme of schemes) {
+      for (const mark of activityMarkNames) {
+        const mutated = {
+          ...theme[scheme],
+          [mark]: theme[scheme][theme.activityGround] ?? '',
+        };
+        expect(
+          rampFindings(
+            `${theme.name} ${scheme} ${mark}`,
+            scheme,
+            mutated,
+            theme.activityGround,
+          ),
+        ).toContain(
+          `${theme.name} ${scheme} ${mark}: ${mark} on ${theme.activityGround} = 1.000:1`,
+        );
+      }
+    }
   });
 }

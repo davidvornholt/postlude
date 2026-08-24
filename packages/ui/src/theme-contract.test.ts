@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 
 import {
+  activityMarkNames,
   colorTokenNames,
   rampFindings,
   schemeDeclarations,
@@ -79,19 +80,31 @@ it('every token pair that can carry normal-size text meets WCAG AA', () => {
 
 it('the activity ramp stays readable as a sequence', () => {
   expect([
-    ...rampFindings('light', 'light', light),
-    ...rampFindings('dark', 'dark', dark),
+    ...rampFindings('light', 'light', light, '--pl-background'),
+    ...rampFindings('dark', 'dark', dark, '--pl-background'),
   ]).toEqual([]);
 });
 
 it('rejects activity marks that blend into the page', () => {
-  for (const token of ['--pl-heat-q1', '--pl-heat-none-mark']) {
-    const mutated = {
-      ...light,
-      [token]: light['--pl-background'],
-    };
-    expect(rampFindings(`mutated ${token}`, 'light', mutated)).toContain(
-      `mutated ${token}: ${token} on --pl-background = 1.000:1`,
-    );
+  for (const [scheme, palette] of [
+    ['light', light],
+    ['dark', dark],
+  ] as const) {
+    for (const token of activityMarkNames) {
+      const mutated = {
+        ...palette,
+        [token]: palette['--pl-background'],
+      };
+      expect(
+        rampFindings(
+          `mutated ${scheme} ${token}`,
+          scheme,
+          mutated,
+          '--pl-background',
+        ),
+      ).toContain(
+        `mutated ${scheme} ${token}: ${token} on --pl-background = 1.000:1`,
+      );
+    }
   }
 });
