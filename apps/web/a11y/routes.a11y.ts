@@ -1,6 +1,8 @@
 import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import { expect, test } from '@playwright/test';
 
+import { heatmapDayCount } from '#/features/design-comparison/archive-data.ts';
+
 /**
  * Only the unauthenticated surface is scannable: sign-in runs exclusively
  * through GitHub OAuth, so there is (yet) no way to reach the signed-in pages
@@ -135,6 +137,26 @@ for (const archive of archiveRoutes) {
       await expect(table).not.toBeVisible();
       await disclosure.press('Enter');
       await expect(table).toBeVisible();
+      const bodyRows = table.locator('tbody tr');
+      await expect(bodyRows).toHaveCount(heatmapDayCount);
+      await expect(bodyRows.first()).toHaveAccessibleName(
+        '2025-08-17 Lowest quarter 140',
+      );
+      await expect(bodyRows.last()).toHaveAccessibleName(
+        '2026-08-22 Lowest quarter 254',
+      );
+      await expect(
+        table.getByRole('row', {
+          name: '2025-08-22 No entry 0',
+          exact: true,
+        }),
+      ).toHaveCount(1);
+      await expect(
+        table.getByRole('row', {
+          name: '2025-08-23 Upper-middle quarter 672',
+          exact: true,
+        }),
+      ).toHaveCount(1);
       const levelCounts = await Promise.all(
         activityLevelNames.map((level) =>
           table.getByRole('row', { name: new RegExp(level, 'u') }).count(),
