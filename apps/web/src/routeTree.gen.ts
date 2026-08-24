@@ -10,14 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as HeirloomRouteImport } from './routes/heirloom'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppArchiveRouteImport } from './routes/_app/archive'
 import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
+import { Route as HeirloomIndexRouteImport } from './routes/heirloom/index'
+import { Route as HeirloomArchiveRouteImport } from './routes/heirloom/archive'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HeirloomRoute = HeirloomRouteImport.update({
+  id: '/heirloom',
+  path: '/heirloom',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -40,6 +48,16 @@ const ApiHealthzRoute = ApiHealthzRouteImport.update({
   path: '/api/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HeirloomIndexRoute = HeirloomIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HeirloomRoute,
+} as any)
+const HeirloomArchiveRoute = HeirloomArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => HeirloomRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -48,44 +66,71 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/heirloom': typeof HeirloomRouteWithChildren
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/heirloom/archive': typeof HeirloomArchiveRoute
+  '/heirloom/': typeof HeirloomIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/heirloom/archive': typeof HeirloomArchiveRoute
   '/': typeof AppIndexRoute
+  '/heirloom': typeof HeirloomIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
+  '/heirloom': typeof HeirloomRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/heirloom/archive': typeof HeirloomArchiveRoute
   '/_app/': typeof AppIndexRoute
+  '/heirloom/': typeof HeirloomIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/archive' | '/api/healthz' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/heirloom'
+    | '/login'
+    | '/archive'
+    | '/api/healthz'
+    | '/heirloom/archive'
+    | '/heirloom/'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/archive' | '/api/healthz' | '/' | '/api/auth/$'
+  to:
+    | '/login'
+    | '/archive'
+    | '/api/healthz'
+    | '/heirloom/archive'
+    | '/'
+    | '/heirloom'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/_app'
+    | '/heirloom'
     | '/login'
     | '/_app/archive'
     | '/api/healthz'
+    | '/heirloom/archive'
     | '/_app/'
+    | '/heirloom/'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
+  HeirloomRoute: typeof HeirloomRouteWithChildren
   LoginRoute: typeof LoginRoute
   ApiHealthzRoute: typeof ApiHealthzRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -98,6 +143,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/heirloom': {
+      id: '/heirloom'
+      path: '/heirloom'
+      fullPath: '/heirloom'
+      preLoaderRoute: typeof HeirloomRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -128,6 +180,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/heirloom/': {
+      id: '/heirloom/'
+      path: '/'
+      fullPath: '/heirloom/'
+      preLoaderRoute: typeof HeirloomIndexRouteImport
+      parentRoute: typeof HeirloomRoute
+    }
+    '/heirloom/archive': {
+      id: '/heirloom/archive'
+      path: '/archive'
+      fullPath: '/heirloom/archive'
+      preLoaderRoute: typeof HeirloomArchiveRouteImport
+      parentRoute: typeof HeirloomRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -150,8 +216,23 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface HeirloomRouteChildren {
+  HeirloomArchiveRoute: typeof HeirloomArchiveRoute
+  HeirloomIndexRoute: typeof HeirloomIndexRoute
+}
+
+const HeirloomRouteChildren: HeirloomRouteChildren = {
+  HeirloomArchiveRoute: HeirloomArchiveRoute,
+  HeirloomIndexRoute: HeirloomIndexRoute,
+}
+
+const HeirloomRouteWithChildren = HeirloomRoute._addFileChildren(
+  HeirloomRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
+  HeirloomRoute: HeirloomRouteWithChildren,
   LoginRoute: LoginRoute,
   ApiHealthzRoute: ApiHealthzRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

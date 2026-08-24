@@ -108,17 +108,30 @@ const decodeGamma = (channel: number): number =>
     : ((channel + srgbTransfer.offset) / srgbTransfer.scale) **
       srgbTransfer.exponent;
 
-/** The 8-bit sRGB channels a browser paints for an `oklch(L C H)` value. */
-export const srgbChannels = (value: string): ReadonlyArray<number> => {
+const coordinates = (
+  value: string,
+): { lightness: number; chroma: number; hue: number } => {
   const groups = oklchPattern.exec(value)?.groups;
   if (groups === undefined) {
     throw new Error(`Not a plain oklch colour: ${value}`);
   }
-  return oklchToLinearSrgb(
-    Number(groups.lightness),
-    Number(groups.chroma),
-    Number(groups.hue),
-  ).map((channel) => Math.round(channelMaximum * encodeGamma(channel)));
+  return {
+    lightness: Number(groups.lightness),
+    chroma: Number(groups.chroma),
+    hue: Number(groups.hue),
+  };
+};
+
+/** The L of an `oklch(L C H)` value, which is what orders a sequential ramp. */
+export const oklchLightness = (value: string): number =>
+  coordinates(value).lightness;
+
+/** The 8-bit sRGB channels a browser paints for an `oklch(L C H)` value. */
+export const srgbChannels = (value: string): ReadonlyArray<number> => {
+  const { lightness, chroma, hue } = coordinates(value);
+  return oklchToLinearSrgb(lightness, chroma, hue).map((channel) =>
+    Math.round(channelMaximum * encodeGamma(channel)),
+  );
 };
 
 export const srgbHex = (value: string): string =>

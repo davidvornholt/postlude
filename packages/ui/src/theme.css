@@ -1,13 +1,22 @@
 /*
  * Placeholder theme for the scaffold: warm paper light mode, warm dark mode.
- * The design comparison PR replaces the values under /heirloom and
- * /warm-print; the winning seed becomes the real theme via design-init.
- * Only these semantic tokens may color the app — the Tailwind palette is off.
+ * The design comparison PR re-skins these values under /heirloom and
+ * /warm-print through a wrapper class; the winning seed becomes the real theme
+ * via design-init. Only these semantic tokens may color the app — the Tailwind
+ * palette is off.
  */
 
 :root {
   /* Both palettes are real, so browser chrome follows the user's preference. */
   color-scheme: light dark;
+
+  /*
+   * Faces resolve through tokens for the same reason colors do: a wrapper class
+   * that redefines them re-sets the type of everything below it. They carry no
+   * dark-mode variant — a color scheme does not change which typeface is right.
+   */
+  --pl-font-display: "Iowan Old Style", Georgia, "Times New Roman", serif;
+  --pl-font-sans: system-ui, sans-serif;
 
   --pl-background: oklch(0.97 0.008 85);
   --pl-surface: oklch(0.99 0.005 90);
@@ -33,6 +42,27 @@
   --pl-border-strong: oklch(0.78 0.02 78);
   --pl-shadow-card: none;
   --pl-shadow-featured: none;
+
+  /*
+   * The activity ramp is sequential: one hue, lightness moving one way only, so
+   * a darker cell always means a longer entry. `heat-none` is the unwritten day
+   * and deliberately sits with the surfaces rather than on the ramp — the
+   * hairline border a cell carries, not this fill, is what marks it as empty.
+   */
+  --pl-heat-none: oklch(0.94 0.01 85);
+  --pl-heat-q1: oklch(0.72 0.07 155);
+  --pl-heat-q2: oklch(0.62 0.085 155);
+  --pl-heat-q3: oklch(0.52 0.09 155);
+  --pl-heat-q4: oklch(0.42 0.09 155);
+
+  /*
+   * The deep register is an inverted surface — a dark panel that keeps its
+   * character in both color schemes rather than following the ground.
+   */
+  --pl-deep-ground: oklch(0.22 0.012 60);
+  --pl-deep-ink: oklch(0.92 0.012 80);
+  --pl-deep-ink-muted: oklch(0.74 0.015 75);
+  --pl-deep-rule: oklch(0.33 0.014 62);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -61,6 +91,18 @@
     --pl-border-strong: oklch(0.42 0.016 65);
     --pl-shadow-card: none;
     --pl-shadow-featured: none;
+
+    /* The ramp climbs in dark mode: the ground is the dark end here. */
+    --pl-heat-none: oklch(0.19 0.01 60);
+    --pl-heat-q1: oklch(0.45 0.075 155);
+    --pl-heat-q2: oklch(0.55 0.085 155);
+    --pl-heat-q3: oklch(0.65 0.09 155);
+    --pl-heat-q4: oklch(0.75 0.1 155);
+
+    --pl-deep-ground: oklch(0.22 0.012 60);
+    --pl-deep-ink: oklch(0.92 0.012 80);
+    --pl-deep-ink-muted: oklch(0.74 0.015 75);
+    --pl-deep-rule: oklch(0.33 0.014 62);
   }
 }
 
@@ -68,18 +110,22 @@
   /* Default palette off — the semantic tokens below are the only colors. */
   --color-*: initial;
 
-  /* System stacks until the design comparison settles the real faces. */
-  --font-display: "Iowan Old Style", Georgia, "Times New Roman", serif;
-  --font-sans: system-ui, sans-serif;
-
   /* The single easing curve. */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/*
+ * `inline` is load-bearing, not a style preference. Without it Tailwind would
+ * resolve each `var(--pl-*)` once at `:root`, and a wrapper class that
+ * redefines the token further down the tree would change nothing.
+ */
+@theme inline {
+  --font-display: var(--pl-font-display);
+  --font-sans: var(--pl-font-sans);
 
   --shadow-card: var(--pl-shadow-card);
   --shadow-featured: var(--pl-shadow-featured);
-}
 
-@theme inline {
   --color-background: var(--pl-background);
   --color-surface: var(--pl-surface);
   --color-surface-sunken: var(--pl-surface-sunken);
@@ -97,4 +143,13 @@
   --color-critical-subtle: var(--pl-critical-subtle);
   --color-border: var(--pl-border);
   --color-border-strong: var(--pl-border-strong);
+  --color-heat-none: var(--pl-heat-none);
+  --color-heat-q1: var(--pl-heat-q1);
+  --color-heat-q2: var(--pl-heat-q2);
+  --color-heat-q3: var(--pl-heat-q3);
+  --color-heat-q4: var(--pl-heat-q4);
+  --color-deep-ground: var(--pl-deep-ground);
+  --color-deep-ink: var(--pl-deep-ink);
+  --color-deep-ink-muted: var(--pl-deep-ink-muted);
+  --color-deep-rule: var(--pl-deep-rule);
 }

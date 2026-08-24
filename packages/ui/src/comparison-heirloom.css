@@ -1,0 +1,103 @@
+/*
+ * Heirloom: the design comparison candidate that treats a journal as a
+ * well-made book. Warm cream grounds and espresso inks, one dignified forest
+ * green, burnished brass used sparingly, square corners throughout. Light mode
+ * takes its depth from real (quiet) shadows; dark mode takes it from raised
+ * surface tones instead, which is why the shadow tokens go to `none` there.
+ *
+ * Every `--pl-*` token in `theme.css` is redefined here, so the class re-skins
+ * every semantic utility in its subtree — including the faces, which resolve
+ * through tokens for exactly this reason. `comparison-themes.test.ts` holds
+ * both halves of that: the token set has to match, and the values have to
+ * clear the same contrast bar the base palette does.
+ */
+
+.theme-heirloom {
+  --pl-font-display: "Spectral", "Iowan Old Style", Georgia, serif;
+  --pl-font-sans: "Hanken Grotesk Variable", system-ui, sans-serif;
+
+  --pl-background: oklch(0.95 0.014 88);
+  --pl-surface: oklch(0.975 0.01 92);
+  --pl-surface-sunken: oklch(0.925 0.016 86);
+
+  --pl-ink: oklch(0.25 0.025 55);
+  --pl-ink-muted: oklch(0.44 0.022 58);
+  --pl-ink-faint: oklch(0.51 0.02 58);
+
+  --pl-primary: oklch(0.42 0.09 160);
+  --pl-primary-strong: oklch(0.36 0.09 160);
+  --pl-on-primary: oklch(0.97 0.012 90);
+  --pl-primary-subtle: oklch(0.93 0.03 160);
+
+  --pl-accent: oklch(0.5 0.1 78);
+  --pl-accent-subtle: oklch(0.93 0.035 80);
+
+  --pl-positive: oklch(0.45 0.11 150);
+  --pl-critical: oklch(0.45 0.14 30);
+  --pl-critical-subtle: oklch(0.94 0.03 30);
+
+  --pl-border: oklch(0.86 0.016 80);
+  --pl-border-strong: oklch(0.72 0.02 78);
+
+  /* Warm and close to the page: material, not gloss. */
+  --pl-shadow-card:
+    0 1px 2px oklch(0.25 0.03 60 / 0.07), 0 3px 10px oklch(0.25 0.03 60 / 0.05);
+  --pl-shadow-featured:
+    0 2px 4px oklch(0.25 0.03 60 / 0.08), 0 10px 24px oklch(0.25 0.03 60 / 0.07);
+
+  --pl-heat-none: oklch(0.925 0.016 86);
+  --pl-heat-q1: oklch(0.7 0.07 160);
+  --pl-heat-q2: oklch(0.6 0.09 160);
+  --pl-heat-q3: oklch(0.5 0.095 160);
+  --pl-heat-q4: oklch(0.4 0.09 160);
+
+  --pl-deep-ground: oklch(0.22 0.012 55);
+  --pl-deep-ink: oklch(0.92 0.014 80);
+  --pl-deep-ink-muted: oklch(0.74 0.016 75);
+  --pl-deep-rule: oklch(0.34 0.016 55);
+
+  /*
+   * Dark mode carries the same character rather than inverting it: warm
+   * anthracite instead of cream, warm off-white instead of espresso, the green
+   * brightened to hold its own on a dark ground.
+   */
+  @media (prefers-color-scheme: dark) {
+    --pl-background: oklch(0.22 0.012 55);
+    --pl-surface: oklch(0.26 0.014 55);
+    --pl-surface-sunken: oklch(0.19 0.01 55);
+
+    --pl-ink: oklch(0.92 0.014 80);
+    --pl-ink-muted: oklch(0.75 0.016 75);
+    --pl-ink-faint: oklch(0.68 0.016 70);
+
+    --pl-primary: oklch(0.72 0.1 160);
+    --pl-primary-strong: oklch(0.8 0.1 160);
+    --pl-on-primary: oklch(0.2 0.03 160);
+    --pl-primary-subtle: oklch(0.3 0.04 160);
+
+    --pl-accent: oklch(0.75 0.09 78);
+    --pl-accent-subtle: oklch(0.31 0.04 78);
+
+    --pl-positive: oklch(0.72 0.1 150);
+    --pl-critical: oklch(0.71 0.14 30);
+    --pl-critical-subtle: oklch(0.3 0.045 30);
+
+    --pl-border: oklch(0.34 0.016 55);
+    --pl-border-strong: oklch(0.46 0.018 58);
+
+    /* Depth comes from the raised surface tones above, so nothing casts. */
+    --pl-shadow-card: none;
+    --pl-shadow-featured: none;
+
+    --pl-heat-none: oklch(0.19 0.01 55);
+    --pl-heat-q1: oklch(0.45 0.08 160);
+    --pl-heat-q2: oklch(0.55 0.09 160);
+    --pl-heat-q3: oklch(0.65 0.095 160);
+    --pl-heat-q4: oklch(0.75 0.1 160);
+
+    --pl-deep-ground: oklch(0.22 0.012 55);
+    --pl-deep-ink: oklch(0.92 0.014 80);
+    --pl-deep-ink-muted: oklch(0.74 0.016 75);
+    --pl-deep-rule: oklch(0.34 0.016 55);
+  }
+}
