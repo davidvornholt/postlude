@@ -14,10 +14,11 @@ import { expect, test } from '@playwright/test';
  * prove it reached the themed not-found page with an HTTP 404 rather than some
  * other page the server happened to answer with.
  *
- * The design-comparison pages under /heirloom are public on purpose: they are
- * the candidate designs for the writing and archive pages, kept out of the
- * signed-in tree so they can be looked at without an account. They are scanned
- * like anything else, because a design is not a candidate until it passes.
+ * The design-comparison pages under /heirloom and /warm-print are public on
+ * purpose: they are the candidate designs for the writing and archive pages,
+ * kept out of the signed-in tree so they can be looked at without an account.
+ * They are scanned like anything else, because a design is not a candidate
+ * until it passes.
  */
 const routes = [
   {
@@ -52,6 +53,20 @@ const routes = [
     name: 'Heirloom archive',
     path: '/heirloom/archive',
     landsOn: '/heirloom/archive',
+    status: 200,
+    heading: 'Archive',
+  },
+  {
+    name: 'Warm print writing page',
+    path: '/warm-print',
+    landsOn: '/warm-print',
+    status: 200,
+    heading: 'Saturday evening 22 August 2026',
+  },
+  {
+    name: 'Warm print archive',
+    path: '/warm-print/archive',
+    landsOn: '/warm-print/archive',
     status: 200,
     heading: 'Archive',
   },

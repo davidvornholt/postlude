@@ -19,6 +19,11 @@ const themes = [
     file: 'comparison-heirloom.css',
     selector: '.theme-heirloom',
   },
+  {
+    name: 'warm-print',
+    file: 'comparison-warm-print.css',
+    selector: '.theme-warm-print',
+  },
 ] as const;
 
 const schemes: ReadonlyArray<Scheme> = ['light', 'dark'];
