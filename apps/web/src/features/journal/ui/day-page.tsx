@@ -92,11 +92,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
         </h1>
         <nav aria-label="Nearby days" className="mt-8 flex gap-8">
           {previous === undefined ? null : (
-            <DayLink
-              className={quietButtonClass}
-              date={previous}
-              today={today}
-            >
+            <DayLink className={quietButtonClass} date={previous} today={today}>
               <span aria-hidden="true">←</span> Previous day
             </DayLink>
           )}
