@@ -19,7 +19,7 @@
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { Effect, Schema } from 'effect';
+import { Effect } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
@@ -35,6 +35,7 @@ import {
   journalDateAt,
   parseJournalDate,
 } from '../journal-day.ts';
+import { decodeArchiveQuery } from '../schemas/archive-query.ts';
 import type { EntrySummary, JournalEntry } from '../schemas/entry.ts';
 import { journalSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
@@ -67,30 +68,6 @@ export type ArchiveView = {
 
 const anniversaryLimit = 4;
 const isoMonthStart = 5;
-
-const firstYear = 1000;
-const lastYear = 9999;
-
-/**
- * What the archive can be asked for: a year, or nothing.
- *
- * The map either shows the rolling year ending this week or one calendar year,
- * so a year is the whole of the question. Four digits is the whole of what a
- * year can be, because that is what the ISO dates the journal stores hold.
- *
- * The route validates its `?year=` search parameter against this same schema
- * rather than restating the bounds, so the address bar and the server function
- * cannot come to disagree about what a year is.
- */
-export const ArchiveQuery = Schema.Struct({
-  year: Schema.optional(
-    Schema.Number.pipe(Schema.int(), Schema.between(firstYear, lastYear)),
-  ),
-});
-
-export type ArchiveQueryParams = Schema.Schema.Type<typeof ArchiveQuery>;
-
-const decodeQuery = Schema.decodeUnknownSync(ArchiveQuery);
 
 const activityDayOf =
   (timeZone: string) =>
@@ -134,7 +111,7 @@ const anniversaryOf =
 
 export const readArchiveFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .validator((input: unknown) => decodeQuery(input ?? {}))
+  .validator((input: unknown) => decodeArchiveQuery(input ?? {}))
   .handler(({ data }): Promise<ArchiveView> => {
     const today = currentJournalDate();
     const window = activityWindow(today, data.year);

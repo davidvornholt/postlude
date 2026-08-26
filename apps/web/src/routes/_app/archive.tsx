@@ -4,8 +4,8 @@ import { Option, Schema } from 'effect';
 import {
   ArchiveQuery,
   type ArchiveQueryParams,
-  readArchiveFn,
-} from '#/features/journal/services/archive-fns.ts';
+} from '#/features/journal/schemas/archive-query.ts';
+import { readArchiveFn } from '#/features/journal/services/archive-fns.ts';
 import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 

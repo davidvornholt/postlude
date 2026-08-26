@@ -7,6 +7,7 @@ import {
   monthColumnLabels,
   monthYearLabel,
 } from './activity-labels.ts';
+import { lastArchiveYear } from './schemas/archive-query.ts';
 
 const day = (date: string, journalWords: number) => ({
   date,
@@ -18,6 +19,7 @@ const day = (date: string, journalWords: number) => ({
 
 const today = '2026-08-26';
 const namedYear = 2025;
+const maximumWindowWeeks = 53;
 const longDay = 400;
 const shortDay = 100;
 
@@ -32,20 +34,44 @@ it('names a month and its year in full', () => {
 });
 
 /*
- * A label is set above its own column and allowed to run past it, so a month
- * narrow enough for the next name to land on top of it is left unnamed.
+ * The first grid week opens in December but contains 1 January. January owns
+ * that column because the label marks the start of the month, not the Sunday.
  */
-it('names a month only where the next name has room', () => {
+it('names a month on the week containing its first day', () => {
   const labels = monthColumnLabels(activityWeeks(cells2025));
   expect(labels.filter((label) => label !== '')).toContain('Jun');
-  expect(labels[0]).toBe('');
+  expect(labels[0]).toBe('Jan');
 });
 
-it('names each month once, on the column it starts in', () => {
+it('labels both boundary weeks when each contains a first day', () => {
   const named = monthColumnLabels(activityWeeks(cells2025)).filter(
     (label) => label !== '',
   );
-  expect(new Set(named).size).toBe(named.length);
+  expect(named).toEqual([
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+    'Jan',
+  ]);
+});
+
+it('labels every column of the maximum 53-week year without leaving four digits', () => {
+  const window = activityWindow(today, lastArchiveYear);
+  const weeks = activityWeeks(activityCells([], window));
+  const labels = monthColumnLabels(weeks);
+
+  expect(labels).toHaveLength(maximumWindowWeeks);
+  expect(labels[0]).toBe('Jan');
+  expect(labels.at(-1)).toBe('Jan');
 });
 
 /* The summary is what stands in for the picture when the page is read aloud. */
