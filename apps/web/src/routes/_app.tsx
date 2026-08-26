@@ -26,10 +26,15 @@ const navItems = [
 ] as const;
 
 /*
- * The nav is type on a rule rather than a row of buttons, the same way a
- * section opens everywhere else. Hovering extends the rule under a page's name
- * from left to right; the page you are on already has its rule out, in the one
- * primary colour.
+ * The nav is type on a rule rather than a row of buttons, because a page built
+ * out of rules should not sprout a row of boxes to move around itself. Hovering
+ * extends the rule under a page's name from left to right; the page you are on
+ * already has its rule out, in the one primary colour.
+ *
+ * The rule here is a state, unlike the sign-out control's, which rests out. The
+ * difference is what each one has to say: this rule answers "which page is
+ * this", and the current page's is always drawn, so a pointer that draws
+ * another adds information rather than being the only way to get any.
  *
  * The rule's resting width and its colour live in the state classes rather than
  * in the base string: the router appends one of them to this one, and two
