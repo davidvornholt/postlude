@@ -85,17 +85,24 @@ const usedScripture = (day: ActivityDay): boolean =>
 const countedDates = (
   days: ReadonlyArray<ActivityDay>,
   counts: (day: ActivityDay) => boolean,
+  usedOnTheDay: (day: ActivityDay) => boolean,
 ): ReadonlyArray<JournalDate> =>
-  days
-    .filter((day) => day.writtenOnTheDay && counts(day))
-    .map((day) => day.date);
+  days.filter((day) => usedOnTheDay(day) && counts(day)).map((day) => day.date);
 
 export const journalStreak = (
   days: ReadonlyArray<ActivityDay>,
   today: JournalDate,
-): Streak => streakOf(countedDates(days, wroteJournal), today);
+): Streak =>
+  streakOf(
+    countedDates(days, wroteJournal, (day) => day.journalWrittenOnTheDay),
+    today,
+  );
 
 export const scriptureStreak = (
   days: ReadonlyArray<ActivityDay>,
   today: JournalDate,
-): Streak => streakOf(countedDates(days, usedScripture), today);
+): Streak =>
+  streakOf(
+    countedDates(days, usedScripture, (day) => day.scriptureUsedOnTheDay),
+    today,
+  );

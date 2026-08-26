@@ -39,6 +39,22 @@ it('both sections carry a persisted word count for the heatmap', () => {
   }
 });
 
+it('each section carries an independent nullable first-use stamp', () => {
+  const config = getTableConfig(entry);
+  const firstUseColumns = config.columns.filter((column) =>
+    column.name.endsWith('_first_used_at'),
+  );
+  expect(
+    firstUseColumns
+      .map((column) => column.name)
+      .toSorted((left, right) => left.localeCompare(right)),
+  ).toEqual(['journal_first_used_at', 'scripture_first_used_at']);
+  for (const column of firstUseColumns) {
+    expect(column.notNull).toBe(false);
+    expect(column.hasDefault).toBe(false);
+  }
+});
+
 it('stamps updated_at from the database clock on every write, not just on insert', () => {
   const config = getTableConfig(entry);
   const updatedAt = config.columns.find(

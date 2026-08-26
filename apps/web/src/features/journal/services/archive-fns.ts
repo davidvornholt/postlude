@@ -13,9 +13,9 @@
  * per square and the rest of the journal has already been reduced to two runs
  * and two totals by the time it leaves the server.
  *
- * Whether a day was written on the day it is about is decided here rather than
- * in the browser, because the comparison needs the configured zone — and the
- * browser's zone is whatever a phone was carried into last week.
+ * Whether each section was first used on the day it is about is decided here
+ * rather than in the browser, because the comparison needs the configured zone
+ * — and the browser's zone is whatever a phone was carried into last week.
  */
 
 import { createServerFn } from '@tanstack/react-start';
@@ -36,7 +36,8 @@ import {
   parseJournalDate,
 } from '../journal-day.ts';
 import { decodeArchiveQuery } from '../schemas/archive-query.ts';
-import type { EntrySummary, JournalEntry } from '../schemas/entry.ts';
+import type { JournalEntry } from '../schemas/entry.ts';
+import type { EntrySummary } from '../schemas/entry-summary.ts';
 import { journalSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
@@ -76,8 +77,12 @@ const activityDayOf =
     journalWords: summary.journalWordCount,
     scriptureWords: summary.scriptureWordCount,
     hasScripture: summary.hasScriptureReference,
-    writtenOnTheDay:
-      journalDateAt(summary.createdAt, timeZone) === summary.date,
+    journalWrittenOnTheDay:
+      summary.journalFirstUsedAt !== null &&
+      journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,
+    scriptureUsedOnTheDay:
+      summary.scriptureFirstUsedAt !== null &&
+      journalDateAt(summary.scriptureFirstUsedAt, timeZone) === summary.date,
   });
 
 /**
@@ -118,17 +123,13 @@ export const readArchiveFn = createServerFn({ method: 'GET' })
     return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
-        const earliest = yield* entries.earliestDate();
-        const summaries =
-          earliest === undefined
-            ? []
-            : yield* entries.listBetween(earliest, today);
-        const history = summaries.map(activityDayOf(env.JOURNAL_TIME_ZONE));
-        const anniversaries = yield* entries.readAnniversaries(
-          today.slice(isoMonthStart),
+        const snapshot = yield* entries.readArchive({
           today,
+          anniversaryMonthDay: today.slice(isoMonthStart),
           anniversaryLimit,
-        );
+        });
+        const { earliest, summaries, anniversaries } = snapshot;
+        const history = summaries.map(activityDayOf(env.JOURNAL_TIME_ZONE));
 
         return {
           today,

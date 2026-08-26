@@ -11,7 +11,8 @@ const day = (
   journalWords: 0,
   scriptureWords: 0,
   hasScripture: false,
-  writtenOnTheDay: true,
+  journalWrittenOnTheDay: true,
+  scriptureUsedOnTheDay: true,
   ...overrides,
 });
 
@@ -76,7 +77,7 @@ it('ignores a day after today', () => {
 it('leaves a retroactive entry out of the run it would have repaired', () => {
   const days = [
     wrote('2026-08-23'),
-    wrote('2026-08-24', { writtenOnTheDay: false }),
+    wrote('2026-08-24', { journalWrittenOnTheDay: false }),
     wrote('2026-08-25'),
     wrote('2026-08-26'),
   ];
@@ -93,6 +94,24 @@ it('counts the two habits separately', () => {
     day('2026-08-26', { scriptureWords: 40 }),
   ];
   expect(journalStreak(days, '2026-08-26').current).toBe(2);
+  expect(scriptureStreak(days, '2026-08-26').current).toBe(1);
+});
+
+it('does not let one section first used later break the other streak', () => {
+  const days = [
+    day('2026-08-25', {
+      journalWords: 300,
+      scriptureWords: 40,
+      scriptureUsedOnTheDay: false,
+    }),
+    day('2026-08-26', {
+      journalWords: 300,
+      scriptureWords: 40,
+      journalWrittenOnTheDay: false,
+    }),
+  ];
+
+  expect(journalStreak(days, '2026-08-26').current).toBe(1);
   expect(scriptureStreak(days, '2026-08-26').current).toBe(1);
 });
 

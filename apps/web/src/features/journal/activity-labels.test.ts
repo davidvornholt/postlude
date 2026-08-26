@@ -14,7 +14,8 @@ const day = (date: string, journalWords: number) => ({
   journalWords,
   scriptureWords: 0,
   hasScripture: false,
-  writtenOnTheDay: true,
+  journalWrittenOnTheDay: true,
+  scriptureUsedOnTheDay: true,
 });
 
 const today = '2026-08-26';

@@ -17,7 +17,8 @@ const day = (date: string, journalWords: number): ActivityDay => ({
   journalWords,
   scriptureWords: 0,
   hasScripture: false,
-  writtenOnTheDay: true,
+  journalWrittenOnTheDay: true,
+  scriptureUsedOnTheDay: true,
 });
 
 const sunday = 0;
@@ -114,7 +115,8 @@ it('weighs a day by both of the sections it holds', () => {
     journalWords: words.more,
     scriptureWords,
     hasScripture: true,
-    writtenOnTheDay: true,
+    journalWrittenOnTheDay: true,
+    scriptureUsedOnTheDay: true,
   };
   expect(activityTotals([both])).toEqual({
     daysWritten: 1,

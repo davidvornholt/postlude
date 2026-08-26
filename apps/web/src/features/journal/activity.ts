@@ -28,11 +28,10 @@ export type ActivityDay = {
   readonly scriptureWords: number;
   /** The morning section was used: a passage noted, notes written, or both. */
   readonly hasScripture: boolean;
-  /**
-   * The day was written on the day it is about rather than filled in later.
-   * The streaks read this and nothing else reads it.
-   */
-  readonly writtenOnTheDay: boolean;
+  /** The evening section was first used on the day it is about. */
+  readonly journalWrittenOnTheDay: boolean;
+  /** The scripture section was first used on the day it is about. */
+  readonly scriptureUsedOnTheDay: boolean;
 };
 
 export type HeatLevel = 'none' | 'q1' | 'q2' | 'q3' | 'q4';

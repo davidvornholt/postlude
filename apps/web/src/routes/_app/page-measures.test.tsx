@@ -33,8 +33,10 @@ const emptyDay: JournalEntry = {
   date: '2026-08-26',
   journalMarkdown: '',
   journalWordCount: 0,
+  journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
 };
