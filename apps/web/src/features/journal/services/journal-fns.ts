@@ -61,7 +61,7 @@ export type JournalDayView = {
  */
 export const readJournalDayFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .inputValidator((input: unknown) => decodeDateInput(input ?? {}))
+  .validator((input: unknown) => decodeDateInput(input ?? {}))
   .handler(({ data }): Promise<JournalDayView> => {
     const today = currentJournalDate();
     const date = data.date ?? today;
@@ -81,7 +81,7 @@ export const readJournalDayFn = createServerFn({ method: 'GET' })
  */
 export const saveEntryFn = createServerFn({ method: 'POST' })
   .middleware([sessionRequired])
-  .inputValidator((input: unknown) => decodeDraft(input))
+  .validator((input: unknown) => decodeDraft(input))
   .handler(
     ({ data }): Promise<JournalEntry> =>
       runServerEffect(
