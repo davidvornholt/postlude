@@ -1,9 +1,9 @@
-import { DayPage } from '../src/features/journal/ui/day-page.tsx';
 import { renderInRouter } from '../src/shared/testing/render-in-router.tsx';
 import {
   type DayPageFixtureConfig,
   journalEntryFromFixture,
 } from './day-page-fixture-contract.ts';
+import { DayPage } from './day-page-fixture-module.ts';
 
 const neverSaves = () => new Promise<never>(() => undefined);
 

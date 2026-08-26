@@ -1,14 +1,13 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { hydrateRoot } from 'react-dom/client';
 
-import { DayPage } from '../src/features/journal/ui/day-page.tsx';
 import { createRenderingRouter } from '../src/shared/testing/render-in-router.tsx';
-import '../src/styles.css';
 import type {
   DayPageFixtureWindow,
   SaveOutcome,
 } from './day-page-fixture-contract.ts';
 import { journalEntryFromFixture } from './day-page-fixture-contract.ts';
+import { DayPage } from './day-page-fixture-module.ts';
 
 const fixtureWindow = globalThis as unknown as DayPageFixtureWindow;
 const config = fixtureWindow.postludeDayPageFixture;

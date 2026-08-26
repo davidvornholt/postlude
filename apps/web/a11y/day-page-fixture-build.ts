@@ -1,6 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
 import viteReact from '@vitejs/plugin-react';
-import { build, createServer } from 'vite';
+import { build, createServer, type Plugin } from 'vite';
 import type { DayPageFixtureConfig } from './day-page-fixture-contract.ts';
 
 export type FixtureAssets = {
@@ -12,12 +12,30 @@ export type FixtureAssets = {
 const asText = (source: string | Uint8Array): string =>
   typeof source === 'string' ? source : new TextDecoder().decode(source);
 
+const fixtureModulePath = new URL(
+  './day-page-fixture-module.ts',
+  import.meta.url,
+).pathname;
+const dayPagePath = new URL(
+  '../src/features/journal/ui/day-page.tsx',
+  import.meta.url,
+).pathname;
+const stylesPath = new URL('../src/styles.css', import.meta.url).pathname;
+
+const dayPagePlugin = (): Plugin => ({
+  name: 'postlude-day-page-fixture',
+  load: (id) =>
+    id === fixtureModulePath
+      ? `import ${JSON.stringify(stylesPath)}; export { DayPage } from ${JSON.stringify(dayPagePath)};`
+      : undefined,
+});
+
 const renderFixture = async (config: DayPageFixtureConfig): Promise<string> => {
   const server = await createServer({
     appType: 'custom',
     configFile: false,
     logLevel: 'silent',
-    plugins: [viteReact()],
+    plugins: [dayPagePlugin(), viteReact()],
     resolve: { tsconfigPaths: true },
     server: { middlewareMode: true },
   });
@@ -53,7 +71,7 @@ export const buildDayPageFixture = async (
     configFile: false,
     define: { 'process.env.NODE_ENV': JSON.stringify('production') },
     logLevel: 'silent',
-    plugins: [tailwindcss(), viteReact()],
+    plugins: [dayPagePlugin(), tailwindcss(), viteReact()],
     resolve: { tsconfigPaths: true },
   });
   const results = Array.isArray(result) ? result : [result];
