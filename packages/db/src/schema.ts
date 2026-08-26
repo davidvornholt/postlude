@@ -21,7 +21,10 @@ import {
  *
  * The check constraints keep a partially filled reference out of the table: a
  * verse range with no book cannot be rendered or linked, so the database
- * refuses it rather than leaving the UI to guess. A book that is present but
+ * refuses it rather than leaving the UI to guess. A book and a chapter are the
+ * whole of what a reference needs — "Psalms 23" names a chapter and no verse in
+ * it — so the verses are each optional above that floor, while a verse with no
+ * chapter to sit in is refused. A book that is present but
  * holds no letter is refused for the same reason: it counts as filled in yet
  * renders as nothing a reader could recognise as a book. Every book name
  * carries letters, so requiring one also rejects a book built only from invisible
@@ -65,7 +68,11 @@ export const entry = pgTable(
     ),
     check(
       'entry_scripture_reference_complete',
-      sql`num_nonnulls(${table.scriptureBook}, ${table.scriptureChapter}, ${table.scriptureVerseStart}) in (0, 3)`,
+      sql`num_nonnulls(${table.scriptureBook}, ${table.scriptureChapter}) in (0, 2)`,
+    ),
+    check(
+      'entry_scripture_verse_start_needs_chapter',
+      sql`${table.scriptureVerseStart} is null or ${table.scriptureChapter} is not null`,
     ),
     check(
       'entry_scripture_verse_end_after_start',

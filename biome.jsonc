@@ -164,6 +164,28 @@
       }
     },
     {
+      // Test support: the same boundary biome.base.jsonc already exempts for
+      // the standards CLI's `*-test-support.ts` files, for the path this repo
+      // puts them on. `test-database.ts` opens the Postgres the database tests
+      // run against, so it reads DATABASE_URL from the process the way a test
+      // does — it never ships in a bundle and never reaches a browser, which is
+      // what noNodejsModules and noProcessEnv protect.
+      "includes": ["apps/web/src/shared/testing/**"],
+      "javascript": {
+        "globals": ["Bun"]
+      },
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "style": {
+            "noProcessEnv": "off"
+          }
+        }
+      }
+    },
+    {
       // The theme contract test runs under `bun test` and loads the CSS
       // fixture through the runtime's `Bun.file` API.
       "includes": ["packages/ui/src/*.test.ts"],

@@ -27,6 +27,21 @@ That notice is worded for every code that can land on `/login`, not just this on
 
 The way back out is `authorizeSession`. Every session check re-reads the linked GitHub accounts and revokes a session that no longer belongs to the allowed account.
 
+## The journal data layer
+
+`src/features/journal` owns what a journal day is and how one reaches the database.
+
+- `journal-day.ts` — the 04:00 rule and calendar arithmetic that never builds an instant, so a shift across the day the clocks move cannot pick up an hour on the way.
+- `word-count.ts` — the counts the writer sees and the archive buckets by. It counts prose rather than markup: a heading is its words, a link is its label, a fenced code block is nothing, and an unclosed fence takes the rest of the document so the number does not leap while the fence is being typed.
+- `scripture-books.ts` / `scripture-reference.ts` — the 66 books under their English and German names. A reference is typed in either language, displayed in the house style (`Proverbs 12:5-13`), and linked to bibleserver.com in German, which is how that site addresses passages.
+- `schemas/entry.ts` — the shapes an entry takes, and the one place a database row becomes one. Rows are decoded rather than cast: what a driver hands back is untrusted input like anything else.
+- `services/entry-repository.ts` — every query, behind one Effect service. Nothing in it reads a clock; which day it is arrives as an argument.
+- `services/journal-fns.ts` — the server functions the browser reaches all of that through. Each carries `sessionRequired`, and `sensitive-server-fns.test.ts` fails the build if one loses it.
+
+`src/features/journal/services/journal-runtime.ts` is the journal's single seam between Effect and the rest of the app, as `AGENTS.local.md` describes: journal services keep typed error and requirement channels, and everything above the seam — server functions, React Query, components — stays on plain promises. The feature owns its service composition and depends on the shared database pool; shared code never imports the journal feature. The runtime is built lazily, because building it opens the pool, and a pool must not be opened merely because a client bundle imported a route module.
+
+The repository's own tests run against a real Postgres, since whether an upsert replaces a row and whether a DATE column survives the round trip are properties of the database rather than of the code. `src/shared/testing/test-database.ts` creates the configured database with `_test` appended, migrates it from the same generated migrations the app deploys, and rolls every test body back, so the journal you write in is never touched. `DATABASE_URL` must be present: a database test that silently skips is a gate that silently does not hold.
+
 ## Environment
 
 | Variable                    | Source           | Required          | Purpose                                                 |
@@ -37,7 +52,10 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 | `GITHUB_CLIENT_ID`          | config/dev.yaml  | Yes               | GitHub OAuth app client ID (public value)               |
 | `GITHUB_CLIENT_SECRET`      | secrets/dev.yaml | Yes               | GitHub OAuth app client secret                          |
 | `GITHUB_ALLOWED_ACCOUNT_ID` | config/dev.yaml  | Yes               | The only GitHub account allowed in, digits with no leading zero |
+| `JOURNAL_TIME_ZONE`         | config/dev.yaml  | Yes               | IANA zone whose clock decides which journal day an entry belongs to |
 | `PORT`                      | process env      | No (default 3000) | Port the production server binds                        |
+
+`JOURNAL_TIME_ZONE` is the clock the journal runs on. A journal day runs from 04:00 to 04:00 in that zone, so an entry written at half past one in the morning still closes out the evening before rather than opening a day that has not been lived yet. It is configuration rather than the device's own zone so that the same evening is one journal day from every device: a phone in another country neither splits a night in two nor hides the day just written. The value is checked against the platform's own zone database at boot, because a zone the platform cannot resolve would otherwise show up as a wrong date on a page — the kind of wrong nobody notices until a streak breaks. `src/features/journal/journal-day.ts` applies the rule to the zone's wall clock rather than shifting the instant, which is what keeps the boundary exact on the two days a year the offset moves.
 
 Everything except `PORT` is validated by `src/shared/env.ts`, which parses the whole set the first time it is imported. The built server bundle imports it as it loads, so a missing or malformed value makes `bun run start` name the offending variable and exit non-zero before it binds a port.
 

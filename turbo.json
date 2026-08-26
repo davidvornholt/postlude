@@ -22,6 +22,11 @@
       "outputs": []
     },
     "test": {
+      // The journal repository tests run against a real Postgres. Turbo runs
+      // tasks in strict env mode, so a variable the task is not declared to
+      // read is not there — undeclared, CI's database would be invisible to
+      // exactly the tests that need it.
+      "env": ["DATABASE_URL"],
       "outputs": []
     },
     "test:a11y": {

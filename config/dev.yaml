@@ -15,6 +15,10 @@ apps:
     BETTER_AUTH_URL: http://localhost:3000
     GITHUB_CLIENT_ID: Ov23liMZSmT9ereDMgRP
     GITHUB_ALLOWED_ACCOUNT_ID: "157214705"
+    # Which clock decides the journal day. A journal day runs 04:00-04:00 in
+    # this zone, on every device, so a late-night entry belongs to the evening
+    # it closes out wherever it was written.
+    JOURNAL_TIME_ZONE: Europe/Berlin
 packages:
   db:
     # The app and the migration tooling share one local database.
