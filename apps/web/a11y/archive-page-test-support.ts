@@ -98,6 +98,7 @@ export const scanArchive = async (page: playwright.Page): Promise<void> => {
 
 const navigationConfig: ArchiveNavigationFixtureConfig = {
   today,
+  saveOutcome: 'stored',
   entry: {
     date: today,
     journalMarkdown: '',
@@ -115,17 +116,21 @@ let navigationAssets: FixtureAssets | undefined;
 
 export const mountArchiveNavigation = async (
   page: playwright.Page,
+  saveOutcome: ArchiveNavigationFixtureConfig['saveOutcome'] = 'stored',
 ): Promise<void> => {
   navigationAssets ??= await buildArchiveNavigationFixture(navigationConfig);
   await page.setContent(
     `<html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Archive navigation fixture</title></head><body><div id="archive-navigation-fixture">${navigationAssets.markup}</div></body></html>`,
   );
   await page.addStyleTag({ content: navigationAssets.styles });
-  await page.evaluate((fixture) => {
-    const fixtureWindow =
-      globalThis as unknown as ArchiveNavigationFixtureWindow;
-    fixtureWindow.postludeArchiveNavigationFixture = fixture;
-  }, navigationConfig);
+  await page.evaluate(
+    (fixture) => {
+      const fixtureWindow =
+        globalThis as unknown as ArchiveNavigationFixtureWindow;
+      fixtureWindow.postludeArchiveNavigationFixture = fixture;
+    },
+    { ...navigationConfig, saveOutcome },
+  );
   await page.addScriptTag({
     content: navigationAssets.script,
     type: 'module',

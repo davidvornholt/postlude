@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 
 import { createAutosaveRegistry } from './autosave-registry.ts';
+import { journalWriteMessage } from './errors/journal-errors.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
 
@@ -83,6 +84,26 @@ it('flushes quiet edits and waits for their save before a dependent read', async
   pending.resolve({ revision: 101 });
   await settling;
   expect(finished).toBe(true);
+});
+
+it('rejects settlement when the forced save fails and retains the draft', async () => {
+  const recovery = memoryRecovery();
+  const registry = createAutosaveRegistry(() => recovery);
+  const coordinator = registry.acquire(stored, () =>
+    Promise.reject(new TypeError('offline')),
+  );
+  coordinator.edit({ journalMarkdown: 'Keep me on the writing page.' });
+
+  await expect(registry.settle()).rejects.toThrow(journalWriteMessage);
+  expect(coordinator.snapshot()).toMatchObject({
+    draft: { ...draft, journalMarkdown: 'Keep me on the writing page.' },
+    failure: { kind: 'network', message: journalWriteMessage },
+    inFlight: undefined,
+    stored,
+  });
+  expect(recovery.read(draft.date)?.journalMarkdown).toBe(
+    'Keep me on the writing page.',
+  );
 });
 
 it('retains an in-flight coordinator across mounts, then evicts it', async () => {

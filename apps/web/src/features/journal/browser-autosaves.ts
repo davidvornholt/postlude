@@ -14,6 +14,19 @@ export const acquireBrowserAutosave = (
 
 export const settleBrowserAutosaves = (): Promise<void> => registry.settle();
 
+/** Leaves the current page in place when its forced save cannot be confirmed. */
+export const navigateAfterSettlingBrowserAutosaves = async (
+  navigate: () => Promise<void>,
+): Promise<boolean> => {
+  try {
+    await settleBrowserAutosaves();
+  } catch {
+    return false;
+  }
+  await navigate();
+  return true;
+};
+
 export const readAfterSettlingBrowserAutosaves = async <A>(
   read: () => Promise<A>,
 ): Promise<A> => {

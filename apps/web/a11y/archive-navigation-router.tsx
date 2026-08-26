@@ -5,10 +5,16 @@ import {
   createRouter,
   Link,
   Outlet,
+  useRouter,
+  useRouterState,
 } from '@tanstack/react-router';
+import type { MouseEvent } from 'react';
 
 import { activityWindow } from '../src/features/journal/activity.ts';
-import { readAfterSettlingBrowserAutosaves } from '../src/features/journal/browser-autosaves.ts';
+import {
+  navigateAfterSettlingBrowserAutosaves,
+  readAfterSettlingBrowserAutosaves,
+} from '../src/features/journal/browser-autosaves.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
 import { ArchivePage } from './archive-navigation-archive-module.ts';
@@ -24,6 +30,34 @@ type ArchiveNavigationDependencies = {
 
 const navigationClass =
   'mx-auto flex w-full max-w-[76rem] justify-end px-5 pt-5 sm:px-8';
+
+const FixtureShell = () => {
+  const router = useRouter();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const openArchive = async (
+    event: MouseEvent<HTMLAnchorElement>,
+  ): Promise<void> => {
+    event.preventDefault();
+    await navigateAfterSettlingBrowserAutosaves(() =>
+      router.navigate({ to: '/archive' }),
+    );
+  };
+
+  return (
+    <>
+      <nav aria-label="Journal sections" className={navigationClass}>
+        <Link onClick={openArchive} preload={false} to="/archive">
+          Open archive
+        </Link>
+      </nav>
+      <main data-fixture-route={pathname}>
+        <Outlet />
+      </main>
+    </>
+  );
+};
 
 export const emptyArchiveView = (
   config: ArchiveNavigationFixtureConfig,
@@ -43,20 +77,7 @@ export const createArchiveNavigationRouter = ({
   readArchive,
   save,
 }: ArchiveNavigationDependencies) => {
-  const rootRoute = createRootRoute({
-    component: () => (
-      <>
-        <nav aria-label="Journal sections" className={navigationClass}>
-          <Link preload={false} to="/archive">
-            Open archive
-          </Link>
-        </nav>
-        <main>
-          <Outlet />
-        </main>
-      </>
-    ),
-  });
+  const rootRoute = createRootRoute({ component: FixtureShell });
   const dayRoute = createRoute({
     component: () => (
       <DayPage

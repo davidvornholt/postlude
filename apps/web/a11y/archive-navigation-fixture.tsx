@@ -20,6 +20,9 @@ const save = async (draft: {
   readonly journalMarkdown: string;
 }): Promise<{ readonly revision: number }> => {
   await new Promise((resolve) => setTimeout(resolve, saveDelayMs));
+  if (config.saveOutcome === 'failed') {
+    throw new TypeError('offline');
+  }
   const day = {
     date: config.today,
     journalWords: countJournalWords(draft.journalMarkdown),
@@ -42,7 +45,11 @@ const save = async (draft: {
 
 const router = createArchiveNavigationRouter({
   config,
-  readArchive: () => Promise.resolve(view),
+  readArchive: () => {
+    const reads = Number(document.documentElement.dataset.archiveReads ?? '0');
+    document.documentElement.dataset.archiveReads = String(reads + 1);
+    return Promise.resolve(view);
+  },
   save,
 });
 await router.load();
@@ -53,4 +60,5 @@ if (root === null) {
 }
 
 hydrateRoot(root, <RouterProvider router={router} />);
+document.documentElement.dataset.archiveReads = '0';
 document.documentElement.dataset.hydrated = 'true';

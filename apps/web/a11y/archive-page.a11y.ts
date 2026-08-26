@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { journalWriteMessage } from '../src/features/journal/errors/journal-errors.ts';
 import {
   archiveFixtureConfigs,
   mountArchiveNavigation,
@@ -30,6 +31,25 @@ test('the first archive render includes an edit made inside the autosave quiet p
     'data-stored-revision',
     revision,
   );
+  await expect(page.locator('html')).toHaveAttribute('data-archive-reads', '1');
+});
+
+test('a rejected forced save keeps the writing page and skips the archive read', async ({
+  page,
+}) => {
+  await mountArchiveNavigation(page, 'failed');
+  const evening = page.getByRole('textbox', { name: 'Evening journal' });
+  await evening.fill('Keep this failed draft visible.');
+  await page.getByRole('link', { name: 'Open archive' }).click();
+
+  await expect(evening).toContainText('Keep this failed draft visible.');
+  await expect(
+    page.getByText(journalWriteMessage, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Archive' })).toHaveCount(0);
+  await expect(page.locator('html')).toHaveAttribute('data-archive-reads', '0');
+  await expect(page.locator('main')).toHaveAttribute('data-fixture-route', '/');
 });
 
 for (const colorScheme of colorSchemes) {

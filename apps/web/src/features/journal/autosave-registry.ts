@@ -6,7 +6,11 @@
  * the same ordered queue instead of creating a competing one.
  */
 
-import type { ConfirmedDraft } from './autosave.ts';
+import {
+  type AutosaveFailure,
+  type ConfirmedDraft,
+  sameDraft,
+} from './autosave.ts';
 import {
   type AutosaveCoordinator,
   createAutosaveCoordinator,
@@ -19,19 +23,34 @@ export type AutosaveRegistry = {
     stored: ConfirmedDraft,
     save: SaveDraft,
   ) => AutosaveCoordinator;
-  /** Starts every queued save and resolves when no request remains in flight. */
+  /** Starts every queued save and rejects if any draft remains unconfirmed. */
   readonly settle: () => Promise<void>;
 };
 
+class AutosaveSettlementError extends Error {
+  readonly failure: AutosaveFailure | undefined;
+
+  constructor(failure: AutosaveFailure | undefined) {
+    super(failure?.message ?? 'The journal draft is not stored.');
+    this.name = 'AutosaveSettlementError';
+    this.failure = failure;
+  }
+}
+
 const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     let unsubscribe = (): void => undefined;
     const resolveWhenSettled = (): void => {
-      if (coordinator.snapshot().inFlight !== undefined) {
+      const state = coordinator.snapshot();
+      if (state.inFlight !== undefined) {
         return;
       }
       unsubscribe();
-      resolve();
+      if (sameDraft(state.draft, state.stored.draft)) {
+        resolve();
+        return;
+      }
+      reject(new AutosaveSettlementError(state.failure));
     };
     unsubscribe = coordinator.subscribe(resolveWhenSettled);
     coordinator.flush();
