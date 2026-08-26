@@ -19,7 +19,6 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import {
   EntryDraftSchema,
@@ -27,6 +26,7 @@ import {
   type JournalEntry,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { runJournalEffect } from './journal-runtime.ts';
 import { decodeReadEntryInput } from './read-entry-input.ts';
 
 /** Today as the configured zone reads it, with the 04:00 rule applied. */
@@ -45,7 +45,7 @@ export const readEntryFn = createServerFn({ method: 'GET' })
   .inputValidator((input: unknown) => decodeReadEntryInput(input))
   .handler(({ data }): Promise<JournalEntry> => {
     const date = data.date ?? currentJournalDate();
-    return runServerEffect(
+    return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const entry = yield* entries.read(date);
@@ -64,7 +64,7 @@ export const saveEntryFn = createServerFn({ method: 'POST' })
   .inputValidator((input: unknown) => decodeDraft(input))
   .handler(
     ({ data }): Promise<JournalEntry> =>
-      runServerEffect(
+      runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntryRepository;
           return yield* entries.save(data);
