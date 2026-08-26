@@ -1,81 +1,17 @@
-import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
-import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
-import { buildDayPageFixture } from './day-page-fixture-build.ts';
-import type {
-  DayPageFixtureConfig,
-  DayPageFixtureWindow,
-  SaveOutcome,
-} from './day-page-fixture-contract.ts';
+import { editAndLeave, mountDayPage, scan } from './day-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
 
-const today = '2026-08-26';
-const timestamp = '2026-08-26T20:00:00.000Z';
-const textboxCount = 3;
 const passageLinkName = /Read Proverbs 12:5-13/u;
 const bibleserverLinkName = /bibleserver/u;
-
-const fixtureConfig = (
-  saveOutcomes: ReadonlyArray<SaveOutcome>,
-): DayPageFixtureConfig => ({
-  entry: {
-    date: today,
-    journalMarkdown: '',
-    journalWordCount: 0,
-    scriptureMarkdown: '',
-    scriptureWordCount: 0,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  },
-  today,
-  saveOutcomes,
-});
-
-const assets = await buildDayPageFixture(fixtureConfig(['stored']));
-
-const mountDayPage = async (
-  page: playwright.Page,
-  saveOutcomes: ReadonlyArray<SaveOutcome>,
-): Promise<void> => {
-  const config = fixtureConfig(saveOutcomes);
-  const browserErrors: Array<string> = [];
-  page.on('pageerror', (error) => browserErrors.push(error.message));
-  await page.setContent(
-    `<html lang="en"><head><title>Writing page fixture</title></head><body><main id="day-page-fixture">${assets.markup}</main></body></html>`,
-  );
-  await page.addStyleTag({ content: assets.styles });
-  await page.evaluate((fixture) => {
-    const fixtureWindow = globalThis as unknown as DayPageFixtureWindow;
-    fixtureWindow.postludeDayPageFixture = fixture;
-  }, config);
-  await page.addScriptTag({ content: assets.script, type: 'module' });
-  try {
-    await page.locator('html[data-hydrated="true"]').waitFor({ timeout: 5000 });
-  } catch (error) {
-    throw new Error(
-      `The hydrated fixture failed: ${browserErrors.join(' | ')}`,
-      { cause: error },
-    );
-  }
-  await expect(page.getByRole('textbox')).toHaveCount(textboxCount);
-};
-
-const scan = async (page: playwright.Page): Promise<void> => {
-  expect(await scanWcag22AaViolations(page)).toEqual([]);
-};
-
-const editAndLeave = async (
-  page: playwright.Page,
-  name: string,
-  text: string,
-): Promise<void> => {
-  const field = page.getByRole('textbox', { name });
-  await field.focus();
-  await page.keyboard.type(text);
-  await page.keyboard.press('Tab');
-};
+const connectionMessage =
+  'This entry could not be saved. Your words are still here; check your connection.';
+const validationMessage =
+  'Check the scripture reference and use a form such as Proverbs 12:5-13.';
+const authenticationMessage =
+  'Your sign-in ended before this entry could be saved. Your words are kept in this tab.';
 
 const colorSchemes = ['light', 'dark'] as const;
 
@@ -103,10 +39,12 @@ for (const colorScheme of colorSchemes) {
       name: 'Morning scripture notes',
     });
     await expect(morning).toBeFocused();
+    await expect(morning).toHaveAttribute('aria-multiline', 'true');
     await page.keyboard.type('Mercy arrived this morning.');
     await page.keyboard.press('Tab');
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
     await expect(evening).toBeFocused();
+    await expect(evening).toHaveAttribute('aria-multiline', 'true');
     await page.keyboard.type('A quiet evening ended well.');
     await page.keyboard.press('Tab');
 
@@ -133,10 +71,21 @@ for (const colorScheme of colorSchemes) {
     await mountDayPage(page, ['failed']);
     await editAndLeave(page, 'Evening journal', 'Keep these words.');
     await expect(
-      page.getByText('Could not save', { exact: true }),
+      page.getByText(connectionMessage, { exact: true }),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
     await scan(page);
+
+    const evening = page.getByRole('textbox', { name: 'Evening journal' });
+    await evening.focus();
+    await page.keyboard.down('Control');
+    await page.keyboard.press('a');
+    await page.keyboard.up('Control');
+    await page.keyboard.press('Backspace');
+    await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
+      0,
+    );
   });
 
   test(`an invalid passage passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
@@ -145,12 +94,41 @@ for (const colorScheme of colorSchemes) {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountDayPage(page, ['validation']);
     await editAndLeave(page, 'Passage', 'Proverbs 12:');
-    await expect(
-      page.getByText('Could not save', { exact: true }),
-    ).toBeVisible();
+    const passage = page.getByRole('textbox', { name: 'Passage' });
+    await expect(passage).toHaveAttribute('aria-invalid', 'true');
+    const guidanceId = await passage.getAttribute('aria-describedby');
+    expect(guidanceId).not.toBeNull();
+    await expect(page.locator(`#${guidanceId ?? ''}`)).toHaveText(
+      validationMessage,
+    );
+    await expect(page.locator('[aria-live="polite"]')).toHaveText(
+      validationMessage,
+    );
     await expect(
       page.getByRole('link', { name: bibleserverLinkName }),
     ).toHaveCount(0);
+    await scan(page);
+
+    await passage.fill('Proverbs 12:5');
+    await expect(passage).not.toHaveAttribute('aria-invalid', 'true');
+    expect(await passage.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  test(`an expired sign-in passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountDayPage(page, ['authentication']);
+    await editAndLeave(page, 'Evening journal', 'Keep this after sign-in.');
+    await expect(
+      page.getByText(authenticationMessage, { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Sign in again' }),
+    ).toHaveAttribute('href', '/login');
+    await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
+      0,
+    );
     await scan(page);
   });
 

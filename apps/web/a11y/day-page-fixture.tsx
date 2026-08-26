@@ -29,6 +29,9 @@ const save = (): Promise<unknown> => {
   if (outcome === 'pending') {
     return new Promise(() => undefined);
   }
+  if (outcome === 'authentication') {
+    return Promise.reject(new Response('', { status: 401 }));
+  }
   const message =
     outcome === 'validation'
       ? 'Check the scripture reference and use a form such as Proverbs 12:5-13.'

@@ -81,7 +81,9 @@ export const MarkdownEditor = ({
     editorProps: {
       attributes: {
         'aria-label': label,
+        'aria-multiline': 'true',
         class: [proseClass, focusClass, writingAreaClass].join(' '),
+        role: 'textbox',
       },
     },
     onUpdate: ({ editor: updated }) => changed.current(updated.getMarkdown()),

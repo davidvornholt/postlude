@@ -1,6 +1,11 @@
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 
-export type SaveOutcome = 'stored' | 'failed' | 'validation' | 'pending';
+export type SaveOutcome =
+  | 'stored'
+  | 'failed'
+  | 'validation'
+  | 'authentication'
+  | 'pending';
 
 export type FixtureEntry = Omit<JournalEntry, 'createdAt' | 'updatedAt'> & {
   readonly createdAt: string;
