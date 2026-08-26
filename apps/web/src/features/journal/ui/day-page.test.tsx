@@ -84,16 +84,24 @@ it('names the day in full, and how long ago it was', async () => {
 it('offers no way forward from today', async () => {
   const html = await render(entryOn());
 
-  expect(html).toContain('Previous day');
-  expect(html).not.toContain('Next day');
+  expect(html).toContain('aria-label="Previous day"');
+  expect(html).not.toContain('aria-label="Next day"');
 });
 
+/*
+ * The steps are arrows rather than words, so what each one is called lives in
+ * `aria-label` — an arrow with no name is a control that cannot be read aloud
+ * or reached by voice.
+ */
 it('leads back to today from the day before it', async () => {
   const html = await render(entryOn({ date: '2026-08-25' }));
-  expect(elementAttributes(html, 'a', 'Next day →')).toContain('href="/"');
-  expect(elementAttributes(html, 'a', '← Previous day')).toContain(
-    'href="/day/2026-08-24"',
-  );
+  const next = elementAttributes(html, 'a', '→');
+  const previous = elementAttributes(html, 'a', '←');
+
+  expect(next).toContain('href="/"');
+  expect(next).toContain('aria-label="Next day"');
+  expect(previous).toContain('href="/day/2026-08-24"');
+  expect(previous).toContain('aria-label="Previous day"');
 });
 
 it('omits the previous-day link at the start of the journal calendar', async () => {
@@ -270,4 +278,20 @@ it('offers a way to a day by naming it, without needing script', async () => {
   expect(html).toContain('Go to a day');
   expect(html).toContain(`max="${today}"`);
   expect(html).toContain('value="2026-08-24"');
+});
+
+/*
+ * The date is the control rather than a second field repeating it. What the
+ * heading is called has to carry both what it says and what pressing it does,
+ * because the words the writer sees are only the date.
+ */
+it('makes the date itself the way to another day', async () => {
+  const html = await render(entryOn({ date: '2026-08-24' }));
+  const heading = elementAttributes(html, 'button', 'Monday, August 24, 2026');
+
+  expect(heading).toContain('type="button"');
+  expect(heading).toContain(
+    'aria-label="Monday, August 24, 2026. Go to another day."',
+  );
+  expect(html.match(/<h1\b/gu)?.length).toBe(1);
 });

@@ -15,6 +15,10 @@
  *
  * A day is written on the page it is read on, so this same component serves
  * today and any day in the archive. Only the route differs.
+ *
+ * The date at the top is the way to another day as well as the name of this
+ * one: `day-heading.tsx` makes it the field, and the two arrows under it step
+ * to the day before and the day after.
  */
 
 import { useId } from 'react';
@@ -25,9 +29,9 @@ import {
   pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { iconButtonClass } from '#/shared/ui/form-classes.ts';
 import type { Anniversary } from '../anniversary.ts';
-import { journalDateLabel, journalDayRelation } from '../day-label.ts';
+import { journalDayRelation } from '../day-label.ts';
 import {
   daysBetweenJournalDates,
   earliestJournalDate,
@@ -36,7 +40,7 @@ import {
 } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
-import { DayJump } from './day-jump.tsx';
+import { DayHeading } from './day-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
@@ -101,38 +105,34 @@ const DayBody = ({ entry, today, save, anniversaries }: DayPageProps) => {
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           {journalDayRelation(entry.date, today)}
         </p>
-        {/* Balanced, because a date is one thing and breaking it after the
-            month leaves a year alone on a line. The browser evens the lines
-            out instead of filling the first one and dropping what is left. */}
-        <h1 className="mt-3 text-balance font-display text-4xl text-ink sm:text-5xl">
-          {journalDateLabel(entry.date)}
-        </h1>
-        {/* The links and the date field answer the same question — which day
-            am I looking at — so they are one landmark rather than a nav and a
-            stray form beside it. They sit on one row while there is room and
-            fall onto two when there is not, with the field last, because a
-            step to yesterday is the common move and naming a date is not. */}
-        <nav
-          aria-label="Nearby days"
-          className="mt-8 flex flex-wrap items-end gap-x-8 gap-y-6"
-        >
-          <div className="flex gap-8 pb-1">
-            {previous === undefined ? null : (
-              <DayLink
-                className={quietButtonClass}
-                date={previous}
-                today={today}
-              >
-                <span aria-hidden="true">←</span> Previous day
-              </DayLink>
-            )}
-            {next === undefined ? null : (
-              <DayLink className={quietButtonClass} date={next} today={today}>
-                Next day <span aria-hidden="true">→</span>
-              </DayLink>
-            )}
-          </div>
-          <DayJump date={entry.date} today={today} />
+        <DayHeading date={entry.date} today={today} />
+        {/* Two arrows rather than two labels. The heading above them already
+            names the day they step from, so spelling out "previous day" beside
+            it is the page saying the same thing a third time — and the pair
+            reads as one stepper at a glance, which two lines of small capitals
+            never did. Each one still says where it goes in `aria-label`, and
+            the arrow sits in a target wider than the arrow. */}
+        <nav aria-label="Nearby days" className="mt-6 -ml-3 flex gap-1">
+          {previous === undefined ? null : (
+            <DayLink
+              className={iconButtonClass}
+              date={previous}
+              label="Previous day"
+              today={today}
+            >
+              ←
+            </DayLink>
+          )}
+          {next === undefined ? null : (
+            <DayLink
+              className={iconButtonClass}
+              date={next}
+              label="Next day"
+              today={today}
+            >
+              →
+            </DayLink>
+          )}
         </nav>
       </header>
 
