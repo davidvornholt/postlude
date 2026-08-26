@@ -26,15 +26,19 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { renderToString } from 'react-dom/server';
-
 import { BrandLink } from './brand-link.tsx';
+import { columnClass } from './design-classes.ts';
 import {
   InsideMainLandmark,
   RouterError,
   RouterNotFound,
 } from './router-fallbacks.tsx';
 
-/** The shape `_app` gives the page: a wordmark, then the one main landmark. */
+/**
+ * The shape `_app` gives the page: a wordmark, then the one main landmark, and
+ * no column — the shell leaves the measure to the page so the archive can
+ * widen and the deep register can reach the edges.
+ */
 const shellComponent = () => (
   <div>
     <BrandLink>Wordmark</BrandLink>
@@ -109,6 +113,9 @@ const renderAt = async (path: string): Promise<string> => {
 const mainLandmarks = (html: string): number =>
   html.match(/<main\b/gu)?.length ?? 0;
 
+const columnWrappers = (html: string): number =>
+  html.split(columnClass).length - 1;
+
 /**
  * The attributes of the one anchor with this exact text. Attribute order is
  * React's to choose and it varies between renders, so callers match on
@@ -149,6 +156,20 @@ it('opens a main landmark when the shell guard itself fails', async () => {
 
   expect(html).toContain('Something went wrong');
   expect(mainLandmarks(html)).toBe(1);
+});
+
+/*
+ * The fallback owns its measure in both positions, because the shell hands the
+ * page none. Two counts of one rather than a single count of two: a fallback
+ * nested in a second column reads as an indent, and one with no column runs to
+ * the viewport edges, and both would still total two across the pair.
+ */
+it('sets the text column exactly once wherever a fallback lands', async () => {
+  const insideShell = await renderAt('/gone');
+  const neverReachedShell = await renderAt('/nowhere');
+
+  expect(columnWrappers(insideShell)).toBe(1);
+  expect(columnWrappers(neverReachedShell)).toBe(1);
 });
 
 /*

@@ -91,7 +91,7 @@ const AppShell = () => {
           <p className="font-display text-ink text-xl">
             <BrandLink>Postlude</BrandLink>
           </p>
-          <div className="-mb-px flex items-center gap-6">
+          <div className="flex items-center gap-6">
             <nav aria-label="Main">
               <ul className="flex items-center gap-6">
                 {navItems.map((item) => (
@@ -132,11 +132,11 @@ const AppShell = () => {
           ) : null}
         </div>
       </header>
-      <main
-        className={[columnClass, 'py-10 sm:py-14'].join(' ')}
-        id={mainId}
-        tabIndex={-1}
-      >
+      {/* No column here. The page sets its own measure — the text column for
+          writing, the wider one for the archive — because the deep register
+          has to run edge to edge, and it cannot escape a column the shell has
+          already set around every page. */}
+      <main className="py-10 sm:py-14" id={mainId} tabIndex={-1}>
         {/* A route that fails renders its fallback here, in place of the page
             it replaces, so the fallback has to know it is already inside the
             one main landmark this page gets. */}

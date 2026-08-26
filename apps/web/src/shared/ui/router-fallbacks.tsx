@@ -68,20 +68,28 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
 };
 
 /*
- * Inside the shell the page is already set in its column, so the fallback adds
- * only its own content; a failure that never reached the shell has to open the
- * landmark and set the column itself, the way the sign-in page does.
+ * The shell sets no column — each page picks its own measure — so the fallback
+ * sets the text column either way, and both branches below render that one
+ * wrapper exactly once. What the branches decide is only the landmark: inside
+ * the shell the fallback is already in the one <main> the page gets, and a
+ * failure that never reached the shell has to open it, the way the sign-in
+ * page does.
  */
-const FallbackPage = ({ heading, message }: FallbackContent) =>
-  useContext(MainLandmarkContext) ? (
-    <FallbackBody heading={heading} message={message} />
+const FallbackPage = ({ heading, message }: FallbackContent) => {
+  const column = (
+    <div className={columnClass}>
+      <FallbackBody heading={heading} message={message} />
+    </div>
+  );
+
+  return useContext(MainLandmarkContext) ? (
+    column
   ) : (
     <main className="flex min-h-svh flex-col justify-center bg-background py-16">
-      <div className={columnClass}>
-        <FallbackBody heading={heading} message={message} />
-      </div>
+      {column}
     </main>
   );
+};
 
 export const RouterNotFound = () => (
   <FallbackPage
