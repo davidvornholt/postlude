@@ -22,6 +22,7 @@ import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel, journalDayRelation } from '../day-label.ts';
 import {
   daysBetweenJournalDates,
+  earliestJournalDate,
   type JournalDate,
   shiftJournalDate,
 } from '../journal-day.ts';
@@ -62,9 +63,19 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
 });
 
 const DayBody = ({ entry, today, save }: DayPageProps) => {
-  const autosave = useAutosave(draftOf(entry), save);
+  const autosave = useAutosave(
+    { draft: draftOf(entry), revision: entry.updatedAt.getTime() },
+    save,
+  );
+  const referenceError =
+    autosave.failure?.kind === 'validation'
+      ? autosave.failure.message
+      : undefined;
   const eveningId = useId();
-  const previous = shiftJournalDate(entry.date, -1);
+  const previous =
+    entry.date === earliestJournalDate
+      ? undefined
+      : shiftJournalDate(entry.date, -1);
   const elapsed = daysBetweenJournalDates(entry.date, today);
   // No link forward from today: the next day has not been lived, and offering
   // it would invite writing an evening that has not happened.
@@ -80,9 +91,15 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           {journalDateLabel(entry.date)}
         </h1>
         <nav aria-label="Nearby days" className="mt-8 flex gap-8">
-          <DayLink className={quietButtonClass} date={previous} today={today}>
-            <span aria-hidden="true">←</span> Previous day
-          </DayLink>
+          {previous === undefined ? null : (
+            <DayLink
+              className={quietButtonClass}
+              date={previous}
+              today={today}
+            >
+              <span aria-hidden="true">←</span> Previous day
+            </DayLink>
+          )}
           {next === undefined ? null : (
             <DayLink className={quietButtonClass} date={next} today={today}>
               Next day <span aria-hidden="true">→</span>
@@ -93,7 +110,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
 
       <div className="mt-10 sm:mt-14">
         <ScriptureRegister
-          initialMarkdown={entry.scriptureMarkdown}
+          initialMarkdown={autosave.draft.scriptureMarkdown}
           onLeave={autosave.flush}
           onMarkdownChange={(scriptureMarkdown) =>
             autosave.edit({ scriptureMarkdown })
@@ -102,6 +119,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             autosave.edit({ scriptureReference })
           }
           reference={autosave.draft.scriptureReference}
+          referenceError={referenceError}
         />
       </div>
 
@@ -118,7 +136,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
         <div className="mt-6">
           <MarkdownEditor
             focusClass={focusRingClass}
-            initialMarkdown={entry.journalMarkdown}
+            initialMarkdown={autosave.draft.journalMarkdown}
             label="Evening journal"
             onChange={(journalMarkdown) => autosave.edit({ journalMarkdown })}
             onLeave={autosave.flush}
@@ -133,7 +151,11 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             grows; a second one here would be the same line drawn twice. */}
         <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
           <EntryCounts markdown={autosave.draft.journalMarkdown} />
-          <SaveStatusLine onRetry={autosave.flush} status={autosave.status} />
+          <SaveStatusLine
+            failure={autosave.failure}
+            onRetry={autosave.flush}
+            status={autosave.status}
+          />
         </div>
       </section>
     </>

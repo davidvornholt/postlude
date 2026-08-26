@@ -3,7 +3,6 @@ import { describe, expect, it } from 'bun:test';
 import {
   daysBetweenJournalDates,
   isJournalDate,
-  isTimeZone,
   journalDateAt,
   shiftJournalDate,
 } from './journal-day.ts';
@@ -117,6 +116,11 @@ describe('shiftJournalDate', () => {
     expect(date).toBe('2026-12-20');
     expect(shiftJournalDate(date, -steps)).toBe(start);
   });
+
+  it('refuses to leave the supported Common Era range', () => {
+    expect(() => shiftJournalDate('0001-01-01', -1)).toThrow(RangeError);
+    expect(() => shiftJournalDate('9999-12-31', 1)).toThrow(RangeError);
+  });
 });
 
 describe('daysBetweenJournalDates', () => {
@@ -136,6 +140,11 @@ describe('daysBetweenJournalDates', () => {
       daysInCommonYear,
     );
   });
+
+  it('does not let JavaScript rewrite years below 100', () => {
+    expect(daysBetweenJournalDates('0099-12-31', '0100-01-01')).toBe(1);
+    expect(daysBetweenJournalDates('0100-01-01', '0099-12-31')).toBe(-1);
+  });
 });
 
 describe('isJournalDate', () => {
@@ -150,13 +159,13 @@ describe('isJournalDate', () => {
     expect(isJournalDate('2026-08-26T00:00:00Z')).toBe(false);
     expect(isJournalDate('')).toBe(false);
   });
-});
 
-describe('isTimeZone', () => {
-  it('separates a zone the platform resolves from one it does not', () => {
-    expect(isTimeZone(berlin)).toBe(true);
-    expect(isTimeZone('UTC')).toBe(true);
-    expect(isTimeZone('Europe/Bergstadt')).toBe(false);
-    expect(isTimeZone('')).toBe(false);
+  it('stays inside the supported four-digit Common Era range', () => {
+    expect(isJournalDate('0001-01-01')).toBe(true);
+    expect(isJournalDate('0099-12-31')).toBe(true);
+    expect(isJournalDate('0100-01-01')).toBe(true);
+    expect(isJournalDate('9999-12-31')).toBe(true);
+    expect(isJournalDate('0000-01-01')).toBe(false);
+    expect(isJournalDate('10000-01-01')).toBe(false);
   });
 });

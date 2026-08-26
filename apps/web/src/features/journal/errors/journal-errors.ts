@@ -1,12 +1,10 @@
 /**
  * What the journal's service boundary is allowed to fail with.
  *
- * Two errors, split by what the reader can do about them rather than by what
- * went wrong underneath. A read that fails leaves the page with nothing to show
- * and is worth retrying. A write that fails means words the writer typed are not
- * saved, which is the only failure in Postlude that costs something that cannot
- * be recovered by trying again later — so it is a separate tag, and the writing
- * page treats it as one.
+ * Errors are split by what the reader can do about them rather than by what went
+ * wrong underneath. A read failure is worth retrying. A validation failure
+ * needs a correction. A database write failure means words were not saved and
+ * may clear on another attempt.
  *
  * `message` is written to be shown. A database error underneath carries a
  * connection string and a statement, neither of which belongs on a page or in a
@@ -14,6 +12,12 @@
  */
 
 import { Data } from 'effect';
+
+export const journalWriteMessage =
+  'This entry could not be saved. Your words are still here; check your connection.';
+
+export const invalidScriptureReferenceMessage =
+  'Check the scripture reference and use a form such as Proverbs 12:5-13.';
 
 export class JournalReadError extends Data.TaggedError('JournalReadError')<{
   readonly message: string;
@@ -25,6 +29,12 @@ export class JournalWriteError extends Data.TaggedError('JournalWriteError')<{
   readonly cause: unknown;
 }> {}
 
+export class JournalValidationError extends Data.TaggedError(
+  'JournalValidationError',
+)<{
+  readonly message: string;
+}> {}
+
 export const journalReadError = (cause: unknown): JournalReadError =>
   new JournalReadError({
     message: 'The journal could not be read. Trying again usually works.',
@@ -33,7 +43,11 @@ export const journalReadError = (cause: unknown): JournalReadError =>
 
 export const journalWriteError = (cause: unknown): JournalWriteError =>
   new JournalWriteError({
-    message:
-      'This entry could not be saved. Your words are still here; check your connection.',
+    message: journalWriteMessage,
     cause,
+  });
+
+export const invalidScriptureReferenceError = (): JournalValidationError =>
+  new JournalValidationError({
+    message: invalidScriptureReferenceMessage,
   });

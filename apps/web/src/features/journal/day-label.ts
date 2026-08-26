@@ -23,7 +23,10 @@ const noonHour = 12;
 
 const asUtcNoon = (date: JournalDate): Date => {
   const { year, month, day } = parseJournalDate(date);
-  return new Date(Date.UTC(year, month - 1, day, noonHour));
+  const instant = new Date(0);
+  instant.setUTCFullYear(year, month - 1, day);
+  instant.setUTCHours(noonHour, 0, 0, 0);
+  return instant;
 };
 
 const longFormat = new Intl.DateTimeFormat('en-GB', {
