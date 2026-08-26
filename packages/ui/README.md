@@ -13,7 +13,7 @@ The file is tokens only: it declares no classes and no keyframes, so nothing her
 Surfaces (`background`, `surface`, `surface-sunken`), inks (`ink`, `ink-muted`, `ink-faint`), the primary and accent families, `positive` / `critical`, borders, and two shadow tokens (`shadow-card`, `shadow-featured`, both `none` — nothing in Postlude floats, and the tokens exist so a utility that names one resolves). Two groups serve the archive and the writing page:
 
 - **The activity ramp.** `heat-q1` through `heat-q4` form one sequential hue whose lightness moves toward more activity. The direction reverses with the color scheme, so order carries the meaning rather than darkness alone. `heat-none` fills an unwritten day, while `heat-none-mark` draws the contrasting outline that separates no entry from the ramp.
-- **The deep register.** `deep-ground`, `deep-ink`, `deep-ink-muted`, and `deep-rule` define the one inverse panel. It is dark against the light page and parchment against the dark one, so turning to it always reads as a change of register.
+- **The deep register.** `deep-ground`, `deep-ink`, `deep-ink-muted`, and `deep-rule` define the one separate panel. It is dark against the light page, and against the dark one it lifts a little off the background instead of inverting to parchment, so turning to it always reads as a change of register without putting a lamp on the page in a dark room.
 
 ## Audits
 

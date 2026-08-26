@@ -6,15 +6,21 @@ import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { parseOAuthErrorSearch } from '#/shared/auth/oauth-error-search.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
-import { columnClass, eyebrowClass } from '#/shared/ui/design-classes.ts';
+import {
+  columnClass,
+  eyebrowClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
 // A notice is one of the few places a filled ground is right: it has to be
 // found by someone who was not looking for it. It still takes a rule rather
 // than a shadow, like everything else on the page.
-const noticeClass =
-  'mt-6 max-w-prose border border-critical bg-critical-subtle px-4 py-3 text-ink';
+const noticeClass = [
+  readingMeasureClass,
+  'mt-6 border border-critical bg-critical-subtle px-4 py-3 text-ink',
+].join(' ');
 
 const SignInPage = () => {
   const { error } = Route.useSearch();
@@ -76,7 +82,12 @@ const SignInPage = () => {
             will end the same way.
           </p>
         )}
-        <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
+        <p
+          className={[
+            readingMeasureClass,
+            'mt-8 border-border border-t pt-8 text-ink-muted text-lg',
+          ].join(' ')}
+        >
           A calm place to close out the day: evening writing, morning scripture
           notes, and a quiet archive.
         </p>

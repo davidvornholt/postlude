@@ -9,9 +9,9 @@
  * and it sits under the measurements because it belongs to the same question —
  * what is in here — rather than to the writing.
  *
- * This is the one page that takes the wider measure: a year of days is 53
- * columns and does not fit the text column. The prose inside it still keeps to
- * a readable width of its own rather than running the full 53 columns.
+ * A year of days is 53 columns wide, and it is what set the page frame every
+ * page now shares. The prose inside it still keeps to a reading measure of its
+ * own rather than running the full 53 columns.
  *
  * A journal with no activity gets one sentence instead of three empty reading
  * sections. Export availability is separate: Markdown structure and whitespace
@@ -21,7 +21,11 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
-import { eyebrowClass, wideColumnClass } from '#/shared/ui/design-classes.ts';
+import {
+  columnClass,
+  eyebrowClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import {
   navLinkActiveClass,
   navLinkClass,
@@ -119,17 +123,27 @@ export const ArchivePage = ({
   const journalIsEmpty = view.years.length === 0;
 
   return (
-    <div className={wideColumnClass}>
+    <div className={columnClass}>
       <h1 className={headingClass}>Archive</h1>
       {journalIsEmpty ? (
-        <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
+        <p
+          className={[
+            readingMeasureClass,
+            'mt-8 border-border border-t pt-8 text-ink-muted text-lg',
+          ].join(' ')}
+        >
           No writing activity yet. The streaks, the year of days, and entries
           from earlier years appear once a day contains prose or a scripture
           reference.
         </p>
       ) : (
         <>
-          <p className="mt-4 max-w-prose text-ink-muted text-lg">
+          <p
+            className={[
+              readingMeasureClass,
+              'mt-4 text-ink-muted text-lg',
+            ].join(' ')}
+          >
             {`${dayCountLabel(written)} written, ${wordCountLabel(view.totals.words)} in all.`}
           </p>
 

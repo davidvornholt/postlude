@@ -7,10 +7,11 @@
  * date to anyone west of the configured clock — the page would disagree with
  * the day it is the page for.
  *
- * The locale is fixed rather than taken from the browser. Postlude's interface
- * is English, and a date that switched between `26 August` and `August 26`
- * depending on which device it was opened on would read as two different
- * conventions inside one journal.
+ * The locale is fixed rather than taken from the browser. Postlude has one
+ * reader and the interface is English, and a date that switched between
+ * `August 26` and `26 August` depending on which device it was opened on would
+ * read as two different conventions inside one journal. The convention is the
+ * American one, which is the one this journal's reader reads dates in.
  */
 
 import {
@@ -29,7 +30,7 @@ const asUtcNoon = (date: JournalDate): Date => {
   return instant;
 };
 
-const longFormat = new Intl.DateTimeFormat('en-GB', {
+const longFormat = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
@@ -37,7 +38,7 @@ const longFormat = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 });
 
-/** The heading a day's page carries: "Wednesday 26 August 2026". */
+/** The heading a day's page carries: "Wednesday, August 26, 2026". */
 export const journalDateLabel = (date: JournalDate): string =>
   longFormat.format(asUtcNoon(date));
 

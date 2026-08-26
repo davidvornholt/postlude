@@ -10,16 +10,16 @@ import { expect, it } from 'bun:test';
 import { journalDateLabel, journalDayRelation } from './day-label.ts';
 
 it('names the day the date is, spelled out', () => {
-  expect(journalDateLabel('2026-08-26')).toBe('Wednesday 26 August 2026');
+  expect(journalDateLabel('2026-08-26')).toBe('Wednesday, August 26, 2026');
 });
 
 it('does not slip a day at either end of the year', () => {
-  expect(journalDateLabel('2026-01-01')).toBe('Thursday 1 January 2026');
-  expect(journalDateLabel('2025-12-31')).toBe('Wednesday 31 December 2025');
+  expect(journalDateLabel('2026-01-01')).toBe('Thursday, January 1, 2026');
+  expect(journalDateLabel('2025-12-31')).toBe('Wednesday, December 31, 2025');
 });
 
 it('keeps the leap day a day', () => {
-  expect(journalDateLabel('2024-02-29')).toBe('Thursday 29 February 2024');
+  expect(journalDateLabel('2024-02-29')).toBe('Thursday, February 29, 2024');
 });
 
 it('does not let JavaScript rewrite years below 0100', () => {

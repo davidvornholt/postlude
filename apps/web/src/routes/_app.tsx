@@ -161,10 +161,10 @@ const AppShell = () => {
           />
         </div>
       )}
-      {/* No column here. The page sets its own measure — the text column for
-          writing, the wider one for the archive — because the deep register
-          has to run edge to edge, and it cannot escape a column the shell has
-          already set around every page. */}
+      {/* No frame here, even though every page sets the same one. The morning
+          scripture's deep register has to run edge to edge, and it cannot
+          escape a frame the shell has already closed around the page, so the
+          pages set the shared frame themselves. */}
       <main
         className="flex-1 py-10 sm:py-14"
         id={mainId}

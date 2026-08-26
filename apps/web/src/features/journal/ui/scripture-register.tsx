@@ -1,7 +1,7 @@
 /**
  * The morning scripture: a passage, and what the writer made of it.
  *
- * This is the deep register — the one inverse surface in the design, edge to
+ * This is the deep register — the one separate surface in the design, edge to
  * edge with its own column inside, so arriving at it reads as turning a page
  * rather than as meeting a card. It is optional every day; an untouched one is
  * a quiet band above the evening's writing and costs nothing to skip.
@@ -19,6 +19,7 @@ import {
   columnClass,
   deepFocusRingClass,
   eyebrowClass,
+  readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { deepFieldClass } from '#/shared/ui/form-classes.ts';
 import {
@@ -74,7 +75,11 @@ export const ScriptureRegister = ({
           aria-describedby={referenceError === undefined ? undefined : errorId}
           aria-invalid={referenceError === undefined ? undefined : true}
           autoComplete="off"
-          className={[deepFieldClass, 'mt-2 font-display text-2xl'].join(' ')}
+          className={[
+            deepFieldClass,
+            readingMeasureClass,
+            'mt-2 font-display text-2xl',
+          ].join(' ')}
           id={fieldId}
           // Leaving the field is a save, the same as leaving either editor.
           onBlur={onLeave}
@@ -114,7 +119,7 @@ export const ScriptureRegister = ({
           </p>
         )}
 
-        <div className="mt-8">
+        <div className={[readingMeasureClass, 'mt-8'].join(' ')}>
           <MarkdownEditor
             focusClass={deepFocusRingClass}
             initialMarkdown={initialMarkdown}

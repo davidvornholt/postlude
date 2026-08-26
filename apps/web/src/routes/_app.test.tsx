@@ -43,7 +43,7 @@ import {
   elementAttributes,
   openingTag,
 } from '#/shared/testing/rendered-html.ts';
-import { columnClass, wideColumnClass } from '#/shared/ui/design-classes.ts';
+import { columnClass } from '#/shared/ui/design-classes.ts';
 
 type SignOutState = {
   readonly isError: boolean;
@@ -170,23 +170,23 @@ it('marks only one page as current away from home', async () => {
   expect(classNames(other).has(ruleAtFullWidth)).toBe(false);
 });
 
-// Any class either measure recipe is built from, so a measure put back on
-// <main> is caught whichever one it is.
-const measureNames = new Set(`${columnClass} ${wideColumnClass}`.split(' '));
+// Any class the frame recipe is built from, so a frame put back on <main> is
+// caught whichever part of it went back.
+const frameNames = new Set(columnClass.split(' '));
 
-const setsAMeasure = (attributes: string): boolean =>
-  [...classNames(attributes)].some((name) => measureNames.has(name));
+const setsAFrame = (attributes: string): boolean =>
+  [...classNames(attributes)].some((name) => frameNames.has(name));
 
 /*
- * Column ownership, which the shell gave up so the archive could widen and the
- * morning scripture's deep register could reach the viewport edges. A measure
- * back on <main> would wrap the page's own and cancel the archive's wider one,
- * and nothing else can see it: the browser suite stops at the sign-in page. The
- * header keeps its column — that one is the shell's to set, around the masthead
- * — so this reads the landmark rather than counting across the page.
+ * Frame ownership, which the shell gave up so the morning scripture's deep
+ * register could reach the viewport edges. A frame back on <main> would close a
+ * column around every page and trap that ground inside it, and nothing else can
+ * see it: the browser suite stops at the sign-in page. The header keeps its own
+ * frame — that one is the shell's to set, around the masthead — so this reads
+ * the landmark rather than counting across the page.
  */
-it('leaves the measure to the page', async () => {
-  expect(setsAMeasure(openingTag(await renderAt('/'), 'main'))).toBe(false);
+it('leaves the frame to the page', async () => {
+  expect(setsAFrame(openingTag(await renderAt('/'), 'main'))).toBe(false);
 });
 
 it('opens one main landmark and points the skip link at it', async () => {

@@ -11,7 +11,11 @@
  * heavier as well, so nothing here is said by colour alone.
  */
 
-import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
+import {
+  eyebrowClass,
+  focusRingClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import type { SearchHit, SearchHitSource } from '../search-contract.ts';
@@ -40,7 +44,12 @@ const Excerpt = ({
 }: {
   readonly segments: ReadonlyArray<ExcerptSegment>;
 }) => (
-  <span className="mt-2 block min-w-0 max-w-prose break-words text-ink text-lg">
+  <span
+    className={[
+      readingMeasureClass,
+      'mt-3 block min-w-0 break-words text-ink text-lg',
+    ].join(' ')}
+  >
     {segments.map((segment) =>
       segment.match ? (
         <mark className={markClass} key={segment.at}>

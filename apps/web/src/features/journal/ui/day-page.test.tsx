@@ -59,7 +59,7 @@ const headingSequence = (html: string): ReadonlyArray<string> =>
 it('names the day in full, and how long ago it was', async () => {
   const html = await render(entryOn({ date: '2026-08-24' }));
 
-  expect(html).toContain('Monday 24 August 2026');
+  expect(html).toContain('Monday, August 24, 2026');
   expect(html).toContain('2 days ago');
 });
 

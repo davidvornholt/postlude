@@ -12,7 +12,11 @@
  * to say nothing.
  */
 
-import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
+import {
+  eyebrowClass,
+  focusRingClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import type { Anniversary } from '../services/archive-fns.ts';
@@ -43,7 +47,11 @@ export const OnThisDay = ({ anniversaries, today }: OnThisDayProps) => (
         <span
           className={[eyebrowClass, 'block text-ink-faint'].join(' ')}
         >{`${anniversary.yearsAgo} year${anniversary.yearsAgo === one ? '' : 's'} ago · ${journalDateLabel(anniversary.date)}`}</span>
-        <span className="mt-3 block max-w-prose text-ink text-lg">
+        <span
+          className={[readingMeasureClass, 'mt-3 block text-ink text-lg'].join(
+            ' ',
+          )}
+        >
           {anniversary.snippet}
         </span>
       </DayLink>
