@@ -1,10 +1,5 @@
 @import "tailwindcss";
 @import "@postlude/ui/theme.css";
-/* The design-comparison themes, after the neutral tokens they override: each
-   file redefines the same `--pl-*` custom properties under its own wrapper
-   class, and a class selector only outranks `:root` if it is also read later. */
-@import "@postlude/ui/comparison-heirloom.css";
-@import "@postlude/ui/comparison-warm-print.css";
 
 body {
   background-color: var(--pl-background);
