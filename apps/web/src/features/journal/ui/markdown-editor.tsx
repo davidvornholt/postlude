@@ -13,18 +13,17 @@
  * written here are one corpus.
  *
  * The editor only ever exists in a browser. ProseMirror needs a live document
- * to attach to, so the server renders the words as plain paragraphs and the
- * editor takes over on hydration — the entry is legible before any of this
- * loads, and never absent while it does.
+ * to attach to, so the server first renders safe semantic Markdown and the
+ * editor takes over on hydration. The entry keeps its readable structure
+ * before any of this loads and is never absent while it does.
  */
 
 import { Placeholder } from '@tiptap/extensions';
-import { Markdown } from '@tiptap/markdown';
 import { EditorContent, useEditor } from '@tiptap/react';
-import StarterKit from '@tiptap/starter-kit';
 import { useEffect, useRef } from 'react';
 
-import { journalPlainText } from '../word-count.ts';
+import { journalMarkdownExtensions } from './markdown-extensions.ts';
+import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 
 type MarkdownEditorProps = {
   /** Names the writing area, which carries no visible label of its own. */
@@ -45,29 +44,9 @@ type MarkdownEditorProps = {
  * it before hydration alike. An empty day is mostly this: a tall area with a
  * rule under it, which is what says there is somewhere to write before there is
  * anything written. Both wear it so the page does not resize when ProseMirror
- * arrives and the area stops being a paragraph and starts being an editor.
+ * arrives and the read-only surface becomes an editor.
  */
 const writingAreaClass = 'journal-writing min-h-48';
-
-/** A run of lines with no blank line in it: one paragraph. */
-const paragraphRun = /[^\n]+(?:\n(?!\n)[^\n]*)*/gu;
-
-/**
- * The words, before the editor arrives. Markup is stripped rather than
- * half-rendered, so the pre-hydration page is plainly a plain rendering and
- * never a broken one; paragraphs survive because their breaks are what makes a
- * long entry readable at all.
- *
- * Each one is keyed by where it starts, which is unique even when a writer
- * repeats a line word for word.
- */
-const staticParagraphs = (
-  markdown: string,
-): ReadonlyArray<{ readonly at: number; readonly text: string }> =>
-  Array.from(journalPlainText(markdown).matchAll(paragraphRun), (match) => ({
-    at: match.index,
-    text: match[0].trim(),
-  })).filter((paragraph) => paragraph.text !== '');
 
 export const MarkdownEditor = ({
   label,
@@ -94,10 +73,7 @@ export const MarkdownEditor = ({
     // rendered on the server, so it waits for the browser.
     immediatelyRender: false,
     extensions: [
-      // Underline has no markdown spelling. Leaving it in would let a keyboard
-      // shortcut produce formatting that the next save silently discards.
-      StarterKit.configure({ underline: false }),
-      Markdown,
+      ...journalMarkdownExtensions(),
       Placeholder.configure({ placeholder }),
     ],
     content: initialMarkdown,
@@ -105,7 +81,9 @@ export const MarkdownEditor = ({
     editorProps: {
       attributes: {
         'aria-label': label,
+        'aria-multiline': 'true',
         class: [proseClass, focusClass, writingAreaClass].join(' '),
+        role: 'textbox',
       },
     },
     onUpdate: ({ editor: updated }) => changed.current(updated.getMarkdown()),
@@ -114,11 +92,10 @@ export const MarkdownEditor = ({
 
   if (editor === null) {
     return (
-      <div className={[proseClass, writingAreaClass].join(' ')}>
-        {staticParagraphs(initialMarkdown).map((paragraph) => (
-          <p key={paragraph.at}>{paragraph.text}</p>
-        ))}
-      </div>
+      <ReadOnlyMarkdown
+        className={[proseClass, writingAreaClass].join(' ')}
+        markdown={initialMarkdown}
+      />
     );
   }
 

@@ -4,19 +4,19 @@
  * separately and neither one repairs the other — a morning passage read on a
  * day nothing was written in the evening keeps one run alive and not the other.
  *
- * A day only joins a run if it was written on the day it is about. Filling in
- * last Tuesday this evening is worth doing and the archive shows it on the map,
- * but it does not put back a run that ended on Tuesday: a streak that can be
- * repaired afterwards measures bookkeeping rather than the habit.
+ * A section only joins its run if it was first used on the day it is about.
+ * Filling in last Tuesday this evening is worth doing and the archive shows it
+ * on the map, but it does not put back a run that ended on Tuesday: a streak
+ * that can be repaired afterwards measures bookkeeping rather than the habit.
  *
  * Today never breaks a run. The evening it is the page for has not finished, so
  * a run that reaches yesterday is still the run the writer is on; only a run
  * that stopped before yesterday is over.
  *
  * Nothing here reads a clock: today arrives as an argument, and the days arrive
- * already marked with whether they were written on the day, because that
- * comparison needs the configured zone and this module has no business knowing
- * one.
+ * already marked with whether each section was first used on the day, because
+ * that comparison needs the configured zone and this module has no business
+ * knowing one.
  */
 
 import type { ActivityDay } from './activity.ts';
@@ -85,17 +85,24 @@ const usedScripture = (day: ActivityDay): boolean =>
 const countedDates = (
   days: ReadonlyArray<ActivityDay>,
   counts: (day: ActivityDay) => boolean,
+  usedOnTheDay: (day: ActivityDay) => boolean,
 ): ReadonlyArray<JournalDate> =>
-  days
-    .filter((day) => day.writtenOnTheDay && counts(day))
-    .map((day) => day.date);
+  days.filter((day) => usedOnTheDay(day) && counts(day)).map((day) => day.date);
 
 export const journalStreak = (
   days: ReadonlyArray<ActivityDay>,
   today: JournalDate,
-): Streak => streakOf(countedDates(days, wroteJournal), today);
+): Streak =>
+  streakOf(
+    countedDates(days, wroteJournal, (day) => day.journalWrittenOnTheDay),
+    today,
+  );
 
 export const scriptureStreak = (
   days: ReadonlyArray<ActivityDay>,
   today: JournalDate,
-): Streak => streakOf(countedDates(days, usedScripture), today);
+): Streak =>
+  streakOf(
+    countedDates(days, usedScripture, (day) => day.scriptureUsedOnTheDay),
+    today,
+  );

@@ -57,7 +57,8 @@ export const sampleJournal = (
         journalWords: minimumWords + Math.floor(random() * wordSpread),
         scriptureWords: random() < scriptureChance ? scriptureWords : 0,
         hasScripture: random() < scriptureChance,
-        writtenOnTheDay: true,
+        journalWrittenOnTheDay: true,
+        scriptureUsedOnTheDay: true,
       });
     }
   }

@@ -14,7 +14,6 @@ import { createServerFn } from '@tanstack/react-start';
 import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
-import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import type { JournalDate } from '../journal-day.ts';
 import {
   type ExcerptSegment,
@@ -25,6 +24,7 @@ import {
 import { journalPlainText } from '../word-count.ts';
 import { EntrySearch, type SearchMatch } from './entry-search.ts';
 import { currentJournalDate } from './journal-fns.ts';
+import { runJournalEffect } from './journal-runtime.ts';
 
 /** As many days as one page shows. The writer refines rather than scrolls. */
 const searchLimit = 50;
@@ -92,7 +92,7 @@ export const searchJournalFn = createServerFn({ method: 'GET' })
     if (terms.length === 0) {
       return Promise.resolve({ query, today, terms, hits: [], limited: false });
     }
-    return runServerEffect(
+    return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntrySearch;
         const matches = yield* entries.search(

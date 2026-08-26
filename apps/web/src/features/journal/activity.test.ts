@@ -10,18 +10,21 @@ import {
   quartiles,
 } from './activity.ts';
 import { daysBetweenJournalDates, journalDateWeekday } from './journal-day.ts';
+import { lastArchiveYear } from './schemas/archive-query.ts';
 
 const day = (date: string, journalWords: number): ActivityDay => ({
   date,
   journalWords,
   scriptureWords: 0,
   hasScripture: false,
-  writtenOnTheDay: true,
+  journalWrittenOnTheDay: true,
+  scriptureUsedOnTheDay: true,
 });
 
 const sunday = 0;
 const saturday = 6;
 const daysPerWeek = 7;
+const rollingWeeksShown = 53;
 const today = '2026-08-26';
 const namedYear = 2025;
 /* Four days apart in word count, one to a quartile, plus a day left blank. */
@@ -39,10 +42,9 @@ it('opens on a Sunday and closes on a Saturday', () => {
 });
 
 it('covers a rolling year of whole weeks', () => {
-  const weeksShown = 53;
   const window = activityWindow(today);
   expect(daysBetweenJournalDates(window.from, window.to) + 1).toBe(
-    weeksShown * daysPerWeek,
+    rollingWeeksShown * daysPerWeek,
   );
 });
 
@@ -54,6 +56,15 @@ it('wraps a named year in the weeks that hold it', () => {
   const window = activityWindow(today, namedYear);
   expect(window.from).toBe('2024-12-29');
   expect(window.to).toBe('2026-01-03');
+});
+
+it('draws the maximum named year as 53 complete four-digit weeks', () => {
+  const window = activityWindow(today, lastArchiveYear);
+  const weeks = activityWeeks(activityCells([], window));
+
+  expect(window).toEqual({ from: '9997-12-28', to: '9999-01-02' });
+  expect(weeks).toHaveLength(rollingWeeksShown);
+  expect(weeks.every((week) => week.length === daysPerWeek)).toBe(true);
 });
 
 it('splits the written days into four groups by nearest rank', () => {
@@ -104,7 +115,8 @@ it('weighs a day by both of the sections it holds', () => {
     journalWords: words.more,
     scriptureWords,
     hasScripture: true,
-    writtenOnTheDay: true,
+    journalWrittenOnTheDay: true,
+    scriptureUsedOnTheDay: true,
   };
   expect(activityTotals([both])).toEqual({
     daysWritten: 1,

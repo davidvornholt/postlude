@@ -1,5 +1,5 @@
 {
-  "id": "d6d79d0a-ef67-4861-9b97-8cf431ff15dc",
+  "id": "f3b0b0bf-582a-4658-a6d5-cd029d14d412",
   "prevId": "3580edbd-b64c-4f1b-8087-86e0ef7b8a50",
   "version": "7",
   "dialect": "postgresql",
@@ -27,6 +27,12 @@
           "notNull": true,
           "default": 0
         },
+        "journal_first_used_at": {
+          "name": "journal_first_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "scripture_markdown": {
           "name": "scripture_markdown",
           "type": "text",
@@ -39,6 +45,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "scripture_first_used_at": {
+          "name": "scripture_first_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "scripture_book": {
           "name": "scripture_book",
@@ -77,35 +89,9 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "search_vector": {
-          "name": "search_vector",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "to_tsvector('simple', coalesce(journal_markdown, '') || ' ' || coalesce(scripture_markdown, '') || ' ' || coalesce(scripture_book, ''))",
-            "type": "stored"
-          }
         }
       },
-      "indexes": {
-        "entry_search_vector_index": {
-          "name": "entry_search_vector_index",
-          "columns": [
-            {
-              "expression": "search_vector",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

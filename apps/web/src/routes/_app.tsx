@@ -6,8 +6,9 @@ import {
   redirect,
   useRouter,
 } from '@tanstack/react-router';
-import { type RefObject, useId, useRef } from 'react';
+import { type MouseEvent, type RefObject, useId, useRef } from 'react';
 
+import { navigateAfterSettlingBrowserAutosaves } from '#/features/journal/browser-autosaves.ts';
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
@@ -55,6 +56,23 @@ const AppShell = () => {
     signOutStarted.current = true;
     signOutMutation.mutate();
   };
+  const openArchive = async (
+    event: MouseEvent<HTMLAnchorElement>,
+  ): Promise<void> => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+    event.preventDefault();
+    await navigateAfterSettlingBrowserAutosaves(() =>
+      router.navigate({ to: '/archive' }),
+    );
+  };
 
   return (
     <div className="relative flex min-h-svh flex-col bg-background">
@@ -80,6 +98,8 @@ const AppShell = () => {
                     activeProps={{ className: navLinkActiveClass }}
                     className={navLinkClass}
                     inactiveProps={{ className: navLinkInactiveClass }}
+                    onClick={item.to === '/archive' ? openArchive : undefined}
+                    preload={item.to === '/archive' ? false : undefined}
                     to={item.to}
                   >
                     {item.label}

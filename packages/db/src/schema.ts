@@ -54,8 +54,14 @@ export const entry = pgTable(
     entryDate: date('entry_date').primaryKey(),
     journalMarkdown: text('journal_markdown'),
     journalWordCount: integer('journal_word_count').notNull().default(0),
+    journalFirstUsedAt: timestamp('journal_first_used_at', {
+      withTimezone: true,
+    }),
     scriptureMarkdown: text('scripture_markdown'),
     scriptureWordCount: integer('scripture_word_count').notNull().default(0),
+    scriptureFirstUsedAt: timestamp('scripture_first_used_at', {
+      withTimezone: true,
+    }),
     scriptureBook: text('scripture_book'),
     scriptureChapter: integer('scripture_chapter'),
     scriptureVerseStart: integer('scripture_verse_start'),

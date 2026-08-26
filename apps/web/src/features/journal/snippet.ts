@@ -5,22 +5,36 @@
  * the word count uses, so a day that opens with a heading or a quote shows the
  * words the writer wrote rather than the hashes and angle brackets around them.
  *
- * The cut lands on a word boundary and the ellipsis is only added when
- * something was actually left out, so a short entry is shown whole rather than
- * shown as if it continued.
+ * The cut prefers a word boundary and falls back to a grapheme boundary for a
+ * token with no spaces. The ellipsis counts toward the limit and only appears
+ * when something was left out.
  */
 
 import { journalPlainText } from './word-count.ts';
 
-/** The longest an opening can be before it is cut back to a word boundary. */
+/** Maximum visible grapheme clusters, including a truncation ellipsis. */
 export const snippetLength = 200;
 const whitespaceRuns = /\s+/gu;
 const lastWord = /\s\S*$/u;
+const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+const ellipsis = '…';
+const ellipsisLength = 1;
 
 export const journalSnippet = (markdown: string): string => {
   const text = journalPlainText(markdown).replace(whitespaceRuns, ' ');
-  if (text.length <= snippetLength) {
+  const characters = Array.from(
+    graphemes.segment(text),
+    (part) => part.segment,
+  );
+  if (characters.length <= snippetLength) {
     return text;
   }
-  return `${text.slice(0, snippetLength + 1).replace(lastWord, '')}…`;
+  const contentLimit = snippetLength - ellipsisLength;
+  const candidate = characters.slice(0, contentLimit).join('');
+  const next = characters[contentLimit] ?? '';
+  const wordSafe =
+    candidate.endsWith(' ') || next === ' '
+      ? candidate.trimEnd()
+      : candidate.replace(lastWord, '');
+  return `${wordSafe === '' ? candidate : wordSafe}${ellipsis}`;
 };

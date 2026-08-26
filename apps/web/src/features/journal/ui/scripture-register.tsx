@@ -30,6 +30,7 @@ import { MarkdownEditor } from './markdown-editor.tsx';
 
 type ScriptureRegisterProps = {
   readonly reference: string;
+  readonly referenceError: string | undefined;
   readonly onReferenceChange: (reference: string) => void;
   readonly initialMarkdown: string;
   readonly onMarkdownChange: (markdown: string) => void;
@@ -39,6 +40,7 @@ type ScriptureRegisterProps = {
 
 export const ScriptureRegister = ({
   reference,
+  referenceError,
   onReferenceChange,
   initialMarkdown,
   onMarkdownChange,
@@ -46,6 +48,7 @@ export const ScriptureRegister = ({
 }: ScriptureRegisterProps) => {
   const headingId = useId();
   const fieldId = useId();
+  const errorId = useId();
   const parsed = parseScriptureReference(reference);
 
   return (
@@ -68,6 +71,8 @@ export const ScriptureRegister = ({
           Passage
         </label>
         <input
+          aria-describedby={referenceError === undefined ? undefined : errorId}
+          aria-invalid={referenceError === undefined ? undefined : true}
           autoComplete="off"
           className={[deepFieldClass, 'mt-2 font-display text-2xl'].join(' ')}
           id={fieldId}
@@ -78,6 +83,12 @@ export const ScriptureRegister = ({
           type="text"
           value={reference}
         />
+
+        {referenceError === undefined ? null : (
+          <p className="mt-3 text-deep-ink" id={errorId}>
+            {referenceError}
+          </p>
+        )}
 
         {/*
           The link appears only once the line is a passage, so it is absent for

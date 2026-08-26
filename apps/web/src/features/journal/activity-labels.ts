@@ -21,8 +21,8 @@ type MonthActivity = {
 const isoYearEnd = 4;
 const isoMonthStart = 5;
 const isoMonthEnd = 7;
-/** A month narrower than this cannot hold its own label without colliding. */
-const minimumLabelledWeeks = 2;
+const isoDayStart = 8;
+const firstDayOfMonth = '01';
 const monthAbbreviationLength = 3;
 
 export const heatLevelLabels: Record<HeatLevel, string> = {
@@ -59,32 +59,21 @@ export const monthYearLabel = (date: string): string =>
   `${monthNameOf(date)} ${date.slice(0, isoYearEnd)}`;
 
 /**
- * The label each week column carries: the month's name on the column it starts
- * in, nothing on the rest. A label is set above its own column and allowed to
- * run past it, which is why a month is only named where the next name is far
- * enough away to leave it room.
+ * The label each week column carries: the name of the month whose first day is
+ * in that week, and nothing on the rest. When a week crosses a month boundary,
+ * the first day wins over the month containing the Sunday that opened it.
  */
 export const monthColumnLabels = (
   weeks: ReadonlyArray<ReadonlyArray<ActivityCell>>,
-): ReadonlyArray<string> => {
-  const runs: Array<{ readonly key: string; readonly weeks: number }> = [];
-  for (const week of weeks) {
-    const key = (week[0]?.date ?? '').slice(0, isoMonthEnd);
-    const open = runs.at(-1);
-    if (open?.key === key) {
-      runs[runs.length - 1] = { key, weeks: open.weeks + 1 };
-    } else {
-      runs.push({ key, weeks: 1 });
-    }
-  }
-  return runs.flatMap((run) =>
-    Array.from({ length: run.weeks }, (_unused, week) =>
-      week === 0 && run.weeks >= minimumLabelledWeeks
-        ? monthNameOf(`${run.key}-01`).slice(0, monthAbbreviationLength)
-        : '',
-    ),
-  );
-};
+): ReadonlyArray<string> =>
+  weeks.map((week) => {
+    const first = week.find(
+      (cell) => cell.date.slice(isoDayStart) === firstDayOfMonth,
+    );
+    return first === undefined
+      ? ''
+      : monthNameOf(first.date).slice(0, monthAbbreviationLength);
+  });
 
 /** What the grid says when it is read rather than looked at. */
 export const activitySummary = (cells: ReadonlyArray<ActivityCell>): string => {

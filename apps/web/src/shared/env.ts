@@ -1,7 +1,7 @@
 import { createEnv } from '@t3-oss/env-core';
 import { z } from 'zod';
 
-import { isTimeZone } from '#/features/journal/journal-day.ts';
+import { isTimeZone } from './time-zone.ts';
 
 /**
  * Server-side configuration. Public development values live in config/dev.yaml,
