@@ -18,11 +18,13 @@
  * `apps/web/README.md`.
  */
 
-/** A calendar date as `YYYY-MM-DD`. Never an instant, so never in a zone. */
+/** A Common Era calendar date as `YYYY-MM-DD`, from 0001 through 9999. */
 export type JournalDate = string;
 
 const dayStartsAtHour = 4;
 const monthsPerYear = 12;
+const firstJournalYear = 1;
+const lastJournalYear = 9999;
 const yearDigits = 4;
 const monthAndDayDigits = 2;
 
@@ -35,21 +37,24 @@ type CalendarDate = {
 const pad = (value: number, width: number): string =>
   String(value).padStart(width, '0');
 
-/**
- * Years run to four digits and beyond, so the padding is a floor rather than a
- * width: `2026-08-26` and a year past 9999 both stay sortable as text, which is
- * what lets a date range be a string comparison in SQL and in the archive.
- */
-export const formatJournalDate = ({ year, month, day }: CalendarDate): string =>
-  `${pad(year, yearDigits)}-${pad(month, monthAndDayDigits)}-${pad(day, monthAndDayDigits)}`;
+/** Four-digit years keep text ordering identical to calendar ordering. */
+export const formatJournalDate = ({
+  year,
+  month,
+  day,
+}: CalendarDate): string => {
+  if (year < firstJournalYear || year > lastJournalYear) {
+    throw new RangeError(`Journal year is outside 0001 through 9999: ${year}`);
+  }
+  return `${pad(year, yearDigits)}-${pad(month, monthAndDayDigits)}-${pad(day, monthAndDayDigits)}`;
+};
 
-/**
- * Days in `month` of `year`. Day zero of the next month is the last day of this
- * one, and `Date.UTC` normalises the rollover, so this needs no leap-year rule
- * of its own.
- */
-const daysInMonth = (year: number, month: number): number =>
-  new Date(Date.UTC(year, month, 0)).getUTCDate();
+/** `setUTCFullYear` preserves years below 0100 instead of adding 1900. */
+const daysInMonth = (year: number, month: number): number => {
+  const lastDay = new Date(0);
+  lastDay.setUTCFullYear(year, month, 0);
+  return lastDay.getUTCDate();
+};
 
 /**
  * The calendar date `days` before or after this one, as arithmetic on the date
@@ -88,7 +93,7 @@ export const shiftJournalDate = (
   }
 };
 
-const journalDatePattern = /^(?<year>\d{4,})-(?<month>\d{2})-(?<day>\d{2})$/u;
+const journalDatePattern = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/u;
 
 /** Whether the text is a calendar date this module will accept. */
 export const isJournalDate = (text: string): boolean => {
@@ -99,6 +104,8 @@ export const isJournalDate = (text: string): boolean => {
   const year = Number(parts.year);
   const month = Number(parts.month);
   return (
+    year >= firstJournalYear &&
+    year <= lastJournalYear &&
     month >= 1 &&
     month <= monthsPerYear &&
     Number(parts.day) >= 1 &&
@@ -106,14 +113,10 @@ export const isJournalDate = (text: string): boolean => {
   );
 };
 
-/**
- * Splits a date this module produced. Callers that hold untrusted text validate
- * it with `JournalDateSchema` in `schemas/entry.ts` first, which is what stands
- * between a URL segment and this function.
- */
+/** Splits a validated journal date into its calendar parts. */
 export const parseJournalDate = (date: JournalDate): CalendarDate => {
   const parts = journalDatePattern.exec(date)?.groups;
-  if (parts === undefined) {
+  if (parts === undefined || !isJournalDate(date)) {
     throw new TypeError(`Not a calendar date: ${date}`);
   }
   return {
@@ -134,8 +137,12 @@ export const daysBetweenJournalDates = (
 ): number => {
   const noonHour = 12;
   const millisecondsPerDay = 86_400_000;
-  const noon = ({ year, month, day }: CalendarDate): number =>
-    Date.UTC(year, month - 1, day, noonHour);
+  const noon = ({ year, month, day }: CalendarDate): number => {
+    const instant = new Date(0);
+    instant.setUTCFullYear(year, month - 1, day);
+    instant.setUTCHours(noonHour, 0, 0, 0);
+    return instant.getTime();
+  };
   return Math.round(
     (noon(parseJournalDate(to)) - noon(parseJournalDate(from))) /
       millisecondsPerDay,
@@ -178,14 +185,4 @@ export const journalDateAt = (instant: Date, timeZone: string): JournalDate => {
   return hour < dayStartsAtHour
     ? shiftJournalDate(calendarDate, -1)
     : calendarDate;
-};
-
-/** Whether a zone name is one the platform can actually resolve. */
-export const isTimeZone = (timeZone: string): boolean => {
-  try {
-    const format = new Intl.DateTimeFormat('en-CA', { timeZone });
-    return format.resolvedOptions().timeZone !== '';
-  } catch {
-    return false;
-  }
 };

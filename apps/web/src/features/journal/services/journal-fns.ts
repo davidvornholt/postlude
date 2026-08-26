@@ -27,16 +27,12 @@ import {
   type JournalEntry,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { decodeReadEntryInput } from './read-entry-input.ts';
 
 /** Today as the configured zone reads it, with the 04:00 rule applied. */
 export const currentJournalDate = (): JournalDate =>
   journalDateAt(new Date(), env.JOURNAL_TIME_ZONE);
 
-const DateInput = Schema.Struct({
-  date: Schema.optional(Schema.String),
-});
-
-const decodeDateInput = Schema.decodeUnknownSync(DateInput);
 const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
 
 /**
@@ -46,7 +42,7 @@ const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
  */
 export const readEntryFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .inputValidator((input: unknown) => decodeDateInput(input))
+  .inputValidator((input: unknown) => decodeReadEntryInput(input))
   .handler(({ data }): Promise<JournalEntry> => {
     const date = data.date ?? currentJournalDate();
     return runServerEffect(
