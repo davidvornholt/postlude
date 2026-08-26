@@ -87,7 +87,10 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
 });
 
 const DayBody = ({ entry, today, save }: DayPageProps) => {
-  const autosave = useAutosave(draftOf(entry), save);
+  const autosave = useAutosave(
+    { draft: draftOf(entry), revision: entry.updatedAt.getTime() },
+    save,
+  );
   const referenceError =
     autosave.failure?.kind === 'validation'
       ? autosave.failure.message

@@ -1,18 +1,6 @@
 /**
  * When a typed draft becomes a stored one.
  *
- * Postlude saves as you write, so nothing is ever "submitted" and there is no
- * moment where losing the page would lose the evening. That makes the ordering
- * the whole problem: a writer types faster than a round trip, and a naive
- * "save on every keystroke" produces overlapping writes whose replies can come
- * back in any order, the last of which would decide what the table holds.
- *
- * This module is the rule, and only the rule. It holds no timer and makes no
- * request: it takes what happened and returns what should be true next, plus
- * what the caller should go and do. That is what lets every case below be
- * tested as plain values — including the ones a browser produces once a month,
- * like a reply arriving after the writer has already typed something newer.
- *
  * One save is in flight at a time, always. Edits made while a save is in the
  * air are not queued behind it; they simply become the next save, once, when
  * the reply lands. So a burst of typing costs two writes rather than twenty,
@@ -20,6 +8,7 @@
  */
 
 import type { EntryDraft } from './schemas/entry.ts';
+import { parseScriptureReference } from './scripture-reference.ts';
 
 /** What the writer is told, in the order of urgency the page shows it in. */
 export type SaveStatus = 'saving' | 'failed' | 'unsaved' | 'saved';
@@ -39,11 +28,16 @@ export type AutosaveState = {
   /** The newest text, whether or not anyone has been told about it yet. */
   readonly draft: EntryDraft;
   /** The newest text the server has confirmed it holds. */
-  readonly stored: EntryDraft;
+  readonly stored: ConfirmedDraft;
   /** The snapshot currently being written, or nothing when none is. */
   readonly inFlight: EntryDraft | undefined;
   /** The last actionable failure, cleared by recovery or a confirmed save. */
   readonly failure: AutosaveFailure | undefined;
+};
+
+export type ConfirmedDraft = {
+  readonly draft: EntryDraft;
+  readonly revision: number;
 };
 
 /** Work the state machine asks its coordinator to perform. */
@@ -57,7 +51,7 @@ export type AutosaveEvent =
   | { readonly _tag: 'edited'; readonly draft: EntryDraft }
   | { readonly _tag: 'quiet' }
   | { readonly _tag: 'flush' }
-  | { readonly _tag: 'stored' }
+  | { readonly _tag: 'stored'; readonly revision: number }
   | { readonly _tag: 'failed'; readonly failure: AutosaveFailure };
 
 type Step = readonly [AutosaveState, ReadonlyArray<AutosaveCommand>];
@@ -70,8 +64,8 @@ export const sameDraft = (a: EntryDraft, b: EntryDraft): boolean =>
   a.scriptureReference === b.scriptureReference;
 
 /** A page that has just opened: what is on screen is what the table holds. */
-export const openAutosave = (stored: EntryDraft): AutosaveState => ({
-  draft: stored,
+export const openAutosave = (stored: ConfirmedDraft): AutosaveState => ({
+  draft: stored.draft,
   stored,
   inFlight: undefined,
   failure: undefined,
@@ -89,7 +83,7 @@ export const saveStatus = (state: AutosaveState): SaveStatus => {
   if (state.failure !== undefined) {
     return 'failed';
   }
-  return sameDraft(state.draft, state.stored) ? 'saved' : 'unsaved';
+  return sameDraft(state.draft, state.stored.draft) ? 'saved' : 'unsaved';
 };
 
 /**
@@ -101,7 +95,7 @@ const beginSave = (state: AutosaveState): Step => {
   if (state.inFlight !== undefined) {
     return [state, []];
   }
-  if (sameDraft(state.draft, state.stored)) {
+  if (sameDraft(state.draft, state.stored.draft)) {
     return [state, [{ _tag: 'cancel' }]];
   }
   return [
@@ -111,17 +105,17 @@ const beginSave = (state: AutosaveState): Step => {
 };
 
 /** Confirm the in-flight snapshot, then send any newer draft. */
-const settleStored = (state: AutosaveState): Step => {
+const settleStored = (state: AutosaveState, revision: number): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
   }
   const settled: AutosaveState = {
     ...state,
-    stored: state.inFlight,
+    stored: { draft: state.inFlight, revision },
     inFlight: undefined,
     failure: undefined,
   };
-  return sameDraft(settled.draft, settled.stored)
+  return sameDraft(settled.draft, settled.stored.draft)
     ? [settled, []]
     : [
         { ...settled, inFlight: settled.draft },
@@ -134,7 +128,7 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
   }
-  if (sameDraft(state.draft, state.stored)) {
+  if (sameDraft(state.draft, state.stored.draft)) {
     return [
       { ...state, inFlight: undefined, failure: undefined },
       [{ _tag: 'cancel' }],
@@ -150,25 +144,31 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
  * than a case that quietly falls through.
  */
 const settling: Record<
-  Exclude<AutosaveEvent, { readonly _tag: 'edited' | 'failed' }>['_tag'],
+  Exclude<
+    AutosaveEvent,
+    { readonly _tag: 'edited' | 'failed' | 'stored' }
+  >['_tag'],
   (state: AutosaveState) => Step
 > = {
   quiet: beginSave,
   flush: beginSave,
-  stored: settleStored,
 };
 
 const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
-  const correctedValidation =
+  const referenceChanged =
     state.failure?.kind === 'validation' &&
     draft.scriptureReference !== state.draft.scriptureReference;
+  const correctedValidation =
+    referenceChanged &&
+    (draft.scriptureReference.trim() === '' ||
+      parseScriptureReference(draft.scriptureReference) !== undefined);
   const edited: AutosaveState = {
     ...state,
     draft,
     failure: correctedValidation ? undefined : state.failure,
   };
 
-  if (state.inFlight === undefined && sameDraft(draft, state.stored)) {
+  if (state.inFlight === undefined && sameDraft(draft, state.stored.draft)) {
     return [{ ...edited, failure: undefined }, [{ _tag: 'cancel' }]];
   }
   return [edited, [{ _tag: 'schedule' }]];
@@ -192,6 +192,9 @@ export const advanceAutosave = (
   }
   if (event._tag === 'failed') {
     return settleFailed(state, event.failure);
+  }
+  if (event._tag === 'stored') {
+    return settleStored(state, event.revision);
   }
   return settling[event._tag](state);
 };

@@ -29,9 +29,10 @@ const wrote = (text: string): EntryDraft => ({
   ...blank,
   journalMarkdown: text,
 });
+const confirmed = (draft: EntryDraft) => ({ draft, revision: 1 });
 const run = (
   events: ReadonlyArray<AutosaveEvent>,
-  from: AutosaveState = openAutosave(blank),
+  from: AutosaveState = openAutosave(confirmed(blank)),
 ): { state: AutosaveState; commands: ReadonlyArray<AutosaveCommand> } => {
   let state = from;
   const commands: Array<AutosaveCommand> = [];
@@ -44,7 +45,7 @@ const run = (
 };
 
 it('ignores a failure for a save it is not waiting on', () => {
-  const opened = openAutosave(blank);
+  const opened = openAutosave(confirmed(blank));
   expect(
     run([{ _tag: 'failed', failure: networkFailure }], opened).state,
   ).toEqual(opened);
@@ -58,7 +59,7 @@ it('reports a failure and keeps the text it could not write', () => {
   ]);
   expect(saveStatus(state)).toBe('failed');
   expect(state.draft.journalMarkdown).toBe('unlucky');
-  expect(state.stored.journalMarkdown).toBe('');
+  expect(state.stored.draft.journalMarkdown).toBe('');
 });
 
 it('keeps saying failed while the writer types on', () => {
@@ -77,7 +78,7 @@ it('clears the failure once a later save gets through', () => {
     { _tag: 'quiet' },
     { _tag: 'failed', failure: networkFailure },
     { _tag: 'flush' },
-    { _tag: 'stored' },
+    { _tag: 'stored', revision: 2 },
   ]);
   expect(saveStatus(state)).toBe('saved');
 });
@@ -105,7 +106,7 @@ it('ignores a failed reply after undo returned to the stored draft', () => {
   expect(saveStatus(state)).toBe('saved');
 });
 
-it('clears a passage validation failure when the passage changes', () => {
+it('keeps passage validation until the changed passage is locally valid', () => {
   const invalid = { ...blank, scriptureReference: 'Proverbs 12:' };
   const { state } = run([
     { _tag: 'edited', draft: invalid },
@@ -113,9 +114,21 @@ it('clears a passage validation failure when the passage changes', () => {
     { _tag: 'failed', failure: validationFailure },
     {
       _tag: 'edited',
-      draft: { ...invalid, scriptureReference: 'Proverbs 12:5' },
+      draft: { ...invalid, scriptureReference: 'still not a passage' },
     },
   ]);
-  expect(state.failure).toBeUndefined();
-  expect(saveStatus(state)).toBe('unsaved');
+  expect(state.failure).toBe(validationFailure);
+  expect(saveStatus(state)).toBe('failed');
+
+  const corrected = run(
+    [
+      {
+        _tag: 'edited',
+        draft: { ...invalid, scriptureReference: 'Proverbs 12:5' },
+      },
+    ],
+    state,
+  ).state;
+  expect(corrected.failure).toBeUndefined();
+  expect(saveStatus(corrected)).toBe('unsaved');
 });

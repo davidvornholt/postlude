@@ -20,11 +20,13 @@ import { Effect, Schema } from 'effect';
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
+import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
   type EntryDraft,
   EntryDraftSchema,
   emptyJournalEntry,
   type JournalEntry,
+  type SaveConfirmation,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { runJournalEffect } from './journal-runtime.ts';
@@ -70,19 +72,20 @@ export const readJournalDayFn = createServerFn({ method: 'GET' })
   });
 
 /**
- * Saves a day and hands back what the table now holds, counts included. The
- * counts come back rather than being computed twice, so what the writer is
- * shown is what the archive will bucket the day by.
+ * Saves a day and returns the database-issued revision of that write. The
+ * client uses it to reject a stale loader snapshot after navigating away and
+ * back while a save completes.
  */
 export const saveEntryFn = createServerFn({ method: 'POST' })
   .middleware([sessionRequired])
   .validator((input: unknown) => decodeDraft(input))
   .handler(
-    ({ data }): Promise<JournalEntry> =>
+    ({ data }): Promise<SaveConfirmation> =>
       runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntryRepository;
-          return yield* entries.save(data);
+          const entry = yield* entries.save(data);
+          return { revision: entry.updatedAt.getTime() };
         }),
       ),
   );
@@ -92,5 +95,9 @@ export const saveEntryFn = createServerFn({ method: 'POST' })
  * invoked as `fn({ data })` rather than as `fn(draft)`, and the page should not
  * have to know that — it holds a draft and wants it written.
  */
-export const saveDraft = (draft: EntryDraft): Promise<JournalEntry> =>
-  saveEntryFn({ data: draft });
+export const saveDraft = async (
+  draft: EntryDraft,
+): Promise<SaveConfirmation> => {
+  const result: unknown = await saveEntryFn({ data: draft });
+  return decodeSaveConfirmation(result);
+};

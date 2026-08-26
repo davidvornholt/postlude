@@ -9,15 +9,16 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 import {
   type AutosaveFailure,
+  type ConfirmedDraft,
   openAutosave,
   type SaveStatus,
   saveStatus,
 } from '../autosave.ts';
-import {
-  type AutosaveCoordinator,
-  createAutosaveCoordinator,
-  type SaveDraft,
+import type {
+  AutosaveCoordinator,
+  SaveDraft,
 } from '../autosave-coordinator.ts';
+import { createAutosaveRegistry } from '../autosave-registry.ts';
 import { browserDraftRecovery } from '../recoverable-draft.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
 
@@ -32,36 +33,31 @@ export type Autosave = {
   readonly flush: () => void;
 };
 
-const coordinators = new Map<string, AutosaveCoordinator>();
+const coordinators = createAutosaveRegistry(browserDraftRecovery);
 
 const coordinatorFor = (
-  stored: EntryDraft,
+  stored: ConfirmedDraft,
   save: SaveDraft,
-): AutosaveCoordinator => {
-  const existing = coordinators.get(stored.date);
-  if (existing !== undefined) {
-    existing.update(stored, save);
-    return existing;
-  }
-  const created = createAutosaveCoordinator({
-    stored,
-    save,
-    recovery: browserDraftRecovery(),
-  });
-  coordinators.set(stored.date, created);
-  return created;
-};
+): AutosaveCoordinator => coordinators.acquire(stored, save);
 
 const doNothing = (): void => undefined;
 const browserAvailable = (): boolean =>
   typeof globalThis.window !== 'undefined';
 
-export const useAutosave = (stored: EntryDraft, save: SaveDraft): Autosave => {
-  const { date, journalMarkdown, scriptureMarkdown, scriptureReference } =
-    stored;
-  const stableStored = useMemo<EntryDraft>(
-    () => ({ date, journalMarkdown, scriptureMarkdown, scriptureReference }),
-    [date, journalMarkdown, scriptureMarkdown, scriptureReference],
+export const useAutosave = (
+  stored: ConfirmedDraft,
+  save: SaveDraft,
+): Autosave => {
+  const {
+    draft: { date, journalMarkdown, scriptureMarkdown, scriptureReference },
+    revision,
+  } = stored;
+  const stableStored = useMemo<ConfirmedDraft>(
+    () => ({
+      draft: { date, journalMarkdown, scriptureMarkdown, scriptureReference },
+      revision,
+    }),
+    [date, journalMarkdown, revision, scriptureMarkdown, scriptureReference],
   );
   const serverState = useMemo(() => openAutosave(stableStored), [stableStored]);
   const coordinator = useMemo<AutosaveCoordinator | undefined>(

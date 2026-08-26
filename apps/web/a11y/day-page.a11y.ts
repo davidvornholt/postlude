@@ -133,6 +133,12 @@ for (const colorScheme of colorSchemes) {
     ).toHaveCount(0);
     await scan(page);
 
+    await passage.fill('still not a passage');
+    await expect(passage).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator(`#${guidanceId ?? ''}`)).toHaveText(
+      validationMessage,
+    );
+
     await passage.fill('Proverbs 12:5');
     await expect(passage).not.toHaveAttribute('aria-invalid', 'true');
     expect(await passage.getAttribute('aria-describedby')).toBeNull();

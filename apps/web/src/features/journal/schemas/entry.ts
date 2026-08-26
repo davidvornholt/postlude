@@ -191,6 +191,15 @@ export const EntryDraftSchema = Schema.Struct({
 
 export type EntryDraft = Schema.Schema.Type<typeof EntryDraftSchema>;
 
+/** The database-issued revision returned after a write is committed. */
+export const SaveConfirmationSchema = Schema.Struct({
+  revision: Schema.Number.pipe(Schema.greaterThanOrEqualTo(0)),
+});
+
+export type SaveConfirmation = Schema.Schema.Type<
+  typeof SaveConfirmationSchema
+>;
+
 /**
  * One day as the archive needs it: enough to place a mark on the heatmap and to
  * decide a streak, and nothing else. The entry bodies are deliberately not here

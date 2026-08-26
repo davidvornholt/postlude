@@ -1,39 +1,38 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  authenticationSaveMessage,
-  autosaveFailureOf,
-  createAutosaveCoordinator,
-} from './autosave-coordinator.ts';
+import { createAutosaveCoordinator } from './autosave-coordinator.ts';
+import { authenticationSaveMessage } from './autosave-error.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
-import type { EntryDraft } from './schemas/entry.ts';
+import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
 
-const stored: EntryDraft = {
+const baselineDraft: EntryDraft = {
   date: '2026-08-27',
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
 };
+const savedRevision = 200;
+const stored = { draft: baselineDraft, revision: 100 };
 
 const memoryRecovery = (): DraftRecovery & {
   readonly value: () => EntryDraft | undefined;
 } => {
-  let draft: EntryDraft | undefined;
+  let recovered: EntryDraft | undefined;
   return {
-    read: () => draft,
+    read: () => recovered,
     retain: (next) => {
-      draft = next;
+      recovered = next;
     },
     clear: () => {
-      draft = undefined;
+      recovered = undefined;
     },
-    value: () => draft,
+    value: () => recovered,
   };
 };
 
 const deferred = () => {
-  let resolve: () => void = () => undefined;
+  let resolve: (value: SaveConfirmation) => void = () => undefined;
   let reject: (error: unknown) => void = () => undefined;
-  const promise = new Promise<void>((yes, no) => {
+  const promise = new Promise<SaveConfirmation>((yes, no) => {
     resolve = yes;
     reject = no;
   });
@@ -50,8 +49,8 @@ describe('autosave coordinator', () => {
     const first = deferred();
     const second = deferred();
     const sent: Array<EntryDraft> = [];
-    const save = (draft: EntryDraft): Promise<void> => {
-      sent.push(draft);
+    const save = (next: EntryDraft): Promise<SaveConfirmation> => {
+      sent.push(next);
       return sent.length === 1 ? first.promise : second.promise;
     };
     const coordinator = createAutosaveCoordinator({
@@ -69,19 +68,22 @@ describe('autosave coordinator', () => {
     coordinator.edit({ journalMarkdown: 'second' });
     coordinator.flush();
 
-    expect(sent.map((draft) => draft.journalMarkdown)).toEqual(['first']);
-    first.resolve();
+    expect(sent.map((entry) => entry.journalMarkdown)).toEqual(['first']);
+    first.resolve({ revision: 101 });
     await settleEffects();
-    expect(sent.map((draft) => draft.journalMarkdown)).toEqual([
+    expect(sent.map((entry) => entry.journalMarkdown)).toEqual([
       'first',
       'second',
     ]);
-    second.resolve();
+    second.resolve({ revision: 102 });
   });
 
   it('restores a retained draft and clears it only after confirmation', async () => {
     const recovery = memoryRecovery();
-    recovery.retain({ ...stored, journalMarkdown: 'Recovered words.' });
+    recovery.retain({
+      ...baselineDraft,
+      journalMarkdown: 'Recovered words.',
+    });
     const saved = deferred();
     const coordinator = createAutosaveCoordinator({
       stored,
@@ -94,7 +96,7 @@ describe('autosave coordinator', () => {
     );
     coordinator.flush();
     expect(recovery.value()?.journalMarkdown).toBe('Recovered words.');
-    saved.resolve();
+    saved.resolve({ revision: 101 });
     await settleEffects();
     expect(recovery.value()).toBeUndefined();
   });
@@ -121,36 +123,55 @@ describe('autosave coordinator', () => {
     await settleEffects();
     coordinator.visibilityChanged();
     expect(attempts).toBe(2);
-    second.resolve();
+    second.resolve({ revision: 101 });
   });
 });
 
-describe('autosave failure boundary', () => {
-  it('recognizes authentication and the one safe validation message', () => {
-    expect(autosaveFailureOf(new Response('', { status: 401 }))).toEqual({
+describe('autosave server revision boundary', () => {
+  it('treats a resolved unauthorized Response as a failed save', async () => {
+    const recovery = memoryRecovery();
+    const coordinator = createAutosaveCoordinator({
+      stored,
+      save: () => Promise.resolve(new Response('', { status: 401 })),
+      recovery,
+    });
+
+    coordinator.edit({ journalMarkdown: 'Do not lose this.' });
+    coordinator.flush();
+    await settleEffects();
+
+    expect(coordinator.snapshot().failure).toEqual({
       kind: 'authentication',
       message: authenticationSaveMessage,
     });
-    expect(
-      autosaveFailureOf({
-        message:
-          'FiberFailure: Check the scripture reference and use a form such as Proverbs 12:5-13.',
-      }),
-    ).toEqual({
-      kind: 'validation',
-      field: 'scriptureReference',
-      message:
-        'Check the scripture reference and use a form such as Proverbs 12:5-13.',
-    });
+    expect(coordinator.snapshot().stored).toEqual(stored);
+    expect(recovery.value()?.journalMarkdown).toBe('Do not lose this.');
   });
 
-  it('does not carry an unknown server message to the page', () => {
-    const failure = autosaveFailureOf(
-      new Error('password leaked in a database error'),
-    );
+  it('rejects stale loader snapshots and accepts a newer server revision', async () => {
+    const coordinator = createAutosaveCoordinator({
+      stored,
+      save: () => Promise.resolve({ revision: savedRevision }),
+      recovery: memoryRecovery(),
+    });
+    coordinator.edit({ journalMarkdown: 'Confirmed locally.' });
+    coordinator.flush();
+    await settleEffects();
 
-    expect(failure.kind).toBe('network');
-    expect(failure.message).not.toContain('password');
-    expect(failure.message).toContain('check your connection');
+    coordinator.update(stored, () => Promise.resolve({ revision: 201 }));
+    expect(coordinator.snapshot().draft.journalMarkdown).toBe(
+      'Confirmed locally.',
+    );
+    expect(coordinator.snapshot().stored.revision).toBe(savedRevision);
+
+    const newer = {
+      draft: { ...baselineDraft, journalMarkdown: 'Newer server words.' },
+      revision: 300,
+    };
+    coordinator.update(newer, () => Promise.resolve({ revision: 301 }));
+    expect(coordinator.snapshot()).toMatchObject({
+      draft: newer.draft,
+      stored: newer,
+    });
   });
 });

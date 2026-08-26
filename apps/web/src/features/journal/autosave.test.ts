@@ -31,11 +31,12 @@ const wrote = (text: string): EntryDraft => ({
   ...blank,
   journalMarkdown: text,
 });
+const confirmed = (draft: EntryDraft) => ({ draft, revision: 1 });
 
 /** Replays a run of events, keeping every command each one produced. */
 const run = (
   events: ReadonlyArray<AutosaveEvent>,
-  from: AutosaveState = openAutosave(blank),
+  from: AutosaveState = openAutosave(confirmed(blank)),
 ): { state: AutosaveState; commands: ReadonlyArray<AutosaveCommand> } => {
   let state = from;
   const commands: Array<AutosaveCommand> = [];
@@ -55,7 +56,7 @@ const saves = (
     .map((command) => command.draft.journalMarkdown);
 
 it('opens with nothing to say and nothing to do', () => {
-  const state = openAutosave(blank);
+  const state = openAutosave(confirmed(blank));
   expect(saveStatus(state)).toBe('saved');
   expect(run([{ _tag: 'flush' }], state).commands).toEqual([
     { _tag: 'cancel' },
@@ -101,7 +102,7 @@ it('collapses everything typed during a save into one more save', () => {
     { _tag: 'quiet' },
     { _tag: 'edited', draft: wrote('one two three') },
     { _tag: 'flush' },
-    { _tag: 'stored' },
+    { _tag: 'stored', revision: 2 },
   ]);
 
   expect(saves(commands)).toEqual(['one', 'one two three']);
@@ -112,12 +113,13 @@ it('stops when the reply catches up with the writer', () => {
   const { state, commands } = run([
     { _tag: 'edited', draft: wrote('done') },
     { _tag: 'quiet' },
-    { _tag: 'stored' },
+    { _tag: 'stored', revision: 2 },
   ]);
 
   expect(saves(commands)).toEqual(['done']);
   expect(saveStatus(state)).toBe('saved');
-  expect(state.stored.journalMarkdown).toBe('done');
+  expect(state.stored.draft.journalMarkdown).toBe('done');
+  expect(state.stored.revision).toBe(2);
 });
 
 /*
@@ -130,10 +132,10 @@ it('does not count text typed after a save as saved by it', () => {
     { _tag: 'edited', draft: wrote('sent') },
     { _tag: 'quiet' },
     { _tag: 'edited', draft: wrote('sent and more') },
-    { _tag: 'stored' },
+    { _tag: 'stored', revision: 2 },
   ]);
 
-  expect(state.stored.journalMarkdown).toBe('sent');
+  expect(state.stored.draft.journalMarkdown).toBe('sent');
   expect(state.draft.journalMarkdown).toBe('sent and more');
 });
 

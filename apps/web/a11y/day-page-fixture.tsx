@@ -23,13 +23,17 @@ const save = (): Promise<unknown> => {
   saveAttempt += 1;
   document.documentElement.dataset.saveAttempts = String(saveAttempt);
   if (outcome === 'stored') {
-    return Promise.resolve();
+    return Promise.resolve({
+      revision: new Date(config.entry.updatedAt).getTime() + saveAttempt,
+    });
   }
   if (outcome === 'pending') {
     return new Promise(() => undefined);
   }
   if (outcome === 'authentication') {
-    return Promise.reject(new Response('', { status: 401 }));
+    // TanStack Start can resolve a raw middleware Response rather than reject
+    // it, so the fixture exercises the browser boundary's real semantics.
+    return Promise.resolve(new Response('', { status: 401 }));
   }
   const message =
     outcome === 'validation'
