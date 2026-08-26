@@ -61,9 +61,15 @@ const expectedChecks: ReadonlyArray<readonly [string, string]> = [
     'entry_scripture_word_count_non_negative',
     '"entry"."scripture_word_count" >= 0',
   ],
+  // A book and a chapter travel together; the verse is genuinely optional,
+  // because "Psalms 23" is a whole chapter and a reference a writer will type.
   [
     'entry_scripture_reference_complete',
-    'num_nonnulls("entry"."scripture_book", "entry"."scripture_chapter", "entry"."scripture_verse_start") in (0, 3)',
+    'num_nonnulls("entry"."scripture_book", "entry"."scripture_chapter") in (0, 2)',
+  ],
+  [
+    'entry_scripture_verse_start_needs_chapter',
+    '"entry"."scripture_verse_start" is null or "entry"."scripture_chapter" is not null',
   ],
   [
     'entry_scripture_verse_end_after_start',

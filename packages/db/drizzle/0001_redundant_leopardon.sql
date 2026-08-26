@@ -1,0 +1,3 @@
+ALTER TABLE "entry" DROP CONSTRAINT "entry_scripture_reference_complete";--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_scripture_verse_start_needs_chapter" CHECK ("entry"."scripture_verse_start" is null or "entry"."scripture_chapter" is not null);--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_scripture_reference_complete" CHECK (num_nonnulls("entry"."scripture_book", "entry"."scripture_chapter") in (0, 2));

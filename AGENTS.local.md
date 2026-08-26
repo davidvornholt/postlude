@@ -2,10 +2,15 @@
 
 ## Effect posture in apps/web
 
-`apps/web` has no app-owned async service boundaries yet, so no code in it uses Effect today. The posture is per surface:
+The Effect data layer is in place, adopted with the journal feature (issue #7). The posture is per surface:
 
-- Route and feature code: the first app-owned feature brings in the Effect data layer. Feature services own the async work with typed error and requirement channels; route components stay plain React and consume those services at the boundary. Deferred to issue #7, "Adopt the Effect data layer with the first app-owned feature".
+- Route and feature code: feature services own the async work with typed error and requirement channels; route components stay plain React and consume those services at the boundary. `src/features/journal/services/entry-repository.ts` is the pattern to follow — an `Effect.Service` over `SqlClient`, with `Data.TaggedError` failures in its error channel and no clock of its own.
+- The seam is `src/shared/runtime/app-runtime.ts`: one lazily built `ManagedRuntime` holds the layers, and `runServerEffect` is the only place an Effect becomes a promise. A new feature service is added to the layer there rather than being run ad hoc, so the layers are still built once per process and a service is never unwrapped twice.
 - better-auth glue in `src/shared/auth/*`: stays plain promises. better-auth calls these functions itself and awaits what they return, so it owns the calling convention, and an Effect signature would only be wrapped and unwrapped again at every call site.
 - `scripts/serve.ts`: stays plain. It is the production entrypoint — it reads `PORT`, loads the built SSR bundle, serves the static client files, and boots the server — and the architecture boundaries in `AGENTS.md` scope entrypoints to routing, parsing initial inputs, wiring layers, and bridging to the runtime, not to owning service logic.
 
-The deferred pattern is a single app runtime that holds the Effect layers plus a thin boundary that runs an Effect and hands React a promise, so services keep their typed channels while components keep their plain ones.
+## Database access in apps/web
+
+One process, one pool. `@postlude/db`'s `createPool` owns the connection string; better-auth's Drizzle adapter and the Effect SQL client both receive that same pool through `pgClientLayer`, which never opens or closes one of its own. A second pool would be a second copy of configuration the package already owns.
+
+Tests that need a database use `src/shared/testing/test-database.ts`, which creates and migrates the configured database with `_test` appended and rolls each test body back. They fail rather than skip when `DATABASE_URL` is absent.
