@@ -146,14 +146,16 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             label="Evening journal"
             onChange={(journalMarkdown) => autosave.edit({ journalMarkdown })}
             onLeave={autosave.flush}
-            placeholder="How the day went …"
+            placeholder="How did the day go?"
             proseClass="journal-prose"
           />
         </div>
         {/* The count and the save state are the page's only chrome, and they
-            sit under a rule at the foot of the writing rather than beside it,
-            so nothing hovers next to the words while they are being typed. */}
-        <div className="mt-8 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 border-border border-t pt-4">
+            sit below the writing rather than beside it, so nothing hovers next
+            to the words while they are being typed. The rule above them is the
+            writing area's own, which follows the words down as the entry
+            grows; a second one here would be the same line drawn twice. */}
+        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
           <EntryCounts markdown={autosave.draft.journalMarkdown} />
           <SaveStatusLine onRetry={autosave.flush} status={autosave.status} />
         </div>

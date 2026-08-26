@@ -110,7 +110,7 @@ export const ScriptureRegister = ({
             label="Morning scripture notes"
             onChange={onMarkdownChange}
             onLeave={onLeave}
-            placeholder="What the passage said this morning …"
+            placeholder="What did the passage say this morning?"
             proseClass="journal-prose journal-prose-deep"
           />
         </div>

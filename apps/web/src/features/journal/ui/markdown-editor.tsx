@@ -40,6 +40,15 @@ type MarkdownEditorProps = {
   readonly focusClass: string;
 };
 
+/**
+ * The shape of the writing area, worn by the editor and by what stands in for
+ * it before hydration alike. An empty day is mostly this: a tall area with a
+ * rule under it, which is what says there is somewhere to write before there is
+ * anything written. Both wear it so the page does not resize when ProseMirror
+ * arrives and the area stops being a paragraph and starts being an editor.
+ */
+const writingAreaClass = 'journal-writing min-h-48';
+
 /** A run of lines with no blank line in it: one paragraph. */
 const paragraphRun = /[^\n]+(?:\n(?!\n)[^\n]*)*/gu;
 
@@ -96,7 +105,7 @@ export const MarkdownEditor = ({
     editorProps: {
       attributes: {
         'aria-label': label,
-        class: [proseClass, focusClass, 'min-h-48'].join(' '),
+        class: [proseClass, focusClass, writingAreaClass].join(' '),
       },
     },
     onUpdate: ({ editor: updated }) => changed.current(updated.getMarkdown()),
@@ -105,7 +114,7 @@ export const MarkdownEditor = ({
 
   if (editor === null) {
     return (
-      <div className={proseClass}>
+      <div className={[proseClass, writingAreaClass].join(' ')}>
         {staticParagraphs(initialMarkdown).map((paragraph) => (
           <p key={paragraph.at}>{paragraph.text}</p>
         ))}

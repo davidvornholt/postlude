@@ -25,6 +25,7 @@ body {
   .journal-prose {
     --journal-rule: var(--pl-border);
     --journal-quiet: var(--pl-ink-muted);
+    --journal-prompt: var(--pl-ink-faint);
 
     hyphens: auto;
   }
@@ -32,6 +33,35 @@ body {
   .journal-prose-deep {
     --journal-rule: var(--pl-deep-rule);
     --journal-quiet: var(--pl-deep-ink-muted);
+    --journal-prompt: var(--pl-deep-ink-muted);
+  }
+
+  /*
+   * The area a day is written in.
+   *
+   * Everything else on this page is type on a ground, so an empty writing area
+   * is indistinguishable from the space around it and there is nothing to say
+   * that clicking it does anything. It gets the rule a paper form puts under
+   * the line you are meant to write on, and the rule follows the words down as
+   * the entry grows, so it is always the foot of the writing rather than a box
+   * drawn around it. Under a pointer the rule strengthens, which is the same
+   * move both controls make.
+   */
+  .journal-writing {
+    border-bottom: 1px solid var(--journal-rule);
+    padding-bottom: 1.5rem;
+    cursor: text;
+    transition: border-color 150ms var(--ease-standard);
+  }
+
+  .journal-writing:hover {
+    border-bottom-color: var(--journal-quiet);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .journal-writing {
+      transition: none;
+    }
   }
 
   .journal-prose > * + * {
@@ -118,12 +148,15 @@ body {
   }
 
   /* The prompt on an untouched page. It floats out of the flow so the caret
-     sits where the first word will, rather than after the prompt. */
+     sits where the first word will, rather than after the prompt. It is set in
+     italic and a step fainter than the writing, because the one thing it must
+     never be mistaken for is a line the writer already put there. */
   .journal-prose p.is-empty:first-child::before {
     content: attr(data-placeholder);
     float: left;
     height: 0;
-    color: var(--journal-quiet);
+    color: var(--journal-prompt);
+    font-style: italic;
     pointer-events: none;
   }
 }

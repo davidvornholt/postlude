@@ -17,7 +17,7 @@ import {
   eyebrowClass,
   focusRingClass,
 } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { accountActionClass } from '#/shared/ui/form-classes.ts';
 import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 
 const navItems = [
@@ -96,7 +96,7 @@ const AppShell = () => {
           <p className="font-display text-ink text-xl">
             <BrandLink>Postlude</BrandLink>
           </p>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center">
             <nav aria-label="Main">
               <ul className="flex items-center gap-6">
                 {navItems.map((item) => (
@@ -114,17 +114,21 @@ const AppShell = () => {
                 ))}
               </ul>
             </nav>
-            <button
-              // Staying enabled keeps focus on the button while the request is
-              // in flight; disabling it here would drop focus to <body> and
-              // announce the new label to nobody.
-              aria-busy={signOutMutation.isPending}
-              className={quietButtonClass}
-              onClick={startSignOut}
-              type="button"
-            >
-              {signOutMutation.isPending ? 'Signing out …' : 'Sign out'}
-            </button>
+            {/* A hairline, because the pages and the way out of the app are
+                different in kind and were reading as one row of three. */}
+            <div className="ml-6 border-border border-l pl-6">
+              <button
+                // Staying enabled keeps focus on the button while the request
+                // is in flight; disabling it here would drop focus to <body>
+                // and announce the new label to nobody.
+                aria-busy={signOutMutation.isPending}
+                className={accountActionClass}
+                onClick={startSignOut}
+                type="button"
+              >
+                {signOutMutation.isPending ? 'Signing out …' : 'Sign out'}
+              </button>
+            </div>
           </div>
           {signOutMutation.isError ? (
             <p
