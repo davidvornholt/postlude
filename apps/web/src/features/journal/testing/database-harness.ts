@@ -28,10 +28,15 @@ import {
   type TestPool,
 } from '#/shared/testing/test-database.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
+import { EntryExport } from '../services/entry-export.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
 import { EntrySearch } from '../services/entry-search.ts';
 
-type JournalServices = EntryRepository | EntrySearch | SqlClient.SqlClient;
+type JournalServices =
+  | EntryRepository
+  | EntrySearch
+  | EntryExport
+  | SqlClient.SqlClient;
 
 /** A day to store, with the parts a test does not care about left empty. */
 export const draft = (
@@ -55,7 +60,11 @@ export const journalDatabase = () => {
     runtime = ManagedRuntime.make(
       Layer.provideMerge(
         Layer.provide(
-          Layer.mergeAll(EntryRepository.Default, EntrySearch.Default),
+          Layer.mergeAll(
+            EntryRepository.Default,
+            EntrySearch.Default,
+            EntryExport.Default,
+          ),
           clientLayer,
         ),
         clientLayer,
@@ -76,10 +85,15 @@ export const journalDatabase = () => {
 
   return {
     withRepository: withService(EntryRepository),
-    // Searching means writing the days first, and a body that ran outside the
-    // rollback would leave them behind, so both services are handed to one body.
+    // Searching and exporting mean writing the days first, and a body that ran
+    // outside the rollback would leave them behind, so the services that read
+    // what the repository wrote are handed to one body along with it.
     withJournal: withService(
-      Effect.all({ entries: EntryRepository, search: EntrySearch }),
+      Effect.all({
+        entries: EntryRepository,
+        search: EntrySearch,
+        exports: EntryExport,
+      }),
     ),
   } as const;
 };

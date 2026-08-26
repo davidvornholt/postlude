@@ -42,6 +42,9 @@ const emptyDay: JournalEntry = {
 // Nothing types during a render, so the save port is one that never resolves.
 const neverSaves = () => new Promise<never>(() => undefined);
 
+// Nothing is pressed during a render either, so the download is never called.
+const neverDownloads = () => new Promise<never>(() => undefined);
+
 const today = await renderInRouter(
   <DayPage entry={emptyDay} save={neverSaves} today={emptyDay.date} />,
 );
@@ -49,6 +52,7 @@ const archiveSeed = 20_260_826;
 const sampleDays = 400;
 const archive = await renderInRouter(
   <ArchivePage
+    download={neverDownloads}
     selectedYear={undefined}
     view={sampleArchiveView(
       sampleJournal(emptyDay.date, sampleDays, archiveSeed),

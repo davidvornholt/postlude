@@ -6,6 +6,7 @@ import {
   type ArchiveQueryParams,
   readArchiveFn,
 } from '#/features/journal/services/archive-fns.ts';
+import { exportJournalFn } from '#/features/journal/services/export-fns.ts';
 import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
@@ -30,7 +31,9 @@ const archiveSearch = (search: Record<string, unknown>): ArchiveQueryParams =>
 const ArchiveRoute = () => {
   const view = Route.useLoaderData();
   const { year } = Route.useSearch();
-  return <ArchivePage selectedYear={year} view={view} />;
+  return (
+    <ArchivePage download={exportJournalFn} selectedYear={year} view={view} />
+  );
 };
 
 export const Route = createFileRoute('/_app/archive')({

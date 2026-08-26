@@ -1,10 +1,13 @@
 /**
  * The archive: how the journal has actually been going.
  *
- * It reads top to bottom as three answers to three different questions. The
- * streaks say how it is going now. The map says how the year went. "On this
- * day" says what the writer was thinking about a year ago, which is the only
- * part of the page that is there to be read rather than measured.
+ * It reads top to bottom as answers to different questions. The streaks say how
+ * it is going now. The map says how the year went. "On this day" says what the
+ * writer was thinking about a year ago, which is the only part of the page that
+ * is there to be read rather than measured. The download at the foot is the one
+ * thing here that is not a reading of the journal at all: it is the way out,
+ * and it sits under the measurements because it belongs to the same question —
+ * what is in here — rather than to the writing.
  *
  * This is the one page that takes the wider measure: a year of days is 53
  * columns and does not fit the text column. The prose inside it still keeps to
@@ -29,6 +32,7 @@ import { activityCells } from '../activity.ts';
 import { groupDigits, monthYearLabel } from '../activity-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
+import { type DownloadJournal, ExportControl } from './export-control.tsx';
 import { OnThisDay } from './on-this-day.tsx';
 import { StreakPanel } from './streak-panel.tsx';
 
@@ -84,9 +88,14 @@ type ArchivePageProps = {
   readonly view: ArchiveView;
   /** The year in the address, absent when the map shows the rolling year. */
   readonly selectedYear: number | undefined;
+  readonly download: DownloadJournal;
 };
 
-export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
+export const ArchivePage = ({
+  view,
+  selectedYear,
+  download,
+}: ArchivePageProps) => {
   const cells = activityCells(view.days, view.window);
   const written = view.totals.daysWritten;
 
@@ -129,6 +138,10 @@ export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
               />
             </Section>
           )}
+
+          <Section title="Your own copy">
+            <ExportControl download={download} today={view.today} />
+          </Section>
         </>
       )}
     </div>

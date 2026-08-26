@@ -11,8 +11,16 @@
  * which would pull every route's loader, and with them the database and the
  * validated server environment, into a test about markup. The list is short and
  * a link to an address missing from it fails loudly.
+ *
+ * A query client comes with it for the same reason the router does. Every page
+ * in the app renders under one — `router.tsx` puts it there — so a control that
+ * fires a request has one to fire it through, and rendering that control
+ * without a client would fail on the shape of the test rather than on the
+ * component. Nothing here fetches: server rendering runs the first render only,
+ * and a mutation waits to be pressed.
  */
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -44,5 +52,9 @@ export const renderInRouter = async (element: ReactNode): Promise<string> => {
     ),
   });
   await router.load();
-  return renderToString(<RouterProvider router={router} />);
+  return renderToString(
+    <QueryClientProvider client={new QueryClient()}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 };

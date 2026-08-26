@@ -28,8 +28,18 @@ const describedBy = /aria-describedby="(?<id>[^"]+)"/u;
 const dayLinks = /href="\/day\/\d{4}-\d{2}-\d{2}"/gu;
 
 const journal = sampleJournal(today, sampleDays, seed);
+
+/*
+ * The download is a prop rather than the real server function, which is what
+ * lets the page be rendered here at all: the route owns which function the page
+ * talks to, and nothing on the server side of it is reachable from a test about
+ * markup.
+ */
+const noDownload = () => Promise.resolve(new Response());
+
 const filled = await renderInRouter(
   <ArchivePage
+    download={noDownload}
     selectedYear={undefined}
     view={sampleArchiveView(journal, today)}
   />,
@@ -46,7 +56,11 @@ const emptyView: ArchiveView = {
   anniversaries: [],
 };
 const empty = await renderInRouter(
-  <ArchivePage selectedYear={undefined} view={emptyView} />,
+  <ArchivePage
+    download={noDownload}
+    selectedYear={undefined}
+    view={emptyView}
+  />,
 );
 
 /*
@@ -118,6 +132,7 @@ it('marks the year being shown so it is not told apart by colour alone', () => {
 it('reads back an earlier year and opens the day it came from', async () => {
   const withMemory = await renderInRouter(
     <ArchivePage
+      download={noDownload}
       selectedYear={undefined}
       view={{
         ...sampleArchiveView(journal, today),
@@ -147,4 +162,15 @@ it('names the page once and puts every section under it', () => {
   expect(filled.match(/<h1\b/gu)?.length).toBe(1);
   expect(elementAttributes(filled, 'h1', 'Archive')).not.toBe('');
   expect(elementAttributes(filled, 'h2', 'Activity')).not.toBe('');
+});
+
+/*
+ * The way out of the app is on the page that says what is in it. A journal with
+ * nothing written has nothing to hand over, so the offer is not made there —
+ * being told an empty download is available is worse than not being told.
+ */
+it('offers the journal as a download, and not before there is one', () => {
+  expect(plainText(filled)).toContain('Download the journal');
+  expect(elementAttributes(filled, 'h2', 'Your own copy')).not.toBe('');
+  expect(empty).not.toContain('Download the journal');
 });

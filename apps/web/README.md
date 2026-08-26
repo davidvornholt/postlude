@@ -46,6 +46,9 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 - `services/archive-fns.ts` — the one guarded server function the archive loads from. It reads the whole history to count the runs and only ships the window's days, so a run that began before the window is still counted while the page carries a year of small records rather than the journal.
 - `services/entry-search.ts` — the index read, behind its own Effect service. It is separate from the repository because the repository reads and writes a day keyed by a date, while search reads an index and owns a small query language; the two touch the same table and answer different questions about it.
 - `services/search-fns.ts` — the one guarded server function the search loads from. It cuts each excerpt on the server, so a page of results is a page of lines rather than every matching day's markdown in full.
+- `export-archive.ts` — the journal as a folder of named markdown documents, as pure text work. It knows nothing about zip: it turns entries into files, and the caller decides what container they travel in.
+- `services/entry-export.ts` — the whole table in one read, behind its own Effect service. It is separate from the repository because every repository read is bounded by something a page asked for and this one is bounded by nothing; keeping it apart is what stops an unbounded read from sitting one autocomplete away from the calls a page makes.
+- `services/export-fns.ts` — the one guarded server function the download comes through. It builds the zip and returns a `Response` rather than data, which TanStack Start hands back untouched.
 - `ui/` — the writing page, the archive and the search. `use-autosave.ts` is the only part that touches the browser, turning each of the rule's decisions into a timer or a request; `markdown-editor.tsx` is the Tiptap surface, where markdown is typed and set in place rather than previewed.
 
 ## The writing page
@@ -85,6 +88,16 @@ It is built with Postgres's `simple` configuration — no stemming, no stopword 
 A result is the day's date and the words around the first match, cut on the server, with the matched words in `<mark>` elements set a weight heavier — the tint alone would say it in colour only. Days come back newest first rather than by relevance score, because a journal is read in time: two days that both hold the word are told apart by which was more recent, not by which repeated it more often. A day that matched on its passage rather than its evening says so and shows the passage.
 
 What the page says when it has nothing to list is most of its behaviour. Not having been asked anything, having been asked something that holds no words, and having been asked something no day answers are three different states, and only the last is a search that failed.
+
+## Taking the journal out
+
+The foot of the archive hands the whole journal over as a zip of markdown files — one file per day, named `2026-08-26.md`, under a folder for the year. The name sorts chronologically in any file browser without depending on a timestamp the copy might not survive, and the year folders keep a long journal opening as a handful of folders rather than as one listing of thousands.
+
+Each file opens with YAML front matter carrying the journal day and, where one was noted, the passage in the house style, followed by a `## Morning` section and a `## Evening` section. A section that was never written is left out rather than left empty. The zip also carries a `README.md` stating the format and the 04:00 journal-day rule, because an export that needs the app to explain it is not an export.
+
+The archive is built in memory and sent as one response. A journal is prose: a decade of daily entries is a few megabytes before compression and less after it, so streaming it out entry by entry would buy nothing but a second code path for the failure the whole-read already reports.
+
+The download travels through a guarded server function rather than an API route. A server function that returns a `Response` has it handed back to the caller unserialised, so the bytes arrive with the name they should be saved under while still sitting behind the same `sessionRequired` middleware every other read here carries — which is also what `sensitive-server-fns.test.ts` can see and check. A route outside that middleware could not be proven guarded.
 
 ## Environment
 
