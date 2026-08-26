@@ -26,7 +26,7 @@
  *   from mutation state to `aria-busy` is exactly what has to stay visible.
  */
 
-import { expect, it, mock } from 'bun:test';
+import { afterAll, expect, it, mock } from 'bun:test';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -43,6 +43,7 @@ import {
   elementAttributes,
   openingTag,
 } from '#/shared/testing/rendered-html.ts';
+import { columnClass, wideColumnClass } from '#/shared/ui/design-classes.ts';
 
 type SignOutState = {
   readonly isError: boolean;
@@ -52,11 +53,25 @@ type SignOutState = {
 const idle: SignOutState = { isError: false, isPending: false };
 let signOutState: SignOutState = idle;
 
-const reactQuery = await import('@tanstack/react-query');
+// Copied out of the module namespace, not held as it. Mocking a module rewrites
+// the bindings of the namespace object every importer already has, so a
+// reference kept to it would be the replacement by the time it was read back,
+// and putting the module back from it would put the replacement back.
+const reactQuery = { ...(await import('@tanstack/react-query')) };
+
 mock.module('@tanstack/react-query', () => ({
   ...reactQuery,
   useMutation: () => ({ ...signOutState, mutate: () => undefined }),
 }));
+
+// A Bun module mock replaces the module for the whole test process rather than
+// for this file, so react-query goes back afterwards: a later test of any other
+// surface that mutates would otherwise render against a `mutate` that does
+// nothing and still pass. The session guard stays replaced — putting it back
+// would import the chain this file exists to avoid, and only a route reads it.
+afterAll(() => {
+  mock.module('@tanstack/react-query', () => reactQuery);
+});
 
 mock.module('#/shared/auth/session-fn.ts', () => ({
   hasAuthorizedSessionFn: () => Promise.resolve(true),
@@ -64,6 +79,8 @@ mock.module('#/shared/auth/session-fn.ts', () => ({
 
 const { Route } = await import('#/routes/_app.tsx');
 
+// A stand-in page: what a page puts inside the landmark is its own to test, and
+// `_app/page-measures.test.tsx` tests it against the real pages.
 const pageComponent = () => <h1>A page</h1>;
 
 const rootRoute = createRootRoute();
@@ -153,6 +170,25 @@ it('marks only one page as current away from home', async () => {
   expect(classNames(other).has(ruleAtFullWidth)).toBe(false);
 });
 
+// Any class either measure recipe is built from, so a measure put back on
+// <main> is caught whichever one it is.
+const measureNames = new Set(`${columnClass} ${wideColumnClass}`.split(' '));
+
+const setsAMeasure = (attributes: string): boolean =>
+  [...classNames(attributes)].some((name) => measureNames.has(name));
+
+/*
+ * Column ownership, which the shell gave up so the archive could widen and the
+ * morning scripture's deep register could reach the viewport edges. A measure
+ * back on <main> would wrap the page's own and cancel the archive's wider one,
+ * and nothing else can see it: the browser suite stops at the sign-in page. The
+ * header keeps its column — that one is the shell's to set, around the masthead
+ * — so this reads the landmark rather than counting across the page.
+ */
+it('leaves the measure to the page', async () => {
+  expect(setsAMeasure(openingTag(await renderAt('/'), 'main'))).toBe(false);
+});
+
 it('opens one main landmark and points the skip link at it', async () => {
   const html = await renderAt('/');
 
@@ -171,17 +207,32 @@ it('opens one main landmark and points the skip link at it', async () => {
  * has to be in the resting class set. The rule is asserted as present and as
  * not resting at zero width, so a change that puts the affordance back behind
  * the pointer fails here rather than shipping as inert-looking type.
+ *
+ * All five classes are named, not only the two that paint: an `::after` with no
+ * `after:absolute` collapses inline, and one with no `after:inset-x-0`
+ * shrink-wraps its empty content to nothing. Either deletion alone leaves no
+ * visible rule while a thickness-and-colour assertion still reads as true.
  */
+const restingRule = [
+  'after:absolute',
+  'after:inset-x-0',
+  'after:bottom-0',
+  'after:h-px',
+  'after:bg-current',
+];
+
+/** An `after:` utility a pointer state has to reach before it applies. */
+const pointerGatedRule = /^(?:hover|focus|focus-visible|active):after:/u;
+
 it('gives the sign-out control a rule without waiting for a pointer', async () => {
   const html = await renderAt('/');
   const control = classNames(openingTag(html, 'button'));
 
-  expect(control.has('after:h-px')).toBe(true);
-  expect(control.has('after:bg-current')).toBe(true);
+  expect(restingRule.filter((name) => !control.has(name))).toEqual([]);
   expect(control.has(ruleAtZeroWidth)).toBe(false);
-  expect(
-    [...control].filter((name) => name.startsWith('hover:after:')),
-  ).toEqual([]);
+  expect([...control].filter((name) => pointerGatedRule.test(name))).toEqual(
+    [],
+  );
 });
 
 it('says the sign-out control is busy only while it is signing out', async () => {

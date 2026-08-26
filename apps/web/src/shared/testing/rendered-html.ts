@@ -22,6 +22,10 @@ const openingTagSource = (tag: string): string =>
 const openingTagPattern = (tag: string): RegExp =>
   new RegExp(openingTagSource(tag), 'u');
 
+/** The same opening tag, together with everything up to its closing tag. */
+const contentPattern = (tag: string): RegExp =>
+  new RegExp(`${openingTagSource(tag)}(?<content>.*)</${tag}>`, 'su');
+
 /** The same opening tag, together with the text that follows it. */
 const labelledTagPattern = (tag: string): RegExp =>
   new RegExp(`${openingTagSource(tag)}(?<text>[^<]*)<`, 'gu');
@@ -33,6 +37,23 @@ export const countElements = (html: string, tag: string): number =>
 /** The attribute text of the first `<tag …>`, or `''` when there is none. */
 export const openingTag = (html: string, tag: string): string =>
   html.match(openingTagPattern(tag))?.groups?.attributes ?? '';
+
+/**
+ * Everything the one `<tag …>` encloses, or `''` when there is none. This is
+ * how a count is asked of one region of the page rather than of the whole
+ * document: the shell's header and the page below it both set a measure, and
+ * only the page's is the page's to set.
+ */
+export const elementContent = (html: string, tag: string): string =>
+  html.match(contentPattern(tag))?.groups?.content ?? '';
+
+/**
+ * How many elements carry this whole class recipe. Recipes are composed in a
+ * module and handed to `className` in one piece, so each one reaches the markup
+ * as the same run of names it was written as.
+ */
+export const countRecipe = (html: string, recipe: string): number =>
+  html.split(recipe).length - 1;
 
 /**
  * The attribute text of the one `<tag>` whose text is exactly `text`, or `''`

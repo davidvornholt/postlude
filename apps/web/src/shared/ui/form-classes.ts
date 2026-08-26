@@ -1,8 +1,15 @@
 /**
  * The two controls the app has so far, in the design's own terms: one filled
  * button for the single action a page exists for, and one quiet control that is
- * type on a rule — the same vocabulary the navigation uses, so a control never
- * arrives as a box on a page built out of rules.
+ * type on a rule, so a control never arrives as a box on a page built out of
+ * rules. The navigation is set from the same eyebrow, but its rule is a state
+ * and this one's rests out — see below for why.
+ *
+ * Both recipes hold their state colours rather than leaving them to a caller,
+ * and every caller passes the recipe alone. Two utilities that set the same
+ * property are ordered by the generated stylesheet and never by the `class`
+ * attribute, so a colour appended at a call site could not reliably win: a
+ * control that needs different colours needs its own recipe here.
  *
  * Square corners and no shadow are the design rather than an omission: nothing
  * in Postlude floats, so both shadow tokens are off and there is no raised edge

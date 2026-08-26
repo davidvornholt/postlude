@@ -29,7 +29,9 @@ import { renderToString } from 'react-dom/server';
 
 import {
   countElements,
+  countRecipe,
   elementAttributes,
+  elementContent,
 } from '#/shared/testing/rendered-html.ts';
 import { BrandLink } from './brand-link.tsx';
 import { columnClass } from './design-classes.ts';
@@ -40,9 +42,12 @@ import {
 } from './router-fallbacks.tsx';
 
 /**
- * The shape `_app` gives the page: a wordmark, then the one main landmark, and
- * no column — the shell leaves the measure to the page so the archive can
- * widen and the deep register can reach the edges.
+ * Only the part of `_app` a fallback's position depends on: a wordmark it can
+ * be marked against, and the one main landmark it can land inside. It is not
+ * the shell — the real header sets the text column around the masthead, and
+ * this omits it — so the column counts below read inside `<main>` only, and
+ * what the real shell sets on `<main>` is pinned in `routes/_app.test.tsx`
+ * against the real thing.
  */
 const shellComponent = () => (
   <div>
@@ -118,7 +123,7 @@ const renderAt = async (path: string): Promise<string> => {
 const mainLandmarks = (html: string): number => countElements(html, 'main');
 
 const columnWrappers = (html: string): number =>
-  html.split(columnClass).length - 1;
+  countRecipe(elementContent(html, 'main'), columnClass);
 
 /** The attributes of the one anchor with this exact text. */
 const linkAttributes = (html: string, text: string): string =>

@@ -113,7 +113,7 @@ const textForegrounds = [
 const filledBackgrounds = ['--pl-primary', '--pl-primary-strong'] as const;
 const deepForegrounds = ['--pl-deep-ink', '--pl-deep-ink-muted'] as const;
 
-export const textPairs: ReadonlyArray<readonly [string, string]> = [
+const textPairs: ReadonlyArray<readonly [string, string]> = [
   ...textBackgrounds.flatMap((background) =>
     textForegrounds.map(
       (foreground) => [foreground, background] as readonly [string, string],
