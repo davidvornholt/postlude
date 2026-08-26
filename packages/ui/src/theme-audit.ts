@@ -1,10 +1,10 @@
 /**
  * The audit machinery `theme-contract.test.ts` runs over the tokens in
  * `theme.css`: contrast, the sequential activity ramp, and which tokens have to
- * exist in both color schemes. It sits apart from the test so the rules read as
- * a stated contract rather than as assertions, and so a second palette — a
- * design exploration, a future high-contrast scheme — is audited by the same
- * code rather than by a restatement of it.
+ * exist in both color schemes. Postlude has one palette: the `--pl-*` tokens
+ * declared at `:root`, in a light and a dark color scheme. The rules sit apart
+ * from the test so each reads as a stated contract rather than as an assertion
+ * buried in a case, and so a failure names the rule it broke.
  *
  * The reader of a failure gets the whole list at once, so every check returns
  * findings as strings instead of asserting: a caller compares the list to `[]`
@@ -22,11 +22,16 @@ const declarationPattern = /^(?<token>--pl-[a-z\d-]+)\s*:\s*(?<value>.+)$/su;
 /**
  * The `--pl-*` declarations a selector carries in one color scheme.
  *
- * `theme.css` puts the dark `:root` inside a top-level media query; a palette
- * scoped to a class would nest the media query inside the class instead.
- * Tracking the open preludes rather than slicing on the first `}` is what makes
- * one reader handle both shapes, and what keeps a nested block from being
- * mistaken for the end of its parent.
+ * `theme.css` nests: the dark `:root` sits inside a top-level media query, so
+ * slicing on the first `}` would read that block's close as the end of the
+ * query around it. Tracking the open preludes instead is what keeps a nested
+ * block from being mistaken for its parent's end.
+ *
+ * Every caller passes `:root`, because that is where the palette is declared.
+ * The selector stays a parameter deliberately rather than by requirement: it
+ * costs one argument, and it is what would let a palette scoped somewhere else
+ * — a subtree redefining tokens, a scheme under test — be read by this code
+ * rather than by a second copy of it.
  */
 export const schemeDeclarations = (
   css: string,
@@ -160,7 +165,9 @@ const stepDecimals = 3;
  * categorical distinctness a series palette needs: lightness has to move one
  * way only and far enough per step to be seen. Every filled step and the empty
  * day's outline must also clear WCAG's non-text contrast minimum against the
- * surface beneath the grid.
+ * surface beneath the grid. That surface is `--pl-background` at every caller
+ * today; it stays a parameter deliberately, so a heatmap moved onto a different
+ * surface is re-measured against the one it actually sits on.
  */
 export const rampFindings = (
   label: string,

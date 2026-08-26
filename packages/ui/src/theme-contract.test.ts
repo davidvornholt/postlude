@@ -5,6 +5,7 @@ import {
   colorTokenNames,
   rampFindings,
   schemeDeclarations,
+  shadowTokenNames,
   textPairFindings,
 } from './theme-audit.ts';
 
@@ -56,9 +57,7 @@ it('color tokens use oklch, and nothing casts a shadow', () => {
   // rather than from raised material, so both shadow tokens stay off in both
   // schemes. They still exist so a utility that names one resolves.
   const shadows = schemes.flatMap((palette) =>
-    Object.entries(palette)
-      .filter(([token]) => token.startsWith('--pl-shadow-'))
-      .map(([, value]) => value),
+    shadowTokenNames(palette).map((token) => palette[token]),
   );
   expect(shadows.length).toBeGreaterThan(0);
   expect(new Set(shadows)).toEqual(new Set(['none']));
