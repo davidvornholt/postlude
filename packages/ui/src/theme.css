@@ -21,9 +21,15 @@
    *
    * Fraunces carries an optical size axis, so its display cut sharpens on its
    * own as the type grows; Inter stays quiet and holds tabular figures.
+   *
+   * The monospace face is the device's own and is loaded by nobody. It sets
+   * the one thing markdown can hold that the other two cannot say — a fenced
+   * code block, where the alignment is the content — and a journal that
+   * contains one every few months does not deserve a third webfont for it.
    */
   --pl-font-display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
   --pl-font-sans: "Inter Variable", system-ui, sans-serif;
+  --pl-font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
 
   --pl-background: oklch(0.96 0.015 85);
   /* The page is flat on purpose: a raised surface would be a card, and this
@@ -142,6 +148,7 @@
 @theme inline {
   --font-display: var(--pl-font-display);
   --font-sans: var(--pl-font-sans);
+  --font-mono: var(--pl-font-mono);
 
   --shadow-card: var(--pl-shadow-card);
   --shadow-featured: var(--pl-shadow-featured);

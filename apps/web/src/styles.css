@@ -6,3 +6,124 @@ body {
   color: var(--pl-ink);
   font-family: var(--font-sans);
 }
+
+/*
+ * The written page.
+ *
+ * Markdown is typed and rendered in place, so what the writer sees is the
+ * finished setting rather than a preview of one. That means these rules dress
+ * elements nothing in the source names: the editor produces the heading, the
+ * list, the quote, and there is no component to hang a utility on.
+ *
+ * Structure here is rules and type, as everywhere else in Postlude — a quote
+ * and a code block are a hairline down the left, not a filled box. The two
+ * colors that vary between the page and the deep register are the only ones
+ * these rules name, and they are named as custom properties so the register
+ * re-points them for its whole subtree rather than restating the block.
+ */
+@layer components {
+  .journal-prose {
+    --journal-rule: var(--pl-border);
+    --journal-quiet: var(--pl-ink-muted);
+
+    hyphens: auto;
+  }
+
+  .journal-prose-deep {
+    --journal-rule: var(--pl-deep-rule);
+    --journal-quiet: var(--pl-deep-ink-muted);
+  }
+
+  .journal-prose > * + * {
+    margin-top: 1em;
+  }
+
+  .journal-prose :is(h1, h2, h3, h4) {
+    font-family: var(--pl-font-display);
+    line-height: 1.2;
+  }
+
+  .journal-prose :is(h1, h2, h3, h4):not(:first-child) {
+    margin-top: 1.6em;
+  }
+
+  .journal-prose h1 {
+    font-size: 1.6em;
+  }
+
+  .journal-prose h2 {
+    font-size: 1.35em;
+  }
+
+  .journal-prose h3 {
+    font-size: 1.15em;
+  }
+
+  .journal-prose :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+
+  .journal-prose ul {
+    list-style: disc;
+  }
+
+  .journal-prose ol {
+    list-style: decimal;
+  }
+
+  /* The bullet takes the ink color rather than the quiet one: `::marker` is not
+     Baseline-listed at any level, and a shade on a bullet is not worth a lint
+     exception. */
+  .journal-prose li + li {
+    margin-top: 0.35em;
+  }
+
+  .journal-prose blockquote {
+    border-left: 1px solid var(--journal-rule);
+    padding-left: 1.1em;
+    font-style: italic;
+  }
+
+  .journal-prose hr {
+    margin-block: 2em;
+    border: 0;
+    border-top: 1px solid var(--journal-rule);
+  }
+
+  .journal-prose :is(code, pre) {
+    font-family: var(--pl-font-mono);
+    font-size: 0.9em;
+  }
+
+  .journal-prose pre {
+    overflow-x: auto;
+    border-left: 1px solid var(--journal-rule);
+    padding-left: 1.1em;
+  }
+
+  /* A link is underlined rather than colored: color is the welcome here, never
+     the structure, and an underline works on the parchment and on the deep
+     ground without a second token. */
+  .journal-prose a {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .journal-prose strong {
+    font-weight: 600;
+  }
+
+  .journal-prose em {
+    font-style: italic;
+  }
+
+  /* The prompt on an untouched page. It floats out of the flow so the caret
+     sits where the first word will, rather than after the prompt. */
+  .journal-prose p.is-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--journal-quiet);
+    pointer-events: none;
+  }
+}

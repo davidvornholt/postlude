@@ -26,9 +26,21 @@ const openingTagPattern = (tag: string): RegExp =>
 const contentPattern = (tag: string): RegExp =>
   new RegExp(`${openingTagSource(tag)}(?<content>.*)</${tag}>`, 'su');
 
-/** The same opening tag, together with the text that follows it. */
+/** The same opening tag, together with everything up to its own closing tag. */
 const labelledTagPattern = (tag: string): RegExp =>
-  new RegExp(`${openingTagSource(tag)}(?<text>[^<]*)<`, 'gu');
+  new RegExp(`${openingTagSource(tag)}(?<text>.*?)</${tag}>`, 'gsu');
+
+const markup = /<[^>]*>/gu;
+const whitespaceRuns = /\s+/gu;
+
+/**
+ * What an element reads as: nested tags dropped, and with them the comment
+ * nodes React writes between adjacent pieces of text. A label assembled from a
+ * value and some words reaches the markup as several nodes with separators
+ * between them, and it is still one label to anyone reading the page.
+ */
+export const plainText = (html: string): string =>
+  html.replace(markup, '').replace(whitespaceRuns, ' ').trim();
 
 /** How many `<tag …>` elements the markup opens. */
 export const countElements = (html: string, tag: string): number =>
@@ -56,7 +68,7 @@ export const countRecipe = (html: string, recipe: string): number =>
   html.split(recipe).length - 1;
 
 /**
- * The attribute text of the one `<tag>` whose text is exactly `text`, or `''`
+ * The attribute text of the one `<tag>` that reads as exactly `text`, or `''`
  * when no element matches — so an assertion about a renamed or missing element
  * runs against an empty string rather than against another element's tag.
  */
@@ -67,7 +79,7 @@ export const elementAttributes = (
 ): string =>
   Array.from(html.matchAll(labelledTagPattern(tag)), (match) => ({
     attributes: match.groups?.attributes ?? '',
-    text: match.groups?.text ?? '',
+    text: plainText(match.groups?.text ?? ''),
   })).find((element) => element.text === text)?.attributes ?? '';
 
 /** The value of one attribute inside an attribute text, or `''`. */

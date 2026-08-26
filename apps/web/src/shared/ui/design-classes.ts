@@ -21,6 +21,18 @@ export const focusRingClass =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
 
 /**
+ * The same ring for anything inside the deep register, as its own recipe
+ * rather than a colour appended to the one above. The primary green sits at
+ * 2.11:1 on the deep ground, under the 3:1 a focus indicator has to clear, and
+ * appending `outline-deep-ink` to `focusRingClass` would not reliably replace
+ * it: which of two utilities setting the same property wins is decided by their
+ * order in the generated stylesheet and never by the `class` attribute. So the
+ * register's controls carry this instead, and never both.
+ */
+export const deepFocusRingClass =
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep-ink';
+
+/**
  * The set column the writing page keeps to: roughly 65 characters of Inter
  * once the gutters are taken off, which is a comfortable measure to read a
  * long evening entry at.

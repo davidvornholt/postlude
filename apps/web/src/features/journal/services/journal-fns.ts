@@ -22,8 +22,10 @@ import { env } from '#/shared/env.ts';
 import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import {
+  type EntryDraft,
   EntryDraftSchema,
   emptyJournalEntry,
+  JournalDateSchema,
   type JournalEntry,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
@@ -33,27 +35,41 @@ export const currentJournalDate = (): JournalDate =>
   journalDateAt(new Date(), env.JOURNAL_TIME_ZONE);
 
 const DateInput = Schema.Struct({
-  date: Schema.optional(Schema.String),
+  date: Schema.optional(JournalDateSchema),
 });
 
 const decodeDateInput = Schema.decodeUnknownSync(DateInput);
 const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
 
 /**
+ * A day's page: the entry, and what the server's clock calls today.
+ *
+ * Today comes back with the entry rather than being asked for separately,
+ * because every page needs both and the two have to agree. A page that read
+ * the day from the browser could offer to write a day the server would refuse,
+ * or call yesterday "today" for a reader who has travelled.
+ */
+export type JournalDayView = {
+  readonly entry: JournalEntry;
+  readonly today: JournalDate;
+};
+
+/**
  * One day, blank when it has never been written. The date is optional: with
  * none, the server decides today from its own clock rather than believing a
  * client's, which is what keeps "today" the same page on every device.
  */
-export const readEntryFn = createServerFn({ method: 'GET' })
+export const readJournalDayFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .inputValidator((input: unknown) => decodeDateInput(input))
-  .handler(({ data }): Promise<JournalEntry> => {
-    const date = data.date ?? currentJournalDate();
+  .inputValidator((input: unknown) => decodeDateInput(input ?? {}))
+  .handler(({ data }): Promise<JournalDayView> => {
+    const today = currentJournalDate();
+    const date = data.date ?? today;
     return runServerEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const entry = yield* entries.read(date);
-        return entry ?? emptyJournalEntry(date);
+        return { entry: entry ?? emptyJournalEntry(date), today };
       }),
     );
   });
@@ -75,3 +91,11 @@ export const saveEntryFn = createServerFn({ method: 'POST' })
         }),
       ),
   );
+
+/**
+ * The same save, as the plain call the writing page takes. A server function is
+ * invoked as `fn({ data })` rather than as `fn(draft)`, and the page should not
+ * have to know that — it holds a draft and wants it written.
+ */
+export const saveDraft = (draft: EntryDraft): Promise<JournalEntry> =>
+  saveEntryFn({ data: draft });

@@ -28,7 +28,11 @@ it('declares the type faces once, outside the color schemes', () => {
   // color scheme changes which typeface is right, which it never does.
   const faces = (palette: Record<string, string>) =>
     Object.keys(palette).filter((token) => token.startsWith('--pl-font-'));
-  expect(faces(light)).toEqual(['--pl-font-display', '--pl-font-sans']);
+  expect(faces(light)).toEqual([
+    '--pl-font-display',
+    '--pl-font-sans',
+    '--pl-font-mono',
+  ]);
   expect(faces(dark)).toEqual([]);
 });
 

@@ -1,9 +1,10 @@
 /**
- * The two controls the app has so far, in the design's own terms: one filled
- * button for the single action a page exists for, and one quiet control that is
- * type on a rule, so a control never arrives as a box on a page built out of
- * rules. The navigation is set from the same eyebrow, but its rule is a state
- * and this one's rests out — see below for why.
+ * The controls the app has so far, in the design's own terms: one filled button
+ * for the single action a page exists for, one quiet control that is type on a
+ * rule, and one text field that is also type on a rule, so a control never
+ * arrives as a box on a page built out of rules. The navigation is set from the
+ * same eyebrow, but its rule is a state and the quiet control's rests out — see
+ * below for why.
  *
  * Both recipes hold their state colours rather than leaving them to a caller,
  * and every caller passes the recipe alone. Two utilities that set the same
@@ -16,7 +17,11 @@
  * for a radius to soften.
  */
 
-import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
+import {
+  deepFocusRingClass,
+  eyebrowClass,
+  focusRingClass,
+} from '#/shared/ui/design-classes.ts';
 
 export const primaryButtonClass = [
   'inline-flex items-center justify-center bg-primary px-5 py-2.5',
@@ -42,4 +47,22 @@ export const quietButtonClass = [
   'transition-colors duration-150 ease-standard',
   'hover:text-ink active:text-ink',
   focusRingClass,
+].join(' ');
+
+/*
+ * A single-line field, in the deep register. It is a rule with type on it
+ * rather than a box: an outlined input would be the one card on a page that has
+ * none, and the rule under the words is what a paper form uses to say "write
+ * here" anyway.
+ *
+ * Only the deep variant exists because only the deep register has a field so
+ * far. The ring is the register's own recipe rather than the standard one with
+ * a colour appended, for the reason `deepFocusRingClass` gives.
+ */
+export const deepFieldClass = [
+  'w-full border-deep-rule border-b bg-transparent pb-1',
+  'text-deep-ink placeholder:text-deep-ink-muted',
+  'transition-colors duration-150 ease-standard',
+  'hover:border-deep-ink-muted focus:border-deep-ink',
+  deepFocusRingClass,
 ].join(' ');

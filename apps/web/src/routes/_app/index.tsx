@@ -1,27 +1,30 @@
 import { createFileRoute } from '@tanstack/react-router';
-
-import { columnClass } from '#/shared/ui/design-classes.ts';
+import {
+  readJournalDayFn,
+  saveDraft,
+} from '#/features/journal/services/journal-fns.ts';
+import { DayPage } from '#/features/journal/ui/day-page.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
 /**
- * Placeholder until the writing page lands.
+ * Today, at the plain address.
  *
- * The page sets its own measure, not the shell: this is what the deep register
- * will step outside of when the morning scripture section arrives.
+ * Which day "today" is comes from the server, not from this route: it asks for
+ * a day without naming one and the server answers with its own clock, under the
+ * 04:00 rule. That is what keeps a phone opened at half past midnight on the
+ * same page as the laptop it was left on.
+ *
+ * The page sets its own measure rather than taking one from the shell, because
+ * the morning scripture's deep register has to run edge to edge and cannot
+ * escape a column the shell has already closed around it.
  */
-const TodayPage = () => (
-  <div className={columnClass}>
-    <section>
-      <h1 className="font-display text-4xl text-ink sm:text-5xl">Today</h1>
-      <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
-        The writing page lands next: the morning scripture section, the evening
-        journal, and an editor that saves as you type.
-      </p>
-    </section>
-  </div>
-);
+const TodayRoute = () => {
+  const { entry, today } = Route.useLoaderData();
+  return <DayPage entry={entry} save={saveDraft} today={today} />;
+};
 
 export const Route = createFileRoute('/_app/')({
-  component: TodayPage,
+  loader: () => readJournalDayFn(),
+  component: TodayRoute,
   head: () => ({ meta: [{ title: pageTitle('Today') }] }),
 });

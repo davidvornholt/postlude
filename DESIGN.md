@@ -2,7 +2,7 @@
 
 Postlude is set like a thoughtfully made periodical, not like an app. Parchment grounds, deep warm inks, structure from typography and hairline rules rather than from boxes. The page you write on should feel like a page, and the app around it should get out of the way of the writing.
 
-This file states the intent. The values live in `packages/ui/src/theme.css` and nowhere else; the shared shape classes live in `apps/web/src/shared/ui/design-classes.ts`, and the control recipes built from them — the primary button and the quiet control — live in `apps/web/src/shared/ui/form-classes.ts`. Read this before UI work, and follow it.
+This file states the intent. The values live in `packages/ui/src/theme.css` and nowhere else; the shared shape classes live in `apps/web/src/shared/ui/design-classes.ts`, and the control recipes built from them — the primary button, the quiet control, and the deep register's field — live in `apps/web/src/shared/ui/form-classes.ts`. Read this before UI work, and follow it.
 
 ## The rules that hold it together
 
@@ -10,12 +10,18 @@ This file states the intent. The values live in `packages/ui/src/theme.css` and 
 - **Square corners.** There is no raised edge for a radius to soften, so nothing is rounded.
 - **An eyebrow announces a section.** Small letterspaced capitals are how a section opens and how a control names itself, with a hairline rule where one part of the page has to be separated from the next. The navigation links, the sign-out control, and the sign-in page's opening line are set that way today. The navigation draws its rule as its current-page and hover behaviour. The sign-out control keeps its rule out at rest and deepens the type and the rule together when a pointer or a press reaches it, because a rule only a hover can draw is a rule a phone never gets, and a control has to look like a control before it is touched.
 - **One set column.** Body text keeps to roughly 65 characters (`columnClass`); the archive widens to fit a year of days (`wideColumnClass`). The measure is what the column holds: a rule or a ground may run the full width — the header's hairline already does — but the deep register is the one block of *content* that steps outside it.
-- **One inverse register.** `deep-*` is the single dark panel, edge to edge, with its own column inside. It carries the weight a card would carry elsewhere — the morning scripture, a featured passage — and appears once or twice a page at most. An inset dark panel reads as a card; an edge-to-edge one reads as turning a page. Its tokens are declared and audited, but nothing renders it yet: it arrives with the morning scripture section. When it does, it needs its own focus-ring recipe rather than a deep-ink outline appended to the standard one. Which of two utilities setting the same property wins is decided by their order in the generated stylesheet, not by the `class` attribute, and the standard ring's green is emitted last — so the appended one would silently lose and leave a 2.11:1 ring on the deep ground, under the 3:1 a focus indicator has to clear.
+- **One inverse register.** `deep-*` is the single dark panel, edge to edge, with its own column inside. It carries the weight a card would carry elsewhere — and appears once or twice a page at most. An inset dark panel reads as a card; an edge-to-edge one reads as turning a page. The writing page's morning scripture section is the one that renders it today. Anything focusable inside it takes `deepFocusRingClass` rather than the standard ring with a deep-ink outline appended: which of two utilities setting the same property wins is decided by their order in the generated stylesheet, not by the `class` attribute, and the standard ring's green is emitted last — so the appended one would silently lose and leave a 2.11:1 ring on the deep ground, under the 3:1 a focus indicator has to clear.
 - **Colour is the welcome, never the structure.** Green is the one primary; clay is the accent. Structure is rules and type. If a thing needs colour to be understood, it needs a rule or a label instead.
 
 ## Type
 
-Fraunces for display, Inter for everything set as text, both loaded once in `__root.tsx`. Fraunces carries an optical size axis, so its display cut sharpens on its own as the type grows. Inter stays quiet and holds tabular figures, which the archive needs. Faces resolve through `--pl-font-display` and `--pl-font-sans` rather than being named in components.
+Fraunces for display, Inter for everything set as text, both loaded once in `__root.tsx`. Fraunces carries an optical size axis, so its display cut sharpens on its own as the type grows. Inter stays quiet and holds tabular figures, which the archive needs. Faces resolve through `--pl-font-display`, `--pl-font-sans`, and `--pl-font-mono` rather than being named in components.
+
+The monospace face is a third token but not a third webfont: it is the device's own stack and is loaded by nobody. Markdown can hold a fenced code block, where the alignment is the content and a proportional face destroys it, and a journal that contains one every few months does not deserve a download for it.
+
+### The written page
+
+Markdown is typed and rendered in place, so a heading, a list, and a quote all reach the page without a component to hang a utility on. `.journal-prose` in `apps/web/src/styles.css` is where they are set, and `.journal-prose-deep` re-points its two colour properties for the inverse register rather than restating the block. Structure there follows the same rule as everywhere else: a quote and a code block are a hairline down the left, never a filled box, and a link is underlined rather than coloured — an underline works on the parchment and on the deep ground without a second token.
 
 ## Colour and dark mode
 
@@ -29,11 +35,11 @@ Nothing renders the ramp today. The heatmap that did — a year grid with a desc
 
 One easing curve, `--ease-standard`, used by every transition; no ad-hoc `ease-out` or inline `cubic-bezier(...)`. Motion today is confined to that: the navigation rule extending under a link, and the colour change each of the two controls makes under a pointer. Nothing else moves, and no page depends on movement to be read.
 
-Sections arriving as the reader reaches them is the intent for when the writing and archive pages land, not something the app does yet. When it arrives it should be built as a scroll-driven animation that only attaches where motion is welcome and the browser supports the timeline, so an element is never left holding a start state that nothing will advance, and every page stays fully legible with the animation never running.
+Sections arriving as the reader reaches them is the intent for when the archive lands, not something the app does yet. When it arrives it should be built as a scroll-driven animation that only attaches where motion is welcome and the browser supports the timeline, so an element is never left holding a start state that nothing will advance, and every page stays fully legible with the animation never running.
 
 ## Accessibility
 
-WCAG 2.2 AA is a floor the design is built to, not a pass applied afterwards. Every token pair that can carry normal-size text clears 4.5:1, and every activity mark clears 3:1 against its ground; `packages/ui/src/theme-contract.test.ts` recomputes both straight from the token values, so a pair no page has rendered yet is still held to it. `apps/web/a11y/` scans every route reachable without signing in, under both color schemes on desktop and mobile. The signed-in shell is out of its reach, because getting there needs a real GitHub OAuth round trip. Nothing is communicated by colour alone.
+WCAG 2.2 AA is a floor the design is built to, not a pass applied afterwards. Every token pair that can carry normal-size text clears 4.5:1, and every activity mark clears 3:1 against its ground; `packages/ui/src/theme-contract.test.ts` recomputes both straight from the token values, so a pair no page has rendered yet is still held to it. `apps/web/a11y/` scans every route reachable without signing in, under both color schemes on desktop and mobile. Everything behind the sign-in is out of its reach, because getting there needs a real GitHub OAuth round trip; those pages are server-rendered and asserted in `bun test` instead. Nothing is communicated by colour alone.
 
 ## Changing it
 
