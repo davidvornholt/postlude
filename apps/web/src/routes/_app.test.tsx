@@ -164,6 +164,26 @@ it('opens one main landmark and points the skip link at it', async () => {
   );
 });
 
+/*
+ * Postlude is read and written on a phone, and this button is the only way out
+ * of the app. A `hover:` utility is emitted inside `@media (hover: hover)`, so
+ * a coarse pointer never applies one: whatever says these words can be pressed
+ * has to be in the resting class set. The rule is asserted as present and as
+ * not resting at zero width, so a change that puts the affordance back behind
+ * the pointer fails here rather than shipping as inert-looking type.
+ */
+it('gives the sign-out control a rule without waiting for a pointer', async () => {
+  const html = await renderAt('/');
+  const control = classNames(openingTag(html, 'button'));
+
+  expect(control.has('after:h-px')).toBe(true);
+  expect(control.has('after:bg-current')).toBe(true);
+  expect(control.has(ruleAtZeroWidth)).toBe(false);
+  expect(
+    [...control].filter((name) => name.startsWith('hover:after:')),
+  ).toEqual([]);
+});
+
 it('says the sign-out control is busy only while it is signing out', async () => {
   const resting = await renderAt('/');
   const signingOut = await renderAt('/', { isError: false, isPending: true });

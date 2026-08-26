@@ -20,15 +20,19 @@ export const primaryButtonClass = [
 ].join(' ');
 
 /*
- * The rule is an `::after` on the control itself, so it spans the word exactly
- * and extends from the left as the pointer arrives. It rests at zero width, so
- * the control reads as type until it is reached.
+ * The rule is an `::after` on the control itself, so it spans the word exactly.
+ * It is out at rest, which is what says the words can be pressed: a hover rule
+ * is emitted inside `@media (hover: hover)` and a touch pointer never sees it,
+ * so a rule the pointer drew would leave the only way out of the app reading as
+ * a label on a phone. The rule takes its colour from the label, so deepening
+ * the type to full ink under a pointer or a press strengthens both together —
+ * the pointer weights a rule that is already there rather than drawing one.
  */
 export const quietButtonClass = [
   eyebrowClass,
   'relative inline-block pb-1 text-ink-muted',
-  'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left after:scale-x-0 after:bg-current',
-  'after:transition-transform after:duration-200 after:ease-standard motion-reduce:after:transition-none',
-  'hover:text-ink hover:after:scale-x-100',
+  'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-current',
+  'transition-colors duration-150 ease-standard',
+  'hover:text-ink active:text-ink',
   focusRingClass,
 ].join(' ');
