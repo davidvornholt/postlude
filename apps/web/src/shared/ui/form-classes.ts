@@ -1,11 +1,10 @@
 /**
  * The controls the app has so far, in the design's own terms: one filled button
  * for the single action a page exists for, one quiet control that is type on a
- * rule, the same control set a step back for the one action that sits beside
- * the navigation, and one text field that is also type on a rule — so a control
- * never arrives as a box on a page built out of rules. The navigation is set
- * from the same eyebrow, but its rule is a state and the quiet control's rests
- * out — see below for why.
+ * rule, and one text field that is also type on a rule, so a control never
+ * arrives as a box on a page built out of rules. The navigation is set from the
+ * same eyebrow, but its rule is a state and the quiet control's rests out — see
+ * below for why.
  *
  * Both recipes hold their state colours rather than leaving them to a caller,
  * and every caller passes the recipe alone. Two utilities that set the same
@@ -44,29 +43,6 @@ export const primaryButtonClass = [
 export const quietButtonClass = [
   eyebrowClass,
   'relative inline-block pb-1 text-ink-muted',
-  'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-current',
-  'transition-colors duration-150 ease-standard',
-  'hover:text-ink active:text-ink',
-  focusRingClass,
-].join(' ');
-
-/*
- * The same control, one step back, for an action standing next to the
- * navigation rather than on a page.
- *
- * In the header, weight is what says which page you are on: the current page is
- * the darkest label and the only one wearing a rule. A control set at the same
- * weight as a link, and wearing a rule the inactive links do not, reads as a
- * third page — and as the one you are on. So this is the faintest thing in the
- * row, and the divider beside it says the two groups are different in kind.
- *
- * The rule still rests out, for the reason above: a phone never draws one. It
- * is a recipe rather than the quiet control with a colour appended, because two
- * utilities setting the same property are ordered by the generated stylesheet.
- */
-export const accountActionClass = [
-  eyebrowClass,
-  'relative inline-block pb-1 text-ink-faint',
   'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-current',
   'transition-colors duration-150 ease-standard',
   'hover:text-ink active:text-ink',
