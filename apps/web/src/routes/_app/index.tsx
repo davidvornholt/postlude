@@ -2,13 +2,13 @@ import { createFileRoute } from '@tanstack/react-router';
 
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
-/** Placeholder until the writing page lands with the chosen theme. */
+/** Placeholder until the writing page lands. */
 const TodayPage = () => (
   <section>
-    <h1 className="font-display text-3xl text-ink tracking-tight">Today</h1>
-    <p className="mt-3 text-ink-muted">
-      The writing page arrives with the design comparison: scripture section,
-      evening journal, and an editor that saves as you type.
+    <h1 className="font-display text-4xl text-ink sm:text-5xl">Today</h1>
+    <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
+      The writing page lands next: the morning scripture section, the evening
+      journal, and an editor that saves as you type.
     </p>
   </section>
 );

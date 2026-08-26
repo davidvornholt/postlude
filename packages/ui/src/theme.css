@@ -1,9 +1,13 @@
 /*
- * Placeholder theme for the scaffold: warm paper light mode, warm dark mode.
- * The design comparison PR re-skins these values under /heirloom and
- * /warm-print through a wrapper class; the winning seed becomes the real theme
- * via design-init. Only these semantic tokens may color the app — the Tailwind
- * palette is off.
+ * The Postlude theme. The journal is set like a thoughtfully made periodical:
+ * parchment grounds and deep warm inks, structure from typography and hairline
+ * rules rather than from boxes, square corners everywhere, and one deep inverse
+ * register that carries the weight a card would carry elsewhere. Nothing
+ * floats, so both shadow tokens stay off.
+ *
+ * `DESIGN.md` at the repo root states the intent these values serve; this file
+ * is the only place the values themselves live. Only these semantic tokens may
+ * color the app — the Tailwind palette is off.
  */
 
 :root {
@@ -11,35 +15,44 @@
   color-scheme: light dark;
 
   /*
-   * Faces resolve through tokens for the same reason colors do: a wrapper class
+   * Faces resolve through tokens for the same reason colors do, so a subtree
    * that redefines them re-sets the type of everything below it. They carry no
    * dark-mode variant — a color scheme does not change which typeface is right.
+   *
+   * Fraunces carries an optical size axis, so its display cut sharpens on its
+   * own as the type grows; Inter stays quiet and holds tabular figures.
    */
-  --pl-font-display: "Iowan Old Style", Georgia, "Times New Roman", serif;
-  --pl-font-sans: system-ui, sans-serif;
+  --pl-font-display: "Fraunces Variable", "Iowan Old Style", Georgia, serif;
+  --pl-font-sans: "Inter Variable", system-ui, sans-serif;
 
-  --pl-background: oklch(0.97 0.008 85);
-  --pl-surface: oklch(0.99 0.005 90);
-  --pl-surface-sunken: oklch(0.94 0.01 85);
+  --pl-background: oklch(0.96 0.015 85);
+  /* The page is flat on purpose: a raised surface would be a card, and this
+     design has none. The token still exists so every utility resolves. */
+  --pl-surface: oklch(0.96 0.015 85);
+  --pl-surface-sunken: oklch(0.93 0.015 85);
 
-  --pl-ink: oklch(0.25 0.02 60);
-  --pl-ink-muted: oklch(0.45 0.02 60);
-  --pl-ink-faint: oklch(0.51 0.015 60);
+  --pl-ink: oklch(0.25 0.02 50);
+  --pl-ink-muted: oklch(0.45 0.02 52);
+  --pl-ink-faint: oklch(0.5 0.018 52);
 
-  --pl-primary: oklch(0.45 0.09 155);
-  --pl-primary-strong: oklch(0.38 0.09 155);
-  --pl-on-primary: oklch(0.98 0.01 90);
-  --pl-primary-subtle: oklch(0.93 0.03 155);
+  --pl-primary: oklch(0.43 0.085 155);
+  --pl-primary-strong: oklch(0.37 0.085 155);
+  --pl-on-primary: oklch(0.96 0.015 85);
+  --pl-primary-subtle: oklch(0.92 0.03 155);
 
-  --pl-accent: oklch(0.51 0.115 60);
-  --pl-accent-subtle: oklch(0.93 0.04 75);
+  /* Clay: the welcome, never the structure. Held at this lightness because it
+     has to clear 4.5:1 as text on the palest ground it can be set on. */
+  --pl-accent: oklch(0.5 0.11 40);
+  --pl-accent-subtle: oklch(0.93 0.03 40);
 
-  --pl-positive: oklch(0.5 0.13 150);
-  --pl-critical: oklch(0.5 0.14 30);
-  --pl-critical-subtle: oklch(0.94 0.03 30);
+  --pl-positive: oklch(0.45 0.11 150);
+  --pl-critical: oklch(0.45 0.14 30);
+  --pl-critical-subtle: oklch(0.93 0.03 30);
 
-  --pl-border: oklch(0.87 0.015 80);
-  --pl-border-strong: oklch(0.78 0.02 78);
+  --pl-border: oklch(0.85 0.015 82);
+  --pl-border-strong: oklch(0.72 0.02 80);
+
+  /* Shadows sit under things that float, and nothing here floats. */
   --pl-shadow-card: none;
   --pl-shadow-featured: none;
 
@@ -49,62 +62,67 @@
    * and deliberately sits with the surfaces rather than on the ramp. Its
    * contrasting outline, not this fill, is what marks it as empty.
    */
-  --pl-heat-none: oklch(0.94 0.01 85);
+  --pl-heat-none: oklch(0.93 0.015 85);
   --pl-heat-none-mark: oklch(0.6 0.02 80);
   --pl-heat-q1: oklch(0.6 0.07 155);
   --pl-heat-q2: oklch(0.52 0.085 155);
   --pl-heat-q3: oklch(0.44 0.09 155);
-  --pl-heat-q4: oklch(0.36 0.09 155);
+  --pl-heat-q4: oklch(0.36 0.085 155);
 
-  /*
-   * The deep register is an inverted surface — a dark panel that keeps its
-   * character in both color schemes rather than following the ground.
-   */
-  --pl-deep-ground: oklch(0.22 0.012 60);
-  --pl-deep-ink: oklch(0.92 0.012 80);
-  --pl-deep-ink-muted: oklch(0.74 0.015 75);
-  --pl-deep-rule: oklch(0.33 0.014 62);
+  /* The deep register: the one inverse surface, dark ink-ground under light
+     type, kept to a section or two a page. */
+  --pl-deep-ground: oklch(0.24 0.02 55);
+  --pl-deep-ink: oklch(0.94 0.015 85);
+  --pl-deep-ink-muted: oklch(0.76 0.016 80);
+  --pl-deep-rule: oklch(0.38 0.02 58);
 }
 
+/*
+ * Dark mode is not a second palette: the page becomes the deep register's
+ * world, growing out of its ground and its ink. The register itself then has to
+ * invert to parchment, or turning to it would stop feeling like turning a page
+ * and start feeling like nothing happened.
+ */
 @media (prefers-color-scheme: dark) {
   :root {
-    --pl-background: oklch(0.22 0.012 60);
-    --pl-surface: oklch(0.26 0.014 60);
-    --pl-surface-sunken: oklch(0.19 0.01 60);
+    --pl-background: oklch(0.23 0.018 55);
+    --pl-surface: oklch(0.23 0.018 55);
+    --pl-surface-sunken: oklch(0.2 0.014 55);
 
-    --pl-ink: oklch(0.92 0.012 80);
-    --pl-ink-muted: oklch(0.74 0.015 75);
-    --pl-ink-faint: oklch(0.69 0.015 70);
+    --pl-ink: oklch(0.93 0.015 85);
+    --pl-ink-muted: oklch(0.75 0.016 80);
+    --pl-ink-faint: oklch(0.7 0.016 78);
 
-    --pl-primary: oklch(0.72 0.1 155);
-    --pl-primary-strong: oklch(0.8 0.1 155);
+    --pl-primary: oklch(0.72 0.09 155);
+    --pl-primary-strong: oklch(0.8 0.09 155);
     --pl-on-primary: oklch(0.2 0.03 155);
     --pl-primary-subtle: oklch(0.3 0.04 155);
 
-    --pl-accent: oklch(0.75 0.1 70);
-    --pl-accent-subtle: oklch(0.3 0.04 70);
+    --pl-accent: oklch(0.72 0.1 45);
+    --pl-accent-subtle: oklch(0.3 0.04 45);
 
     --pl-positive: oklch(0.72 0.1 150);
     --pl-critical: oklch(0.71 0.14 30);
-    --pl-critical-subtle: oklch(0.3 0.04 30);
+    --pl-critical-subtle: oklch(0.3 0.045 30);
 
-    --pl-border: oklch(0.33 0.014 62);
-    --pl-border-strong: oklch(0.42 0.016 65);
+    --pl-border: oklch(0.36 0.02 58);
+    --pl-border-strong: oklch(0.48 0.02 60);
+
     --pl-shadow-card: none;
     --pl-shadow-featured: none;
 
-    /* The ramp climbs in dark mode: the ground is the dark end here. */
-    --pl-heat-none: oklch(0.19 0.01 60);
-    --pl-heat-none-mark: oklch(0.52 0.02 65);
-    --pl-heat-q1: oklch(0.52 0.075 155);
+    /* The ramp climbs here: the ground is the dark end in this scheme. */
+    --pl-heat-none: oklch(0.2 0.014 55);
+    --pl-heat-none-mark: oklch(0.52 0.022 65);
+    --pl-heat-q1: oklch(0.52 0.08 155);
     --pl-heat-q2: oklch(0.6 0.085 155);
     --pl-heat-q3: oklch(0.68 0.09 155);
-    --pl-heat-q4: oklch(0.76 0.1 155);
+    --pl-heat-q4: oklch(0.76 0.095 155);
 
-    --pl-deep-ground: oklch(0.22 0.012 60);
-    --pl-deep-ink: oklch(0.92 0.012 80);
-    --pl-deep-ink-muted: oklch(0.74 0.015 75);
-    --pl-deep-rule: oklch(0.33 0.014 62);
+    --pl-deep-ground: oklch(0.96 0.015 85);
+    --pl-deep-ink: oklch(0.25 0.02 50);
+    --pl-deep-ink-muted: oklch(0.45 0.02 52);
+    --pl-deep-rule: oklch(0.8 0.015 82);
   }
 }
 
@@ -118,8 +136,8 @@
 
 /*
  * `inline` is load-bearing, not a style preference. Without it Tailwind would
- * resolve each `var(--pl-*)` once at `:root`, and a wrapper class that
- * redefines the token further down the tree would change nothing.
+ * resolve each `var(--pl-*)` once at `:root`, and a subtree that redefines a
+ * token further down the tree would change nothing.
  */
 @theme inline {
   --font-display: var(--pl-font-display);
@@ -155,4 +173,27 @@
   --color-deep-ink: var(--pl-deep-ink);
   --color-deep-ink-muted: var(--pl-deep-ink-muted);
   --color-deep-rule: var(--pl-deep-rule);
+}
+
+@keyframes pl-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+}
+
+/*
+ * Sections arrive as the reader reaches them, once per pass, and the page is
+ * fully legible without the animation ever running: the rule only attaches
+ * where motion is welcome and the view timeline exists, so an element is never
+ * left holding a start state no timeline will advance.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .pl-enter {
+      animation: pl-enter 400ms var(--ease-standard) both;
+      animation-timeline: view();
+      animation-range: entry 5% entry 55%;
+    }
+  }
 }

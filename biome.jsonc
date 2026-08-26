@@ -172,12 +172,12 @@
       }
     },
     {
-      // Each comparison theme is one wrapper class that redefines the `--pl-*`
-      // tokens for its subtree, and the element wearing it lives in apps/web.
-      // Lint runs per workspace, so the packages/ui pass only ever sees this
-      // package's own files and can never find the consumer that applies the
-      // class; noUnusedClasses has nothing to check it against here.
-      "includes": ["packages/ui/src/comparison-*.css"],
+      // theme.css declares `.pl-enter`, the class that plays a section's
+      // arrival on a view timeline, and every element wearing it lives in
+      // apps/web. Lint runs per workspace, so the packages/ui pass only ever
+      // sees this package's own files and can never find those consumers;
+      // noUnusedClasses has nothing to check the class against here.
+      "includes": ["packages/ui/src/theme.css"],
       "linter": {
         "rules": {
           "nursery": {

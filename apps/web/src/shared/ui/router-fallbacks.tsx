@@ -14,6 +14,7 @@
 
 import { createContext, type ReactNode, useContext, useEffect } from 'react';
 
+import { columnClass } from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 import { UnmarkedLink } from '#/shared/ui/unmarked-link.tsx';
@@ -31,7 +32,7 @@ type FallbackContent = {
   readonly message: string;
 };
 
-const FallbackCard = ({ heading, message }: FallbackContent) => {
+const FallbackBody = ({ heading, message }: FallbackContent) => {
   // The document head is built from the head data of the matched routes, and a
   // fallback replaces a match rather than becoming one, so it has no way to
   // contribute a title through the router. Server-rendered markup therefore
@@ -45,31 +46,40 @@ const FallbackCard = ({ heading, message }: FallbackContent) => {
   }, [heading]);
 
   return (
-    <div className="w-full max-w-sm border border-border bg-surface p-8 shadow-card">
-      <h1 className="font-display text-3xl text-ink tracking-tight">
-        {heading}
-      </h1>
-      <p className="mt-3 text-ink-muted">{message}</p>
+    <section>
+      <h1 className="font-display text-4xl text-ink sm:text-5xl">{heading}</h1>
+      <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
+        {message}
+      </p>
       {/* The way back is an action, and the failing address can be "/" itself
           — a bad search param on the home page, or an error inside it — so it
           goes through the link that never marks itself as the current page. */}
-      <UnmarkedLink
-        activeProps={{ className: '' }}
-        className={`${primaryButtonClass} mt-8 w-full`}
-        to="/"
-      >
-        Back to Postlude
-      </UnmarkedLink>
-    </div>
+      <p className="mt-10">
+        <UnmarkedLink
+          activeProps={{ className: '' }}
+          className={primaryButtonClass}
+          to="/"
+        >
+          Back to Postlude
+        </UnmarkedLink>
+      </p>
+    </section>
   );
 };
 
+/*
+ * Inside the shell the page is already set in its column, so the fallback adds
+ * only its own content; a failure that never reached the shell has to open the
+ * landmark and set the column itself, the way the sign-in page does.
+ */
 const FallbackPage = ({ heading, message }: FallbackContent) =>
   useContext(MainLandmarkContext) ? (
-    <FallbackCard heading={heading} message={message} />
+    <FallbackBody heading={heading} message={message} />
   ) : (
-    <main className="flex min-h-svh items-center justify-center bg-background px-6">
-      <FallbackCard heading={heading} message={message} />
+    <main className="flex min-h-svh flex-col justify-center bg-background py-16">
+      <div className={columnClass}>
+        <FallbackBody heading={heading} message={message} />
+      </div>
     </main>
   );
 

@@ -13,9 +13,9 @@ bun run dev                                # vite dev server on port 3000
 
 Sign-in needs all three of those. Without the database the sign-in request fails before the browser ever reaches GitHub, because better-auth stores the OAuth state as a row before it redirects; the sign-in page still renders, since a failed session lookup counts as signed out. Without the migrations that same write has no table to land in. And the dev server has to hold port 3000: the "Postlude (dev)" OAuth app sends the browser back to `http://localhost:3000/api/auth/callback/github`, so a server that fell back to another port never receives the callback. Free port 3000 rather than letting Vite move.
 
-## Design comparison
+## Design
 
-`/heirloom` and `/warm-print` each render the two pages the product is being designed around: the day you write on and the archive. Both route trees use the same made-up content with no database or sign-in behind it. They are public, so anyone with a link sees sample entries, never a real one. `src/features/design-comparison/` holds the sample day, the seeded year of activity, and the heatmap both candidates share. `packages/ui/src/comparison-heirloom.css` and `packages/ui/src/comparison-warm-print.css` each redefine the `--pl-*` tokens under their own wrapper class. `src/styles.css` loads both token overrides globally, but they remain inert outside `.theme-heirloom` and `.theme-warm-print`. Each layout loads only the font files for its own candidate. Nothing under `_app` reads the sample content, so the comparison can be deleted in one commit once the design is chosen.
+`DESIGN.md` at the repo root states the design intent and its rules; `@postlude/ui` holds the token values. In this app, `src/shared/ui/design-classes.ts` holds the shape vocabulary the pages share — the set column, the ruled eyebrow, the focus ring, the deep register — carrying no colour, so a caller's state colour never fights a colour baked into a shared recipe. `src/routes/__root.tsx` links the two faces the theme names, Fraunces and Inter, for the whole app.
 
 ## Access control
 
@@ -47,7 +47,7 @@ Everything except `PORT` is validated by `src/shared/env.ts`, which parses the w
 
 ## Accessibility
 
-`bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans the unauthenticated routes for WCAG 2.2 AA violations: sign-in, the redirect from `/`, the not-found page, and the two design-comparison pages, each under both `prefers-color-scheme: light` and `prefers-color-scheme: dark` on desktop and mobile Chromium.
+`bun run test:a11y` builds nothing by itself, so run `bun run build` first. The Playwright config boots the production server with `.env.a11y` (fixture values, no secrets) and scans every unauthenticated route for WCAG 2.2 AA violations — sign-in, the redirect from `/`, and the not-found page — each under both `prefers-color-scheme: light` and `prefers-color-scheme: dark` on desktop and mobile Chromium.
 
 Each case also pins the HTTP status, the path it landed on, and the `h1` of the page it scanned, because a scan of the wrong page still passes — the `/` case has to prove it was redirected to `/login`, and the not-found case has to prove it got an HTTP 404 and the themed not-found page. It asserts a single `main` landmark too: axe classes duplicate-landmark rules as best practice rather than WCAG, so the violation scan itself cannot see a second `main`.
 

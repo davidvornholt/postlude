@@ -43,7 +43,7 @@ it('every mapped Tailwind value resolves to a defined token', () => {
   }
 });
 
-it('color tokens use oklch, and the scaffold casts no shadow', () => {
+it('color tokens use oklch, and nothing casts a shadow', () => {
   const schemes = [light, dark];
   const notOklch = schemes.flatMap((palette) =>
     colorTokenNames(palette).filter(
@@ -52,8 +52,9 @@ it('color tokens use oklch, and the scaffold casts no shadow', () => {
   );
   expect(notOklch).toEqual([]);
 
-  // The scaffold is unfinished on purpose: material — the shadow a card casts —
-  // arrives with a theme, so every shadow token here is switched off.
+  // Nothing in Postlude floats: structure comes from hairline rules and type
+  // rather than from raised material, so both shadow tokens stay off in both
+  // schemes. They still exist so a utility that names one resolves.
   const shadows = schemes.flatMap((palette) =>
     Object.entries(palette)
       .filter(([token]) => token.startsWith('--pl-shadow-'))
@@ -67,8 +68,7 @@ it('color tokens use oklch, and the scaffold casts no shadow', () => {
  * The accessibility scan in apps/web can only measure the token pairs the
  * pages it can reach actually render, so a pair no component has used yet is
  * invisible to it. These audits are what keep the rest of the palette safe:
- * they recompute every pair straight from the token values. The comparison
- * themes run the same two audits in `comparison-themes.test.ts`.
+ * they recompute every pair straight from the token values.
  */
 it('every token pair that can carry normal-size text meets WCAG AA', () => {
   // Whole-list equality, so one run names every failing pair at once.

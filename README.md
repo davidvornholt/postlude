@@ -18,7 +18,7 @@ day, week, month, or year.
 
 - `apps/web` — the application.
 - `packages/db` — Drizzle schema and database client.
-- `packages/ui` — design tokens (`src/theme.css`) and shared UI primitives.
+- `packages/ui` — design tokens (`src/theme.css`) and the audits that hold them to WCAG AA. `DESIGN.md` states the design intent those values serve.
 
 ## Configuration and secrets
 

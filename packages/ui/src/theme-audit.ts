@@ -1,8 +1,10 @@
 /**
- * The audit machinery both theme test files run: `theme-contract.test.ts` on
- * the base tokens in `theme.css`, `comparison-themes.test.ts` on every design
- * comparison wrapper class. The rules are identical for all of them, so they
- * live here once rather than being restated per theme.
+ * The audit machinery `theme-contract.test.ts` runs over the tokens in
+ * `theme.css`: contrast, the sequential activity ramp, and which tokens have to
+ * exist in both color schemes. It sits apart from the test so the rules read as
+ * a stated contract rather than as assertions, and so a second palette — a
+ * design exploration, a future high-contrast scheme — is audited by the same
+ * code rather than by a restatement of it.
  *
  * The reader of a failure gets the whole list at once, so every check returns
  * findings as strings instead of asserting: a caller compares the list to `[]`
@@ -20,11 +22,11 @@ const declarationPattern = /^(?<token>--pl-[a-z\d-]+)\s*:\s*(?<value>.+)$/su;
 /**
  * The `--pl-*` declarations a selector carries in one color scheme.
  *
- * Both block shapes in this package parse the same way: `theme.css` puts the
- * dark `:root` inside a top-level media query, and a theme wrapper nests the
- * media query inside its class. Tracking the open preludes rather than slicing
- * on the first `}` is what makes one reader handle both, and what keeps a
- * nested block from being mistaken for the end of its parent.
+ * `theme.css` puts the dark `:root` inside a top-level media query; a palette
+ * scoped to a class would nest the media query inside the class instead.
+ * Tracking the open preludes rather than slicing on the first `}` is what makes
+ * one reader handle both shapes, and what keeps a nested block from being
+ * mistaken for the end of its parent.
  */
 export const schemeDeclarations = (
   css: string,

@@ -6,11 +6,15 @@ import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { parseOAuthErrorSearch } from '#/shared/auth/oauth-error-search.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
+import { columnClass, eyebrowClass } from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
+// A notice is one of the few places a filled ground is right: it has to be
+// found by someone who was not looking for it. It still takes a rule rather
+// than a shadow, like everything else on the page.
 const noticeClass =
-  'mt-4 border border-critical bg-critical-subtle px-3 py-2 text-ink text-sm';
+  'mt-6 max-w-prose border border-critical bg-critical-subtle px-4 py-3 text-ink';
 
 const SignInPage = () => {
   const { error } = Route.useSearch();
@@ -41,9 +45,14 @@ const SignInPage = () => {
   };
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background px-6">
-      <div className="w-full max-w-sm border border-border bg-surface p-8 shadow-card">
-        <h1 className="font-display text-4xl text-ink tracking-tight">
+    <main className="flex min-h-svh flex-col justify-center bg-background py-16">
+      {/* No card: the page is the sign-in, set in its own column the way every
+          other page is set. */}
+      <div className={columnClass}>
+        <p className={[eyebrowClass, 'text-accent'].join(' ')}>
+          Private journal
+        </p>
+        <h1 className="mt-5 font-display text-5xl text-ink sm:text-6xl">
           Postlude
         </h1>
         {/* No `role="alert"`: this notice is in the server-rendered markup of a
@@ -67,23 +76,25 @@ const SignInPage = () => {
             will end the same way.
           </p>
         )}
-        <p className="mt-3 text-ink-muted">
+        <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
           A calm place to close out the day: evening writing, morning scripture
           notes, and a quiet archive.
         </p>
-        <button
-          // Staying enabled keeps focus on the button while the request is in
-          // flight; disabling it here would drop focus to <body> and announce
-          // the new label to nobody.
-          aria-busy={signInMutation.isPending}
-          className={`${primaryButtonClass} mt-8 w-full py-3`}
-          onClick={startSignIn}
-          type="button"
-        >
-          {signInMutation.isPending
-            ? 'Opening GitHub sign-in …'
-            : 'Sign in with GitHub'}
-        </button>
+        <p className="mt-10">
+          <button
+            // Staying enabled keeps focus on the button while the request is in
+            // flight; disabling it here would drop focus to <body> and announce
+            // the new label to nobody.
+            aria-busy={signInMutation.isPending}
+            className={primaryButtonClass}
+            onClick={startSignIn}
+            type="button"
+          >
+            {signInMutation.isPending
+              ? 'Opening GitHub sign-in …'
+              : 'Sign in with GitHub'}
+          </button>
+        </p>
         {/* This one keeps `role="alert"`: it appears in response to the reader
             pressing the button, on a page they are already reading. */}
         {signInMutation.isError ? (
@@ -92,7 +103,7 @@ const SignInPage = () => {
             again.
           </p>
         ) : null}
-        <p className="mt-4 text-ink-faint text-sm">
+        <p className="mt-10 text-ink-faint text-sm">
           Private access: only the allowed GitHub account can sign in.
         </p>
       </div>

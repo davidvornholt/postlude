@@ -1,9 +1,8 @@
 /**
- * The few class recipes the warm print pages share.
- *
- * They hold the theme's constants — the set column, the letterspaced eyebrow,
- * the focus ring, the deep register's ground — in one place, so a page cannot
- * drift from the other by retyping them.
+ * The shape vocabulary every page shares: the set column, the letterspaced
+ * eyebrow, the rule a section opens on, the focus ring, the deep register's
+ * ground. `DESIGN.md` says what each one is for; this file is where the classes
+ * that build them live, so one page cannot drift from another by retyping them.
  *
  * None of them carries a colour. Two utilities that set the same property have
  * no reliable winner from the order they appear in a `class` attribute, so a
@@ -17,7 +16,7 @@
  */
 export const eyebrowClass = 'text-xs uppercase tracking-widest';
 
-/** The rule an eyebrow sits on: how a section opens everywhere in this theme. */
+/** The rule an eyebrow sits on: how a section opens everywhere in this design. */
 export const ruledEyebrowClass = `${eyebrowClass} block border-b pb-3`;
 
 export const focusRingClass =
@@ -45,4 +44,4 @@ export const wideColumnClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 export const deepRegisterClass = 'bg-deep-ground text-deep-ink';
 
 /** Sections fade and rise as the reader reaches them; the CSS is in the theme. */
-export const enterClass = 'warm-print-enter';
+export const enterClass = 'pl-enter';
