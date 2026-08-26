@@ -40,10 +40,13 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 - `activity-labels.ts` — the words that stand in for the grid when the page is read aloud rather than looked at, and the month names above it. The month names are a fixed list rather than `Intl.DateTimeFormat`, because the server and the browser have to agree on the markup and a locale database does not.
 - `streaks.ts` — the two runs, over the same day records the map is drawn from.
 - `snippet.ts` — the opening of an entry, as prose rather than as the markdown carrying it, for "on this day".
+- `search-query.ts` — what a typed line means, as pure text work: the words it holds, the `tsquery` those words become, and the excerpt a matched day is shown as. A term is cut down to letters and digits before it goes anywhere near the database, which is what makes appending the prefix marker safe.
 - `services/journal-fns.ts` — the server functions the browser reaches all of that through. Each carries `sessionRequired`, and `sensitive-server-fns.test.ts` fails the build if one loses it. `readJournalDayFn` answers with the entry *and* the server's own journal day, so a page never has to ask twice or decide from the browser's clock what "today" means.
 - `autosave.ts` — when a draft is written, as a pure state machine over plain values. It answers the questions a timer alone gets wrong: a burst of typing during a save collapses into one further write rather than a queue of them; a reply is matched against the draft that was actually sent, so text typed after the request left is never marked as stored; a failure keeps the words and keeps saying so.
 - `services/archive-fns.ts` — the one guarded server function the archive loads from. It reads the whole history to count the runs and only ships the window's days, so a run that began before the window is still counted while the page carries a year of small records rather than the journal.
-- `ui/` — the writing page and the archive. `use-autosave.ts` is the only part that touches the browser, turning each of the rule's decisions into a timer or a request; `markdown-editor.tsx` is the Tiptap surface, where markdown is typed and set in place rather than previewed.
+- `services/entry-search.ts` — the index read, behind its own Effect service. It is separate from the repository because the repository reads and writes a day keyed by a date, while search reads an index and owns a small query language; the two touch the same table and answer different questions about it.
+- `services/search-fns.ts` — the one guarded server function the search loads from. It cuts each excerpt on the server, so a page of results is a page of lines rather than every matching day's markdown in full.
+- `ui/` — the writing page, the archive and the search. `use-autosave.ts` is the only part that touches the browser, turning each of the rule's decisions into a timer or a request; `markdown-editor.tsx` is the Tiptap surface, where markdown is typed and set in place rather than previewed.
 
 ## The writing page
 
@@ -59,6 +62,8 @@ Both editors render as plain paragraphs on the server and hand over to Tiptap on
 
 The repository's own tests run against a real Postgres, since whether an upsert replaces a row and whether a DATE column survives the round trip are properties of the database rather than of the code. `src/shared/testing/test-database.ts` creates the configured database with `_test` appended, migrates it from the same generated migrations the app deploys, and rolls every test body back, so the journal you write in is never touched. `DATABASE_URL` must be present: a database test that silently skips is a gate that silently does not hold.
 
+`src/features/journal/testing/database-harness.ts` is what a test file calls to get that: one pool, one migrated database and one Effect runtime holding both journal services. It is a function rather than a module that installs itself on import, because Bun caches a module across the files that import it, so hooks registered at import time would attach to whichever file loaded it first and to no other.
+
 ## The archive
 
 `/archive` is where the journal is looked back at rather than added to. It holds three things: the two runs, a year of days as a grid, and what was written on this date in earlier years.
@@ -68,6 +73,18 @@ The two runs are counted separately, because the evening's writing and the morni
 The grid draws a day as a square whose depth is where its word count falls among the days actually written, recomputed over the window rather than fixed, so a writer of long entries and a writer of short ones each get the whole ramp. `?year=2025` shows a calendar year; no search parameter shows the rolling 53 weeks up to this one. It is one image with a summary label and a month-by-month description rather than 371 separately labelled squares, and the way into a day is the collapsed table beneath it — 371 links in the tab order would put the whole year between the writer and the next thing on the page.
 
 "On this day" is the one part of the archive there to be read. It matches the month and day against earlier years, leads with the entry's own opening words, and opens the day it came from.
+
+## Search
+
+`/search?q=rain` finds a day by what is written on it. The search is in the address rather than in a component's state, so a search can be bookmarked, shared, and reached with the back button, and the form is a real `GET` form pointed at the same route — without JavaScript it submits and the server answers, and with it the submit is intercepted and the router navigates instead.
+
+The index is a `tsvector` Postgres keeps for every row as a stored generated column, covering the evening's prose, the morning's notes and the book name. Being a generated column rather than a trigger or an application write means it can never fall behind the words it describes: the database recomputes it as part of the same statement that changes the row.
+
+It is built with Postgres's `simple` configuration — no stemming, no stopword list — and every typed word is matched as a prefix instead. The journal is written in more than one language, and a stemmer told the wrong language mangles its input and drops words for being common in a language the writer was not using. Prefix matching gets "Gebet" to "Gebete" and "schreib" to "schreiben" without the index having to know which language a day was written in. Every word has to appear: a day holding some of them answers a different question than the one that was asked.
+
+A result is the day's date and the words around the first match, cut on the server, with the matched words in `<mark>` elements set a weight heavier — the tint alone would say it in colour only. Days come back newest first rather than by relevance score, because a journal is read in time: two days that both hold the word are told apart by which was more recent, not by which repeated it more often. A day that matched on its passage rather than its evening says so and shows the passage.
+
+What the page says when it has nothing to list is most of its behaviour. Not having been asked anything, having been asked something that holds no words, and having been asked something no day answers are three different states, and only the last is a search that failed.
 
 ## Environment
 

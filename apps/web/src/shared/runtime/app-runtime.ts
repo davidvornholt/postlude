@@ -19,10 +19,11 @@ import { pgClientLayer } from '@postlude/db/effect-client';
 import { Cause, Effect, Layer, ManagedRuntime } from 'effect';
 
 import { EntryRepository } from '#/features/journal/services/entry-repository.ts';
+import { EntrySearch } from '#/features/journal/services/entry-search.ts';
 import { pool } from '#/shared/db/pool.ts';
 
 const appLayer = Layer.provide(
-  EntryRepository.Default,
+  Layer.mergeAll(EntryRepository.Default, EntrySearch.Default),
   Layer.suspend(() => pgClientLayer(pool)),
 );
 
@@ -33,7 +34,10 @@ const appLayer = Layer.provide(
  * database that is down should fail the request that needed it, not the module
  * that mentioned it.
  */
-type AppRuntime = ManagedRuntime.ManagedRuntime<EntryRepository, SqlError>;
+type AppRuntime = ManagedRuntime.ManagedRuntime<
+  EntryRepository | EntrySearch,
+  SqlError
+>;
 
 let runtime: AppRuntime | undefined;
 
@@ -57,7 +61,7 @@ const appRuntime = (): AppRuntime => {
  * database error carrying a statement and a connection string.
  */
 export const runServerEffect = <A, E>(
-  effect: Effect.Effect<A, E, EntryRepository>,
+  effect: Effect.Effect<A, E, EntryRepository | EntrySearch>,
 ): Promise<A> =>
   appRuntime().runPromise(
     effect.pipe(

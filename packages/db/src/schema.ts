@@ -1,12 +1,23 @@
 import { sql } from 'drizzle-orm';
 import {
   check,
+  customType,
   date,
+  index,
   integer,
   pgTable,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+/**
+ * Postgres's own full-text type. Drizzle has no built-in for it, and the column
+ * is never read or written by the app — the database computes it and the search
+ * query matches against it — so it needs a name and a type and nothing else.
+ */
+const tsvector = customType<{ data: string; driverData: string }>({
+  dataType: () => 'tsvector',
+});
 
 /**
  * One row per journal day. A journal day runs 04:00–04:00 local time, so a
@@ -56,8 +67,20 @@ export const entry = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => sql`now()`),
+    /**
+     * What the search reads, kept by the database so it can never fall behind
+     * the row it describes. The `simple` configuration neither stems nor drops
+     * stopwords, because the journal is written in more than one language and a
+     * stemmer told the wrong one mangles the words it is given; the app matches
+     * every term as a prefix instead. The passage's book is indexed with the
+     * prose, so searching for a book name finds the mornings that read it.
+     */
+    searchVector: tsvector('search_vector').generatedAlwaysAs(
+      sql`to_tsvector('simple', coalesce(journal_markdown, '') || ' ' || coalesce(scripture_markdown, '') || ' ' || coalesce(scripture_book, ''))`,
+    ),
   },
   (table) => [
+    index('entry_search_vector_index').using('gin', table.searchVector),
     check(
       'entry_journal_word_count_non_negative',
       sql`${table.journalWordCount} >= 0`,

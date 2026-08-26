@@ -6,64 +6,20 @@
  * constraints accept a whole-chapter reference are all properties of the
  * database, not of the code that talks to it.
  *
- * `shared/testing/test-database.ts` owns the database and the rollback; see it
- * for what these tests do and do not touch.
+ * `testing/database-harness.ts` owns the pool, the runtime and the rollback;
+ * `shared/testing/test-database.ts` owns the database itself and says what
+ * these tests do and do not touch.
  */
 
-import { afterAll, beforeAll, expect, it } from 'bun:test';
-import type { SqlClient } from '@effect/sql';
-import { pgClientLayer } from '@postlude/db/effect-client';
-import { Effect, Layer, ManagedRuntime } from 'effect';
+import { expect, it } from 'bun:test';
+import { Effect } from 'effect';
 
-import {
-  openTestDatabase,
-  rolledBack,
-  type TestPool,
-} from '#/shared/testing/test-database.ts';
-import type { EntryDraft } from '../schemas/entry.ts';
-import { EntryRepository } from './entry-repository.ts';
+import { draft, journalDatabase } from '../testing/database-harness.ts';
 
-let pool: TestPool;
-let runtime: ManagedRuntime.ManagedRuntime<
-  EntryRepository | SqlClient.SqlClient,
-  never
->;
-
-beforeAll(async () => {
-  pool = await openTestDatabase();
-  const clientLayer = pgClientLayer(pool);
-  runtime = ManagedRuntime.make(
-    Layer.provideMerge(
-      Layer.provide(EntryRepository.Default, clientLayer),
-      clientLayer,
-    ).pipe(Layer.orDie),
-  );
-});
-
-afterAll(async () => {
-  await runtime.dispose();
-  await pool.end();
-});
-
-/** Runs the body against the repository and leaves the table as it was. */
-const withRepository = <A, E>(
-  body: (entries: EntryRepository) => Effect.Effect<A, E>,
-): Promise<A> =>
-  runtime.runPromise(rolledBack(Effect.flatMap(EntryRepository, body)));
+const { withRepository } = journalDatabase();
 
 /** As many earlier years as the archive asks for; the page shows four. */
 const anniversaryLimit = 4;
-
-const draft = (
-  date: string,
-  journalMarkdown: string,
-  scriptureReference = '',
-): EntryDraft => ({
-  date,
-  journalMarkdown,
-  scriptureMarkdown: '',
-  scriptureReference,
-});
 
 it('reads nothing for a day that was never written', async () => {
   const entry = await withRepository((entries) => entries.read('2019-04-02'));

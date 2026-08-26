@@ -164,6 +164,21 @@
       }
     },
     {
+      // Test support modules import `bun:test` to register the hooks the files
+      // that call them run under. Biome does not resolve Bun's virtual modules,
+      // which is why biome.base.jsonc already turns this rule off for every
+      // `*.test.ts` and for the standards CLI's own `*-test-support.ts` files;
+      // these are the same modules under the paths this repo puts them on.
+      "includes": ["apps/web/src/**/testing/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
+          }
+        }
+      }
+    },
+    {
       // Test support: the same boundary biome.base.jsonc already exempts for
       // the standards CLI's `*-test-support.ts` files, for the path this repo
       // puts them on. `test-database.ts` opens the Postgres the database tests
@@ -210,23 +225,6 @@
         "rules": {
           "nursery": {
             "noUnusedClasses": "off"
-          }
-        }
-      }
-    },
-    {
-      // One boundary's tests against a real Postgres, sharing one pool, one
-      // migration run and one Effect runtime built in a single `beforeAll`.
-      // Splitting the file would either duplicate that setup against the same
-      // database or hide it behind a helper that exists only to satisfy a line
-      // count. See docs/quality/no-excessive-lines-per-file-exceptions.md.
-      "includes": [
-        "apps/web/src/features/journal/services/entry-repository.test.ts"
-      ],
-      "linter": {
-        "rules": {
-          "style": {
-            "noExcessiveLinesPerFile": "off"
           }
         }
       }
