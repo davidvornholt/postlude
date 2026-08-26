@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import {
   archiveFixtureConfigs,
+  mountArchiveNavigation,
   mountArchivePage,
   scanArchive,
 } from './archive-page-test-support.ts';
@@ -10,6 +11,26 @@ test.describe.configure({ mode: 'serial' });
 
 const colorSchemes = ['light', 'dark'] as const;
 const everyDayWritten = /Every day written/u;
+const quietPeriodMs = 1200;
+const revision = /\d+/u;
+
+test('the first archive render includes an edit made inside the autosave quiet period', async ({
+  page,
+}) => {
+  await mountArchiveNavigation(page);
+  const evening = page.getByRole('textbox', { name: 'Evening journal' });
+  await evening.fill('Quiet archive edit.');
+  const editedAt = Date.now();
+  await page.getByRole('link', { name: 'Open archive' }).click();
+  expect(Date.now() - editedAt).toBeLessThan(quietPeriodMs);
+
+  await expect(page.getByRole('heading', { name: 'Archive' })).toBeVisible();
+  await expect(page.getByText('1 days written, 3 words in all.')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-stored-revision',
+    revision,
+  );
+});
 
 for (const colorScheme of colorSchemes) {
   test(`the empty archive passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
