@@ -39,7 +39,7 @@ const cellClass: Record<HeatLevel, string> = {
   q4: 'size-3 bg-heat-q4',
 };
 
-const legendSteps = ['none', 'q1', 'q2', 'q3', 'q4'] as const;
+const legendSteps = ['q1', 'q2', 'q3', 'q4'] as const;
 
 const hintClass = 'flex h-3 items-center text-ink-faint text-xs leading-none';
 // A month's name sits over the column its month starts in and runs past it, so
@@ -106,14 +106,20 @@ export const ActivityMap = ({ cells, today }: ActivityMapProps) => {
       <figcaption
         className={[
           eyebrowClass,
-          'mt-4 flex items-center gap-1 text-ink-faint',
+          'mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 text-ink-faint',
         ].join(' ')}
       >
-        <span className="mr-1">Less</span>
-        {legendSteps.map((step) => (
-          <span aria-hidden="true" className={cellClass[step]} key={step} />
-        ))}
-        <span className="ml-1">More</span>
+        <span className="flex items-center gap-2">
+          <span aria-hidden="true" className={cellClass.none} />
+          No writing
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="mr-1">Less</span>
+          {legendSteps.map((step) => (
+            <span aria-hidden="true" className={cellClass[step]} key={step} />
+          ))}
+          <span className="ml-1">More</span>
+        </span>
       </figcaption>
       <ActivityTable cells={cells} today={today} />
     </figure>

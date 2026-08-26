@@ -63,6 +63,28 @@ it('retains a coordinator while its quiet timer carries an edit', () => {
   expect(registry.acquire(stored, save)).not.toBe(first);
 });
 
+it('flushes quiet edits and waits for their save before a dependent read', async () => {
+  const pending = deferred();
+  const registry = createAutosaveRegistry(memoryRecovery);
+  const coordinator = registry.acquire(stored, () => pending.promise);
+  coordinator.edit({ journalMarkdown: 'Include me in the archive.' });
+  let finished = false;
+
+  const settling = registry.settle().then(() => {
+    finished = true;
+  });
+  await settleEffects();
+
+  expect(finished).toBe(false);
+  expect(coordinator.snapshot().inFlight?.journalMarkdown).toBe(
+    'Include me in the archive.',
+  );
+
+  pending.resolve({ revision: 101 });
+  await settling;
+  expect(finished).toBe(true);
+});
+
 it('retains an in-flight coordinator across mounts, then evicts it', async () => {
   const pending = deferred();
   const registry = createAutosaveRegistry(memoryRecovery);

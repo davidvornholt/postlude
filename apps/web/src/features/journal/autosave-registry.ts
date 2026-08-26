@@ -19,7 +19,24 @@ export type AutosaveRegistry = {
     stored: ConfirmedDraft,
     save: SaveDraft,
   ) => AutosaveCoordinator;
+  /** Starts every queued save and resolves when no request remains in flight. */
+  readonly settle: () => Promise<void>;
 };
+
+const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
+  new Promise((resolve) => {
+    let unsubscribe = (): void => undefined;
+    const resolveWhenSettled = (): void => {
+      if (coordinator.snapshot().inFlight !== undefined) {
+        return;
+      }
+      unsubscribe();
+      resolve();
+    };
+    unsubscribe = coordinator.subscribe(resolveWhenSettled);
+    coordinator.flush();
+    resolveWhenSettled();
+  });
 
 export const createAutosaveRegistry = (
   recovery: () => DraftRecovery,
@@ -60,6 +77,9 @@ export const createAutosaveRegistry = (
       });
       coordinators.set(date, created);
       return created;
+    },
+    settle: async () => {
+      await Promise.all(Array.from(coordinators.values(), settleCoordinator));
     },
   };
 };

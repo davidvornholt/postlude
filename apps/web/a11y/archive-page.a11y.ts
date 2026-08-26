@@ -1,0 +1,71 @@
+import { expect, test } from '@playwright/test';
+
+import {
+  archiveFixtureConfigs,
+  mountArchivePage,
+  scanArchive,
+} from './archive-page-test-support.ts';
+
+test.describe.configure({ mode: 'serial' });
+
+const colorSchemes = ['light', 'dark'] as const;
+const everyDayWritten = /Every day written/u;
+
+for (const colorScheme of colorSchemes) {
+  test(`the empty archive passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountArchivePage(page, archiveFixtureConfigs.empty);
+    await expect(page.getByText('Nothing has been written yet')).toBeVisible();
+    await scanArchive(page);
+  });
+
+  test(`the filled archive and expanded day table pass WCAG 2.2 AA in ${colorScheme} mode`, async ({
+    page,
+  }, testInfo) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountArchivePage(page, archiveFixtureConfigs.filled);
+
+    const activityRegion = page.getByRole('region', {
+      name: 'Journal activity grid',
+    });
+    await activityRegion.focus();
+    await expect(activityRegion).toBeFocused();
+    const activityOverflows = await activityRegion.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    );
+    expect(activityOverflows).toBe(testInfo.project.name.includes('mobile'));
+
+    const summary = page.getByText(everyDayWritten);
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('table')).toBeVisible();
+    const dayRegion = page.getByRole('region', {
+      name: 'Days written, scrollable',
+    });
+    await dayRegion.focus();
+    await expect(dayRegion).toBeFocused();
+    await scanArchive(page);
+  });
+
+  test(`a named archive year passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountArchivePage(page, archiveFixtureConfigs.namedYear);
+    const selectedYear = page.getByRole('link', { name: '2024' });
+    await expect(selectedYear).toHaveAttribute('aria-current', 'page');
+    const destination = new URL(
+      (await selectedYear.getAttribute('href')) ?? '',
+      'https://fixture.invalid',
+    );
+    expect(destination.pathname).toBe('/archive');
+    expect(destination.searchParams.get('year')).toBe('2024');
+    await expect(page.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(
+      page.getByText('Nothing was written in this stretch of the journal.'),
+    ).toBeVisible();
+    await scanArchive(page);
+  });
+}

@@ -18,8 +18,7 @@ import type {
   AutosaveCoordinator,
   SaveDraft,
 } from '../autosave-coordinator.ts';
-import { createAutosaveRegistry } from '../autosave-registry.ts';
-import { browserDraftRecovery } from '../recoverable-draft.ts';
+import { acquireBrowserAutosave } from '../browser-autosaves.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
 
 export type { SaveDraft } from '../autosave-coordinator.ts';
@@ -33,12 +32,10 @@ export type Autosave = {
   readonly flush: () => void;
 };
 
-const coordinators = createAutosaveRegistry(browserDraftRecovery);
-
 const coordinatorFor = (
   stored: ConfirmedDraft,
   save: SaveDraft,
-): AutosaveCoordinator => coordinators.acquire(stored, save);
+): AutosaveCoordinator => acquireBrowserAutosave(stored, save);
 
 const doNothing = (): void => undefined;
 const browserAvailable = (): boolean =>
