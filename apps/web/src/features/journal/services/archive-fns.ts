@@ -23,7 +23,6 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import {
   type ActivityDay,
   type ActivityTotals,
@@ -41,6 +40,7 @@ import { journalSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
+import { runJournalEffect } from './journal-runtime.ts';
 
 /** One earlier year's entry for the same day of the month. */
 export type Anniversary = {
@@ -138,7 +138,7 @@ export const readArchiveFn = createServerFn({ method: 'GET' })
   .handler(({ data }): Promise<ArchiveView> => {
     const today = currentJournalDate();
     const window = activityWindow(today, data.year);
-    return runServerEffect(
+    return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const earliest = yield* entries.earliestDate();
