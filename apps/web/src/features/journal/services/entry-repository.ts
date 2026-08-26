@@ -19,6 +19,7 @@ import {
 } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
 import {
+  EarliestDateFromRow,
   type EntryDraft,
   EntryFromRow,
   type EntrySummary,
@@ -29,6 +30,9 @@ import { parseScriptureReference } from '../scripture-reference.ts';
 import { countJournalWords } from '../word-count.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
+const decodeEarliestDates = Schema.decodeUnknown(
+  Schema.Array(EarliestDateFromRow),
+);
 const decodeSummaries = Schema.decodeUnknown(Schema.Array(EntrySummaryFromRow));
 
 export class EntryRepository extends Effect.Service<EntryRepository>()(
@@ -70,9 +74,18 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
        */
       const save = (
         draft: EntryDraft,
-      ): Effect.Effect<JournalEntry, ReturnType<typeof journalWriteError>> => {
-        const reference = parseScriptureReference(draft.scriptureReference);
-        return sql`
+      ): Effect.Effect<JournalEntry, ReturnType<typeof journalWriteError>> =>
+        Effect.gen(function* () {
+          const enteredReference = draft.scriptureReference.trim();
+          const reference = parseScriptureReference(enteredReference);
+          if (enteredReference !== '' && reference === undefined) {
+            return yield* Effect.fail(
+              journalWriteError(
+                new Error('The scripture reference is not valid.'),
+              ),
+            );
+          }
+          return yield* sql`
           insert into entry (
             entry_date,
             journal_markdown,
@@ -105,16 +118,16 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_verse_end = excluded.scripture_verse_end,
             updated_at = now()
           returning *
-        `.pipe(
-          Effect.flatMap(decodeEntries),
-          Effect.flatMap((entries) =>
-            entries[0] === undefined
-              ? Effect.fail(new Error('The saved entry did not come back.'))
-              : Effect.succeed(entries[0]),
-          ),
-          Effect.mapError(journalWriteError),
-        );
-      };
+          `.pipe(
+            Effect.flatMap(decodeEntries),
+            Effect.flatMap((entries) =>
+              entries[0] === undefined
+                ? Effect.fail(new Error('The saved entry did not come back.'))
+                : Effect.succeed(entries[0]),
+            ),
+            Effect.mapError(journalWriteError),
+          );
+        });
 
       /**
        * Every written day in a range, oldest first, as the archive needs them:
@@ -155,10 +168,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           select min(entry_date) as entry_date
           from entry
         `.pipe(
-          Effect.map((rows) => {
-            const value: unknown = rows[0]?.entry_date;
-            return typeof value === 'string' ? value : undefined;
-          }),
+          Effect.flatMap(decodeEarliestDates),
+          Effect.map((rows) => rows[0]?.date ?? undefined),
           Effect.mapError(journalReadError),
         );
 
