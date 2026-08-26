@@ -25,7 +25,8 @@ const save = async (draft: {
     journalWords: countJournalWords(draft.journalMarkdown),
     scriptureWords: 0,
     hasScripture: false,
-    writtenOnTheDay: true,
+    journalWrittenOnTheDay: true,
+    scriptureUsedOnTheDay: false,
   };
   revision += 1;
   view = {
