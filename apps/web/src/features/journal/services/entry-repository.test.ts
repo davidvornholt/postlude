@@ -66,26 +66,15 @@ afterAll(async () => {
 const withRepository = <A, E>(
   body: (entries: EntryRepository) => Effect.Effect<A, E, SqlClient.SqlClient>,
 ): Promise<A> =>
-  runtime.runPromise(rolledBack(Effect.flatMap(EntryRepository, body)));
-
-const withCommittedRepository = <A, E>(
-  dates: ReadonlyArray<string>,
-  body: (entries: EntryRepository) => Effect.Effect<A, E>,
-): Promise<A> =>
   runtime.runPromise(
-    Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
-      const clean =
-        dates.length === 0
-          ? Effect.void
-          : sql`delete from entry where ${sql.in('entry_date', dates)}`.pipe(
-              Effect.asVoid,
-            );
-      yield* clean;
-      return yield* Effect.flatMap(EntryRepository, body).pipe(
-        Effect.ensuring(clean.pipe(Effect.orDie)),
-      );
-    }),
+    rolledBack(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        yield* sql`set transaction isolation level repeatable read`;
+        const entries = yield* EntryRepository;
+        return yield* body(entries);
+      }),
+    ),
   );
 /** As many earlier years as the archive asks for; the page shows four. */
 const anniversaryLimit = 4;
@@ -316,8 +305,7 @@ it('explains an invalid reference without changing the stored entry', async () =
 });
 
 it('lists a range inclusively and in calendar order', async () => {
-  const dates = ['2026-03-01', '2026-03-15', '2026-03-31', '2026-04-01'];
-  const summaries = await withCommittedRepository(dates, (entries) =>
+  const summaries = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-01', 'One.'));
       yield* entries.save(draft('2026-03-15', 'Two words here.', 'Psalms 23'));
@@ -337,8 +325,7 @@ it('lists a range inclusively and in calendar order', async () => {
 });
 
 it('finds the same day of the month in earlier years, newest first', async () => {
-  const dates = ['2024-08-26', '2025-08-26', '2025-08-25', '2026-08-26'];
-  const anniversaries = await withCommittedRepository(dates, (entries) =>
+  const anniversaries = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2024-08-26', 'Two years back.'));
       yield* entries.save(draft('2025-08-26', 'One year back.'));
@@ -359,51 +346,45 @@ it('finds the same day of the month in earlier years, newest first', async () =>
  * as a blank line.
  */
 it('leaves out an anniversary with no evening prose', async () => {
-  const anniversaries = await withCommittedRepository(
-    ['2025-08-26'],
-    (entries) =>
-      Effect.gen(function* () {
-        yield* entries.save({
-          date: '2025-08-26',
-          journalMarkdown: '',
-          scriptureMarkdown: '',
-          scriptureReference: 'Psalms 23',
-        });
-        return yield* entries.readArchive(archiveRequest('2026-08-26'));
-      }),
+  const anniversaries = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        date: '2025-08-26',
+        journalMarkdown: '',
+        scriptureMarkdown: '',
+        scriptureReference: 'Psalms 23',
+      });
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
   );
   expect(anniversaries.anniversaries).toEqual([]);
 });
 
 it('reports no archive coverage while the journal is empty', async () => {
-  const archive = await withCommittedRepository([], (entries) =>
+  const archive = await withRepository((entries) =>
     entries.readArchive(archiveRequest('2026-08-26')),
   );
   expect(archive.earliest).toBeUndefined();
 });
 
 it('reports the oldest written day as where the archive starts', async () => {
-  const earliest = await withCommittedRepository(
-    ['2025-11-02', '2026-03-15'],
-    (entries) =>
-      Effect.gen(function* () {
-        yield* entries.save(draft('2026-03-15', 'Later.'));
-        yield* entries.save(draft('2025-11-02', 'Earlier.'));
-        return yield* entries.readArchive(archiveRequest('2026-08-26'));
-      }),
+  const earliest = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2026-03-15', 'Later.'));
+      yield* entries.save(draft('2025-11-02', 'Earlier.'));
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
   );
   expect(earliest.earliest).toBe('2025-11-02');
 });
 
 it('keeps an empty historical row without extending archive coverage', async () => {
-  const archive = await withCommittedRepository(
-    ['2024-01-01', '2025-11-02'],
-    (entries) =>
-      Effect.gen(function* () {
-        yield* entries.save(draft('2024-01-01', ''));
-        yield* entries.save(draft('2025-11-02', 'Meaningful.'));
-        return yield* entries.readArchive(archiveRequest('2026-08-26'));
-      }),
+  const archive = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2024-01-01', ''));
+      yield* entries.save(draft('2025-11-02', 'Meaningful.'));
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
   );
 
   expect(archive.earliest).toBe('2025-11-02');
@@ -412,19 +393,71 @@ it('keeps an empty historical row without extending archive coverage', async () 
   ]);
 });
 
+it('removes a cleared journal section from archive coverage', async () => {
+  const archive = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2024-01-01', 'Once meaningful.'));
+      yield* entries.save(draft('2024-01-01', ''));
+      yield* entries.save(draft('2025-11-02', '', 'Psalms 23'));
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
+  );
+
+  expect(archive.earliest).toBe('2025-11-02');
+  expect(archive.summaries.map((summary) => summary.date)).toEqual([
+    '2025-11-02',
+  ]);
+});
+
+it('removes a cleared scripture section from archive coverage', async () => {
+  const archive = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        ...draft('2024-01-01', ''),
+        scriptureMarkdown: 'Once meaningful.',
+      });
+      yield* entries.save(draft('2024-01-01', ''));
+      yield* entries.save(draft('2025-11-02', 'Still here.'));
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
+  );
+
+  expect(archive.earliest).toBe('2025-11-02');
+  expect(archive.summaries.map((summary) => summary.date)).toEqual([
+    '2025-11-02',
+  ]);
+});
+
+it('reports a truly empty archive after every meaningful section is cleared', async () => {
+  const archive = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2024-01-01', 'Once meaningful.'));
+      yield* entries.save(draft('2025-11-02', '', 'Psalms 23'));
+      yield* entries.save(draft('2024-01-01', ''));
+      yield* entries.save(draft('2025-11-02', ''));
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
+  );
+
+  expect(archive.earliest).toBeUndefined();
+  expect(archive.summaries).toEqual([]);
+  expect(archive.anniversaries).toEqual([]);
+});
+
 it('holds one snapshot while a concurrent archive-visible row commits', async () => {
-  const concurrentDate = '2999-12-31';
+  const tableName = `archive_snapshot_test_${crypto.randomUUID().replaceAll('-', '')}`;
   const observed = await runtime.runPromise(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
+      const table = sql(tableName);
       const rowExists = () =>
         sql<{ readonly present: boolean }>`
           select exists(
-            select 1 from entry where entry_date = ${concurrentDate}
+            select 1 from ${table}
           ) as present
         `.pipe(Effect.map((rows) => rows[0]?.present ?? false));
 
-      yield* sql`delete from entry where entry_date = ${concurrentDate}`;
+      yield* sql`create table ${table} (marker integer primary key)`;
       return yield* Effect.gen(function* () {
         const firstReadDone = yield* Deferred.make<void>();
         const continueRead = yield* Deferred.make<void>();
@@ -440,21 +473,12 @@ it('holds one snapshot while a concurrent archive-visible row commits', async ()
         ).pipe(Effect.fork);
 
         yield* Deferred.await(firstReadDone);
-        yield* sql`
-          insert into entry (entry_date, journal_markdown, journal_word_count)
-          values (${concurrentDate}, 'Concurrent words.', 2)
-        `;
+        yield* sql`insert into ${table} (marker) values (1)`;
         yield* Deferred.succeed(continueRead, undefined);
         const snapshot = yield* Fiber.join(reader);
         const visibleAfterCommit = yield* rowExists();
         return { snapshot, visibleAfterCommit };
-      }).pipe(
-        Effect.ensuring(
-          sql`delete from entry where entry_date = ${concurrentDate}`.pipe(
-            Effect.orDie,
-          ),
-        ),
-      );
+      }).pipe(Effect.ensuring(sql`drop table ${table}`.pipe(Effect.orDie)));
     }),
   );
 
