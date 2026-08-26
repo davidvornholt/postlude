@@ -15,7 +15,7 @@ Sign-in needs all three of those. Without the database the sign-in request fails
 
 ## Design
 
-`DESIGN.md` at the repo root states the design intent and its rules; `@postlude/ui` holds the token values. In this app, `src/shared/ui/design-classes.ts` holds the shape vocabulary the pages share — the set column, the ruled eyebrow, the focus ring, the deep register — carrying no colour, so a caller's state colour never fights a colour baked into a shared recipe. `src/routes/__root.tsx` links the two faces the theme names, Fraunces and Inter, for the whole app.
+`DESIGN.md` at the repo root states the design intent and its rules; `@postlude/ui` holds the token values. In this app, `src/shared/ui/design-classes.ts` holds the shape vocabulary the pages share — the set column, the letterspaced eyebrow, the focus ring — and `src/shared/ui/form-classes.ts` builds the two control recipes on top of it, the primary button and the quiet control. Those recipes carry shape, and a caller adds the colour a state needs, so a state colour never fights one baked into a shared recipe. The focus ring's colour is the one a shared recipe does hold, and it holds it because no caller re-colours it. `src/routes/__root.tsx` links the two faces the theme names, Fraunces and Inter, for the whole app.
 
 ## Access control
 
