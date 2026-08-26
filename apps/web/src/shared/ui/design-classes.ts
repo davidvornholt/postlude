@@ -42,6 +42,3 @@ export const wideColumnClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
  * card and an edge-to-edge one reads as turning a page.
  */
 export const deepRegisterClass = 'bg-deep-ground text-deep-ink';
-
-/** Sections fade and rise as the reader reaches them; the CSS is in the theme. */
-export const enterClass = 'pl-enter';

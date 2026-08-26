@@ -25,7 +25,9 @@ The activity ramp (`heat-q1` … `heat-q4`) is one hue whose lightness moves one
 
 ## Motion
 
-One easing curve, `--ease-standard`, used by every transition; no ad-hoc `ease-out` or inline `cubic-bezier(...)`. Sections arrive as the reader reaches them via `.pl-enter`, which runs on a view timeline and is attached only where motion is welcome and the timeline exists, so nothing is ever left holding a start state that will not advance. Every page is fully legible with the animation never running.
+One easing curve, `--ease-standard`, used by every transition; no ad-hoc `ease-out` or inline `cubic-bezier(...)`. Motion today is confined to that: the navigation rule, the quiet control's rule, and the primary button's colour change. Nothing else moves, and no page depends on movement to be read.
+
+Sections arriving as the reader reaches them is the intent for when the writing and archive pages land, not something the app does yet. When it arrives it should be built as a scroll-driven animation that only attaches where motion is welcome and the browser supports the timeline, so an element is never left holding a start state that nothing will advance, and every page stays fully legible with the animation never running.
 
 ## Accessibility
 

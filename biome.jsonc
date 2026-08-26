@@ -170,21 +170,6 @@
       "javascript": {
         "globals": ["Bun"]
       }
-    },
-    {
-      // theme.css declares `.pl-enter`, the class that plays a section's
-      // arrival on a view timeline, and every element wearing it lives in
-      // apps/web. Lint runs per workspace, so the packages/ui pass only ever
-      // sees this package's own files and can never find those consumers;
-      // noUnusedClasses has nothing to check the class against here.
-      "includes": ["packages/ui/src/theme.css"],
-      "linter": {
-        "rules": {
-          "nursery": {
-            "noUnusedClasses": "off"
-          }
-        }
-      }
     }
   ]
 }

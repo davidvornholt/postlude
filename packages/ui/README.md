@@ -6,7 +6,7 @@ Design tokens for Postlude. `DESIGN.md` at the repo root states the intent these
 
 The type faces resolve through `--pl-font-display` and `--pl-font-sans`. The Tailwind mapping is `@theme inline`, which substitutes each `var(--pl-*)` at the element that uses the utility instead of resolving it once at `:root`. That is what lets a subtree redefine a token — a future high-contrast scheme, a design exploration — and re-skin every utility below it rather than nothing at all.
 
-The file also carries the one piece of authored CSS the design needs: the `pl-enter` keyframes and the `.pl-enter` rule that plays them on a view timeline, guarded by `prefers-reduced-motion` and by `@supports (animation-timeline: view())`.
+The file is tokens only. It declares no classes and no keyframes, so every rule a page renders comes from a Tailwind utility resolving one of these tokens.
 
 ## Token groups
 
