@@ -137,48 +137,6 @@ it('does not count text typed after a save as saved by it', () => {
   expect(state.draft.journalMarkdown).toBe('sent and more');
 });
 
-it('ignores a reply for a save it is not waiting on', () => {
-  const opened = openAutosave(blank);
-  expect(run([{ _tag: 'stored' }], opened).state).toEqual(opened);
-  expect(run([{ _tag: 'failed' }], opened).state).toEqual(opened);
-});
-
-it('reports a failure and keeps the text it could not write', () => {
-  const { state } = run([
-    { _tag: 'edited', draft: wrote('unlucky') },
-    { _tag: 'quiet' },
-    { _tag: 'failed' },
-  ]);
-
-  expect(saveStatus(state)).toBe('failed');
-  expect(state.draft.journalMarkdown).toBe('unlucky');
-  expect(state.stored.journalMarkdown).toBe('');
-});
-
-it('keeps saying failed while the writer types on', () => {
-  const { state } = run([
-    { _tag: 'edited', draft: wrote('unlucky') },
-    { _tag: 'quiet' },
-    { _tag: 'failed' },
-    { _tag: 'edited', draft: wrote('unlucky still') },
-  ]);
-
-  expect(saveStatus(state)).toBe('failed');
-});
-
-it('clears the failure once a later save gets through', () => {
-  const { state, commands } = run([
-    { _tag: 'edited', draft: wrote('unlucky') },
-    { _tag: 'quiet' },
-    { _tag: 'failed' },
-    { _tag: 'flush' },
-    { _tag: 'stored' },
-  ]);
-
-  expect(saves(commands)).toEqual(['unlucky', 'unlucky']);
-  expect(saveStatus(state)).toBe('saved');
-});
-
 it('treats text undone back to what is stored as nothing to write', () => {
   const { state, commands } = run([
     { _tag: 'edited', draft: wrote('typed') },

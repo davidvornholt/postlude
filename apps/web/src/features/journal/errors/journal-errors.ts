@@ -13,6 +13,12 @@
 
 import { Data } from 'effect';
 
+export const journalWriteMessage =
+  'This entry could not be saved. Your words are still here; check your connection.';
+
+export const invalidScriptureReferenceMessage =
+  'Check the scripture reference and use a form such as Proverbs 12:5-13.';
+
 export class JournalReadError extends Data.TaggedError('JournalReadError')<{
   readonly message: string;
   readonly cause: unknown;
@@ -37,13 +43,11 @@ export const journalReadError = (cause: unknown): JournalReadError =>
 
 export const journalWriteError = (cause: unknown): JournalWriteError =>
   new JournalWriteError({
-    message:
-      'This entry could not be saved. Your words are still here; check your connection.',
+    message: journalWriteMessage,
     cause,
   });
 
 export const invalidScriptureReferenceError = (): JournalValidationError =>
   new JournalValidationError({
-    message:
-      'Check the scripture reference and use a form such as Proverbs 12:5-13.',
+    message: invalidScriptureReferenceMessage,
   });
