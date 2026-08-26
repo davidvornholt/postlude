@@ -146,6 +146,34 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           Effect.mapError(journalReadError),
         );
 
+      /**
+       * The same day of the month in earlier years, newest first. Only days
+       * with evening prose come back: "on this day" exists to hand the writer
+       * something to read, and a day holding a passage reference and nothing
+       * else has nothing to say here. The upper bound is exclusive, so today is
+       * never its own memory.
+       */
+      const readAnniversaries = (
+        monthDay: string,
+        before: JournalDate,
+        limit: number,
+      ): Effect.Effect<
+        ReadonlyArray<JournalEntry>,
+        ReturnType<typeof journalReadError>
+      > =>
+        sql`
+          select *
+          from entry
+          where to_char(entry_date, 'MM-DD') = ${monthDay}
+            and entry_date < ${before}
+            and journal_word_count > 0
+          order by entry_date desc
+          limit ${limit}
+        `.pipe(
+          Effect.flatMap(decodeEntries),
+          Effect.mapError(journalReadError),
+        );
+
       /** The first day ever written, which is where the archive starts. */
       const earliestDate = (): Effect.Effect<
         JournalDate | undefined,
@@ -162,7 +190,13 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           Effect.mapError(journalReadError),
         );
 
-      return { read, save, listBetween, earliestDate } as const;
+      return {
+        read,
+        save,
+        listBetween,
+        readAnniversaries,
+        earliestDate,
+      } as const;
     }),
   },
 ) {}

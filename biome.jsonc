@@ -215,6 +215,23 @@
       }
     },
     {
+      // One boundary's tests against a real Postgres, sharing one pool, one
+      // migration run and one Effect runtime built in a single `beforeAll`.
+      // Splitting the file would either duplicate that setup against the same
+      // database or hide it behind a helper that exists only to satisfy a line
+      // count. See docs/quality/no-excessive-lines-per-file-exceptions.md.
+      "includes": [
+        "apps/web/src/features/journal/services/entry-repository.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
       // The theme contract test runs under `bun test` and loads the CSS
       // fixture through the runtime's `Bun.file` API.
       "includes": ["packages/ui/src/*.test.ts"],

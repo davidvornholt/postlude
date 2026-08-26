@@ -12,45 +12,19 @@ import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
 import { BrandLink } from '#/shared/ui/brand-link.tsx';
+import { columnClass } from '#/shared/ui/design-classes.ts';
 import {
-  columnClass,
-  eyebrowClass,
-  focusRingClass,
-} from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+  navLinkActiveClass,
+  navLinkClass,
+  navLinkInactiveClass,
+  quietButtonClass,
+} from '#/shared/ui/form-classes.ts';
 import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 
 const navItems = [
   { to: '/', label: 'Today' },
   { to: '/archive', label: 'Archive' },
 ] as const;
-
-/*
- * The nav is type on a rule rather than a row of buttons, because a page built
- * out of rules should not sprout a row of boxes to move around itself. Hovering
- * extends the rule under a page's name from left to right; the page you are on
- * already has its rule out, in the one primary colour.
- *
- * The rule here is a state, unlike the sign-out control's, which rests out. The
- * difference is what each one has to say: this rule answers "which page is
- * this", and the current page's is always drawn, so a pointer that draws
- * another adds information rather than being the only way to get any.
- *
- * The rule's resting width and its colour live in the state classes rather than
- * in the base string: the router appends one of them to this one, and two
- * utilities setting the same property cannot be ordered by where they sit in a
- * `class` attribute.
- */
-const navLinkClass = [
-  eyebrowClass,
-  'relative inline-block pb-2',
-  'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left',
-  'after:transition-transform after:duration-200 after:ease-standard motion-reduce:after:transition-none',
-  focusRingClass,
-].join(' ');
-const navLinkActiveClass = 'text-ink after:scale-x-100 after:bg-primary';
-const navLinkInactiveClass =
-  'text-ink-muted after:scale-x-0 after:bg-current hover:text-ink hover:after:scale-x-100';
 
 // `focus`, not `focus-visible`: the link is only reachable by keyboard, so it
 // has to appear the moment it takes focus. It is also the one thing on the page

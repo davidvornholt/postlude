@@ -11,8 +11,7 @@
  * today and any day in the archive. Only the route differs.
  */
 
-import { Link } from '@tanstack/react-router';
-import { type ReactNode, useId } from 'react';
+import { useId } from 'react';
 
 import {
   columnClass,
@@ -28,6 +27,7 @@ import {
 } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
+import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { SaveStatusLine } from './save-status.tsx';
@@ -44,30 +44,6 @@ type DayPageProps = {
    */
   readonly save: SaveDraft;
 };
-
-/**
- * Today keeps the plain address. Linking a neighbour that happens to be today
- * to `/day/<today>` would work — the route redirects — but it would put a
- * redirect between the writer and the page they use most.
- */
-const DayLink = ({
-  date,
-  today,
-  children,
-}: {
-  readonly date: JournalDate;
-  readonly today: JournalDate;
-  readonly children: ReactNode;
-}) =>
-  date === today ? (
-    <Link className={quietButtonClass} to="/">
-      {children}
-    </Link>
-  ) : (
-    <Link className={quietButtonClass} params={{ date }} to="/day/$date">
-      {children}
-    </Link>
-  );
 
 /**
  * The entry as the editors and the autosave rule take it: markdown and a typed
@@ -104,11 +80,11 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           {journalDateLabel(entry.date)}
         </h1>
         <nav aria-label="Nearby days" className="mt-8 flex gap-8">
-          <DayLink date={previous} today={today}>
+          <DayLink className={quietButtonClass} date={previous} today={today}>
             <span aria-hidden="true">←</span> Previous day
           </DayLink>
           {next === undefined ? null : (
-            <DayLink date={next} today={today}>
+            <DayLink className={quietButtonClass} date={next} today={today}>
               Next day <span aria-hidden="true">→</span>
             </DayLink>
           )}

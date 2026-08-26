@@ -12,20 +12,22 @@
  * needs a real GitHub OAuth round trip, so these pages are rendered by no other
  * check in the repository.
  *
- * The writing page is rendered as its component rather than through its route,
- * because the route's whole body is that component and reaching it through the
+ * Both pages are rendered as their components rather than through their routes,
+ * because a route's whole body is its component and reaching it through the
  * route would need a loader, and with it a database.
  */
 
 import { expect, it } from 'bun:test';
-import { type ComponentType, createElement } from 'react';
-import { renderToString } from 'react-dom/server';
 import type { JournalEntry } from '#/features/journal/schemas/entry.ts';
+import {
+  sampleArchiveView,
+  sampleJournal,
+} from '#/features/journal/testing/archive-view.ts';
+import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import { countRecipe } from '#/shared/testing/rendered-html.ts';
 import { columnClass, wideColumnClass } from '#/shared/ui/design-classes.ts';
-import { Route as archiveRoute } from './archive.tsx';
 
 const emptyDay: JournalEntry = {
   date: '2026-08-26',
@@ -37,19 +39,23 @@ const emptyDay: JournalEntry = {
   updatedAt: new Date(0),
 };
 
-// A route's component is optional to the router's types and never absent here,
-// so a missing one renders as no markup and fails the counts below rather than
-// needing an assertion of its own.
-const render = (component: ComponentType | undefined): string =>
-  component === undefined ? '' : renderToString(createElement(component));
-
 // Nothing types during a render, so the save port is one that never resolves.
 const neverSaves = () => new Promise<never>(() => undefined);
 
 const today = await renderInRouter(
   <DayPage entry={emptyDay} save={neverSaves} today={emptyDay.date} />,
 );
-const archive = render(archiveRoute.options.component);
+const archiveSeed = 20_260_826;
+const sampleDays = 400;
+const archive = await renderInRouter(
+  <ArchivePage
+    selectedYear={undefined}
+    view={sampleArchiveView(
+      sampleJournal(emptyDay.date, sampleDays, archiveSeed),
+      emptyDay.date,
+    )}
+  />,
+);
 
 /*
  * Three columns, because the writing page is three blocks: the day's heading,

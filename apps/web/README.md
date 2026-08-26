@@ -36,9 +36,14 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 - `scripture-books.ts` / `scripture-reference.ts` — the 66 books under their English and German names. A reference is typed in either language, displayed in the house style (`Proverbs 12:5-13`), and linked to bibleserver.com in German, which is how that site addresses passages.
 - `schemas/entry.ts` — the shapes an entry takes, and the one place a database row becomes one. Rows are decoded rather than cast: what a driver hands back is untrusted input like anything else.
 - `services/entry-repository.ts` — every query, behind one Effect service. Nothing in it reads a clock; which day it is arrives as an argument.
+- `activity.ts` — the window the activity map covers and the four steps of its ramp. Both are pure: which days are shown, and where a day's word count falls among the days actually written.
+- `activity-labels.ts` — the words that stand in for the grid when the page is read aloud rather than looked at, and the month names above it. The month names are a fixed list rather than `Intl.DateTimeFormat`, because the server and the browser have to agree on the markup and a locale database does not.
+- `streaks.ts` — the two runs, over the same day records the map is drawn from.
+- `snippet.ts` — the opening of an entry, as prose rather than as the markdown carrying it, for "on this day".
 - `services/journal-fns.ts` — the server functions the browser reaches all of that through. Each carries `sessionRequired`, and `sensitive-server-fns.test.ts` fails the build if one loses it. `readJournalDayFn` answers with the entry *and* the server's own journal day, so a page never has to ask twice or decide from the browser's clock what "today" means.
 - `autosave.ts` — when a draft is written, as a pure state machine over plain values. It answers the questions a timer alone gets wrong: a burst of typing during a save collapses into one further write rather than a queue of them; a reply is matched against the draft that was actually sent, so text typed after the request left is never marked as stored; a failure keeps the words and keeps saying so.
-- `ui/` — the writing page. `use-autosave.ts` is the only part that touches the browser, turning each of the rule's decisions into a timer or a request; `markdown-editor.tsx` is the Tiptap surface, where markdown is typed and set in place rather than previewed.
+- `services/archive-fns.ts` — the one guarded server function the archive loads from. It reads the whole history to count the runs and only ships the window's days, so a run that began before the window is still counted while the page carries a year of small records rather than the journal.
+- `ui/` — the writing page and the archive. `use-autosave.ts` is the only part that touches the browser, turning each of the rule's decisions into a timer or a request; `markdown-editor.tsx` is the Tiptap surface, where markdown is typed and set in place rather than previewed.
 
 ## The writing page
 
@@ -53,6 +58,16 @@ Both editors render as plain paragraphs on the server and hand over to Tiptap on
 `src/shared/runtime/app-runtime.ts` is the single seam between Effect and the rest of the app, as `AGENTS.local.md` describes: services keep typed error and requirement channels, and everything above the seam — server functions, React Query, components — stays on plain promises. The runtime is built lazily, because building it opens the database pool, and a pool must not be opened merely because a client bundle imported a route module.
 
 The repository's own tests run against a real Postgres, since whether an upsert replaces a row and whether a DATE column survives the round trip are properties of the database rather than of the code. `src/shared/testing/test-database.ts` creates the configured database with `_test` appended, migrates it from the same generated migrations the app deploys, and rolls every test body back, so the journal you write in is never touched. `DATABASE_URL` must be present: a database test that silently skips is a gate that silently does not hold.
+
+## The archive
+
+`/archive` is where the journal is looked back at rather than added to. It holds three things: the two runs, a year of days as a grid, and what was written on this date in earlier years.
+
+The two runs are counted separately, because the evening's writing and the morning's passage are two habits and one is not evidence of the other. A run stays alive on a day not yet written — the evening today is for has not happened, and calling the run broken at four in the morning would tell the writer they had lost something they had not. A day filled in later never repairs a run: the row's `created_at` says whether it was written on the day it is about, and only days written on the day count. That signal is generous in one case worth naming — a row created in the morning for the passage, whose evening prose is added days later, still counts toward the evening run — and the alternative is a per-section timestamp the table does not carry.
+
+The grid draws a day as a square whose depth is where its word count falls among the days actually written, recomputed over the window rather than fixed, so a writer of long entries and a writer of short ones each get the whole ramp. `?year=2025` shows a calendar year; no search parameter shows the rolling 53 weeks up to this one. It is one image with a summary label and a month-by-month description rather than 371 separately labelled squares, and the way into a day is the collapsed table beneath it — 371 links in the tab order would put the whole year between the writer and the next thing on the page.
+
+"On this day" is the one part of the archive there to be read. It matches the month and day against earlier years, leads with the entry's own opening words, and opens the day it came from.
 
 ## Environment
 

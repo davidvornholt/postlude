@@ -51,6 +51,9 @@ const withRepository = <A, E>(
 ): Promise<A> =>
   runtime.runPromise(rolledBack(Effect.flatMap(EntryRepository, body)));
 
+/** As many earlier years as the archive asks for; the page shows four. */
+const anniversaryLimit = 4;
+
 const draft = (
   date: string,
   journalMarkdown: string,
@@ -164,6 +167,50 @@ it('lists a range inclusively and in calendar order', async () => {
     true,
     false,
   ]);
+});
+
+it('finds the same day of the month in earlier years, newest first', async () => {
+  const anniversaries = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2024-08-26', 'Two years back.'));
+      yield* entries.save(draft('2025-08-26', 'One year back.'));
+      yield* entries.save(draft('2025-08-25', 'The day before, once.'));
+      yield* entries.save(draft('2026-08-26', 'Today itself.'));
+      return yield* entries.readAnniversaries(
+        '08-26',
+        '2026-08-26',
+        anniversaryLimit,
+      );
+    }),
+  );
+  expect(anniversaries.map((entry) => entry.date)).toEqual([
+    '2025-08-26',
+    '2024-08-26',
+  ]);
+});
+
+/*
+ * A day whose morning holds a passage and whose evening holds nothing has
+ * nothing to show in a list of openings, so it is left out rather than listed
+ * as a blank line.
+ */
+it('leaves out an anniversary with no evening prose', async () => {
+  const anniversaries = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        date: '2025-08-26',
+        journalMarkdown: '',
+        scriptureMarkdown: '',
+        scriptureReference: 'Psalms 23',
+      });
+      return yield* entries.readAnniversaries(
+        '08-26',
+        '2026-08-26',
+        anniversaryLimit,
+      );
+    }),
+  );
+  expect(anniversaries).toEqual([]);
 });
 
 it('reports no earliest day while the journal is empty', async () => {
