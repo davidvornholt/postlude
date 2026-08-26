@@ -17,7 +17,9 @@ import { SqlClient } from '@effect/sql';
 import type { SqlError } from '@effect/sql/SqlError';
 import { migrateDatabase } from '@postlude/db/migrate';
 import { createPool } from '@postlude/db/pool';
-import { Data, Effect, type Exit } from 'effect';
+import { Data, Effect, type Exit, type Scope } from 'effect';
+
+import { TestDatabaseSetupError } from './test-database-errors.ts';
 
 /**
  * `bun test` runs with `NODE_ENV=test`, and Bun deliberately skips `.env.local`
@@ -46,14 +48,18 @@ const fromGeneratedDevEnv = (): string => {
  * quietly does not run is a gate that quietly does not hold, and the two are
  * indistinguishable in a green build.
  */
-const requireDatabaseUrl = (): string => {
+const databaseUrl = (): Effect.Effect<string, TestDatabaseSetupError> => {
   const configured = process.env.DATABASE_URL || fromGeneratedDevEnv();
   if (configured === '') {
-    throw new Error(
-      'No DATABASE_URL. These tests need a Postgres to run against: run `just dev-env-generate` and `just dev-db-start`, or set DATABASE_URL in the environment.',
+    return Effect.fail(
+      new TestDatabaseSetupError({
+        message:
+          'No DATABASE_URL. These tests need a Postgres to run against: run `just dev-env-generate` and `just dev-db-start`, or set DATABASE_URL in the environment.',
+        cause: 'DATABASE_URL is empty.',
+      }),
     );
   }
-  return configured;
+  return Effect.succeed(configured);
 };
 
 /**
@@ -66,32 +72,93 @@ export type TestPool = ReturnType<typeof createPool>;
 /** Postgres' code for "that database already exists", which is not a failure. */
 const duplicateDatabase = '42P04';
 
+type TestDatabaseDependencies<Pool> = {
+  readonly createPool: (connectionString: string) => Pool;
+  readonly createDatabase: (pool: Pool, name: string) => Promise<unknown>;
+  readonly migrateDatabase: (
+    pool: Pool,
+  ) => Effect.Effect<unknown, unknown, never>;
+  readonly closePool: (pool: Pool) => Promise<unknown>;
+};
+
+const setupError = (cause: unknown): TestDatabaseSetupError =>
+  new TestDatabaseSetupError({
+    message: 'The test database could not be prepared.',
+    cause,
+  });
+
+/**
+ * The scoped acquisition behind `openTestDatabase`, exported so its failure
+ * cleanup can be tested without opening a real connection.
+ */
+export const acquireTestDatabase = <Pool>(
+  configured: string,
+  dependencies: TestDatabaseDependencies<Pool>,
+): Effect.Effect<Pool, TestDatabaseSetupError, Scope.Scope> =>
+  Effect.gen(function* () {
+    const configuredUrl = yield* Effect.try({
+      try: () => new URL(configured),
+      catch: setupError,
+    });
+    const name = `${configuredUrl.pathname.slice(1)}_test`;
+
+    const acquirePool = (connectionString: string) =>
+      Effect.acquireRelease(
+        Effect.try({
+          try: () => dependencies.createPool(connectionString),
+          catch: setupError,
+        }),
+        (acquiredPool) =>
+          Effect.tryPromise({
+            try: () => dependencies.closePool(acquiredPool),
+            catch: setupError,
+          }).pipe(Effect.orDie),
+      );
+
+    yield* Effect.scoped(
+      Effect.gen(function* () {
+        const admin = yield* acquirePool(configuredUrl.toString());
+        yield* Effect.tryPromise({
+          try: () => dependencies.createDatabase(admin, name),
+          catch: (cause) => cause,
+        }).pipe(
+          Effect.catchAll((cause) =>
+            (cause as { readonly code?: string }).code === duplicateDatabase
+              ? Effect.void
+              : Effect.fail(cause),
+          ),
+          Effect.mapError(setupError),
+        );
+      }),
+    );
+
+    const testUrl = new URL(configuredUrl.toString());
+    testUrl.pathname = `/${name}`;
+    const pool = yield* acquirePool(testUrl.toString());
+    yield* dependencies.migrateDatabase(pool).pipe(Effect.mapError(setupError));
+    return pool;
+  });
+
 /**
  * A pool on a migrated test database, created if this is the first run. The
  * name cannot be a bound parameter, so it is quoted instead; it comes from
  * configuration rather than from input.
  */
-export const openTestDatabase = async (): Promise<TestPool> => {
-  const configured = new URL(requireDatabaseUrl());
-  const name = `${configured.pathname.slice(1)}_test`;
-
-  const admin = createPool(configured.toString());
-  try {
-    await admin.query(`create database "${name}"`);
-  } catch (error) {
-    if ((error as { readonly code?: string }).code !== duplicateDatabase) {
-      throw error;
-    }
-  } finally {
-    await admin.end();
-  }
-
-  const testUrl = new URL(configured.toString());
-  testUrl.pathname = `/${name}`;
-  const pool = createPool(testUrl.toString());
-  await Effect.runPromise(migrateDatabase(pool));
-  return pool;
-};
+export const openTestDatabase = (): Effect.Effect<
+  TestPool,
+  TestDatabaseSetupError,
+  Scope.Scope
+> =>
+  databaseUrl().pipe(
+    Effect.flatMap((configured) =>
+      acquireTestDatabase(configured, {
+        createPool,
+        createDatabase: (pool, name) => pool.query(`create database "${name}"`),
+        migrateDatabase,
+        closePool: (pool) => pool.end(),
+      }),
+    ),
+  );
 
 class Rollback extends Data.TaggedError('Rollback')<{
   readonly outcome: Exit.Exit<unknown, unknown>;

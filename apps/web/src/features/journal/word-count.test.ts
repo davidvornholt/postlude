@@ -91,6 +91,46 @@ describe('countJournalWords', () => {
     expect(countJournalWords(openFence)).toBe(beforeOnly);
   });
 
+  it('does not mistake trailing text for a closing fence', () => {
+    const openFence = [
+      'Before',
+      '',
+      '```',
+      'const a = 1;',
+      '``` not a closer',
+      'more code',
+    ].join('\n');
+
+    expect(countJournalWords(openFence)).toBe(1);
+  });
+
+  it('does not mistake an over-indented fence for a closing fence', () => {
+    const openFence = [
+      'Before',
+      '',
+      '```',
+      'const a = 1;',
+      '    ```',
+      'more code',
+    ].join('\n');
+
+    expect(countJournalWords(openFence)).toBe(1);
+  });
+
+  it('accepts a closing fence longer than its opener', () => {
+    const closedFence = [
+      'Before',
+      '',
+      '```',
+      'const a = 1;',
+      '````',
+      '',
+      'after',
+    ].join('\n');
+
+    expect(countJournalWords(closedFence)).toBe(2);
+  });
+
   it('counts an escaped marker as the character it stands for', () => {
     const escapedStars = 3;
     expect(countJournalWords('A \\*quiet\\* morning')).toBe(escapedStars);

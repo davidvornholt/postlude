@@ -1,56 +1,61 @@
-/**
- * The repository against a real Postgres, because that is the only place its
- * claims are actually settled. Whether the upsert really replaces a day,
- * whether a DATE column comes back as the calendar date it was written as
- * rather than an instant shifted by a timezone, and whether the check
- * constraints accept a whole-chapter reference are all properties of the
- * database, not of the code that talks to it.
- *
- * `shared/testing/test-database.ts` owns the database and the rollback; see it
- * for what these tests do and do not touch.
- */
-
 import { afterAll, beforeAll, expect, it } from 'bun:test';
 import type { SqlClient } from '@effect/sql';
 import { pgClientLayer } from '@postlude/db/effect-client';
-import { Effect, Layer, ManagedRuntime } from 'effect';
+import { Effect, Exit, Layer, ManagedRuntime, Scope } from 'effect';
 
 import {
   openTestDatabase,
   rolledBack,
-  type TestPool,
 } from '#/shared/testing/test-database.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
 
-let pool: TestPool;
+let resourceScope: Scope.CloseableScope | undefined;
 let runtime: ManagedRuntime.ManagedRuntime<
   EntryRepository | SqlClient.SqlClient,
   never
 >;
 
-beforeAll(async () => {
-  pool = await openTestDatabase();
-  const clientLayer = pgClientLayer(pool);
-  runtime = ManagedRuntime.make(
+const acquireRepositoryResources = Effect.gen(function* () {
+  const acquiredPool = yield* openTestDatabase();
+  const clientLayer = pgClientLayer(acquiredPool);
+  const acquiredRuntime = ManagedRuntime.make(
     Layer.provideMerge(
       Layer.provide(EntryRepository.Default, clientLayer),
       clientLayer,
     ).pipe(Layer.orDie),
   );
+  yield* Effect.addFinalizer(() =>
+    Effect.promise(() => acquiredRuntime.dispose()),
+  );
+  return acquiredRuntime;
+});
+
+const openRepositoryResources = Scope.make().pipe(
+  Effect.flatMap((scope) =>
+    acquireRepositoryResources.pipe(
+      Effect.provideService(Scope.Scope, scope),
+      Effect.map((acquiredRuntime) => ({ runtime: acquiredRuntime, scope })),
+      Effect.onError(() => Scope.close(scope, Exit.void)),
+    ),
+  ),
+);
+
+beforeAll(async () => {
+  ({ runtime, scope: resourceScope } = await Effect.runPromise(
+    openRepositoryResources,
+  ));
 });
 
 afterAll(async () => {
-  await runtime.dispose();
-  await pool.end();
+  if (resourceScope !== undefined) {
+    await Effect.runPromise(Scope.close(resourceScope, Exit.void));
+  }
 });
-
-/** Runs the body against the repository and leaves the table as it was. */
 const withRepository = <A, E>(
   body: (entries: EntryRepository) => Effect.Effect<A, E>,
 ): Promise<A> =>
   runtime.runPromise(rolledBack(Effect.flatMap(EntryRepository, body)));
-
 const draft = (
   date: string,
   journalMarkdown: string,
@@ -61,12 +66,10 @@ const draft = (
   scriptureMarkdown: '',
   scriptureReference,
 });
-
 it('reads nothing for a day that was never written', async () => {
   const entry = await withRepository((entries) => entries.read('2019-04-02'));
   expect(entry).toBeUndefined();
 });
-
 it('gives back the day it stored, counted by the server', async () => {
   const prose = 'A quiet evening, and the rain finally stopped.';
   const words = 8;
@@ -79,7 +82,6 @@ it('gives back the day it stored, counted by the server', async () => {
   expect(entry.scriptureWordCount).toBe(0);
   expect(entry.scriptureReference).toBeUndefined();
 });
-
 it('keeps the date a calendar date rather than an instant', async () => {
   const entry = await withRepository((entries) =>
     Effect.gen(function* () {
@@ -89,7 +91,6 @@ it('keeps the date a calendar date rather than an instant', async () => {
   );
   expect(entry?.date).toBe('2026-01-01');
 });
-
 it('replaces a day rather than failing on the second save', async () => {
   const words = 3;
   const entry = await withRepository((entries) =>
@@ -103,7 +104,6 @@ it('replaces a day rather than failing on the second save', async () => {
   expect(entry.journalMarkdown).toBe('Rewritten, and shorter.');
   expect(entry.journalWordCount).toBe(words);
 });
-
 it('keeps the creation stamp of the day it is rewriting', async () => {
   const [first, second] = await withRepository((entries) =>
     Effect.gen(function* () {
@@ -114,7 +114,6 @@ it('keeps the creation stamp of the day it is rewriting', async () => {
   );
   expect(second.createdAt.getTime()).toBe(first.createdAt.getTime());
 });
-
 it('stores a verse range as the four columns the archive reads', async () => {
   const entry = await withRepository((entries) =>
     entries.save(draft('2026-08-25', 'Read it slowly.', 'Sprüche 12,5-13')),
@@ -126,14 +125,12 @@ it('stores a verse range as the four columns the archive reads', async () => {
     verseEnd: 13,
   });
 });
-
 it('accepts a whole chapter, which has no verse at all', async () => {
   const entry = await withRepository((entries) =>
     entries.save(draft('2026-08-25', 'The whole psalm.', 'Psalms 23')),
   );
   expect(entry.scriptureReference).toEqual({ book: 'Psalms', chapter: 23 });
 });
-
 it('drops a reference the writer removed', async () => {
   const entry = await withRepository((entries) =>
     Effect.gen(function* () {
@@ -142,6 +139,26 @@ it('drops a reference the writer removed', async () => {
     }),
   );
   expect(entry.scriptureReference).toBeUndefined();
+});
+it('explains an invalid reference without changing the stored entry', async () => {
+  const outcome = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2026-08-25', 'With one.', 'Psalms 23'));
+      const failure = yield* Effect.flip(
+        entries.save(draft('2026-08-25', 'Still editing.', 'Proverbs 12:')),
+      );
+      const stored = yield* entries.read('2026-08-25');
+      return { failure, stored } as const;
+    }),
+  );
+
+  expect(outcome.failure._tag).toBe('JournalValidationError');
+  expect(outcome.failure.message).toContain('scripture reference');
+  expect(outcome.stored?.journalMarkdown).toBe('With one.');
+  expect(outcome.stored?.scriptureReference).toEqual({
+    book: 'Psalms',
+    chapter: 23,
+  });
 });
 
 it('lists a range inclusively and in calendar order', async () => {

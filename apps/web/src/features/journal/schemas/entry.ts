@@ -26,7 +26,12 @@ export const JournalDateSchema = Schema.String.pipe(
   }),
 );
 
+const WordCount = Schema.Number.pipe(
+  Schema.int(),
+  Schema.greaterThanOrEqualTo(0),
+);
 const VerseNumber = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
+const containsLetter = /\p{L}/u;
 
 /** A row of `entry`, under the column names Postgres actually returns. */
 const EntryRow = Schema.Struct({
@@ -36,13 +41,13 @@ const EntryRow = Schema.Struct({
   journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
     Schema.fromKey('journal_markdown'),
   ),
-  journalWordCount: Schema.propertySignature(Schema.Number).pipe(
+  journalWordCount: Schema.propertySignature(WordCount).pipe(
     Schema.fromKey('journal_word_count'),
   ),
   scriptureMarkdown: Schema.propertySignature(
     Schema.NullOr(Schema.String),
   ).pipe(Schema.fromKey('scripture_markdown')),
-  scriptureWordCount: Schema.propertySignature(Schema.Number).pipe(
+  scriptureWordCount: Schema.propertySignature(WordCount).pipe(
     Schema.fromKey('scripture_word_count'),
   ),
   scriptureBook: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
@@ -63,7 +68,22 @@ const EntryRow = Schema.Struct({
   updatedAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
     Schema.fromKey('updated_at'),
   ),
-});
+}).pipe(
+  Schema.filter(
+    (row) =>
+      (row.scriptureBook === null) === (row.scriptureChapter === null) &&
+      (row.scriptureVerseStart === null || row.scriptureChapter !== null) &&
+      (row.scriptureVerseEnd === null ||
+        (row.scriptureVerseStart !== null &&
+          row.scriptureVerseEnd >= row.scriptureVerseStart)) &&
+      (row.scriptureBook === null || containsLetter.test(row.scriptureBook)),
+    {
+      identifier: 'CoherentScriptureReferenceColumns',
+      description:
+        'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
+    },
+  ),
+);
 
 export type JournalEntry = {
   readonly date: string;
@@ -129,6 +149,13 @@ export const EntryFromRow = Schema.transform(
   Schema.Any as Schema.Schema<JournalEntry>,
   { strict: false, decode: entryOf, encode: (entry) => entry },
 );
+
+/** The nullable aggregate row returned by `min(entry_date)`. */
+export const EarliestDateFromRow = Schema.Struct({
+  date: Schema.propertySignature(Schema.NullOr(JournalDateSchema)).pipe(
+    Schema.fromKey('entry_date'),
+  ),
+});
 
 /**
  * What a day looks like before it has ever been written. The writing page opens

@@ -19,26 +19,21 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import {
   type EntryDraft,
   EntryDraftSchema,
   emptyJournalEntry,
-  JournalDateSchema,
   type JournalEntry,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { runJournalEffect } from './journal-runtime.ts';
+import { decodeReadEntryInput } from './read-entry-input.ts';
 
 /** Today as the configured zone reads it, with the 04:00 rule applied. */
 export const currentJournalDate = (): JournalDate =>
   journalDateAt(new Date(), env.JOURNAL_TIME_ZONE);
 
-const DateInput = Schema.Struct({
-  date: Schema.optional(JournalDateSchema),
-});
-
-const decodeDateInput = Schema.decodeUnknownSync(DateInput);
 const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
 
 /**
@@ -61,11 +56,11 @@ export type JournalDayView = {
  */
 export const readJournalDayFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .validator((input: unknown) => decodeDateInput(input ?? {}))
+  .validator((input: unknown) => decodeReadEntryInput(input ?? {}))
   .handler(({ data }): Promise<JournalDayView> => {
     const today = currentJournalDate();
     const date = data.date ?? today;
-    return runServerEffect(
+    return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const entry = yield* entries.read(date);
@@ -84,7 +79,7 @@ export const saveEntryFn = createServerFn({ method: 'POST' })
   .validator((input: unknown) => decodeDraft(input))
   .handler(
     ({ data }): Promise<JournalEntry> =>
-      runServerEffect(
+      runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntryRepository;
           return yield* entries.save(data);

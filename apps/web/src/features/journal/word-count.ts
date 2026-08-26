@@ -8,9 +8,11 @@
  * is also why it lives here rather than in the editor's own code.
  */
 
-const fencedBlock =
-  /^[ \t]*(?<fence>```+|~~~+).*$[\s\S]*?^[ \t]*\k<fence>.*$/gmu;
-const unclosedFence = /^[ \t]*(?:```+|~~~+).*$[\s\S]*/mu;
+const backtickFencedBlock =
+  /^ {0,3}(?<fence>`{3,})[^`\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>`*[ \t]*\r?$/gmu;
+const tildeFencedBlock =
+  /^ {0,3}(?<fence>~{3,})[^\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>~*[ \t]*\r?$/gmu;
+const unclosedFence = /^ {0,3}(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)\r?$[\s\S]*/mu;
 const htmlComment = /<!--[\s\S]*?-->/gu;
 const image = /!\[(?<alt>[^\]]*)\]\([^)]*\)/gu;
 const inlineLink = /\[(?<label>[^\]]*)\]\([^)]*\)/gu;
@@ -45,7 +47,8 @@ const escaped = /\\(?<character>[\\`*_{}[\]()#+\-.!>~|])/gu;
  */
 export const journalPlainText = (markdown: string): string =>
   markdown
-    .replace(fencedBlock, ' ')
+    .replace(backtickFencedBlock, ' ')
+    .replace(tildeFencedBlock, ' ')
     .replace(unclosedFence, ' ')
     .replace(htmlComment, ' ')
     .replace(linkDefinition, ' ')
