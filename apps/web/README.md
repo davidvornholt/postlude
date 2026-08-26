@@ -40,6 +40,7 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 - `activity-labels.ts` — the words that stand in for the grid when the page is read aloud rather than looked at, and the month names above it. The month names are a fixed list rather than `Intl.DateTimeFormat`, because the server and the browser have to agree on the markup and a locale database does not.
 - `streaks.ts` — the two runs, over the same day records the map is drawn from.
 - `snippet.ts` — the opening of an entry, as prose rather than as the markdown carrying it, for "on this day".
+- `anniversary.ts` — the same date in earlier years, as the day page shows it: how many years back an entry is counted from the day being read, its two word counts added together, and its opening line.
 - `search-query.ts` — what a typed line means, as pure text work: the words it holds, the `tsquery` those words become, and the excerpt a matched day is shown as. A term is cut down to letters and digits before it goes anywhere near the database, which is what makes appending the prefix marker safe.
 - `services/journal-fns.ts` — the server functions the browser reaches all of that through. Each carries `sessionRequired`, and `sensitive-server-fns.test.ts` fails the build if one loses it. `readJournalDayFn` answers with the entry *and* the server's own journal day, so a page never has to ask twice or decide from the browser's clock what "today" means.
 - `autosave.ts` owns when a draft needs writing as a pure state machine over plain values. It answers the questions a timer alone gets wrong. A burst of typing during a save collapses into one further write. A reply matches the draft that was sent, so text typed after the request left is never marked as stored. A failure keeps the words and keeps saying so.
@@ -73,7 +74,7 @@ The repository's own tests run against a real Postgres, since whether an upsert 
 
 ## The archive
 
-`/archive` is where the journal is looked back at rather than added to. It holds three things: the two runs, a year of days as a grid, and what was written on this date in earlier years.
+`/archive` is where the journal is looked back at rather than added to. It holds the two runs, a year of days as a grid, the journal's totals, and the download. Everything on it is measured rather than read: what was written on a date belongs on that date's own page.
 
 The two runs are counted separately, because the evening's writing and the morning's passage are two habits and one is not evidence of the other. A run stays alive on a day not yet written — the evening today is for has not happened, and calling the run broken at four in the morning would tell the writer they had lost something they had not. Each section has its own first-use timestamp, set when that section first holds prose or, for scripture, a passage reference. The timestamp never changes when the section is edited, cleared, or restored, so filling in a missed day later cannot repair that habit's run and one section cannot lend its timing to the other. The generated migration leaves an existing section's timestamp empty because the database cannot establish when that section first held content. Its next edit records the first evidence available under this rule.
 
@@ -81,7 +82,11 @@ Archive coverage follows what the journal contains now, not those immutable prov
 
 The grid draws a day as a square whose depth is where its word count falls among the days actually written, recomputed over the window rather than fixed, so a writer of long entries and a writer of short ones each get the whole ramp. `?year=2025` shows a calendar year; no search parameter shows the rolling 53 weeks up to this one. It is one image with a summary label and a month-by-month description rather than 371 separately labelled squares, and the way into a day is the collapsed table beneath it — 371 links in the tab order would put the whole year between the writer and the next thing on the page.
 
-"On this day" is the one part of the archive there to be read. It matches the month and day against earlier years, leads with the entry's own opening words, and opens the day it came from.
+## Reaching a day
+
+A day is reached three ways, and each answers a different question. The previous and next links step one day at a time, which is the move for last night. The date field beside them goes straight to a day the writer can already name — it is a real `GET` form pointed at `/day`, a route that is not a page but a redirect to `/day/2026-08-20`, so naming a date works in a browser that ran no script. The archive's table of days is for finding a day by looking rather than by naming.
+
+Under the evening's writing, a day's own page shows what was written on that same date in earlier years. It matches the month and day against the years before the one being read, leads with each entry's opening words, and opens the day it came from. It sits below the editor rather than above it, because the page is for writing an evening and old entries stacked in front of the editor would put reading ahead of that. On a date with nothing behind it the section is absent rather than empty.
 
 ## Search
 

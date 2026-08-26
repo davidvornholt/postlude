@@ -19,6 +19,7 @@ import {
   elementAttributes,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
+import type { Anniversary } from '../anniversary.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import { DayPage } from './day-page.tsx';
 
@@ -46,8 +47,18 @@ const entryOn = (overrides: Partial<JournalEntry> = {}): JournalEntry => ({
  */
 const neverSaves = () => new Promise<never>(() => undefined);
 
-const render = (entry: JournalEntry): Promise<string> =>
-  renderInRouter(<DayPage entry={entry} save={neverSaves} today={today} />);
+const render = (
+  entry: JournalEntry,
+  anniversaries: ReadonlyArray<Anniversary> = [],
+): Promise<string> =>
+  renderInRouter(
+    <DayPage
+      anniversaries={anniversaries}
+      entry={entry}
+      save={neverSaves}
+      today={today}
+    />,
+  );
 
 const headingSequence = (html: string): ReadonlyArray<string> =>
   Array.from(
@@ -195,4 +206,68 @@ it('counts the prose rather than the markup', async () => {
 
 it('says a day is saved before anything has been typed', async () => {
   expect(await render(entryOn())).toContain('Saved');
+});
+
+/*
+ * The years behind a date are the one part of the page there to be read rather
+ * than written. They lead with the writer's own words, and the whole line opens
+ * the day, because the reason to go back is the sentence and not the date above
+ * it.
+ */
+it('reads back an earlier year and opens the day it came from', async () => {
+  const html = await render(entryOn(), [
+    {
+      date: '2025-08-26',
+      yearsAgo: 1,
+      words: 210,
+      snippet: 'Moved the desk under the window.',
+    },
+  ]);
+
+  expect(html).toContain('On this day');
+  expect(html).toContain('Moved the desk under the window.');
+  expect(plainText(html)).toContain('1 year ago');
+  expect(html).toContain('href="/day/2025-08-26"');
+});
+
+/*
+ * A heading over nothing would take a section of every page for a journal's
+ * whole first year to say that there is nothing yet.
+ */
+it('leaves the section out on a date with no years behind it', async () => {
+  expect(await render(entryOn())).not.toContain('On this day');
+});
+
+/*
+ * The memory sits below the writing, not above it. This page exists to have an
+ * evening written into it, and old entries in front of the editor would put
+ * reading ahead of that.
+ */
+it('puts the memory after the evening rather than before it', async () => {
+  const html = await render(entryOn(), [
+    {
+      date: '2025-08-26',
+      yearsAgo: 1,
+      words: 210,
+      snippet: 'Moved the desk under the window.',
+    },
+  ]);
+
+  expect(html.indexOf('Evening')).toBeLessThan(html.indexOf('On this day'));
+});
+
+/*
+ * Walking back a day at a time is right for last night and wrong for last
+ * March. The field is a real `GET` form pointed at `/day`, so it reaches the
+ * day through a page load in a browser that ran no script, and it cannot be
+ * pointed at a day that has not been lived.
+ */
+it('offers a way to a day by naming it, without needing script', async () => {
+  const html = await render(entryOn({ date: '2026-08-24' }));
+
+  expect(html).toContain('action="/day"');
+  expect(html).toContain('method="get"');
+  expect(html).toContain('Go to a day');
+  expect(html).toContain(`max="${today}"`);
+  expect(html).toContain('value="2026-08-24"');
 });

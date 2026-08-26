@@ -20,6 +20,12 @@ import { Effect, Schema } from 'effect';
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
 import { loadAfterConfirmedRevision } from '../confirmed-revisions.ts';
+import {
+  type Anniversary,
+  anniversaryLimit,
+  anniversaryOf,
+  isoMonthStart,
+} from '../anniversary.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
@@ -40,16 +46,22 @@ export const currentJournalDate = (): JournalDate =>
 const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
 
 /**
- * A day's page: the entry, and what the server's clock calls today.
+ * A day's page: the entry, what the server's clock calls today, and the same
+ * date in the years behind it.
  *
  * Today comes back with the entry rather than being asked for separately,
  * because every page needs both and the two have to agree. A page that read
  * the day from the browser could offer to write a day the server would refuse,
  * or call yesterday "today" for a reader who has travelled.
+ *
+ * The anniversaries come back in the same round trip for the same reason the
+ * counts do: they are part of what the page is, and a second request for them
+ * would let the page render once without them and shift under the reader.
  */
 export type JournalDayView = {
   readonly entry: JournalEntry;
   readonly today: JournalDate;
+  readonly anniversaries: ReadonlyArray<Anniversary>;
 };
 
 /**
@@ -67,7 +79,16 @@ export const readJournalDayFn = createServerFn({ method: 'GET' })
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const entry = yield* entries.read(date);
-        return { entry: entry ?? emptyJournalEntry(date), today };
+        const earlier = yield* entries.readAnniversaries(
+          date.slice(isoMonthStart),
+          date,
+          anniversaryLimit,
+        );
+        return {
+          entry: entry ?? emptyJournalEntry(date),
+          today,
+          anniversaries: earlier.map(anniversaryOf(date)),
+        };
       }),
     );
   });

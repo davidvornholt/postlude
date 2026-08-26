@@ -288,7 +288,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
        * with prose in either section come back: "on this day" exists to hand
        * the writer something to read, and a day holding a passage reference and
        * nothing else has nothing to say here. The upper bound is exclusive, so
-       * today is never its own memory.
+       * the day being read is never its own memory.
        */
       const readAnniversaries = (
         monthDay: string,

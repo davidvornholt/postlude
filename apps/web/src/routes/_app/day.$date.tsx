@@ -21,8 +21,15 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * that drift apart in a bookmark or a browser's history.
  */
 const DayRoute = () => {
-  const { entry, today } = Route.useLoaderData();
-  return <DayPage entry={entry} save={saveDraft} today={today} />;
+  const { entry, today, anniversaries } = Route.useLoaderData();
+  return (
+    <DayPage
+      anniversaries={anniversaries}
+      entry={entry}
+      save={saveDraft}
+      today={today}
+    />
+  );
 };
 
 export const Route = createFileRoute('/_app/day/$date')({
