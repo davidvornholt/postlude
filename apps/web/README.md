@@ -5,12 +5,13 @@ The Postlude application: TanStack Start + Vite on Bun, GitHub OAuth via better-
 ## Development
 
 ```sh
-just dev-env-generate   # compose .env.local from config/dev.yaml + secrets/dev.yaml
-just dev-db-start       # local Postgres container (postlude-dev-postgres)
-bun run dev             # vite dev server on port 3000
+just dev-env-generate                      # compose .env.local from config/dev.yaml + secrets/dev.yaml
+just dev-db-start                          # local Postgres container (postlude-dev-postgres)
+bun run --cwd ../../packages/db db:migrate # apply migrations; a freshly created container is empty
+bun run dev                                # vite dev server on port 3000
 ```
 
-`config/dev.yaml` still carries a placeholder `GITHUB_CLIENT_ID`. The app boots and every unauthenticated page works, but sign-in fails until a real dev GitHub OAuth app value lands there.
+Sign-in needs all three of those. Without the database the sign-in request fails before the browser ever reaches GitHub, because better-auth stores the OAuth state as a row before it redirects; the sign-in page still renders, since a failed session lookup counts as signed out. Without the migrations that same write has no table to land in. And the dev server has to hold port 3000: the "Postlude (dev)" OAuth app sends the browser back to `http://localhost:3000/api/auth/callback/github`, so a server that fell back to another port never receives the callback. Free port 3000 rather than letting Vite move.
 
 ## Design comparison
 

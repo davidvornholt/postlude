@@ -5,14 +5,15 @@
 # the shared layers. A key never lives in both this file and secrets/dev.yaml.
 # This file is seeded once and then owned by your repo.
 #
-# GITHUB_CLIENT_ID is a placeholder until the dev GitHub OAuth app exists
-# (callback http://localhost:3000/api/auth/callback/github); the app boots,
-# only sign-in fails until the real value lands here.
+# GITHUB_CLIENT_ID belongs to the "Postlude (dev)" GitHub OAuth app, whose
+# callback is http://localhost:3000/api/auth/callback/github. That callback is
+# why BETTER_AUTH_URL and the dev server both have to stay on port 3000. Its
+# client secret is a secret and lives in secrets/dev.yaml.
 apps:
   web:
     DATABASE_URL: &databaseUrl postgresql://postlude:postlude@127.0.0.1:15433/postlude_dev
     BETTER_AUTH_URL: http://localhost:3000
-    GITHUB_CLIENT_ID: replace-after-creating-the-dev-github-oauth-app
+    GITHUB_CLIENT_ID: Ov23liMZSmT9ereDMgRP
     GITHUB_ALLOWED_ACCOUNT_ID: "157214705"
 packages:
   db:
