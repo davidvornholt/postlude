@@ -26,6 +26,11 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import { renderToString } from 'react-dom/server';
+
+import {
+  countElements,
+  elementAttributes,
+} from '#/shared/testing/rendered-html.ts';
 import { BrandLink } from './brand-link.tsx';
 import { columnClass } from './design-classes.ts';
 import {
@@ -110,25 +115,14 @@ const renderAt = async (path: string): Promise<string> => {
   return renderToString(<RouterProvider router={router} />);
 };
 
-const mainLandmarks = (html: string): number =>
-  html.match(/<main\b/gu)?.length ?? 0;
+const mainLandmarks = (html: string): number => countElements(html, 'main');
 
 const columnWrappers = (html: string): number =>
   html.split(columnClass).length - 1;
 
-/**
- * The attributes of the one anchor with this exact text. Attribute order is
- * React's to choose and it varies between renders, so callers match on
- * substrings rather than on a whole tag.
- */
+/** The attributes of the one anchor with this exact text. */
 const linkAttributes = (html: string, text: string): string =>
-  Array.from(
-    html.matchAll(/<a(?<attributes>[^>]*)>(?<text>[^<]*)</gu),
-    (match) => ({
-      attributes: match.groups?.attributes ?? '',
-      text: match.groups?.text ?? '',
-    }),
-  ).find((anchor) => anchor.text === text)?.attributes ?? '';
+  elementAttributes(html, 'a', text);
 
 it('keeps one main landmark when a route inside the shell fails', async () => {
   const html = await renderAt('/');
