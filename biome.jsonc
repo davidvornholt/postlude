@@ -230,6 +230,22 @@
       }
     },
     {
+      // One repository boundary's real-Postgres contract: reads, writes,
+      // archive projections and transaction behavior belong together even
+      // though their coverage exceeds the general file limit. See
+      // docs/quality/no-excessive-lines-per-file-exceptions.md.
+      "includes": [
+        "apps/web/src/features/journal/services/entry-repository.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
       // The theme contract test runs under `bun test` and loads the CSS
       // fixture through the runtime's `Bun.file` API.
       "includes": ["packages/ui/src/*.test.ts"],
