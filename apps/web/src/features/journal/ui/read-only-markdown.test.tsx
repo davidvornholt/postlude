@@ -1,6 +1,10 @@
 import { expect, it } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 
+import {
+  markdownSemanticsFixture,
+  markdownSemanticsLinks,
+} from './markdown-semantics.fixture.ts';
 import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 
 const render = (markdown: string): string =>
@@ -18,7 +22,7 @@ it('server-renders the Markdown structure a reader uses', () => {
 
 ![Rain over the lake](/rain.png)`);
 
-  expect(html).toContain('<h1>Quiet <strong>morning</strong></h1>');
+  expect(html).toContain('<h3>Quiet <strong>morning</strong></h3>');
   expect(html).toContain('<ul><li><p>First thought</p></li>');
   expect(html).toContain('<ol start="3"><li><p>Third thought</p></li></ol>');
   expect(html).toContain(
@@ -26,6 +30,16 @@ it('server-renders the Markdown structure a reader uses', () => {
   );
   expect(html).toContain('Rain over the lake');
   expect(html).not.toContain('<img');
+});
+
+it('keeps safe mixed-case web links and subordinate heading levels', () => {
+  const html = render(markdownSemanticsFixture);
+
+  expect(html).toContain('<h3>Entry heading</h3>');
+  expect(html).toContain('<h4>Entry subheading</h4>');
+  for (const link of markdownSemanticsLinks) {
+    expect(html).toContain(`<a href="${link.href}">${link.name}</a>`);
+  }
 });
 
 it('keeps a fenced code block as preformatted code', () => {

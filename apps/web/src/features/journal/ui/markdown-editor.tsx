@@ -13,9 +13,9 @@
  * written here are one corpus.
  *
  * The editor only ever exists in a browser. ProseMirror needs a live document
- * to attach to, so the server renders the words as plain paragraphs and the
- * editor takes over on hydration — the entry is legible before any of this
- * loads, and never absent while it does.
+ * to attach to, so the server first renders safe semantic Markdown and the
+ * editor takes over on hydration. The entry keeps its readable structure
+ * before any of this loads and is never absent while it does.
  */
 
 import { Placeholder } from '@tiptap/extensions';
@@ -44,7 +44,7 @@ type MarkdownEditorProps = {
  * it before hydration alike. An empty day is mostly this: a tall area with a
  * rule under it, which is what says there is somewhere to write before there is
  * anything written. Both wear it so the page does not resize when ProseMirror
- * arrives and the area stops being a paragraph and starts being an editor.
+ * arrives and the read-only surface becomes an editor.
  */
 const writingAreaClass = 'journal-writing min-h-48';
 

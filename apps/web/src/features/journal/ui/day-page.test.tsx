@@ -16,6 +16,7 @@ import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import {
   attributeValue,
   elementAttributes,
+  plainText,
 } from '#/shared/testing/rendered-html.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import { DayPage } from './day-page.tsx';
@@ -43,6 +44,13 @@ const neverSaves = () => new Promise<never>(() => undefined);
 
 const render = (entry: JournalEntry): Promise<string> =>
   renderInRouter(<DayPage entry={entry} save={neverSaves} today={today} />);
+
+const headingSequence = (html: string): ReadonlyArray<string> =>
+  Array.from(
+    html.matchAll(/<(?<tag>h[1-6])[^>]*>(?<text>.*?)<\/h[1-6]>/gsu),
+    (match) =>
+      `${match.groups?.tag ?? ''}: ${plainText(match.groups?.text ?? '')}`,
+  );
 
 it('names the day in full, and how long ago it was', async () => {
   const html = await render(entryOn({ date: '2026-08-24' }));
@@ -102,15 +110,24 @@ it('renders the writing before the editor attaches', async () => {
   expect(html).toContain('<p>On mercy.</p>');
 });
 
-it('renders meaningful Markdown before the editor attaches', async () => {
+it('keeps entry headings below the page and section headings', async () => {
   const html = await render(
     entryOn({
       journalMarkdown:
-        '## What stayed\n\n- A **clear** thought\n- [A source](https://example.com)\n\n```ts\nconst kept = true;\n```',
+        '# Evening thought\n\n## What stayed\n\n- A **clear** thought\n- [A source](https://example.com)\n\n```ts\nconst kept = true;\n```',
+      scriptureMarkdown: '# Morning thought\n\n## What opened',
     }),
   );
 
-  expect(html).toContain('<h2>What stayed</h2>');
+  expect(headingSequence(html)).toEqual([
+    'h1: Wednesday 26 August 2026',
+    'h2: Morning scripture',
+    'h3: Morning thought',
+    'h4: What opened',
+    'h2: Evening',
+    'h3: Evening thought',
+    'h4: What stayed',
+  ]);
   expect(html).toContain('<strong>clear</strong>');
   expect(html).toContain('<a href="https://example.com">A source</a>');
   expect(html).toContain('<pre><code>const kept = true;</code></pre>');

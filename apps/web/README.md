@@ -48,7 +48,7 @@ There is no save button. The editor posts the draft after a short pause in typin
 
 The morning scripture sits above the evening's writing, in the design's one inverse register. Its reference is typed as a line in either English or German and stored broken into book, chapter, and verses by the server, so one parser decides what a reference is for every way an entry can reach the table — the importers included. The same parser runs in the browser to build the bibleserver.com link, which is why "Sprüche 12,5" opens the right passage without being corrected first.
 
-Both editors render as plain paragraphs on the server and hand over to Tiptap on hydration, so an entry is legible before any script runs and never absent while one loads.
+Both editors render safe semantic Markdown on the server and hand over to Tiptap on hydration, so headings, lists, links, and fenced code remain legible before any script runs. Raw HTML stays escaped and executable link schemes are not emitted. Entry headings begin at `h3`, below the page's date heading and its morning or evening section heading, in both renderers.
 
 `src/features/journal/services/journal-runtime.ts` is the journal's single seam between Effect and the rest of the app, as `AGENTS.local.md` describes: journal services keep typed error and requirement channels, and everything above the seam — server functions, React Query, components — stays on plain promises. The feature owns its service composition and depends on the shared database pool; shared code never imports the journal feature. The runtime is built lazily, because building it opens the pool, and a pool must not be opened merely because a client bundle imported a route module.
 

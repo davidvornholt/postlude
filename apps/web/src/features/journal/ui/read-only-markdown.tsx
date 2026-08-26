@@ -2,7 +2,10 @@ import type { JSONContent } from '@tiptap/core';
 import { MarkdownManager } from '@tiptap/markdown';
 import { createElement, type ReactNode } from 'react';
 
-import { journalMarkdownExtensions } from './markdown-extensions.ts';
+import {
+  journalHeadingTag,
+  journalMarkdownExtensions,
+} from './markdown-extensions.ts';
 
 type ReadOnlyMarkdownProps = {
   readonly className: string;
@@ -14,6 +17,7 @@ const markdownManager = new MarkdownManager({
 });
 
 const uriProtocol = /^[a-z][a-z\d+.-]*:/iu;
+const safeWebProtocol = /^https?:\/\//iu;
 const controlCharacterLimit = 0x20;
 const deleteControlCharacter = 0x7f;
 
@@ -35,9 +39,7 @@ const safeHref = (value: unknown): string | undefined => {
   if (href === '' || !uriProtocol.test(href)) {
     return href;
   }
-  return href.startsWith('https://') || href.startsWith('http://')
-    ? href
-    : undefined;
+  return safeWebProtocol.test(href) ? href : undefined;
 };
 
 const childrenOf = (
@@ -83,18 +85,6 @@ const markedText = (node: JSONContent, key: string): ReactNode => {
   return content;
 };
 
-const headingTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const;
-const firstHeadingLevel = 1;
-
-const headingTag = (
-  level: unknown,
-): 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' => {
-  if (typeof level !== 'number') {
-    return 'h6';
-  }
-  return headingTags[level - firstHeadingLevel] ?? 'h6';
-};
-
 const renderNode = (node: JSONContent, key: string): ReactNode => {
   const children = childrenOf(node, key);
   switch (node.type) {
@@ -105,7 +95,11 @@ const renderNode = (node: JSONContent, key: string): ReactNode => {
     case 'paragraph':
       return <p key={key}>{children}</p>;
     case 'heading':
-      return createElement(headingTag(node.attrs?.level), { key }, children);
+      return createElement(
+        journalHeadingTag(node.attrs?.level),
+        { key },
+        children,
+      );
     case 'bulletList':
       return <ul key={key}>{children}</ul>;
     case 'orderedList':
