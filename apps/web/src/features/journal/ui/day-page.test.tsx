@@ -73,6 +73,16 @@ it('leads back to today from the day before it', async () => {
   );
 });
 
+it('omits the previous-day link at the start of the journal calendar', async () => {
+  const html = await render(entryOn({ date: '0001-01-01' }));
+
+  expect(html).toContain('Monday 1 January 1');
+  expect(html).not.toContain('Previous day');
+  expect(elementAttributes(html, 'a', 'Next day →')).toContain(
+    'href="/day/0001-01-02"',
+  );
+});
+
 /**
  * The entry, before the editor exists. ProseMirror needs a live document to
  * attach to and has none while the page is being rendered, so an entry that
@@ -87,9 +97,23 @@ it('renders the writing before the editor attaches', async () => {
     }),
   );
 
-  expect(html).toContain('A long evening.');
-  expect(html).toContain('Then a second thought.');
-  expect(html).toContain('On mercy.');
+  expect(html).toContain('<p>A <strong>long</strong> evening.</p>');
+  expect(html).toContain('<p>Then a second thought.</p>');
+  expect(html).toContain('<p>On mercy.</p>');
+});
+
+it('renders meaningful Markdown before the editor attaches', async () => {
+  const html = await render(
+    entryOn({
+      journalMarkdown:
+        '## What stayed\n\n- A **clear** thought\n- [A source](https://example.com)\n\n```ts\nconst kept = true;\n```',
+    }),
+  );
+
+  expect(html).toContain('<h2>What stayed</h2>');
+  expect(html).toContain('<strong>clear</strong>');
+  expect(html).toContain('<a href="https://example.com">A source</a>');
+  expect(html).toContain('<pre><code>const kept = true;</code></pre>');
 });
 
 /*

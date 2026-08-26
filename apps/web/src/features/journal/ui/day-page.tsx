@@ -23,6 +23,7 @@ import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel, journalDayRelation } from '../day-label.ts';
 import {
   daysBetweenJournalDates,
+  earliestJournalDate,
   type JournalDate,
   shiftJournalDate,
 } from '../journal-day.ts';
@@ -88,7 +89,10 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
 const DayBody = ({ entry, today, save }: DayPageProps) => {
   const autosave = useAutosave(draftOf(entry), save);
   const eveningId = useId();
-  const previous = shiftJournalDate(entry.date, -1);
+  const previous =
+    entry.date === earliestJournalDate
+      ? undefined
+      : shiftJournalDate(entry.date, -1);
   const elapsed = daysBetweenJournalDates(entry.date, today);
   // No link forward from today: the next day has not been lived, and offering
   // it would invite writing an evening that has not happened.
@@ -104,9 +108,11 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           {journalDateLabel(entry.date)}
         </h1>
         <nav aria-label="Nearby days" className="mt-8 flex gap-8">
-          <DayLink date={previous} today={today}>
-            <span aria-hidden="true">←</span> Previous day
-          </DayLink>
+          {previous === undefined ? null : (
+            <DayLink date={previous} today={today}>
+              <span aria-hidden="true">←</span> Previous day
+            </DayLink>
+          )}
           {next === undefined ? null : (
             <DayLink date={next} today={today}>
               Next day <span aria-hidden="true">→</span>

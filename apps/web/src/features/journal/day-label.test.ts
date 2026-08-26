@@ -22,6 +22,12 @@ it('keeps the leap day a day', () => {
   expect(journalDateLabel('2024-02-29')).toBe('Thursday 29 February 2024');
 });
 
+it('does not let JavaScript rewrite years below 0100', () => {
+  expect(journalDateLabel('0001-01-01')).toBe('Monday 1 January 1');
+  expect(journalDateLabel('0099-01-01')).toBe('Thursday 1 January 99');
+  expect(journalDateLabel('0100-01-01')).toBe('Friday 1 January 100');
+});
+
 it('names today and yesterday rather than counting them', () => {
   expect(journalDayRelation('2026-08-26', '2026-08-26')).toBe('Today');
   expect(journalDayRelation('2026-08-25', '2026-08-26')).toBe('Yesterday');
