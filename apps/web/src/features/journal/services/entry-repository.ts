@@ -14,6 +14,7 @@ import { SqlClient } from '@effect/sql';
 import { Effect, Schema } from 'effect';
 
 import {
+  invalidScriptureReferenceError,
   journalReadError,
   journalWriteError,
 } from '../errors/journal-errors.ts';
@@ -74,16 +75,16 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
        */
       const save = (
         draft: EntryDraft,
-      ): Effect.Effect<JournalEntry, ReturnType<typeof journalWriteError>> =>
+      ): Effect.Effect<
+        JournalEntry,
+        | ReturnType<typeof invalidScriptureReferenceError>
+        | ReturnType<typeof journalWriteError>
+      > =>
         Effect.gen(function* () {
           const enteredReference = draft.scriptureReference.trim();
           const reference = parseScriptureReference(enteredReference);
           if (enteredReference !== '' && reference === undefined) {
-            return yield* Effect.fail(
-              journalWriteError(
-                new Error('The scripture reference is not valid.'),
-              ),
-            );
+            return yield* Effect.fail(invalidScriptureReferenceError());
           }
           return yield* sql`
           insert into entry (

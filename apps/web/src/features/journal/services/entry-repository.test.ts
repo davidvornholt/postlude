@@ -140,20 +140,20 @@ it('drops a reference the writer removed', async () => {
   );
   expect(entry.scriptureReference).toBeUndefined();
 });
-
-it('keeps a stored reference when a non-empty replacement is invalid', async () => {
+it('explains an invalid reference without changing the stored entry', async () => {
   const outcome = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-08-25', 'With one.', 'Psalms 23'));
-      const failedSave = yield* Effect.exit(
+      const failure = yield* Effect.flip(
         entries.save(draft('2026-08-25', 'Still editing.', 'Proverbs 12:')),
       );
       const stored = yield* entries.read('2026-08-25');
-      return { failedSave, stored } as const;
+      return { failure, stored } as const;
     }),
   );
 
-  expect(outcome.failedSave._tag).toBe('Failure');
+  expect(outcome.failure._tag).toBe('JournalValidationError');
+  expect(outcome.failure.message).toContain('scripture reference');
   expect(outcome.stored?.journalMarkdown).toBe('With one.');
   expect(outcome.stored?.scriptureReference).toEqual({
     book: 'Psalms',
