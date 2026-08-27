@@ -13,7 +13,13 @@ export const decodeSaveConfirmation = (
   result: unknown,
 ): Promise<SaveConfirmation> => {
   if (result instanceof Response && !result.ok) {
-    return Promise.reject(result);
+    return result
+      .text()
+      .then((message) =>
+        Promise.reject(
+          Object.assign(new Error(message), { status: result.status }),
+        ),
+      );
   }
   return decodeConfirmation(result);
 };
