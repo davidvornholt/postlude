@@ -32,11 +32,8 @@ import {
   navLinkInactiveClass,
 } from '#/shared/ui/form-classes.ts';
 import { activityCells } from '../activity-cells.ts';
-import {
-  dayCountLabel,
-  monthYearLabel,
-  wordCountLabel,
-} from '../activity-labels.ts';
+import { monthYearLabel } from '../activity-labels.ts';
+import { journalCountLabel } from '../journal-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
 import { ExportControl, type SettleAutosaves } from './export-control.tsx';
@@ -144,7 +141,7 @@ export const ArchivePage = ({
               'mt-4 text-ink-muted text-lg',
             ].join(' ')}
           >
-            {`${dayCountLabel(written)} written, ${wordCountLabel(view.totals.words)} in all.`}
+            {`${journalCountLabel(written, 'day')} written, ${journalCountLabel(view.totals.words, 'word')} in all.`}
           </p>
 
           <Section title="Streaks">

@@ -11,6 +11,7 @@
 
 import type { HeatLevel } from './activity.ts';
 import type { ActivityCell } from './activity-cells.ts';
+import { journalMonthLabel, journalNumberLabel } from './journal-labels.ts';
 
 type MonthActivity = {
   readonly date: string;
@@ -34,34 +35,8 @@ export const heatLevelLabels: Record<HeatLevel, string> = {
   q4: 'Highest quarter',
 };
 
-const monthNames = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-] as const;
-
-const digitGroups = new Intl.NumberFormat('en-GB');
-const one = 1;
-
-export const groupDigits = (value: number): string => digitGroups.format(value);
-
-export const dayCountLabel = (value: number): string =>
-  `${groupDigits(value)} ${value === one ? 'day' : 'days'}`;
-
-export const wordCountLabel = (value: number): string =>
-  `${groupDigits(value)} ${value === one ? 'word' : 'words'}`;
-
 const monthNameOf = (date: string): string =>
-  monthNames[Number(date.slice(isoMonthStart, isoMonthEnd)) - 1] ?? '';
+  journalMonthLabel(Number(date.slice(isoMonthStart, isoMonthEnd)));
 
 export const monthYearLabel = (date: string): string =>
   `${monthNameOf(date)} ${date.slice(0, isoYearEnd)}`;
@@ -92,7 +67,7 @@ export const activitySummary = (cells: ReadonlyArray<ActivityCell>): string => {
     return 'Journal activity: this range has not started';
   }
   const written = days.filter((cell) => cell.words > 0).length;
-  return `Journal activity from ${monthYearLabel(first.date)} to ${monthYearLabel(last.date)}: ${dayCountLabel(written)} written`;
+  return `Journal activity from ${monthYearLabel(first.date)} to ${monthYearLabel(last.date)}: ${written} days written`;
 };
 
 /** Monthly distribution and volume, compact enough to replace 371 cells. */
@@ -129,7 +104,7 @@ export const activityDescription = (
   return `Monthly breakdown. ${months
     .map(
       (month) =>
-        `${monthYearLabel(month.date)}: ${month.written} of ${dayCountLabel(month.days)} written, ${wordCountLabel(month.words)}`,
+        `${monthYearLabel(month.date)}: ${journalNumberLabel(month.written)} of ${journalNumberLabel(month.days)} days written, ${journalNumberLabel(month.words)} words`,
     )
     .join('. ')}.`;
 };

@@ -1,11 +1,9 @@
 /**
  * How a journal day is named to the reader.
  *
- * The date is built as noon UTC from its own parts and formatted in UTC, so
- * the label is a rendering of the calendar date and never a rendering of an
- * instant. Formatting it in the reader's zone instead would show yesterday's
- * date to anyone west of the configured clock — the page would disagree with
- * the day it is the page for.
+ * The label is assembled from the calendar date's own parts, so it never
+ * becomes an instant that a time zone can shift to yesterday. Its weekday is
+ * calculated through the same year-safe calendar helper used by the archive.
  *
  * The locale is fixed rather than taken from the browser. Postlude has one
  * reader and the interface is English, and a date that switched between
@@ -17,30 +15,16 @@
 import {
   daysBetweenJournalDates,
   type JournalDate,
+  journalDateWeekday,
   parseJournalDate,
 } from './journal-day.ts';
-
-const noonHour = 12;
-
-const asUtcNoon = (date: JournalDate): Date => {
-  const { year, month, day } = parseJournalDate(date);
-  const instant = new Date(0);
-  instant.setUTCFullYear(year, month - 1, day);
-  instant.setUTCHours(noonHour, 0, 0, 0);
-  return instant;
-};
-
-const longFormat = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  year: 'numeric',
-  timeZone: 'UTC',
-});
+import { journalMonthLabel, journalWeekdayLabel } from './journal-labels.ts';
 
 /** The heading a day's page carries: "Wednesday, August 26, 2026". */
-export const journalDateLabel = (date: JournalDate): string =>
-  longFormat.format(asUtcNoon(date));
+export const journalDateLabel = (date: JournalDate): string => {
+  const { year, month, day } = parseJournalDate(date);
+  return `${journalWeekdayLabel(journalDateWeekday(date))}, ${journalMonthLabel(month)} ${day}, ${year}`;
+};
 
 const yesterday = 1;
 

@@ -95,6 +95,16 @@ it('omits the previous-day link at the start of the journal calendar', async () 
   );
 });
 
+it('renders supported low years without changing their calendar day', async () => {
+  const year99 = await render(entryOn({ date: '0099-01-01' }));
+  const year100 = await render(entryOn({ date: '0100-01-01' }));
+
+  expect(year99).toContain('Thursday, January 1, 99');
+  expect(year99).toContain('href="/day/0098-12-31"');
+  expect(year100).toContain('Friday, January 1, 100');
+  expect(year100).toContain('href="/day/0099-12-31"');
+});
+
 /**
  * The entry, before the editor exists. ProseMirror needs a live document to
  * attach to and has none while the page is being rendered, so an entry that
