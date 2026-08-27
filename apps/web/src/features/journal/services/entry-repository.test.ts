@@ -18,9 +18,9 @@ import {
   rolledBack,
 } from '#/shared/testing/test-database.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
-import { inArchiveSnapshot } from './archive-snapshot.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { migrateJournalDatabase } from './journal-migration.ts';
+import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 let resourceScope: Scope.CloseableScope | undefined;
 let runtime: ManagedRuntime.ManagedRuntime<
@@ -462,7 +462,7 @@ it('holds one snapshot while a concurrent archive-visible row commits', async ()
       return yield* Effect.gen(function* () {
         const firstReadDone = yield* Deferred.make<void>();
         const continueRead = yield* Deferred.make<void>();
-        const reader = yield* inArchiveSnapshot(
+        const reader = yield* inRepeatableReadSnapshot(
           sql,
           Effect.gen(function* () {
             const before = yield* rowExists();

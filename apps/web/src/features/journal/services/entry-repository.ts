@@ -32,7 +32,8 @@ import {
 import { parseScriptureReference } from '../scripture-reference.ts';
 import { searchDocumentOf } from '../search-document.ts';
 import { countJournalWords } from '../word-count.ts';
-import { inArchiveSnapshot } from './archive-snapshot.ts';
+import { currentMeaningfulEntry } from './entry-content-sql.ts';
+import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
 const decodeEarliestDates = Schema.decodeUnknown(
@@ -57,11 +58,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
   {
     effect: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      const hasCurrentMeaningfulContent = sql.or([
-        sql`journal_word_count > 0`,
-        sql`scripture_word_count > 0`,
-        sql`scripture_book is not null`,
-      ]);
+      const hasCurrentMeaningfulContent = currentMeaningfulEntry(sql);
 
       /**
        * The one day, or nothing. The caller decides what an unwritten day looks
@@ -247,7 +244,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         ArchiveRead,
         ReturnType<typeof journalReadError>
       > =>
-        inArchiveSnapshot(
+        inRepeatableReadSnapshot(
           sql,
           Effect.gen(function* () {
             const earliest = yield* earliestDate();

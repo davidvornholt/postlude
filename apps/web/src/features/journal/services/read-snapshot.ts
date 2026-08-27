@@ -1,10 +1,10 @@
-/** Run archive reads against one repeatable-read Postgres snapshot. */
+/** Run a multi-query read against one repeatable PostgreSQL snapshot. */
 
 import { SqlClient } from '@effect/sql';
 import { SqlError } from '@effect/sql/SqlError';
 import { Effect, Option } from 'effect';
 
-export const inArchiveSnapshot = <A, E, R>(
+export const inRepeatableReadSnapshot = <A, E, R>(
   sql: SqlClient.SqlClient,
   body: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E | SqlError, R> =>
@@ -12,8 +12,8 @@ export const inArchiveSnapshot = <A, E, R>(
     const transaction = yield* Effect.serviceOption(
       SqlClient.TransactionConnection,
     );
-    // A rollback-based caller may already own the transaction. Reuse it only
-    // when it provides the same snapshot guarantee; never silently downgrade.
+    // Rollback-based tests already own a transaction. Reuse it only when it
+    // gives this read the same snapshot guarantee as production.
     if (Option.isSome(transaction)) {
       const rows = yield* sql<{ readonly repeatableRead: boolean }>`
         select current_setting('transaction_isolation') = 'repeatable read'
@@ -23,7 +23,7 @@ export const inArchiveSnapshot = <A, E, R>(
         return yield* Effect.fail(
           new SqlError({
             message:
-              'An archive read nested inside a transaction requires repeatable-read isolation.',
+              'A snapshot read nested inside a transaction requires repeatable-read isolation.',
           }),
         );
       }

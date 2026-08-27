@@ -155,6 +155,12 @@ describe('sensitive server surfaces', () => {
     expect(reachableSignedOut(app.routeHandlers)).toEqual(publicRouteHandlers);
   });
 
+  it('pins the journal download POST behind the session guard', () => {
+    expect(
+      surfacesAt(app.routeHandlers, 'routes/_app/archive_.export.ts'),
+    ).toEqual([{ name: 'POST', guarded: true }]);
+  });
+
   it('credits a guard only to the declaration it is chained onto', () => {
     expect(serverFunctionsAt('journal/trailing-middleware.ts')).toEqual([
       { name: 'readJournal', guarded: false },

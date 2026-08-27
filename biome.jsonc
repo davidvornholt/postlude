@@ -99,10 +99,11 @@
       }
     },
     {
-      // The private search route owns a server POST handler. Its `POST` key and
-      // the `-` prefix that excludes its colocated helper from route generation
-      // are TanStack Start contracts, not authored naming choices.
+      // Private TanStack Start routes own server POST handlers. Their `POST`
+      // keys and the search helper's `-` route-generation prefix are framework
+      // contracts, not authored naming choices.
       "includes": [
+        "apps/web/src/routes/_app/archive_.export.ts",
         "apps/web/src/routes/_app/search.tsx",
         "apps/web/src/routes/_app/-search-request.ts"
       ],
