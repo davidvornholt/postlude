@@ -23,7 +23,7 @@ bun run db:migrate:deploy  # apply with DATABASE_URL from the environment
 
 ## Migration history
 
-The checked-in migration history is append-only because journal databases already carry its Drizzle timestamps. Keep `0000` and `0001` unchanged. Change the schema source, run `bun run db:generate`, and commit the new migration with its snapshot and journal entry.
+The checked-in migration history is append-only because journal databases already carry its Drizzle timestamps. Keep existing migrations and snapshots unchanged. Change the schema source, run `bun run db:generate`, and commit the next migration with its snapshot and journal entry.
 
 ## Environment
 

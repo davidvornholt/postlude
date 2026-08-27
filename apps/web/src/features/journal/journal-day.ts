@@ -157,6 +157,21 @@ export const daysBetweenJournalDates = (
 };
 
 /**
+ * Which day of the week a calendar date falls on, 0 for Sunday through 6 for
+ * Saturday. Built at noon UTC from the date's own parts, like every other
+ * reading here, so the answer is a property of the date rather than of the zone
+ * the question was asked in.
+ */
+export const journalDateWeekday = (date: JournalDate): number => {
+  const noonHour = 12;
+  const { year, month, day } = parseJournalDate(date);
+  const instant = new Date(0);
+  instant.setUTCFullYear(year, month - 1, day);
+  instant.setUTCHours(noonHour, 0, 0, 0);
+  return instant.getUTCDay();
+};
+
+/**
  * The zone's wall clock at an instant. `en-CA` is asked for so the parts come
  * back as plain numerals whatever the reader's own locale is, and `h23` so
  * midnight reads as hour 0 rather than as hour 24 of the day before.

@@ -4,10 +4,14 @@ import {
   daysBetweenJournalDates,
   isJournalDate,
   journalDateAt,
+  journalDateWeekday,
   shiftJournalDate,
 } from './journal-day.ts';
 
 const berlin = 'Europe/Berlin';
+const monday = 1;
+const thursday = 4;
+const friday = 5;
 
 /** An instant written as the UTC clock, which is the one clock with no rules. */
 const utc = (text: string): Date => new Date(`${text}Z`);
@@ -144,6 +148,14 @@ describe('daysBetweenJournalDates', () => {
   it('does not let JavaScript rewrite years below 100', () => {
     expect(daysBetweenJournalDates('0099-12-31', '0100-01-01')).toBe(1);
     expect(daysBetweenJournalDates('0100-01-01', '0099-12-31')).toBe(-1);
+  });
+});
+
+describe('journalDateWeekday', () => {
+  it('reads early Common Era years without JavaScript adding 1900', () => {
+    expect(journalDateWeekday('0001-01-01')).toBe(monday);
+    expect(journalDateWeekday('0099-12-31')).toBe(thursday);
+    expect(journalDateWeekday('0100-01-01')).toBe(friday);
   });
 });
 

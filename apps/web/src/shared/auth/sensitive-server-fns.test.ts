@@ -60,6 +60,10 @@ const publicServerFunctions = [
  */
 const privateServerFunctions = [
   {
+    path: 'features/journal/services/archive-fns.ts',
+    name: 'readArchiveFn',
+  },
+  {
     path: 'features/journal/services/journal-fns.ts',
     name: 'readJournalDayFn',
   },

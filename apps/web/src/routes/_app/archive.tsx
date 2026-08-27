@@ -1,27 +1,41 @@
 import { createFileRoute } from '@tanstack/react-router';
-
-import { wideColumnClass } from '#/shared/ui/design-classes.ts';
+import { Option, Schema } from 'effect';
+import { readArchiveRoute } from '#/features/journal/browser-archive-navigation.ts';
+import {
+  ArchiveQuery,
+  type ArchiveQueryParams,
+} from '#/features/journal/schemas/archive-query.ts';
+import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
 /**
- * Placeholder until the archive page lands.
+ * The archive, at `/archive`, optionally pointed at one year with `?year=2025`.
  *
- * This is the one page that widens: the year grid needs the wider measure, so
- * the archive takes it here rather than the shell handing every page the text
- * column.
+ * The year in the address is untrusted text like any other input, so it is
+ * decoded against the server function's own schema before it reaches the
+ * loader, and anything that is not a year falls back to the rolling window
+ * rather than failing the page. A mistyped address here is a view that does not
+ * exist, not a day that does not exist, so it does not deserve the not-found
+ * page the way `/day/<nonsense>` does.
+ *
+ * The page sets its own measure — the wider one, which a year of days needs —
+ * because the shell hands no column to any page.
  */
-const ArchivePage = () => (
-  <div className={wideColumnClass}>
-    <section>
-      <h1 className="font-display text-4xl text-ink sm:text-5xl">Archive</h1>
-      <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
-        Streaks, the activity heatmap, search, and exports will live here.
-      </p>
-    </section>
-  </div>
-);
+const decodeSearch = Schema.decodeUnknownOption(ArchiveQuery);
+
+const archiveSearch = (search: Record<string, unknown>): ArchiveQueryParams =>
+  Option.getOrElse(decodeSearch(search), (): ArchiveQueryParams => ({}));
+
+const ArchiveRoute = () => {
+  const view = Route.useLoaderData();
+  const { year } = Route.useSearch();
+  return <ArchivePage selectedYear={year} view={view} />;
+};
 
 export const Route = createFileRoute('/_app/archive')({
-  component: ArchivePage,
+  validateSearch: archiveSearch,
+  loaderDeps: ({ search }) => ({ year: search.year }),
+  loader: ({ deps }) => readArchiveRoute({ year: deps.year }),
+  component: ArchiveRoute,
   head: () => ({ meta: [{ title: pageTitle('Archive') }] }),
 });

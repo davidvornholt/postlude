@@ -24,12 +24,15 @@ import {
   EarliestDateFromRow,
   type EntryDraft,
   EntryFromRow,
-  type EntrySummary,
-  EntrySummaryFromRow,
   type JournalEntry,
 } from '../schemas/entry.ts';
+import {
+  type EntrySummary,
+  EntrySummaryFromRow,
+} from '../schemas/entry-summary.ts';
 import { parseScriptureReference } from '../scripture-reference.ts';
 import { countJournalWords } from '../word-count.ts';
+import { inArchiveSnapshot } from './archive-snapshot.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
 const decodeEarliestDates = Schema.decodeUnknown(
@@ -37,11 +40,28 @@ const decodeEarliestDates = Schema.decodeUnknown(
 );
 const decodeSummaries = Schema.decodeUnknown(Schema.Array(EntrySummaryFromRow));
 
+export type ArchiveRead = {
+  readonly earliest: JournalDate | undefined;
+  readonly summaries: ReadonlyArray<EntrySummary>;
+  readonly anniversaries: ReadonlyArray<JournalEntry>;
+};
+
+export type ArchiveReadRequest = {
+  readonly today: JournalDate;
+  readonly anniversaryMonthDay: string;
+  readonly anniversaryLimit: number;
+};
+
 export class EntryRepository extends Effect.Service<EntryRepository>()(
   'journal/EntryRepository',
   {
     effect: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
+      const hasCurrentMeaningfulContent = sql.or([
+        sql`journal_word_count > 0`,
+        sql`scripture_word_count > 0`,
+        sql`scripture_book is not null`,
+      ]);
 
       /**
        * The one day, or nothing. The caller decides what an unwritten day looks
@@ -88,13 +108,20 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           if (enteredReference !== '' && reference === undefined) {
             return yield* Effect.fail(invalidScriptureReferenceError());
           }
+          const journalWordCount = countJournalWords(draft.journalMarkdown);
+          const scriptureWordCount = countJournalWords(draft.scriptureMarkdown);
+          const journalUsed = journalWordCount > 0;
+          const scriptureUsed =
+            scriptureWordCount > 0 || reference !== undefined;
           const saved = yield* sql`
           with candidate (
             entry_date,
             journal_markdown,
             journal_word_count,
+            journal_first_used_at,
             scripture_markdown,
             scripture_word_count,
+            scripture_first_used_at,
             scripture_book,
             scripture_chapter,
             scripture_verse_start,
@@ -103,9 +130,11 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           ) as (values (
             ${draft.date}::date,
             ${draft.journalMarkdown}::text,
-            ${countJournalWords(draft.journalMarkdown)}::integer,
+            ${journalWordCount}::integer,
+            case when ${journalUsed}::boolean then now() else null end,
             ${draft.scriptureMarkdown}::text,
-            ${countJournalWords(draft.scriptureMarkdown)}::integer,
+            ${scriptureWordCount}::integer,
+            case when ${scriptureUsed}::boolean then now() else null end,
             ${reference?.book ?? null}::text,
             ${reference?.chapter ?? null}::integer,
             ${reference?.verseStart ?? null}::integer,
@@ -115,8 +144,16 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             update entry set
             journal_markdown = candidate.journal_markdown,
             journal_word_count = candidate.journal_word_count,
+            journal_first_used_at = coalesce(
+              entry.journal_first_used_at,
+              candidate.journal_first_used_at
+            ),
             scripture_markdown = candidate.scripture_markdown,
             scripture_word_count = candidate.scripture_word_count,
+            scripture_first_used_at = coalesce(
+              entry.scripture_first_used_at,
+              candidate.scripture_first_used_at
+            ),
             scripture_book = candidate.scripture_book,
             scripture_chapter = candidate.scripture_chapter,
             scripture_verse_start = candidate.scripture_verse_start,
@@ -132,8 +169,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               entry_date,
               journal_markdown,
               journal_word_count,
+              journal_first_used_at,
               scripture_markdown,
               scripture_word_count,
+              scripture_first_used_at,
               scripture_book,
               scripture_chapter,
               scripture_verse_start,
@@ -142,8 +181,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               entry_date,
               journal_markdown,
               journal_word_count,
+              journal_first_used_at,
               scripture_markdown,
               scripture_word_count,
+              scripture_first_used_at,
               scripture_book,
               scripture_chapter,
               scripture_verse_start,
@@ -166,50 +207,94 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         });
 
       /**
-       * Every written day in a range, oldest first, as the archive needs them:
-       * the counts that decide a mark's weight and the creation stamp that
-       * decides whether the day counts toward a streak.
+       * Every currently meaningful day in a range, oldest first, as the archive
+       * needs them: the counts that decide a mark's weight and each section's
+       * first-use stamp, which decides whether that habit counts toward its
+       * streak. Cleared rows remain stored but have nothing to show here.
        *
        * The range is compared as text, which is exact because the dates are
        * zero-padded and both ends are calendar dates rather than instants.
        */
-      const listBetween = (
-        from: JournalDate,
-        to: JournalDate,
-      ): Effect.Effect<
-        ReadonlyArray<EntrySummary>,
-        ReturnType<typeof journalReadError>
-      > =>
+      const listBetween = (from: JournalDate, to: JournalDate) =>
         sql`
           select
             entry_date,
             journal_word_count,
+            journal_first_used_at,
             scripture_word_count,
-            scripture_book is not null as has_scripture_reference,
-            created_at
+            scripture_first_used_at,
+            scripture_book is not null as has_scripture_reference
           from entry
           where entry_date between ${from} and ${to}
+            and ${hasCurrentMeaningfulContent}
           order by entry_date
-        `.pipe(
-          Effect.flatMap(decodeSummaries),
-          Effect.mapError(journalReadError),
-        );
+        `.pipe(Effect.flatMap(decodeSummaries));
 
-      /** The first day ever written, which is where the archive starts. */
-      const earliestDate = (): Effect.Effect<
-        JournalDate | undefined,
-        ReturnType<typeof journalReadError>
-      > =>
+      /**
+       * The same day of the month in earlier years, newest first. Only days
+       * with prose in either section come back: "on this day" exists to hand
+       * the writer something to read, and a day holding a passage reference and
+       * nothing else has nothing to say here. The upper bound is exclusive, so
+       * today is never its own memory.
+       */
+      const readAnniversaries = (
+        monthDay: string,
+        before: JournalDate,
+        limit: number,
+      ) =>
+        sql`
+          select *
+          from entry
+          where to_char(entry_date, 'MM-DD') = ${monthDay}
+            and entry_date < ${before}
+            and (
+              journal_word_count > 0
+              or scripture_word_count > 0
+            )
+          order by entry_date desc
+          limit ${limit}
+        `.pipe(Effect.flatMap(decodeEntries));
+
+      /** The oldest day that still has something for the archive to show. */
+      const earliestDate = (today: JournalDate) =>
         sql`
           select min(entry_date) as entry_date
           from entry
+          where ${hasCurrentMeaningfulContent}
+            and entry_date <= ${today}
         `.pipe(
           Effect.flatMap(decodeEarliestDates),
           Effect.map((rows) => rows[0]?.date ?? undefined),
-          Effect.mapError(journalReadError),
         );
 
-      return { read, save, listBetween, earliestDate } as const;
+      const readArchive = ({
+        today,
+        anniversaryMonthDay,
+        anniversaryLimit,
+      }: ArchiveReadRequest): Effect.Effect<
+        ArchiveRead,
+        ReturnType<typeof journalReadError>
+      > =>
+        inArchiveSnapshot(
+          sql,
+          Effect.gen(function* () {
+            const earliest = yield* earliestDate(today);
+            const summaries =
+              earliest === undefined ? [] : yield* listBetween(earliest, today);
+            const anniversaries = yield* readAnniversaries(
+              anniversaryMonthDay,
+              today,
+              anniversaryLimit,
+            );
+            return { earliest, summaries, anniversaries };
+          }),
+        ).pipe(Effect.mapError(journalReadError));
+
+      return {
+        read,
+        save,
+        readArchive,
+      } as const;
     }),
   },
 ) {}

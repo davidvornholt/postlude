@@ -215,6 +215,22 @@
       }
     },
     {
+      // One repository boundary's query and transaction coverage against a
+      // real Postgres. The shared test support owns resource acquisition and
+      // rollback; this file stays ordered by the service methods it protects.
+      // See docs/quality/no-excessive-lines-per-file-exceptions.md.
+      "includes": [
+        "apps/web/src/features/journal/services/entry-repository.test.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noExcessiveLinesPerFile": "off"
+          }
+        }
+      }
+    },
+    {
       // The theme contract test runs under `bun test` and loads the CSS
       // fixture through the runtime's `Bun.file` API.
       "includes": ["packages/ui/src/*.test.ts"],

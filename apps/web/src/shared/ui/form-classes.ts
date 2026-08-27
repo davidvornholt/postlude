@@ -1,10 +1,9 @@
 /**
  * The controls the app has so far, in the design's own terms: one filled button
  * for the single action a page exists for, one quiet control that is type on a
- * rule, and one text field that is also type on a rule, so a control never
- * arrives as a box on a page built out of rules. The navigation is set from the
- * same eyebrow, but its rule is a state and the quiet control's rests out — see
- * below for why.
+ * rule, one navigation link that is the same eyebrow with the rule as its
+ * state, and one text field that is also type on a rule, so a control never
+ * arrives as a box on a page built out of rules.
  *
  * Both recipes hold their state colours rather than leaving them to a caller,
  * and every caller passes the recipe alone. Two utilities that set the same
@@ -22,6 +21,37 @@ import {
   eyebrowClass,
   focusRingClass,
 } from '#/shared/ui/design-classes.ts';
+
+/*
+ * A link in a row of links, where one of them is the one you are looking at:
+ * the shell's two pages, and the archive's years. Type on a rule rather than a
+ * row of buttons, because a page built out of rules should not sprout a row of
+ * boxes to move around itself. Hovering extends the rule under a name from left
+ * to right; the one you are on already has its rule out, in the one primary
+ * colour.
+ *
+ * The rule here is a state, unlike the quiet control's, which rests out. The
+ * difference is what each one has to say: this rule answers "which one is
+ * this", and the current one's is always drawn, so a pointer that draws another
+ * adds information rather than being the only way to get any.
+ *
+ * The rule's resting width and its colour live in the two state classes rather
+ * than in the base, because a caller appends one of them to the other and two
+ * utilities setting the same property cannot be ordered by where they sit in a
+ * `class` attribute.
+ */
+export const navLinkClass = [
+  eyebrowClass,
+  'relative inline-block pb-2',
+  'after:absolute after:inset-x-0 after:bottom-0 after:h-px after:origin-left',
+  'after:transition-transform after:duration-200 after:ease-standard motion-reduce:after:transition-none',
+  focusRingClass,
+].join(' ');
+
+export const navLinkActiveClass = 'text-ink after:scale-x-100 after:bg-primary';
+
+export const navLinkInactiveClass =
+  'text-ink-muted after:scale-x-0 after:bg-current hover:text-ink hover:after:scale-x-100';
 
 export const primaryButtonClass = [
   'inline-flex items-center justify-center bg-primary px-5 py-2.5',

@@ -1,48 +1,20 @@
 import { expect, it } from 'bun:test';
 
+import {
+  createTestAutosaveRegistry,
+  deferredSave,
+  draft,
+  memoryRecovery,
+  settleEffects,
+  stored,
+} from './autosave-registry.test-support.ts';
 import { createAutosaveRegistry } from './autosave-registry.ts';
 import { createConfirmedRevisionTracker } from './confirmed-revisions.ts';
-import type { DraftRecovery } from './recoverable-draft.ts';
-import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
 
-const draft: EntryDraft = {
-  date: '2026-08-27',
-  journalMarkdown: '',
-  scriptureMarkdown: '',
-  scriptureReference: '',
-  baseRevision: 100,
-};
-const stored = { draft, revision: 100 };
 const savedRevision = 101;
 
-const memoryRecovery = (): DraftRecovery => {
-  let recovered: EntryDraft | undefined;
-  return {
-    read: () => recovered,
-    retain: (next) => {
-      recovered = next;
-    },
-    clear: () => {
-      recovered = undefined;
-    },
-  };
-};
-
-const deferred = () => {
-  let resolve: (value: SaveConfirmation) => void = () => undefined;
-  const promise = new Promise<SaveConfirmation>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-};
-
-const settleEffects = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
-};
-
 it('evicts a clean day after its last subscriber leaves', () => {
-  const registry = createAutosaveRegistry(memoryRecovery);
+  const registry = createTestAutosaveRegistry();
   const save = () => Promise.resolve({ revision: 101 });
   const first = registry.acquire(stored, save);
   const unsubscribe = first.subscribe(() => undefined);
@@ -53,7 +25,7 @@ it('evicts a clean day after its last subscriber leaves', () => {
 });
 
 it('retains a coordinator while its quiet timer carries an edit', () => {
-  const registry = createAutosaveRegistry(memoryRecovery);
+  const registry = createTestAutosaveRegistry();
   const save = () => Promise.resolve({ revision: 101 });
   const first = registry.acquire(stored, save);
   const unsubscribe = first.subscribe(() => undefined);
@@ -67,7 +39,7 @@ it('retains a coordinator while its quiet timer carries an edit', () => {
 });
 
 it('evicts a confirmed coordinator and retains only its revision', async () => {
-  const pending = deferred();
+  const pending = deferredSave();
   const revisions = createConfirmedRevisionTracker();
   const registry = createAutosaveRegistry(memoryRecovery, revisions);
   const first = registry.acquire(stored, () => pending.promise);
@@ -128,7 +100,7 @@ it('rejects a cached stale acquisition after a confirmed checkpoint is released'
 
 it('retains a failed recoverable draft until it is undone', async () => {
   const recovery = memoryRecovery();
-  const registry = createAutosaveRegistry(() => recovery);
+  const registry = createTestAutosaveRegistry(() => recovery);
   const save = () => Promise.reject(new TypeError('offline'));
   const first = registry.acquire(stored, save);
   const unsubscribe = first.subscribe(() => undefined);

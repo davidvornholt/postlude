@@ -14,9 +14,11 @@ const entryOn = (date: JournalEntry['date']): JournalEntry => ({
   date,
   journalMarkdown: '',
   journalWordCount: 0,
+  journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
   revision: 0,
+  scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
 });

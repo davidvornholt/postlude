@@ -6,7 +6,12 @@
  * the same ordered queue instead of creating a competing one.
  */
 
-import type { ConfirmedDraft } from './autosave.ts';
+import { Data } from 'effect';
+import {
+  type AutosaveFailure,
+  type ConfirmedDraft,
+  sameDraft,
+} from './autosave.ts';
 import {
   type AutosaveCoordinator,
   createAutosaveCoordinator,
@@ -16,6 +21,7 @@ import {
   type ConfirmedRevisionTracker,
   confirmedRevisions,
 } from './confirmed-revisions.ts';
+import type { JournalDate } from './journal-day.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 
 export type AutosaveRegistry = {
@@ -23,13 +29,79 @@ export type AutosaveRegistry = {
     stored: ConfirmedDraft,
     save: SaveDraft,
   ) => AutosaveCoordinator;
+  /** Starts every queued save and rejects if any draft remains unconfirmed. */
+  readonly settle: () => Promise<void>;
+  /** Repeats a read when a confirmed save lands before that read finishes. */
+  readonly readAfterSettled: <A>(read: () => Promise<A>) => Promise<A>;
 };
+
+export class AutosaveSettlementError extends Data.TaggedError(
+  'AutosaveSettlementError',
+)<{
+  readonly date: JournalDate;
+  readonly failure: AutosaveFailure | undefined;
+  readonly message: string;
+}> {}
+
+const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
+  new Promise((resolve, reject) => {
+    let unsubscribe = (): void => undefined;
+    const resolveWhenSettled = (): void => {
+      const state = coordinator.snapshot();
+      if (state.inFlight !== undefined) {
+        return;
+      }
+      unsubscribe();
+      if (sameDraft(state.draft, state.stored.draft)) {
+        resolve();
+        return;
+      }
+      reject(
+        new AutosaveSettlementError({
+          date: state.draft.date,
+          failure: state.failure,
+          message: state.failure?.message ?? 'The journal draft is not stored.',
+        }),
+      );
+    };
+    unsubscribe = coordinator.subscribe(resolveWhenSettled);
+    coordinator.flush();
+    resolveWhenSettled();
+  });
 
 export const createAutosaveRegistry = (
   recovery: () => DraftRecovery,
   revisions: ConfirmedRevisionTracker = confirmedRevisions,
 ): AutosaveRegistry => {
   const coordinators = new Map<string, AutosaveCoordinator>();
+  let confirmedSaveGeneration = 0;
+
+  const settle = async (): Promise<void> => {
+    await Promise.all(Array.from(coordinators.values(), settleCoordinator));
+    const allSettled = Array.from(coordinators.values()).every(
+      (coordinator) => {
+        const state = coordinator.snapshot();
+        return (
+          state.inFlight === undefined &&
+          sameDraft(state.draft, state.stored.draft)
+        );
+      },
+    );
+    if (!allSettled) {
+      return settle();
+    }
+  };
+
+  const readAfterSettled = async <A>(read: () => Promise<A>): Promise<A> => {
+    await settle();
+    const generationBeforeRead = confirmedSaveGeneration;
+    const result = await read();
+    await settle();
+    if (confirmedSaveGeneration === generationBeforeRead) {
+      return result;
+    }
+    return readAfterSettled(read);
+  };
 
   return {
     acquire: (stored, save) => {
@@ -49,7 +121,10 @@ export const createAutosaveRegistry = (
         stored,
         save,
         recovery: recovery(),
-        onConfirmed: (saved) => revisions.record(date, saved.revision),
+        onConfirmed: (saved) => {
+          confirmedSaveGeneration += 1;
+          revisions.record(date, saved.revision);
+        },
         onIdle: () => {
           if (coordinators.get(date) === created) {
             coordinators.delete(date);
@@ -59,5 +134,7 @@ export const createAutosaveRegistry = (
       coordinators.set(date, created);
       return created;
     },
+    readAfterSettled,
+    settle,
   };
 };
