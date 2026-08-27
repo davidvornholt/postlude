@@ -13,6 +13,7 @@
     "start": "bun run scripts/serve.ts",
     "db:migrate": "bun --env-file=.env.local run scripts/migrate.ts",
     "db:migrate:deploy": "bun run scripts/migrate.ts",
+    "import:journals": "bun run scripts/import-journals.ts",
     "check-types": "tsc --noEmit",
     "lint": "biome check --error-on-warnings .",
     "lint:fix": "biome check --write --error-on-warnings .",
