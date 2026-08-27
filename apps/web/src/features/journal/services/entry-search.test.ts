@@ -138,7 +138,7 @@ it('forgets a word the writer took back out', async () => {
   expect(dates).toEqual([]);
 });
 
-it('hands back the prose to cut an excerpt from, and the day, counted', async () => {
+it('hands back the indexed visible sources and the day, counted', async () => {
   const words = 5;
   const match = await withJournal(({ entries, search }) =>
     Effect.gen(function* () {
@@ -152,7 +152,58 @@ it('hands back the prose to cut an excerpt from, and the day, counted', async ()
       return matches.at(0);
     }),
   );
-  expect(match?.journalMarkdown).toBe('The rain fell all night.');
-  expect(match?.scriptureMarkdown).toBe('');
+  expect(match?.journalText).toBe('The rain fell all night.');
+  expect(match?.scriptureText).toBe('');
+  expect(match?.scriptureReferenceText).toContain('Psalms 23');
+  expect(match?.scriptureReferenceText).toContain('Psalm 23');
   expect(match?.words).toBe(words);
+});
+
+it('does not match hidden markdown syntax or fenced code', async () => {
+  const dates = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save(
+        draft(
+          '2026-03-01',
+          '[visible](secret-target)\n```\nsecret-code\n```\n![alt](secret-file)',
+        ),
+      );
+      const matches = yield* search.search(asked('secret'), plenty);
+      return matches.map((match) => match.date);
+    }),
+  );
+  expect(dates).toEqual([]);
+});
+
+it('matches punctuation-delimited words and canonically normalized text', async () => {
+  const dates = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2026-03-01', 'Rain,fell by Sprüche.'));
+      const matches = yield* search.search(
+        asked('rain fell Spru\u0308che'),
+        plenty,
+      );
+      return matches.map((match) => match.date);
+    }),
+  );
+  expect(dates).toEqual(['2026-03-01']);
+});
+
+it('finds a reference by German names and keyboard aliases', async () => {
+  const labels = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save(
+        draft('2026-03-01', 'A quiet evening.', 'Sprüche 12,5-13'),
+      );
+      const german = yield* search.search(asked('sprüche'), plenty);
+      const keyboard = yield* search.search(asked('sprueche'), plenty);
+      const alias = yield* search.search(asked('spr'), plenty);
+      return [german, keyboard, alias].map(
+        (matches) => matches[0]?.scriptureReferenceText,
+      );
+    }),
+  );
+  for (const label of labels) {
+    expect(label).toContain('Sprüche 12:5-13');
+  }
 });

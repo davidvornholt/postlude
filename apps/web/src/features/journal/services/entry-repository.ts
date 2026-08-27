@@ -30,6 +30,7 @@ import {
   EntrySummaryFromRow,
 } from '../schemas/entry-summary.ts';
 import { parseScriptureReference } from '../scripture-reference.ts';
+import { searchDocumentOf } from '../search-document.ts';
 import { countJournalWords } from '../word-count.ts';
 import { inArchiveSnapshot } from './archive-snapshot.ts';
 
@@ -111,6 +112,11 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           const journalUsed = journalWordCount > 0;
           const scriptureUsed =
             scriptureWordCount > 0 || reference !== undefined;
+          const searchDocument = searchDocumentOf({
+            journalMarkdown: draft.journalMarkdown,
+            scriptureMarkdown: draft.scriptureMarkdown,
+            scriptureReference: reference,
+          });
           return yield* sql`
           insert into entry (
             entry_date,
@@ -123,7 +129,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_book,
             scripture_chapter,
             scripture_verse_start,
-            scripture_verse_end
+            scripture_verse_end,
+            journal_search_text,
+            scripture_search_text,
+            scripture_reference_search_text
           ) values (
             ${draft.date},
             ${draft.journalMarkdown},
@@ -135,7 +144,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             ${reference?.book ?? null},
             ${reference?.chapter ?? null},
             ${reference?.verseStart ?? null},
-            ${reference?.verseEnd ?? null}
+            ${reference?.verseEnd ?? null},
+            ${searchDocument.journalText},
+            ${searchDocument.scriptureText},
+            ${searchDocument.scriptureReferenceText}
           )
           on conflict (entry_date) do update set
             journal_markdown = excluded.journal_markdown,
@@ -154,6 +166,9 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_chapter = excluded.scripture_chapter,
             scripture_verse_start = excluded.scripture_verse_start,
             scripture_verse_end = excluded.scripture_verse_end,
+            journal_search_text = excluded.journal_search_text,
+            scripture_search_text = excluded.scripture_search_text,
+            scripture_reference_search_text = excluded.scripture_reference_search_text,
             updated_at = now()
           returning *
           `.pipe(

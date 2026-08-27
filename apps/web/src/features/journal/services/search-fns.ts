@@ -14,29 +14,25 @@ import { createServerFn } from '@tanstack/react-start';
 import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
+import { searchTransportBoundary } from '../errors/search-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
 import {
-  type ExcerptSegment,
-  searchExcerpt,
-  searchTerms,
-  searchTsQuery,
-} from '../search-query.ts';
-import { journalPlainText } from '../word-count.ts';
-import { EntrySearch, type SearchMatch } from './entry-search.ts';
+  type SearchHit as ContractSearchHit,
+  type SearchQueryParams as ContractSearchQueryParams,
+  SearchQuery as SearchQueryContract,
+  searchHitOf,
+} from '../search-contract.ts';
+import { searchTerms, searchTsQuery } from '../search-query.ts';
+import { EntrySearch } from './entry-search.ts';
 import { currentJournalDate } from './journal-fns.ts';
 import { runJournalEffect } from './journal-runtime.ts';
 
 /** As many days as one page shows. The writer refines rather than scrolls. */
 const searchLimit = 50;
-const maxQueryLength = 200;
 
-export type SearchHit = {
-  readonly date: JournalDate;
-  readonly words: number;
-  /** Where the passage is what matched, so the excerpt is not the evening's. */
-  readonly fromScripture: boolean;
-  readonly excerpt: ReadonlyArray<ExcerptSegment>;
-};
+export const SearchQuery = SearchQueryContract;
+export type SearchQueryParams = ContractSearchQueryParams;
+export type SearchHit = ContractSearchHit;
 
 export type SearchResults = {
   /** The line as typed, so the page can say what it answered. */
@@ -50,39 +46,9 @@ export type SearchResults = {
   readonly limited: boolean;
 };
 
-export const SearchQuery = Schema.Struct({
-  q: Schema.optional(Schema.String.pipe(Schema.maxLength(maxQueryLength))),
-});
-
-export type SearchQueryParams = Schema.Schema.Type<typeof SearchQuery>;
-
 const decodeQuery = Schema.decodeUnknownSync(SearchQuery);
 
-/**
- * Which half of the day to show. A day matches on its evening prose, on the
- * morning's notes, or on the book it read; the excerpt comes from whichever of
- * the two actually holds one of the words, and from the evening by default,
- * which is where the writing is.
- */
-const hitOf =
-  (terms: ReadonlyArray<string>) =>
-  (match: SearchMatch): SearchHit => {
-    const journal = journalPlainText(match.journalMarkdown);
-    const evening = searchExcerpt(journal, terms);
-    const fromScripture =
-      !evening.some((segment) => segment.match) &&
-      match.scriptureMarkdown !== '';
-    return {
-      date: match.date,
-      words: match.words,
-      fromScripture,
-      excerpt: fromScripture
-        ? searchExcerpt(journalPlainText(match.scriptureMarkdown), terms)
-        : evening,
-    };
-  };
-
-export const searchJournalFn = createServerFn({ method: 'GET' })
+export const searchJournalFn = createServerFn({ method: 'POST' })
   .middleware([sessionRequired])
   .validator((input: unknown) => decodeQuery(input ?? {}))
   .handler(({ data }): Promise<SearchResults> => {
@@ -92,20 +58,22 @@ export const searchJournalFn = createServerFn({ method: 'GET' })
     if (terms.length === 0) {
       return Promise.resolve({ query, today, terms, hits: [], limited: false });
     }
-    return runJournalEffect(
-      Effect.gen(function* () {
-        const entries = yield* EntrySearch;
-        const matches = yield* entries.search(
-          searchTsQuery(terms),
-          searchLimit,
-        );
-        return {
-          query,
-          today,
-          terms,
-          hits: matches.map(hitOf(terms)),
-          limited: matches.length === searchLimit,
-        };
-      }),
+    return searchTransportBoundary(
+      runJournalEffect(
+        Effect.gen(function* () {
+          const entries = yield* EntrySearch;
+          const matches = yield* entries.search(
+            searchTsQuery(terms),
+            searchLimit,
+          );
+          return {
+            query,
+            today,
+            terms,
+            hits: matches.map(searchHitOf(terms)),
+            limited: matches.length === searchLimit,
+          };
+        }),
+      ),
     );
   });

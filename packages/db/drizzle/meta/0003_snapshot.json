@@ -1,5 +1,5 @@
 {
-  "id": "e587f566-9519-4d72-957e-9d46bf88935e",
+  "id": "70c3dbca-79ba-4395-a014-ee04678d4ad0",
   "prevId": "f3b0b0bf-582a-4658-a6d5-cd029d14d412",
   "version": "7",
   "dialect": "postgresql",
@@ -76,6 +76,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "journal_search_text": {
+          "name": "journal_search_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scripture_search_text": {
+          "name": "scripture_search_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scripture_reference_search_text": {
+          "name": "scripture_reference_search_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -96,7 +114,7 @@
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "to_tsvector('simple', coalesce(journal_markdown, '') || ' ' || coalesce(scripture_markdown, '') || ' ' || coalesce(scripture_book, ''))",
+            "as": "to_tsvector('simple', journal_search_text || ' ' || scripture_search_text || ' ' || scripture_reference_search_text)",
             "type": "stored"
           }
         }

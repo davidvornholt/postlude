@@ -55,6 +55,30 @@ it('each section carries an independent nullable first-use stamp', () => {
   }
 });
 
+it('indexes only required visible-text projections', () => {
+  const config = getTableConfig(entry);
+  const searchTextColumns = config.columns.filter((column) =>
+    column.name.endsWith('_search_text'),
+  );
+  expect(searchTextColumns.map((column) => column.name)).toEqual([
+    'journal_search_text',
+    'scripture_search_text',
+    'scripture_reference_search_text',
+  ]);
+  for (const column of searchTextColumns) {
+    expect(column.notNull).toBe(true);
+    expect(column.hasDefault).toBe(false);
+  }
+  const searchVector = config.columns.find(
+    (column) => column.name === 'search_vector',
+  );
+  const expression = renderSql(searchVector?.generated?.as);
+  expect(expression).toContain('journal_search_text');
+  expect(expression).toContain('scripture_search_text');
+  expect(expression).toContain('scripture_reference_search_text');
+  expect(expression).not.toContain('_markdown');
+});
+
 it('stamps updated_at from the database clock on every write, not just on insert', () => {
   const config = getTableConfig(entry);
   const updatedAt = config.columns.find(
