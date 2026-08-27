@@ -12,7 +12,7 @@ const replacement = (
 ): FixtureModuleReplacement => ({
   fixtureModulePath: new URL(fixture, import.meta.url).pathname,
   productionModulePath: new URL(production, import.meta.url).pathname,
-  exportName,
+  exportNames: [exportName],
 });
 
 export const buildArchiveNavigationFixture = (

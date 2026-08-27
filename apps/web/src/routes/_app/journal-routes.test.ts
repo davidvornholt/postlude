@@ -26,6 +26,7 @@ let loadedDay: JournalDay = { entry: entryOn(today), today };
 let readInputs: ReadonlyArray<unknown> = [];
 
 mock.module('#/features/journal/services/journal-fns.ts', () => ({
+  currentJournalDate: () => today,
   readJournalDayFn: (input?: unknown) => {
     readInputs = [...readInputs, input];
     return Promise.resolve(loadedDay);

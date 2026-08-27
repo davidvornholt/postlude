@@ -15,17 +15,20 @@ import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import {
   attributeValue,
   elementAttributes,
+  openingTag,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
 import { searchExcerpt, searchTerms } from '../search-query.ts';
 import type { SearchHit, SearchResults } from '../services/search-fns.ts';
-import { SearchPage } from './search-page.tsx';
+import { SearchPage, type SearchPageView } from './search-page.tsx';
 
 const today = '2026-08-26';
 const words = 120;
 const one = 1;
 const two = 2;
+const overLimitLength = 201;
 const marks = /<mark\b/gu;
+const search = () => Promise.reject(new Error('SSR does not submit a search.'));
 
 const hit = (
   date: string,
@@ -52,7 +55,12 @@ const answered = (
 });
 
 const render = (results: SearchResults) =>
-  renderInRouter(<SearchPage results={results} />);
+  renderInRouter(
+    <SearchPage
+      search={search}
+      view={{ state: 'answered', results } satisfies SearchPageView}
+    />,
+  );
 
 const rain = searchTerms('rain');
 
@@ -81,6 +89,39 @@ it('says no day answered, and how to ask for more', async () => {
 it('gives back the line that was searched for, so it can be edited', async () => {
   const html = await render(answered('rain'));
   expect(attributeValue(html, 'value')).toBe('rain');
+});
+
+it('submits the private query in a POST body rather than the address', async () => {
+  const html = await render(answered('rain'));
+  const form = openingTag(html, 'form');
+  expect(attributeValue(form, 'action')).toBe('/search');
+  expect(attributeValue(form, 'method')).toBe('post');
+  expect(html).not.toContain('?q=');
+});
+
+it('keeps an overlong native submission in the field and describes its error', async () => {
+  const query = 'x'.repeat(overLimitLength);
+  const html = await renderInRouter(
+    <SearchPage search={search} view={{ state: 'invalid', query }} />,
+  );
+  const input = openingTag(html, 'input');
+  const errorId = attributeValue(input, 'aria-describedby');
+  expect(attributeValue(input, 'value')).toBe(query);
+  expect(attributeValue(input, 'maxLength')).toBe('200');
+  expect(attributeValue(input, 'aria-invalid')).toBe('true');
+  expect(html).toContain(`id="${errorId}"`);
+  expect(html).toContain('Use 200 characters or fewer');
+});
+
+it('keeps a failed query ready to retry', async () => {
+  const html = await renderInRouter(
+    <SearchPage search={search} view={{ state: 'failed', query: 'rain' }} />,
+  );
+  expect(attributeValue(html, 'value')).toBe('rain');
+  expect(elementAttributes(html, 'button', 'Try again')).toContain(
+    'type="submit"',
+  );
+  expect(html).toContain('Search is unavailable right now');
 });
 
 it('lists a found day as a link to the day it was written on', async () => {
@@ -149,5 +190,14 @@ it('says when it is the morning passage that matched, not the evening', async ()
 /* A result arriving without a page load has to be announced, not just drawn. */
 it('answers inside a live region', async () => {
   const html = await render(answered('rain'));
-  expect(html).toContain('aria-live="polite"');
+  expect(elementAttributes(html, 'p', 'No days found.')).toContain(
+    'aria-live="polite"',
+  );
+  expect(
+    elementAttributes(
+      html,
+      'p',
+      'No day holds all of those words. Fewer words, or shorter ones, will find more.',
+    ),
+  ).not.toContain('aria-live');
 });

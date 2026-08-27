@@ -10,6 +10,8 @@ export type Chain = {
   readonly text: string;
   /** What each `.middleware(…)` applied directly to the chain was passed. */
   readonly middlewareArguments: ReadonlyArray<string>;
+  /** What each `middleware: […]` route-server option was passed. */
+  readonly routeMiddlewareArguments: ReadonlyArray<string>;
 };
 
 const anonymous = '(anonymous)';
@@ -17,6 +19,7 @@ const anonymous = '(anonymous)';
 const identifierPart = /[$\p{ID_Continue}]/u;
 const partOfIdentifier = /[$.\p{ID_Continue}]/u;
 const whitespace = /\s/u;
+const routeMiddlewareProperty = /\bmiddleware\s*:\s*\[(?<arguments>[^\]]*)\]/gu;
 
 /** Offsets where `name` stands alone rather than inside a longer identifier. */
 const identifierOffsets = (
@@ -156,10 +159,16 @@ const chainAt = (
       at = end;
     }
   }
+  const text = code.slice(start, at);
   return {
     name: assignedName(code, start),
-    text: code.slice(start, at),
+    text,
     middlewareArguments,
+    routeMiddlewareArguments: [...text.matchAll(routeMiddlewareProperty)]
+      .map(({ groups }) => groups?.arguments)
+      .filter((argumentsList): argumentsList is string =>
+        Boolean(argumentsList),
+      ),
   };
 };
 

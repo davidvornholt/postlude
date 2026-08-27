@@ -136,6 +136,13 @@ const scanModule = ({ path, code }: Module) => {
     middlewareArguments.some((list) =>
       guards.some((guard) => mentions(list, guard)),
     );
+  const isRouteGuarded = ({
+    middlewareArguments,
+    routeMiddlewareArguments,
+  }: Chain) =>
+    [...middlewareArguments, ...routeMiddlewareArguments].some((list) =>
+      guards.some((guard) => mentions(list, guard)),
+    );
   return {
     serverFunctions: chainsOf(code, serverFunctionNames, boundaryNames).map(
       (chain) => ({ path, name: chain.name, guarded: isGuarded(chain) }),
@@ -144,7 +151,7 @@ const scanModule = ({ path, code }: Module) => {
       handlersOf(path, chain).map((name) => ({
         path,
         name,
-        guarded: isGuarded(chain),
+        guarded: isRouteGuarded(chain),
       })),
     ),
   };

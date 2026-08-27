@@ -24,6 +24,10 @@ export const buildDayPageFixture = async (
     serverModuleId: '/a11y/day-page-fixture-render.tsx',
     serverRenderName: 'renderDayPageFixture',
     replacements: [
-      { fixtureModulePath, productionModulePath, exportName: 'DayPage' },
+      {
+        fixtureModulePath,
+        productionModulePath,
+        exportNames: ['DayPage'],
+      },
     ],
   });

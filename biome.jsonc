@@ -99,6 +99,23 @@
       }
     },
     {
+      // The private search route owns a server POST handler. Its `POST` key and
+      // the `-` prefix that excludes its colocated helper from route generation
+      // are TanStack Start contracts, not authored naming choices.
+      "includes": [
+        "apps/web/src/routes/_app/search.tsx",
+        "apps/web/src/routes/_app/-search-request.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off",
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
       // The TanStack Start document shell renders the literal <head> element;
       // noHeadElement is a Next.js-domain rule and this is not a Next app.
       // Biome's resolver also cannot follow Vite's `?url` asset-query import

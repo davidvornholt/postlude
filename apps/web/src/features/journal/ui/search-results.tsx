@@ -31,7 +31,7 @@ const Excerpt = ({
 }: {
   readonly segments: ReadonlyArray<ExcerptSegment>;
 }) => (
-  <span className="mt-3 block max-w-prose text-ink text-lg">
+  <span className="mt-3 block min-w-0 max-w-prose break-words text-ink text-lg">
     {segments.map((segment) =>
       segment.match ? (
         <mark className={markClass} key={segment.at}>
