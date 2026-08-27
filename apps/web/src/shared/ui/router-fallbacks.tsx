@@ -15,7 +15,7 @@
 import { createContext, type ReactNode, useContext, useEffect } from 'react';
 
 import {
-  columnClass,
+  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
@@ -76,7 +76,7 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
 };
 
 /*
- * The shell sets no column — every page sets the shared frame itself — so the
+ * The shell sets no frame — every page sets the shared frame itself — so the
  * fallback sets that frame either way, and both branches below render that one
  * wrapper exactly once. What the branches decide is only the landmark: inside
  * the shell the fallback is already in the one <main> the page gets, and a
@@ -84,17 +84,17 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
  * page does.
  */
 const FallbackPage = ({ heading, message }: FallbackContent) => {
-  const column = (
-    <div className={columnClass}>
+  const frame = (
+    <div className={pageFrameClass}>
       <FallbackBody heading={heading} message={message} />
     </div>
   );
 
   return useContext(MainLandmarkContext) ? (
-    column
+    frame
   ) : (
     <main className="flex min-h-svh flex-col justify-center bg-background py-16">
-      {column}
+      {frame}
     </main>
   );
 };

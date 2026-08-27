@@ -43,7 +43,7 @@ import {
   elementAttributes,
   openingTag,
 } from '#/shared/testing/rendered-html.ts';
-import { columnClass } from '#/shared/ui/design-classes.ts';
+import { pageFrameClass } from '#/shared/ui/design-classes.ts';
 
 type SignOutState = {
   readonly isError: boolean;
@@ -80,7 +80,7 @@ mock.module('#/shared/auth/session-fn.ts', () => ({
 const { Route } = await import('#/routes/_app.tsx');
 
 // A stand-in page: what a page puts inside the landmark is its own to test, and
-// `_app/page-measures.test.tsx` tests it against the real pages.
+// `_app/page-frames.test.tsx` tests it against the real pages.
 const pageComponent = () => <h1>A page</h1>;
 
 const rootRoute = createRootRoute();
@@ -172,7 +172,7 @@ it('marks only one page as current away from home', async () => {
 
 // Any class the frame recipe is built from, so a frame put back on <main> is
 // caught whichever part of it went back.
-const frameNames = new Set(columnClass.split(' '));
+const frameNames = new Set(pageFrameClass.split(' '));
 
 const setsAFrame = (attributes: string): boolean =>
   [...classNames(attributes)].some((name) => frameNames.has(name));
@@ -180,8 +180,9 @@ const setsAFrame = (attributes: string): boolean =>
 /*
  * Frame ownership, which the shell gave up so the morning scripture's deep
  * register could reach the viewport edges. A frame back on <main> would close a
- * column around every page and trap that ground inside it, and nothing else can
- * see it: the browser suite stops at the sign-in page. The header keeps its own
+ * second frame around every page and trap that ground inside it, and nothing
+ * else can see it: the production-server browser suite stops at the sign-in
+ * page. The header keeps its own
  * frame — that one is the shell's to set, around the masthead — so this reads
  * the landmark rather than counting across the page.
  */

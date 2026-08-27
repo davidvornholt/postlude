@@ -27,7 +27,7 @@ import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
 import { BrandLink } from '#/shared/ui/brand-link.tsx';
-import { columnClass } from '#/shared/ui/design-classes.ts';
+import { pageFrameClass } from '#/shared/ui/design-classes.ts';
 import {
   navLinkActiveClass,
   navLinkClass,
@@ -125,7 +125,7 @@ const AppShell = () => {
       <header className="border-border border-b">
         <div
           className={[
-            columnClass,
+            pageFrameClass,
             'flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 py-5',
           ].join(' ')}
         >
@@ -154,7 +154,7 @@ const AppShell = () => {
         </div>
       </header>
       {blockedArchiveDay === undefined ? null : (
-        <div className={[columnClass, 'pt-6'].join(' ')}>
+        <div className={[pageFrameClass, 'pt-6'].join(' ')}>
           <ArchiveNavigationFailure
             date={blockedArchiveDay}
             onOpen={() => setBlockedArchiveDay(undefined)}
@@ -183,11 +183,11 @@ const AppShell = () => {
         the two links at the top. It is used about once a year, and a control at
         a link's weight standing in the navigation row reads as a third page —
         as the one you are on, since the pages are told apart by weight. The
-        column is set here, not by the page, because this belongs to the app
+        frame is set here, not by the page, because this belongs to the app
         rather than to whatever is being read above it.
       */}
       <footer className="border-border border-t">
-        <div className={[columnClass, 'py-6'].join(' ')}>
+        <div className={[pageFrameClass, 'py-6'].join(' ')}>
           <button
             // Staying enabled keeps focus on the button while the request is
             // in flight; disabling it here would drop focus to <body> and

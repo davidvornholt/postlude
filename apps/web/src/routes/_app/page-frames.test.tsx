@@ -2,7 +2,7 @@
  * That every page under the shell sets the same frame around itself.
  *
  * The shell does not set one, because the morning scripture's deep register has
- * to reach the viewport edges and cannot do that from inside a column the shell
+ * to reach the viewport edges and cannot do that from inside a frame the shell
  * has already closed around the page. So each page sets the shared frame itself
  * — and a frame nothing central sets is one a page can silently lose, since
  * dropping a wrapper is a one-line edit that looks like tidying.
@@ -28,7 +28,7 @@ import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import { countRecipe } from '#/shared/testing/rendered-html.ts';
-import { columnClass } from '#/shared/ui/design-classes.ts';
+import { pageFrameClass } from '#/shared/ui/design-classes.ts';
 
 const emptyDay: JournalEntry = {
   date: '2026-08-26',
@@ -66,17 +66,17 @@ const archive = await renderInRouter(
  * the deep register's own frame inside its edge-to-edge ground, and the
  * evening's writing. The register sets its own rather than sharing the page's,
  * which is the whole reason the shell sets none — a ground that has to reach
- * the viewport edges cannot do it from inside a column.
+ * the viewport edges cannot do it from inside a frame.
  */
 const writingPageFrames = 3;
 
 it('wraps the writing page in the shared frame', () => {
-  expect(countRecipe(today, columnClass)).toBe(writingPageFrames);
+  expect(countRecipe(today, pageFrameClass)).toBe(writingPageFrames);
 });
 
 /*
- * The register's ground is a sibling of the columns rather than a child of one,
- * and its own column is inside it. Wrapping the page in a single column instead
+ * The register's ground is a sibling of the frames rather than a child of one,
+ * and its own frame is inside it. Wrapping the page in a single frame instead
  * would leave the panel inset, which reads as a card — the one thing the design
  * has none of — and would show up here as a fourth wrapper.
  */
@@ -91,5 +91,5 @@ it('renders the deep register on its own ground', () => {
  * the other. That is the complaint this frame was made one to answer.
  */
 it('wraps the archive in the frame the writing page uses', () => {
-  expect(countRecipe(archive, columnClass)).toBe(1);
+  expect(countRecipe(archive, pageFrameClass)).toBe(1);
 });

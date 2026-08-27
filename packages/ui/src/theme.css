@@ -80,7 +80,7 @@
   --pl-deep-ground: oklch(0.24 0.02 55);
   --pl-deep-ink: oklch(0.94 0.015 85);
   --pl-deep-ink-muted: oklch(0.76 0.016 80);
-  --pl-deep-rule: oklch(0.38 0.02 58);
+  --pl-deep-rule: oklch(0.54 0.02 60);
 }
 
 /*
@@ -133,7 +133,7 @@
     --pl-deep-ground: oklch(0.32 0.022 58);
     --pl-deep-ink: oklch(0.95 0.015 85);
     --pl-deep-ink-muted: oklch(0.78 0.016 80);
-    --pl-deep-rule: oklch(0.45 0.02 60);
+    --pl-deep-rule: oklch(0.6 0.02 60);
   }
 }
 

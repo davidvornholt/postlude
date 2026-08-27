@@ -39,7 +39,7 @@ export const deepFocusRingClass =
  * days, because a frame that changed between pages would move the masthead
  * under the reader as they walked from one to the next.
  */
-export const columnClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
+export const pageFrameClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 
 /**
  * The measure text is read and written at: roughly 65 characters, which is a

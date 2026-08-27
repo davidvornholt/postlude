@@ -7,8 +7,8 @@ import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { parseOAuthErrorSearch } from '#/shared/auth/oauth-error-search.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
 import {
-  columnClass,
   eyebrowClass,
+  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
@@ -52,9 +52,9 @@ const SignInPage = () => {
 
   return (
     <main className="flex min-h-svh flex-col justify-center bg-background py-16">
-      {/* No card: the page is the sign-in, set in its own column the way every
+      {/* No card: the page is the sign-in, set in its own frame the way every
           other page is set. */}
-      <div className={columnClass}>
+      <div className={pageFrameClass}>
         <p className={[eyebrowClass, 'text-accent'].join(' ')}>
           Private journal
         </p>

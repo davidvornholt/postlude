@@ -18,7 +18,7 @@ import {
 } from 'react';
 
 import {
-  columnClass,
+  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
@@ -136,7 +136,7 @@ export const SearchPage = ({
   };
 
   return (
-    <div className={columnClass}>
+    <div className={pageFrameClass}>
       <h1 className="font-display text-4xl text-ink sm:text-5xl">Search</h1>
       <SearchForm
         errorId={errorId}

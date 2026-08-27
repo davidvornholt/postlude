@@ -53,8 +53,8 @@ export const openingTag = (html: string, tag: string): string =>
 /**
  * Everything the one `<tag …>` encloses, or `''` when there is none. This is
  * how a count is asked of one region of the page rather than of the whole
- * document: the shell's header and the page below it both set a measure, and
- * only the page's is the page's to set.
+ * document: the shell's header and the page below it both set a frame, and only
+ * the page's is the page's to set.
  */
 export const elementContent = (html: string, tag: string): string =>
   html.match(contentPattern(tag))?.groups?.content ?? '';

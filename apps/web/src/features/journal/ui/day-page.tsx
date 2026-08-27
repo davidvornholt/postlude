@@ -14,9 +14,9 @@
 import { useId } from 'react';
 
 import {
-  columnClass,
   eyebrowClass,
   focusRingClass,
+  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
@@ -85,7 +85,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
 
   return (
     <>
-      <header className={columnClass}>
+      <header className={pageFrameClass}>
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           {journalDayRelation(entry.date, today)}
         </p>
@@ -126,7 +126,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
 
       <section
         aria-labelledby={eveningId}
-        className={[columnClass, 'mt-10 sm:mt-14'].join(' ')}
+        className={[pageFrameClass, 'mt-10 sm:mt-14'].join(' ')}
       >
         <h2
           className={[eyebrowClass, 'text-ink-muted'].join(' ')}

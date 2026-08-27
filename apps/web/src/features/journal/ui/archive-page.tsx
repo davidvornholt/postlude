@@ -22,8 +22,8 @@ import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 import {
-  columnClass,
   eyebrowClass,
+  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import {
@@ -120,7 +120,7 @@ export const ArchivePage = ({
   const journalIsEmpty = view.years.length === 0;
 
   return (
-    <div className={columnClass}>
+    <div className={pageFrameClass}>
       <h1 className={headingClass}>Archive</h1>
       {journalIsEmpty ? (
         <p
