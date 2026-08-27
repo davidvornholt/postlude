@@ -138,14 +138,36 @@ describe('trusted preview consumer boundary', () => {
       'cmp "$RUNNER_TEMP/expected-metadata.json" "$metadata"',
     );
   });
+
+  it('resolves the pushed image digest from the registry manifest', () => {
+    const publish = extractRunScript(
+      consumer,
+      'Publish and prove the exact public digest',
+    );
+
+    expect(publish).toContain('docker image push "$IMAGE:$tag"');
+    expect(publish).toContain('docker buildx imagetools inspect "$IMAGE:$tag"');
+    expect(publish).toContain("--format '{{json .Manifest}}' | jq -er .digest");
+    expect(publish).not.toContain('push_output=');
+  });
 });
 
 describe('preview host authorization and secret boundary', () => {
   it('uses only the dedicated main-only environment secret contract', () => {
     expect(hostCommand).toContain('      name: pr-preview');
     expect(hostCommand).toContain(
-      `SOPS_AGE_KEY: ${githubExpression('secrets.SOPS_AGE_KEY')}`,
+      `SOPS_AGE_KEY: ${githubExpression('secrets.sops_age_key')}`,
     );
+    expect(hostCommand).toContain('      sops_age_key:');
+    expect(hostCommand).toContain('        required: true');
+    const hostCommandCalls = consumer.match(
+      /uses: \.\/\.github\/workflows\/pr-preview-host-command\.yml/gu,
+    );
+    const explicitSecretPasses = consumer.match(
+      /sops_age_key: \$\{\{ secrets\.SOPS_AGE_KEY \}\}/gu,
+    );
+    expect(hostCommandCalls).not.toBeNull();
+    expect(explicitSecretPasses).toHaveLength(hostCommandCalls?.length ?? 0);
     expect(hostCommand).toContain('secrets/pr-preview.yaml?ref=$main_sha');
     expect(hostCommand).not.toContain('secrets: inherit');
     expect(hostCommand).not.toContain('secrets/ci.yaml');

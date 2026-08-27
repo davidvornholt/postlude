@@ -538,11 +538,10 @@ jobs:
           echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
           tag="pr-$PR_NUMBER-$HEAD_SHA-run-$RUN_ID-attempt-$RUN_ATTEMPT"
           docker image tag postlude:pull-request "$IMAGE:$tag"
-          push_output=$(docker image push "$IMAGE:$tag")
-          digest=$(awk '$1 == "digest:" { print $2; exit }' <<<"$push_output")
+          docker image push "$IMAGE:$tag"
+          digest=$(docker buildx imagetools inspect "$IMAGE:$tag" \
+            --format '{{json .Manifest}}' | jq -er .digest)
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-          tagged_digest=$(docker buildx imagetools inspect "$IMAGE:$tag" | awk '$1 == "Digest:" { print $2; exit }')
-          test "$tagged_digest" = "$digest"
 
           docker logout ghcr.io
           anonymous_config="$RUNNER_TEMP/anonymous-docker"
@@ -576,6 +575,8 @@ jobs:
       pull-request-number: ${{ fromJSON(needs.select.outputs.pull-request-number) }}
       image: ${{ needs.publish.outputs.image }}
       head-sha: ${{ needs.select.outputs.head-sha }}
+    secrets:
+      sops_age_key: ${{ secrets.SOPS_AGE_KEY }}
 
   cleanup-ineligible:
     needs: select
@@ -589,6 +590,8 @@ jobs:
       reason: ineligible
       pull-request-number: ${{ fromJSON(needs.select.outputs.pull-request-number) }}
       previous-base-ref: ${{ needs.select.outputs.previous-base-ref }}
+    secrets:
+      sops_age_key: ${{ secrets.SOPS_AGE_KEY }}
 
   cleanup-failed-build:
     needs: select
@@ -602,6 +605,8 @@ jobs:
       reason: failed-build
       pull-request-number: ${{ fromJSON(needs.select.outputs.pull-request-number) }}
       head-sha: ${{ needs.select.outputs.head-sha }}
+    secrets:
+      sops_age_key: ${{ secrets.SOPS_AGE_KEY }}
 
   cleanup-failed-publication:
     needs:
@@ -620,6 +625,8 @@ jobs:
       reason: failed-publication
       pull-request-number: ${{ fromJSON(needs.select.outputs.pull-request-number) }}
       head-sha: ${{ needs.select.outputs.head-sha }}
+    secrets:
+      sops_age_key: ${{ secrets.SOPS_AGE_KEY }}
 
   cleanup-failed-deploy:
     needs:
@@ -640,3 +647,5 @@ jobs:
       reason: failed-deploy
       pull-request-number: ${{ fromJSON(needs.select.outputs.pull-request-number) }}
       head-sha: ${{ needs.select.outputs.head-sha }}
+    secrets:
+      sops_age_key: ${{ secrets.SOPS_AGE_KEY }}
