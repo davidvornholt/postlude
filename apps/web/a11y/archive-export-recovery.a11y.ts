@@ -27,6 +27,7 @@ const referenceOnly: ArchivePageFixtureConfig = {
   selectedYear: undefined,
   view: {
     today,
+    exportAvailable: true,
     window: activityWindow(today),
     days: [
       {

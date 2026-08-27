@@ -3,6 +3,7 @@ import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { activityWindow } from '../src/features/journal/activity.ts';
+import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import {
   sampleArchiveView,
   sampleJournal,
@@ -21,6 +22,17 @@ const sampleSeed = 20_260_826;
 const exportSettlementDelayMs = 1500;
 const journal = sampleJournal(today, sampleDays, sampleSeed);
 const filledView = sampleArchiveView(journal, today);
+const emptyView: ArchiveView = {
+  today,
+  exportAvailable: false,
+  window: activityWindow(today),
+  days: [],
+  years: [],
+  journalStreak: { current: 0, longest: 0 },
+  scriptureStreak: { current: 0, longest: 0 },
+  totals: { daysWritten: 0, words: 0 },
+  anniversaries: [],
+};
 const fixtureDocument = '**/__postlude-archive-fixture';
 
 const openFixtureDocument = async (page: playwright.Page): Promise<void> => {
@@ -35,16 +47,12 @@ export const archiveFixtureConfigs = {
   empty: {
     exportSettlement: { delayMs: 0, outcome: 'stored' },
     selectedYear: undefined,
-    view: {
-      today,
-      window: activityWindow(today),
-      days: [],
-      years: [],
-      journalStreak: { current: 0, longest: 0 },
-      scriptureStreak: { current: 0, longest: 0 },
-      totals: { daysWritten: 0, words: 0 },
-      anniversaries: [],
-    },
+    view: emptyView,
+  },
+  sourceOnly: {
+    exportSettlement: { delayMs: 0, outcome: 'stored' },
+    selectedYear: undefined,
+    view: { ...emptyView, exportAvailable: true },
   },
   exportFailed: {
     exportSettlement: { delayMs: 0, outcome: 'failed' },

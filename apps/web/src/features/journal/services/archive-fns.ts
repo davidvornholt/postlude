@@ -54,6 +54,8 @@ export type Anniversary = {
 
 export type ArchiveView = {
   readonly today: JournalDate;
+  /** Stored source exists even when word-count activity does not. */
+  readonly exportAvailable: boolean;
   /** The stretch the map draws, clipped only at the first journal day. */
   readonly window: ActivityWindow;
   /** Every day in the window that has a row; the gaps are the days without. */
@@ -128,11 +130,13 @@ export const readArchiveFn = createServerFn({ method: 'GET' })
           anniversaryMonthDay: today.slice(isoMonthStart),
           anniversaryLimit,
         });
-        const { earliest, summaries, anniversaries } = snapshot;
+        const { earliest, summaries, anniversaries, exportAvailable } =
+          snapshot;
         const history = summaries.map(activityDayOf(env.JOURNAL_TIME_ZONE));
 
         return {
           today,
+          exportAvailable,
           window,
           days: history.filter(
             (day) => day.date >= window.from && day.date <= window.to,

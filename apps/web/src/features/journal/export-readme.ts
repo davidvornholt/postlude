@@ -15,11 +15,11 @@ const days = (count: number): string =>
 export const exportReadme = (metadata: ExportMetadata): string =>
   [
     '# Postlude journal export',
-    `This archive was created at ${metadata.exportedAt} and contains ${days(metadata.entryCount)} with current meaningful content as of journal day ${metadata.journalDate}.`,
+    `This archive was created at ${metadata.exportedAt} and contains ${days(metadata.entryCount)} with recoverable stored content as of journal day ${metadata.journalDate}.`,
     '## Authoritative data',
     `\`${manifestPath}\` is the manifest for version ${exportFormatVersion} of \`${exportManifestMediaType}\`. It records the export instant, journal date, entry count, and journal-day rules.`,
     `\`${entriesPath}\` uses \`${exportEntriesMediaType}\`. Each UTF-8 line is one JSON object followed by a line feed. JSON escaping preserves every stored Markdown code point and newline when parsed. The records also carry the structured scripture reference, the independent first-use timestamps for both sections, and the row creation and update timestamps.`,
-    'Only days with current meaningful content are present. A day qualifies when its evening word count is positive, its morning word count is positive, or it has a scripture reference. A cleared row and a row that was never meaningfully written are omitted.',
+    'Only days with recoverable stored content are present. A day qualifies when either stored Markdown string is not empty or it has a scripture reference. Markdown structure and whitespace remain exact content. Empty, fully cleared, and provenance-only rows are omitted.',
     '## Journal days',
     `The configured IANA time zone is \`${metadata.timeZone}\`. A journal day starts at ${journalDayStartsAt} in that zone, so an instant before ${journalDayStartsAt} belongs to the calendar day that is ending. The stored journal date, rather than an inferred UTC date, is authoritative across daylight-saving changes and travel.`,
     '## Markdown projections',

@@ -26,7 +26,7 @@ const bytesOf = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
 it('exports every non-empty stored source exactly, even when it has no prose', async () => {
   const codeOnly = '```\n\n```';
   const imageOnly = '![](https://example.com/image.png)';
-  const structuralOnly = '##\n\n> \n';
+  const structuralOnly = '---\n';
   const whitespaceOnly = ' \t\r\n';
   const result = await withJournal(({ entries, exports }) =>
     Effect.gen(function* () {

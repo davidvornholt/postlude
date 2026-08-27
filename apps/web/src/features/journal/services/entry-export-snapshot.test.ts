@@ -8,11 +8,13 @@ import {
   type TestPool,
 } from '#/shared/testing/test-database.ts';
 import { draft } from '../testing/database-harness.ts';
-import { EntryExport, type ExportEntry } from './entry-export.ts';
+import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { migrateJournalDatabase } from './journal-migration.ts';
 
 const testDate = '9090-04-03';
+const committedMarkdown = 'Committed during the delayed export scan.';
+const millisecondTimestampEnd = 23;
 
 const commitWriterUpdate = (pool: TestPool) =>
   Effect.tryPromise(async () => {
@@ -22,15 +24,15 @@ const commitWriterUpdate = (pool: TestPool) =>
       const result = await writer.query<{ readonly updatedAt: string }>(
         `update entry
          set
-           journal_markdown = 'Committed after export BEGIN.',
-           journal_word_count = 4,
+           journal_markdown = $2,
+           journal_word_count = 6,
            updated_at = statement_timestamp()
          where entry_date = $1
          returning to_char(
            updated_at at time zone 'UTC',
            'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
          ) as "updatedAt"`,
-        [testDate],
+        [testDate, committedMarkdown],
       );
       await writer.query('commit');
       const updatedAt = result.rows[0]?.updatedAt;
@@ -46,36 +48,48 @@ const commitWriterUpdate = (pool: TestPool) =>
     }
   });
 
-const readExport = (exports: EntryExport) =>
+const readWhileWriterCommits = (exports: EntryExport, pool: TestPool) =>
   Effect.gen(function* () {
     let exportedAt: string | undefined;
-    let entry: ExportEntry | undefined;
+    let writerUpdatedAt: string | undefined;
+    let included = false;
+    const commitAfterSnapshot = ({
+      exportedAt: observedExportedAt,
+    }: {
+      readonly exportedAt: string;
+    }) =>
+      commitWriterUpdate(pool).pipe(
+        Effect.tap((updatedAt) =>
+          Effect.sync(() => {
+            exportedAt = observedExportedAt;
+            writerUpdatedAt = updatedAt;
+          }),
+        ),
+      );
+
     yield* exports.visit({
-      onSnapshot: ({ exportedAt: observedExportedAt }) =>
-        Effect.sync(() => {
-          exportedAt = observedExportedAt;
-        }),
+      onSnapshot: commitAfterSnapshot,
       onCount: () => Effect.void,
       passes: [
         {
           before: Effect.void,
-          onEntry: (candidate) =>
+          onEntry: (entry) =>
             Effect.sync(() => {
-              if (candidate.date === testDate) {
-                entry = candidate;
-              }
+              included ||= entry.date === testDate;
             }),
           after: Effect.void,
         },
       ],
     });
-    if (exportedAt === undefined || entry === undefined) {
-      return yield* Effect.dieMessage('The export missed its test row.');
+    if (exportedAt === undefined || writerUpdatedAt === undefined) {
+      return yield* Effect.dieMessage(
+        'The export did not observe both database instants.',
+      );
     }
-    return { entry, exportedAt };
+    return { exportedAt, included, writerUpdatedAt };
   });
 
-it('dates a snapshot after a writer committed between BEGIN and its first entry read', async () => {
+it('excludes a commit made after the first entry read began', async () => {
   const observed = await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
@@ -95,28 +109,14 @@ it('dates a snapshot after a writer committed between BEGIN and its first entry 
           const exports = yield* EntryExport;
           yield* sql`delete from entry where entry_date = ${testDate}`;
           return yield* Effect.gen(function* () {
-            yield* entries.save(draft(testDate, 'Before export.'));
-            let writerUpdatedAt: string | undefined;
-            const rememberWriterUpdate = (updatedAt: string) =>
-              Effect.sync(() => {
-                writerUpdatedAt = updatedAt;
-              });
+            yield* entries.save(draft(testDate, ''));
             const snapshot = yield* sql.withTransaction(
               sql`set transaction isolation level repeatable read read only`.pipe(
-                Effect.zipRight(
-                  commitWriterUpdate(pool).pipe(
-                    Effect.tap(rememberWriterUpdate),
-                  ),
-                ),
-                Effect.zipRight(readExport(exports)),
+                Effect.zipRight(readWhileWriterCommits(exports, pool)),
               ),
             );
-            if (writerUpdatedAt === undefined) {
-              return yield* Effect.dieMessage(
-                'The concurrent writer did not publish its update instant.',
-              );
-            }
-            return { ...snapshot, writerUpdatedAt };
+            const committed = yield* entries.read(testDate);
+            return { ...snapshot, committed };
           }).pipe(
             Effect.ensuring(
               sql`delete from entry where entry_date = ${testDate}`.pipe(
@@ -129,7 +129,10 @@ it('dates a snapshot after a writer committed between BEGIN and its first entry 
     ),
   );
 
-  expect(observed.entry.journalMarkdown).toBe('Committed after export BEGIN.');
-  expect(observed.entry.updatedAt).toBe(observed.writerUpdatedAt);
-  expect(observed.exportedAt >= observed.entry.updatedAt).toBe(true);
+  expect(observed.included).toBe(false);
+  expect(observed.writerUpdatedAt > observed.exportedAt).toBe(true);
+  expect(observed.committed?.journalMarkdown).toBe(committedMarkdown);
+  expect(observed.committed?.updatedAt.toISOString()).toBe(
+    `${observed.writerUpdatedAt.slice(0, millisecondTimestampEnd)}Z`,
+  );
 });

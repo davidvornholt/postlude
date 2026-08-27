@@ -33,7 +33,10 @@ import {
 import { parseScriptureReference } from '../scripture-reference.ts';
 import { searchDocumentOf } from '../search-document.ts';
 import { countJournalWords } from '../word-count.ts';
-import { currentMeaningfulEntry } from './entry-content-sql.ts';
+import {
+  currentMeaningfulEntry,
+  exportableStoredEntry,
+} from './entry-content-sql.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
@@ -41,11 +44,33 @@ const decodeEarliestDates = Schema.decodeUnknown(
   Schema.Array(EarliestDateFromRow),
 );
 const decodeSummaries = Schema.decodeUnknown(Schema.Array(EntrySummaryFromRow));
+const ExportAvailabilityRow = Schema.Struct({
+  available: Schema.propertySignature(Schema.Boolean).pipe(
+    Schema.fromKey('export_available'),
+  ),
+});
+const decodeExportAvailability = Schema.decodeUnknown(
+  Schema.Array(ExportAvailabilityRow),
+);
+
+/** Whether any row still carries source the writer can recover. */
+const readExportAvailability = (sql: SqlClient.SqlClient) =>
+  sql`
+    select exists(
+      select 1
+      from entry
+      where ${exportableStoredEntry(sql)}
+    ) as export_available
+  `.pipe(
+    Effect.flatMap(decodeExportAvailability),
+    Effect.map((rows) => rows[0]?.available ?? false),
+  );
 
 export type ArchiveRead = {
   readonly earliest: JournalDate | undefined;
   readonly summaries: ReadonlyArray<EntrySummary>;
   readonly anniversaries: ReadonlyArray<JournalEntry>;
+  readonly exportAvailable: boolean;
 };
 
 export type ArchiveReadRequest = {
@@ -306,6 +331,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         inRepeatableReadSnapshot(
           sql,
           Effect.gen(function* () {
+            const canExport = yield* readExportAvailability(sql);
             const earliest = yield* earliestDate(today);
             const summaries =
               earliest === undefined ? [] : yield* listBetween(earliest, today);
@@ -314,7 +340,12 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               today,
               anniversaryLimit,
             );
-            return { earliest, summaries, anniversaries };
+            return {
+              earliest,
+              summaries,
+              anniversaries,
+              exportAvailable: canExport,
+            };
           }),
         ).pipe(Effect.mapError(journalReadError));
 

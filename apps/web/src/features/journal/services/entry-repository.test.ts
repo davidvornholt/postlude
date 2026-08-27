@@ -279,6 +279,30 @@ it('reports no archive coverage while the journal is empty', async () => {
     entries.readArchive(archiveRequest('2026-08-26')),
   );
   expect(archive.earliest).toBeUndefined();
+  expect(archive.exportAvailable).toBe(false);
+});
+
+it('reports recoverable stored source separately from archive activity', async () => {
+  const archive = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2026-08-20', '```\n\n```'));
+      yield* entries.save({
+        ...draft('2026-08-21', ''),
+        scriptureMarkdown: '![](https://example.com/image.png)',
+      });
+      yield* entries.save(draft('2026-08-22', '---\n'));
+      yield* entries.save({
+        ...draft('2026-08-23', ''),
+        scriptureMarkdown: ' \t\r\n',
+      });
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
+  );
+
+  expect(archive.exportAvailable).toBe(true);
+  expect(archive.earliest).toBeUndefined();
+  expect(archive.summaries).toEqual([]);
+  expect(archive.anniversaries).toEqual([]);
 });
 
 it('does not let future rows open the archive', async () => {
@@ -291,6 +315,7 @@ it('does not let future rows open the archive', async () => {
   );
 
   expect(archive.earliest).toBeUndefined();
+  expect(archive.exportAvailable).toBe(true);
   expect(archive.summaries).toEqual([]);
   expect(archive.anniversaries).toEqual([]);
 });
@@ -374,6 +399,7 @@ it('reports a truly empty archive after every meaningful section is cleared', as
   );
 
   expect(archive.earliest).toBeUndefined();
+  expect(archive.exportAvailable).toBe(false);
   expect(archive.summaries).toEqual([]);
   expect(archive.anniversaries).toEqual([]);
 });

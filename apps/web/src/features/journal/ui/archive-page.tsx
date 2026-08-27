@@ -13,10 +13,9 @@
  * columns and does not fit the text column. The prose inside it still keeps to
  * a readable width of its own rather than running the full 53 columns.
  *
- * A journal with nothing in it gets one sentence instead of four empty
- * sections. Everything on this page is a reading of days that exist, and a
- * grid of 371 outlines under two zeroes says nothing except that the writer has
- * not started.
+ * A journal with no activity gets one sentence instead of three empty reading
+ * sections. Export availability is separate: Markdown structure and whitespace
+ * can still be recoverable source even when they produce no activity year.
  */
 
 import { Link } from '@tanstack/react-router';
@@ -124,8 +123,9 @@ export const ArchivePage = ({
       <h1 className={headingClass}>Archive</h1>
       {journalIsEmpty ? (
         <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
-          Nothing has been written yet. The streaks, the year of days, and the
-          entries from earlier years all appear here as the journal fills up.
+          No writing activity yet. The streaks, the year of days, and entries
+          from earlier years appear once a day contains prose or a scripture
+          reference.
         </p>
       ) : (
         <>
@@ -158,12 +158,13 @@ export const ArchivePage = ({
               />
             </Section>
           )}
-
-          <Section title="Your own copy">
-            <ExportControl settleAutosaves={settleAutosaves} />
-          </Section>
         </>
       )}
+      {view.exportAvailable ? (
+        <Section title="Your own copy">
+          <ExportControl settleAutosaves={settleAutosaves} />
+        </Section>
+      ) : null}
     </div>
   );
 };

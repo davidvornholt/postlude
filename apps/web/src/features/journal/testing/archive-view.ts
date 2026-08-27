@@ -77,6 +77,7 @@ export const sampleArchiveView = (
   const window = activityWindow(today);
   return {
     today,
+    exportAvailable: days.length > 0,
     window,
     days: days.filter(
       (day) => day.date >= window.from && day.date <= window.to,

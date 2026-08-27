@@ -1,4 +1,4 @@
-/** A bounded, ordered read of every currently meaningful journal day. */
+/** A bounded, ordered read of every day with recoverable stored content. */
 
 import { SqlClient } from '@effect/sql';
 import { Effect, Either, Schema } from 'effect';
@@ -74,8 +74,8 @@ export class EntryExport extends Effect.Service<EntryExport>()(
 
       /**
        * This is deliberately the transaction's first entry read. PostgreSQL
-       * fixes the repeatable-read snapshot for this statement. The aggregate
-       * then reads the database clock after that snapshot exists.
+       * fixes the repeatable-read snapshot and the statement timestamp
+       * together, before a later commit can enter either side of the export.
        */
       const readSnapshot = (): Effect.Effect<
         { readonly count: number; readonly exportedAt: string },
@@ -85,7 +85,7 @@ export class EntryExport extends Effect.Service<EntryExport>()(
           select
             count(*)::text as count,
             to_char(
-              clock_timestamp() at time zone 'UTC',
+              statement_timestamp() at time zone 'UTC',
               'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
             ) as exported_at
           from entry
