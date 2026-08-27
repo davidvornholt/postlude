@@ -14,10 +14,16 @@ import { useRef, useState } from 'react';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 
-type ExportState = 'failed' | 'idle' | 'settling';
+type ExportState = 'failed' | 'idle' | 'settling' | 'submitted';
 export type SettleAutosaves = () => Promise<void>;
 
 const failureId = 'journal-export-failure';
+const exportLabel: Record<ExportState, string> = {
+  failed: 'Download the journal',
+  idle: 'Download the journal',
+  settling: 'Saving before download …',
+  submitted: 'Download started',
+};
 
 type ExportControlProps = {
   readonly settleAutosaves?: SettleAutosaves;
@@ -30,6 +36,7 @@ export const ExportControl = ({
   const form: RefObject<HTMLFormElement | null> = useRef(null);
   const started: RefObject<boolean> = useRef(false);
   const settling = state === 'settling';
+  const submitted = state === 'submitted';
 
   const submitAfterSettling = (
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
@@ -40,17 +47,16 @@ export const ExportControl = ({
     }
     started.current = true;
     setState('settling');
-    return settleAutosaves()
-      .then(
-        () => {
-          form.current?.submit();
-          setState('idle');
-        },
-        () => setState('failed'),
-      )
-      .finally(() => {
+    return settleAutosaves().then(
+      () => {
+        setState('submitted');
+        form.current?.submit();
+      },
+      () => {
         started.current = false;
-      });
+        setState('failed');
+      },
+    );
   };
 
   return (
@@ -69,11 +75,11 @@ export const ExportControl = ({
       <button
         aria-busy={settling}
         aria-describedby={state === 'failed' ? failureId : undefined}
-        aria-disabled={settling}
+        aria-disabled={settling || submitted}
         className={[primaryButtonClass, 'mt-6'].join(' ')}
         type="submit"
       >
-        {settling ? 'Saving before download …' : 'Download the journal'}
+        {exportLabel[state]}
       </button>
       {state === 'failed' ? (
         <p
