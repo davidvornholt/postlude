@@ -3,6 +3,7 @@ import { expect, it } from 'bun:test';
 import { createAutosaveCoordinator } from './autosave-coordinator.ts';
 import { journalWriteConflictMessage } from './errors/journal-errors.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
+import { decodeSaveConfirmation } from './save-confirmation.ts';
 import type { EntryDraft } from './schemas/entry.ts';
 
 const draft: EntryDraft = {
@@ -12,6 +13,7 @@ const draft: EntryDraft = {
   scriptureReference: '',
   baseRevision: 100,
 };
+const writeConflictStatus = 409;
 
 it('keeps stale-tab prose recoverable when its base revision conflicts', async () => {
   let recovered: EntryDraft | undefined;
@@ -27,7 +29,12 @@ it('keeps stale-tab prose recoverable when its base revision conflicts', async (
   const stored = { draft, revision: draft.baseRevision };
   const coordinator = createAutosaveCoordinator({
     stored,
-    save: () => Promise.reject(new Error(journalWriteConflictMessage)),
+    save: () =>
+      decodeSaveConfirmation(
+        new Response(journalWriteConflictMessage, {
+          status: writeConflictStatus,
+        }),
+      ),
     recovery,
   });
 

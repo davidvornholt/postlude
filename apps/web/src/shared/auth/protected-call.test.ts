@@ -6,6 +6,7 @@ import { runProtectedCall } from './protected-call.ts';
 
 const badRequest = 400;
 const unauthorized = 401;
+const conflict = 409;
 const internalServerError = 500;
 const expectedPrivateHeaders = {
   cacheControl: 'private, no-store, max-age=0',
@@ -175,4 +176,25 @@ describe('server-function failures', () => {
       expectedPrivateHeaders,
     );
   });
+});
+
+it('returns an approved private conflict with its recovery advice', async () => {
+  const writeConflict = await Effect.runPromise(
+    Effect.fail({
+      _tag: 'JournalWriteConflictError',
+      message: 'This entry changed in another tab. Copy it before reloading.',
+    }),
+  ).catch((error: unknown) => error);
+  const response = await responseFrom(
+    protectedCall(
+      () => Promise.resolve(true),
+      () => Promise.reject(writeConflict),
+    ).result,
+  );
+
+  expect(response.status).toBe(conflict);
+  expect(await response.text()).toBe(
+    'This entry changed in another tab. Copy it before reloading.',
+  );
+  expect(privateHeadersOf(response.headers)).toEqual(expectedPrivateHeaders);
 });

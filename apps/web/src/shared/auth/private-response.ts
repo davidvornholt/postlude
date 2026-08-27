@@ -25,21 +25,32 @@ const failureOf = (error: unknown): unknown => {
   return Option.isSome(failure) ? failure.value : error;
 };
 
-const taggedValidationMessage = (error: unknown): string | undefined => {
+type SafeFailure = {
+  readonly message: string;
+  readonly status: number;
+};
+
+const badRequest = 400;
+const conflict = 409;
+
+const taggedSafeFailure = (error: unknown): SafeFailure | undefined => {
   const failure = failureOf(error);
-  // JournalValidationError's contract approves its message for the reader.
-  // Other Effect failures may retain SQL details and must stay opaque.
   if (
     typeof failure !== 'object' ||
     failure === null ||
     !('_tag' in failure) ||
-    failure._tag !== 'JournalValidationError' ||
     !('message' in failure) ||
     typeof failure.message !== 'string'
   ) {
     return undefined;
   }
-  return failure.message;
+  if (failure._tag === 'JournalValidationError') {
+    return { message: failure.message, status: badRequest };
+  }
+  if (failure._tag === 'JournalWriteConflictError') {
+    return { message: failure.message, status: conflict };
+  }
+  return undefined;
 };
 
 export const privateFailureResponse = (error: unknown): Response => {
@@ -50,10 +61,10 @@ export const privateFailureResponse = (error: unknown): Response => {
     });
   }
 
-  const validationMessage = taggedValidationMessage(error);
-  if (validationMessage !== undefined) {
-    return new Response(validationMessage, {
-      status: 400,
+  const safeFailure = taggedSafeFailure(error);
+  if (safeFailure !== undefined) {
+    return new Response(safeFailure.message, {
+      status: safeFailure.status,
       headers: privateResponseHeaders,
     });
   }
