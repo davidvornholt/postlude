@@ -1,12 +1,17 @@
 import { beforeEach, expect, it } from 'bun:test';
 
 import type { SearchResults } from '#/features/journal/services/search-fns.ts';
+import { applyPrivateResponseHeaders } from '#/shared/auth/private-response.ts';
+import { runSessionRequired } from '#/shared/auth/session-required.ts';
 
 const today = '2026-08-26';
 const overLimitLength = 201;
+const seeOther = 303;
+const unauthorized = 401;
+const internalServerError = 500;
 let searches: ReadonlyArray<unknown> = [];
 let rejects = false;
-let unauthorized = false;
+let responseStatus: number | undefined;
 
 const answered = (query: string): SearchResults => ({
   query,
@@ -16,13 +21,27 @@ const answered = (query: string): SearchResults => ({
   limited: false,
 });
 
-const search = (input: unknown): Promise<SearchResults> => {
+const privateHeadersOf = (headers: Headers) => ({
+  cacheControl: headers.get('cache-control'),
+  pragma: headers.get('pragma'),
+  contentTypeOptions: headers.get('x-content-type-options'),
+});
+
+const expectedPrivateHeaders = {
+  cacheControl: 'private, no-store, max-age=0',
+  pragma: 'no-cache',
+  contentTypeOptions: 'nosniff',
+};
+
+const search = (input: unknown): Promise<unknown> => {
   searches = [...searches, input];
   if (rejects) {
     return Promise.reject(new Error('private database detail'));
   }
-  if (unauthorized) {
-    return Promise.reject(new Response('Not authorized.', { status: 401 }));
+  if (responseStatus !== undefined) {
+    return Promise.resolve(
+      new Response('private transport detail', { status: responseStatus }),
+    );
   }
   const q = (input as { data?: { q?: string } }).data?.q ?? '';
   return Promise.resolve(answered(q));
@@ -31,7 +50,7 @@ const search = (input: unknown): Promise<SearchResults> => {
 beforeEach(() => {
   searches = [];
   rejects = false;
-  unauthorized = false;
+  responseStatus = undefined;
 });
 
 const { handleSearchPost, loadSearchView } = await import(
@@ -94,11 +113,73 @@ it('turns a private server failure into a retryable page state', async () => {
   });
 });
 
-it('turns an expired native session into a sign-in recovery state', async () => {
-  unauthorized = true;
+it('classifies resolved raw server-function failures without reading a body', async () => {
+  responseStatus = unauthorized;
   await expect(submit('rain')).resolves.toMatchObject({
     context: {
       searchView: { state: 'authentication-required', query: 'rain' },
     },
   });
+  responseStatus = internalServerError;
+  await expect(submit('rain')).resolves.toMatchObject({
+    context: { searchView: { state: 'failed', query: 'rain' } },
+  });
+});
+
+it('redirects an expired native POST before the route can search', async () => {
+  const responseHeaders = new Headers();
+  const request = new Request('https://postlude.test/search', {
+    body: new URLSearchParams({ q: 'private rain' }),
+    method: 'POST',
+  });
+  const failure = await runSessionRequired({
+    request,
+    authorize: () => Promise.resolve(false),
+    next: () =>
+      handleSearchPost(
+        {
+          request,
+          next: (options) => options,
+        },
+        search,
+      ),
+    publishHeaders: () => applyPrivateResponseHeaders(responseHeaders),
+  }).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+
+  expect(failure).toBeInstanceOf(Response);
+  if (!(failure instanceof Response)) {
+    throw new Error('The expired document session did not return a response.');
+  }
+  expect(failure.status).toBe(seeOther);
+  expect(failure.headers.get('location')).toBe('/login');
+  expect(privateHeadersOf(failure.headers)).toEqual(expectedPrivateHeaders);
+  expect(await failure.text()).toBe('');
+  expect(searches).toEqual([]);
+  expect(privateHeadersOf(responseHeaders)).toEqual(expectedPrivateHeaders);
+});
+
+it('keeps an expired server-function call on a private raw 401', async () => {
+  const failure = await runSessionRequired({
+    request: new Request('https://postlude.test/server-function', {
+      headers: { 'x-tsr-serverFn': 'true' },
+      method: 'POST',
+    }),
+    authorize: () => Promise.resolve(false),
+    next: () => Promise.reject(new Error('unreachable private search')),
+    publishHeaders: () => undefined,
+  }).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+
+  expect(failure).toBeInstanceOf(Response);
+  if (!(failure instanceof Response)) {
+    throw new Error('The expired server function did not return a response.');
+  }
+  expect(failure.status).toBe(unauthorized);
+  expect(privateHeadersOf(failure.headers)).toEqual(expectedPrivateHeaders);
+  expect(await failure.text()).toBe('Not authorized.');
 });

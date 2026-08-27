@@ -52,7 +52,7 @@ const documentOf = (
 export const mountSearchPage = async (
   page: playwright.Page,
   outcome: SearchFixtureOutcome,
-): Promise<void> => {
+): Promise<{ readonly pageErrors: () => ReadonlyArray<string> }> => {
   const fixtureAssets = await assetsFor(outcome);
   const browserErrors: Array<string> = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
@@ -71,6 +71,14 @@ export const mountSearchPage = async (
     );
   }
   await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  const hydratedErrorCount = browserErrors.length;
+  return { pageErrors: () => browserErrors.slice(hydratedErrorCount) };
 };
 
 export const changeSearchOutcome = (

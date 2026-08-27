@@ -80,3 +80,9 @@ export const unauthorizedPrivateResponse = (): Response =>
     status: 401,
     headers: privateResponseHeaders,
   });
+
+export const signInPrivateRedirect = (): Response =>
+  new Response(null, {
+    status: 303,
+    headers: { ...privateResponseHeaders, location: '/login' },
+  });

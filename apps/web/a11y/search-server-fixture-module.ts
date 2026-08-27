@@ -105,7 +105,7 @@ export const searchJournalFn = async ({
   data,
 }: {
   readonly data: { readonly q?: string };
-}): Promise<SearchResults> => {
+}): Promise<unknown> => {
   const config = (globalThis as unknown as SearchPageFixtureWindow)
     .postludeSearchPageFixture;
   const query = data.q ?? '';
@@ -114,10 +114,10 @@ export const searchJournalFn = async ({
   }
   await new Promise((resolve) => setTimeout(resolve, fixtureDelayMs));
   if (config.outcome === 'error') {
-    throw new Error('private fixture detail');
+    return new Response('private fixture detail', { status: 500 });
   }
   if (config.outcome === 'authentication') {
-    throw new Response('Not authorized.', { status: 401 });
+    return new Response('Not authorized.', { status: 401 });
   }
   const view = searchFixtureView(config.outcome, query);
   if (view.state !== 'answered') {

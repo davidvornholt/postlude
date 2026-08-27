@@ -22,6 +22,7 @@ const merge = (resolutions: ReadonlyArray<Resolution>): Resolution => {
 const markerNamesFor = (
   modules: ReadonlyMap<string, ModuleBindings | undefined>,
   path: string,
+  code: string,
   factory: ServerFactoryName,
 ): ReadonlyArray<string> => {
   const resolveExport = (
@@ -90,20 +91,29 @@ const markerNamesFor = (
   if (bindings === undefined) {
     return [];
   }
+  const namespaceMembers = (namespace: string): ReadonlyArray<string> => {
+    const escaped = namespace.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+    const call = new RegExp(
+      `\\b${escaped}\\s*\\.\\s*(?<member>[$\\p{ID_Start}][$\\p{ID_Continue}]*)\\s*\\(`,
+      'gu',
+    );
+    return [...code.matchAll(call)].flatMap(({ groups }) =>
+      groups?.member === undefined ? [] : [groups.member],
+    );
+  };
   return [
     ...bindings.imports
       .filter((binding) => resolveImport(path, binding, new Set()) !== 'absent')
       .map(({ local }) => local),
     ...bindings.namespaces.flatMap(({ local, specifier }) => {
       const target = resolveSpecifier(specifier, path);
-      return target === ''
-        ? [`${local}.${factory}`]
-        : [...(modules.get(target)?.reExports ?? [])]
-            .filter(
-              ({ exported }) =>
-                resolveExport(target, exported, new Set()) !== 'absent',
-            )
-            .map(({ exported }) => `${local}.${exported}`);
+      return namespaceMembers(local)
+        .filter((member) =>
+          target === ''
+            ? member === factory
+            : resolveExport(target, member, new Set()) !== 'absent',
+        )
+        .map((member) => `${local}.${member}`);
     }),
   ];
 };
@@ -118,6 +128,9 @@ export const serverFactoryNames = (
   const moduleBindings = new Map(
     modules.map((module) => [module.path, bindingsOf(module.code)]),
   );
+  const moduleCode = new Map(
+    modules.map((module) => [module.path, module.code]),
+  );
   return (path: string, factory: ServerFactoryName): ReadonlyArray<string> =>
-    markerNamesFor(moduleBindings, path, factory);
+    markerNamesFor(moduleBindings, path, moduleCode.get(path) ?? '', factory);
 };

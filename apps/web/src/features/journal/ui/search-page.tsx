@@ -26,6 +26,7 @@ import {
   searchUnavailableMessage,
 } from '../search-contract.ts';
 import type { SearchResults } from '../services/search-fns.ts';
+import { searchResponseOf } from '../services/search-response.ts';
 import { SearchAnswer } from './search-answer.tsx';
 import { SearchForm } from './search-form.tsx';
 import { searchStatus } from './search-status.ts';
@@ -43,7 +44,7 @@ type SearchState =
 
 export type SearchCall = (input: {
   readonly data: { readonly q?: string };
-}) => Promise<SearchResults>;
+}) => Promise<unknown>;
 
 const queryOf = (view: SearchPageView): string =>
   view.state === 'answered' ? view.results.query : view.query;
@@ -92,10 +93,16 @@ export const SearchPage = ({
     }
     setState({ state: 'pending', query: nextQuery });
     try {
-      const results = await search({
-        data: nextQuery === '' ? {} : { q: nextQuery },
-      });
-      setState({ state: 'answered', results });
+      const response = searchResponseOf(
+        await search({
+          data: nextQuery === '' ? {} : { q: nextQuery },
+        }),
+      );
+      setState(
+        response.state === 'answered'
+          ? response
+          : { state: response.state, query: nextQuery },
+      );
     } catch (error) {
       setState({
         state:

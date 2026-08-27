@@ -37,6 +37,63 @@ const factoryModules = [
   ),
 ];
 
+it('follows namespace factories through multi-hop export-all barrels', () => {
+  const scan = scanModules([
+    moduleOf(
+      'shared/start-factories.ts',
+      `export { createFileRoute, createMiddleware, createServerFn } from '@tanstack/react-start';`,
+    ),
+    moduleOf(
+      'shared/start-barrel-one.ts',
+      `export * from './start-factories.ts';`,
+    ),
+    moduleOf(
+      'shared/start-barrel-two.ts',
+      `export * from './start-barrel-one.ts';`,
+    ),
+    moduleOf(
+      'journal/namespace-guarded.ts',
+      `import * as Start from '#/shared/start-barrel-two.ts';
+import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
+export const audit = Start.createMiddleware({ type: 'function' }).middleware([sessionRequired]).server(({ next }) => next());
+export const guardedFn = Start.createServerFn({ method: 'GET' }).middleware([sessionRequired]).handler(() => 'secret');
+export const Route = Start.createFileRoute('/guarded')({ server: { middleware: [sessionRequired], handlers: { POST: () => Response.json({ ok: true }) } } });`,
+    ),
+    moduleOf(
+      'journal/namespace-unguarded.ts',
+      `import * as Start from '#/shared/start-barrel-two.ts';
+export const audit = Start.createMiddleware({ type: 'function' }).server(({ next }) => next());
+export const unguardedFn = Start.createServerFn({ method: 'GET' }).handler(() => 'secret');
+export const Route = Start.createFileRoute('/unguarded')({ server: { handlers: { POST: () => Response.json({ ok: true }) } } });`,
+    ),
+  ]);
+
+  expect(scan.serverFunctions.map(surfaceShape)).toEqual([
+    {
+      path: 'journal/namespace-guarded.ts',
+      name: 'guardedFn',
+      guarded: true,
+    },
+    {
+      path: 'journal/namespace-unguarded.ts',
+      name: 'unguardedFn',
+      guarded: false,
+    },
+  ]);
+  expect(scan.routeHandlers.map(surfaceShape)).toEqual([
+    {
+      path: 'journal/namespace-guarded.ts',
+      name: 'POST',
+      guarded: true,
+    },
+    {
+      path: 'journal/namespace-unguarded.ts',
+      name: 'POST',
+      guarded: false,
+    },
+  ]);
+});
+
 describe('renamed server factory scanning', () => {
   it('finds guarded and unguarded server functions through renamed re-exports', () => {
     const scan = scanModules([

@@ -129,14 +129,16 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountSearchPage(page, 'error');
+    const fixture = await mountSearchPage(page, 'error');
     const field = await searchFor(page, 'rain');
     await expect(
       page.getByText('Search is unavailable right now'),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
     await expect(field).toHaveValue('rain');
+    await expect(field).toBeFocused();
     await expect(page.getByText('private fixture detail')).toHaveCount(0);
+    expect(fixture.pageErrors()).toEqual([]);
     await scanSearch(page);
 
     await changeSearchOutcome(page, 'populated');
@@ -145,13 +147,14 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByRole('link', { name: resultLink })).toBeVisible();
     await expect(field).toHaveValue('rain');
     await expect(field).toBeFocused();
+    expect(fixture.pageErrors()).toEqual([]);
   });
 
   test(`an expired session focuses an explicit recovery action in ${colorScheme} mode`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountSearchPage(page, 'authentication');
+    const fixture = await mountSearchPage(page, 'authentication');
     await searchFor(page, 'rain');
     await expect(
       page.getByText('Your sign-in ended before the search finished'),
@@ -160,6 +163,7 @@ for (const colorScheme of colorSchemes) {
     await expect(signIn).toHaveAttribute('href', '/login');
     await expect(signIn).toBeFocused();
     await expect(page.getByText('Not authorized.')).toHaveCount(0);
+    expect(fixture.pageErrors()).toEqual([]);
     await scanSearch(page);
   });
 
