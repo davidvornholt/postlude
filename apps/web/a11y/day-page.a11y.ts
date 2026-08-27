@@ -23,6 +23,14 @@ for (const colorScheme of colorSchemes) {
     await mountDayPage(page, ['stored']);
 
     await page.keyboard.press('Tab');
+    const dayField = page.getByLabel(dayFieldName);
+    await expect(dayField).toBeFocused();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Open' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(
       page.getByRole('link', { name: 'Previous day' }),
     ).toBeFocused();

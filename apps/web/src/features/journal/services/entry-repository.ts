@@ -322,8 +322,6 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
 
       const readArchive = ({
         today,
-        anniversaryMonthDay,
-        anniversaryLimit,
       }: ArchiveReadRequest): Effect.Effect<
         ArchiveRead,
         ReturnType<typeof journalReadError>

@@ -22,9 +22,9 @@
  */
 
 import { useNavigate } from '@tanstack/react-router';
-import { type SubmitEvent, useId, useRef } from 'react';
+import { type FocusEvent, type SubmitEvent, useId, useState } from 'react';
 
-import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
+import { eyebrowClass } from '#/shared/ui/design-classes.ts';
 import { fieldClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import { isJournalDate, type JournalDate } from '../journal-day.ts';
@@ -43,24 +43,29 @@ type DayHeadingProps = {
  * because a date is one thing and breaking it after the month leaves a year
  * alone on a line.
  */
-const dateButtonClass = [
-  'block max-w-full text-balance text-left',
-  'border-border border-b pb-1',
+const dateLabelClass = [
+  'block max-w-full cursor-pointer text-balance text-left',
+  'border-ink-muted border-b pb-1',
   'transition-colors duration-150 ease-standard',
-  'hover:border-ink-muted',
-  focusRingClass,
+  'hover:border-ink',
+].join(' ');
+
+const visibleControlsClass = 'flex flex-wrap items-end gap-x-6 gap-y-3';
+const fallbackControlsClass = [
+  'sr-only',
+  'group-focus-within:not-sr-only group-focus-within:flex',
+  'group-focus-within:flex-wrap group-focus-within:items-end',
+  'group-focus-within:gap-x-6 group-focus-within:gap-y-3',
 ].join(' ');
 
 export const DayHeading = ({ date, today }: DayHeadingProps) => {
   const fieldId = useId();
-  const field = useRef<HTMLInputElement>(null);
+  const [active, setActive] = useState(false);
   const navigate = useNavigate();
   const label = journalDateLabel(date);
 
-  const jump = (typed: string, form: HTMLFormElement | null) => {
-    // An empty, half-typed, or unchanged field is not a day to go to, so
-    // nothing moves rather than the writer landing somewhere unasked for.
-    if (!isJournalDate(typed) || typed === date) {
+  const jump = (typed: JournalDate, form: HTMLFormElement) => {
+    if (typed === date) {
       return;
     }
     const moved =
@@ -69,52 +74,55 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
         : navigate({ params: { date: typed }, to: '/day/$date' });
     // A router that cannot make the move falls back to what the form already
     // is: submitting it natively reaches the same day through a page load.
-    moved.catch(() => form?.submit());
+    moved.catch(() => form.submit());
   };
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const typed = new FormData(form).get('date');
-    jump(typeof typed === 'string' ? typed : '', form);
+    const input = form.elements.namedItem('date');
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    input.setCustomValidity('');
+    if (!input.checkValidity()) {
+      input.reportValidity();
+      return;
+    }
+    if (!isJournalDate(input.value) || input.value > today) {
+      input.setCustomValidity('Choose a date from 0001 through today.');
+      input.reportValidity();
+      return;
+    }
+    jump(input.value, form);
   };
 
-  /*
-   * Focus first, then the picker. `showPicker` is not in every browser, and
-   * where it is missing a focused field is the whole fallback: it comes out of
-   * hiding on focus, so the writer sees the field they just asked for either
-   * way.
-   */
-  const openPicker = () => {
-    const input = field.current;
-    input?.focus();
-    if (typeof input?.showPicker === 'function') {
-      input.showPicker();
+  const leaveControls = (
+    event: FocusEvent<HTMLInputElement | HTMLButtonElement>,
+  ) => {
+    const { currentTarget, relatedTarget: next } = event;
+    const { form } = currentTarget;
+    if (!(form !== null && next instanceof Element && form.contains(next))) {
+      setActive(false);
     }
   };
 
   return (
-    <div className="mt-3">
-      <h1 className="font-display text-4xl text-ink sm:text-5xl">
-        <button
-          aria-label={`${label}. Go to another day.`}
-          className={dateButtonClass}
-          onClick={openPicker}
-          type="button"
-        >
-          {label}
-        </button>
-      </h1>
-      {/* Clipped rather than absent, and un-clipped the moment anything inside
-          it takes focus. A field that was not in the page at all could not be
-          reached by a keyboard or read aloud, and would leave the heading as a
-          control only a pointer can work. */}
-      <form
-        action="/day"
-        className="sr-only focus-within:not-sr-only focus-within:mt-4 focus-within:flex focus-within:flex-wrap focus-within:items-end focus-within:gap-x-6 focus-within:gap-y-3"
-        method="get"
-        onSubmit={submit}
+    <form action="/day" className="group mt-3" method="get" onSubmit={submit}>
+      <h1
+        className={[
+          'text-balance font-display text-4xl text-ink sm:text-5xl',
+          active ? 'sr-only' : 'group-focus-within:sr-only',
+        ].join(' ')}
       >
+        <label className={dateLabelClass} htmlFor={fieldId}>
+          {label}
+        </label>
+      </h1>
+      {/* The heading and field trade places while the form has focus. The page
+          therefore shows the date once, while a keyboard still reaches the
+          native field and a browser without script still submits a GET. */}
+      <div className={active ? visibleControlsClass : fallbackControlsClass}>
         <div>
           <label
             className={[eyebrowClass, 'block text-ink-faint'].join(' ')}
@@ -131,17 +139,22 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
             key={date}
             max={today}
             name="date"
-            onChange={(event) =>
-              jump(event.currentTarget.value, event.currentTarget.form)
-            }
-            ref={field}
+            onBlur={leaveControls}
+            onFocus={() => setActive(true)}
+            onInput={(event) => event.currentTarget.setCustomValidity('')}
+            required={true}
             type="date"
           />
         </div>
-        <button className={[quietButtonClass, 'pb-2'].join(' ')} type="submit">
+        <button
+          className={[quietButtonClass, 'pb-2'].join(' ')}
+          onBlur={leaveControls}
+          onFocus={() => setActive(true)}
+          type="submit"
+        >
           Open
         </button>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 };
