@@ -121,8 +121,17 @@ it('backfills existing visible search documents before hardening the schema', as
     expect(match.revision).toBe(1);
     expect(match.searchProjectionRevision).toBe(match.revision);
     const hit = searchHitOf(terms)(match);
-    expect(hit.fromScripture).toBe(true);
-    expect(hit.excerpt.some((segment) => segment.match)).toBe(true);
+    expect(hit.sources.map(({ kind }) => kind)).toEqual([
+      'scripture-notes',
+      'passage-reference',
+    ]);
+    for (const source of hit.sources) {
+      expect(
+        source.excerpts.some((excerpt) =>
+          excerpt.some((segment) => segment.match),
+        ),
+      ).toBe(true);
+    }
 
     const completeness = await upgrade.query<{
       readonly incomplete: number;
