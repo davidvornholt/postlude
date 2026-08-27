@@ -23,9 +23,9 @@ it('keeps the leap day a day', () => {
 });
 
 it('does not let JavaScript rewrite years below 0100', () => {
-  expect(journalDateLabel('0001-01-01')).toBe('Monday 1 January 1');
-  expect(journalDateLabel('0099-01-01')).toBe('Thursday 1 January 99');
-  expect(journalDateLabel('0100-01-01')).toBe('Friday 1 January 100');
+  expect(journalDateLabel('0001-01-01')).toBe('Monday, January 1, 1');
+  expect(journalDateLabel('0099-01-01')).toBe('Thursday, January 1, 99');
+  expect(journalDateLabel('0100-01-01')).toBe('Friday, January 1, 100');
 });
 
 it('names today and yesterday rather than counting them', () => {
@@ -36,6 +36,7 @@ it('names today and yesterday rather than counting them', () => {
 it('counts the days back for everything older', () => {
   expect(journalDayRelation('2026-08-24', '2026-08-26')).toBe('2 days ago');
   expect(journalDayRelation('2025-08-26', '2026-08-26')).toBe('365 days ago');
+  expect(journalDayRelation('2023-01-01', '2026-01-01')).toBe('1,096 days ago');
 });
 
 /*

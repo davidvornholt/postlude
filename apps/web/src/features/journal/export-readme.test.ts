@@ -2,6 +2,8 @@ import { expect, it } from 'bun:test';
 
 import { exportReadme } from './export-readme.ts';
 
+const groupedEntryCount = 1000;
+
 const readme = (entryCount: number): string =>
   exportReadme({
     exportedAt: '2026-08-26T20:00:00.123456Z',
@@ -36,6 +38,12 @@ it('records the IANA zone, 04:00 boundary, and six-digit export instant', () => 
   expect(text).toContain('`Europe/Berlin`');
   expect(text).toContain('starts at 04:00');
   expect(text).toContain('1 day with recoverable stored content');
+});
+
+it('groups a four-digit entry count', () => {
+  expect(readme(groupedEntryCount)).toContain(
+    'contains 1,000 days with recoverable stored content',
+  );
 });
 
 it('does not hard-wrap generated prose', () => {

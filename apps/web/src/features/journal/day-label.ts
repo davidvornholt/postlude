@@ -18,7 +18,11 @@ import {
   journalDateWeekday,
   parseJournalDate,
 } from './journal-day.ts';
-import { journalMonthLabel, journalWeekdayLabel } from './journal-labels.ts';
+import {
+  journalCountLabel,
+  journalMonthLabel,
+  journalWeekdayLabel,
+} from './journal-labels.ts';
 
 /** The heading a day's page carries: "Wednesday, August 26, 2026". */
 export const journalDateLabel = (date: JournalDate): string => {
@@ -45,5 +49,7 @@ export const journalDayRelation = (
   if (elapsed <= 0) {
     return 'Today';
   }
-  return elapsed === yesterday ? 'Yesterday' : `${elapsed} days ago`;
+  return elapsed === yesterday
+    ? 'Yesterday'
+    : `${journalCountLabel(elapsed, 'day')} ago`;
 };
