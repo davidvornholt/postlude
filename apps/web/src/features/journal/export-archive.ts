@@ -25,7 +25,6 @@ export type ExportContext = Omit<ExportMetadata, 'entryCount'>;
 const yearLength = 4;
 const minimumFenceLength = 3;
 const readmePath = 'README.md';
-const backtickRuns = /`+/gu;
 
 const checkedDate = (date: string): string => {
   if (!isJournalDate(date)) {
@@ -41,11 +40,22 @@ export const entryPath = (date: string): string => {
   return `days/${safeDate.slice(0, yearLength)}/${safeDate}.md`;
 };
 
+const longestBacktickRun = (markdown: string): number => {
+  let longest = 0;
+  let current = 0;
+  for (const character of markdown) {
+    if (character === '`') {
+      current += 1;
+      longest = Math.max(longest, current);
+    } else {
+      current = 0;
+    }
+  }
+  return longest;
+};
+
 const markdownFence = (markdown: string): string => {
-  const longestSourceRun = Math.max(
-    0,
-    ...Array.from(markdown.matchAll(backtickRuns), (match) => match[0].length),
-  );
+  const longestSourceRun = longestBacktickRun(markdown);
   const fence = '`'.repeat(Math.max(minimumFenceLength, longestSourceRun + 1));
   const beforeClosingFence = markdown.endsWith('\n') ? '' : '\n';
   return `${fence}markdown\n${markdown}${beforeClosingFence}${fence}`;
