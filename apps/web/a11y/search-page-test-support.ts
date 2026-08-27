@@ -1,8 +1,10 @@
 import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
-import { searchQueryLengthLimit } from '../src/features/journal/search-contract.ts';
-import type { SearchResults } from '../src/features/journal/services/search-fns.ts';
+import {
+  type SearchResults,
+  searchQueryLengthLimit,
+} from '../src/features/journal/search-contract.ts';
 import { buildSearchPageFixture } from './search-page-fixture-build.ts';
 import type {
   SearchFixtureOutcome,

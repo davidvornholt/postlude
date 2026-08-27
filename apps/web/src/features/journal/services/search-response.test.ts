@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import type { SearchResults } from './search-fns.ts';
+import type { SearchResults } from '../search-contract.ts';
 import { searchResponseOf } from './search-response.ts';
 
 const results: SearchResults = {
@@ -27,6 +27,12 @@ describe('search server-function response classification', () => {
     expect(searchResponseOf(results)).toEqual({ state: 'answered', results });
   });
 
+  it('keeps undeclared diagnostics out of a decoded success', () => {
+    expect(
+      searchResponseOf({ ...results, privateDiagnostic: 'database detail' }),
+    ).toEqual({ state: 'answered', results });
+  });
+
   it('uses only a raw failure response status and never reads its body', () => {
     const unauthorized = new Response('private session detail', {
       status: 401,
@@ -42,17 +48,22 @@ describe('search server-function response classification', () => {
   });
 
   it('fails closed on malformed successful payloads', () => {
-    expect(searchResponseOf({ ...results, hits: null })).toEqual({
-      state: 'failed',
-    });
-    expect(
-      searchResponseOf({
+    const malformedPayloads: ReadonlyArray<unknown> = [
+      { ...results, hits: null },
+      {
         ...results,
         hits: [{ ...results.hits[0], date: '2026-02-30' }],
-      }),
-    ).toEqual({ state: 'failed' });
-    expect(
-      searchResponseOf({
+      },
+      { ...results, today: '2026-02-30' },
+      {
+        ...results,
+        hits: [{ ...results.hits[0], words: -1 }],
+      },
+      {
+        ...results,
+        hits: [{ ...results.hits[0], words: 1.5 }],
+      },
+      {
         ...results,
         hits: [
           {
@@ -60,7 +71,42 @@ describe('search server-function response classification', () => {
             sources: [{ kind: 'private-diagnostic', excerpts: [] }],
           },
         ],
-      }),
-    ).toEqual({ state: 'failed' });
+      },
+      {
+        ...results,
+        hits: [
+          {
+            ...results.hits[0],
+            sources: [
+              {
+                kind: 'evening',
+                excerpts: [[{ text: 'Rain', match: true, at: -1 }]],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        query: results.query,
+        today: results.today,
+        terms: results.terms,
+        hits: results.hits,
+      },
+      {
+        ...results,
+        hits: [
+          {
+            ...results.hits[0],
+            sources: [
+              { kind: 'evening', excerpts: [[{ text: 'Rain', at: 0 }]] },
+            ],
+          },
+        ],
+      },
+    ];
+
+    for (const payload of malformedPayloads) {
+      expect(searchResponseOf(payload)).toEqual({ state: 'failed' });
+    }
   });
 });

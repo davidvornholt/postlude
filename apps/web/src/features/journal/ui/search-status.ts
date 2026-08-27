@@ -1,4 +1,4 @@
-import type { SearchResults } from '../services/search-fns.ts';
+import type { SearchResults } from '../search-contract.ts';
 
 const one = 1;
 

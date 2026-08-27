@@ -1,10 +1,10 @@
-import { searchHitOf } from '../src/features/journal/search-contract.ts';
+import {
+  type SearchHit,
+  type SearchResults,
+  searchHitOf,
+} from '../src/features/journal/search-contract.ts';
 import { searchExcerpt } from '../src/features/journal/search-excerpt.ts';
 import { searchTerms } from '../src/features/journal/search-query.ts';
-import type {
-  SearchHit,
-  SearchResults,
-} from '../src/features/journal/services/search-fns.ts';
 import type { SearchPageView } from '../src/features/journal/ui/search-page.tsx';
 import type {
   SearchFixtureOutcome,

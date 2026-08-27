@@ -15,11 +15,9 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { searchTransportBoundary } from '../errors/search-errors.ts';
-import type { JournalDate } from '../journal-day.ts';
 import {
-  type SearchHit as ContractSearchHit,
-  type SearchQueryParams as ContractSearchQueryParams,
-  SearchQuery as SearchQueryContract,
+  SearchQuery,
+  type SearchResults,
   searchHitOf,
 } from '../search-contract.ts';
 import { searchTerms, searchTsQuery } from '../search-query.ts';
@@ -29,22 +27,6 @@ import { runJournalEffect } from './journal-runtime.ts';
 
 /** As many days as one page shows. The writer refines rather than scrolls. */
 const searchLimit = 50;
-
-export const SearchQuery = SearchQueryContract;
-export type SearchQueryParams = ContractSearchQueryParams;
-export type SearchHit = ContractSearchHit;
-
-export type SearchResults = {
-  /** The line as typed, so the page can say what it answered. */
-  readonly query: string;
-  /** Which day today is, so a result for it links to the page it lives on. */
-  readonly today: JournalDate;
-  /** The words it was reduced to; empty means nothing was actually asked. */
-  readonly terms: ReadonlyArray<string>;
-  readonly hits: ReadonlyArray<SearchHit>;
-  /** There were at least this many; the page stopped counting at the limit. */
-  readonly limited: boolean;
-};
 
 const decodeQuery = Schema.decodeUnknownSync(SearchQuery);
 

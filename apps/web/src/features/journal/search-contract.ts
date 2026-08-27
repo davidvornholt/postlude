@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
-
-import { type ExcerptSegment, searchExcerpts } from './search-excerpt.ts';
+import { JournalDateSchema } from './schemas/entry.ts';
+import { searchExcerpts } from './search-excerpt.ts';
 import type { SearchMatch } from './services/entry-search.ts';
 
 export const searchQueryLengthLimit = 200;
@@ -17,25 +17,55 @@ export const SearchQuery = Schema.Struct({
 
 export type SearchQueryParams = Schema.Schema.Type<typeof SearchQuery>;
 
-export type SearchHit = {
-  readonly date: string;
-  readonly words: number;
-  /** Every visible source that contributed one or more words to the match. */
-  readonly sources: ReadonlyArray<SearchHitSource>;
-};
+const NonNegativeInteger = Schema.Number.pipe(
+  Schema.int(),
+  Schema.greaterThanOrEqualTo(0),
+);
 
-export type SearchHitSourceKind =
-  | 'evening'
-  | 'passage-reference'
-  | 'scripture-notes';
+const SearchExcerptSegment = Schema.Struct({
+  text: Schema.String,
+  match: Schema.Boolean,
+  at: NonNegativeInteger,
+});
 
-export type SearchHitSource = {
-  readonly kind: SearchHitSourceKind;
+export const SearchHitSourceKind = Schema.Literal(
+  'evening',
+  'passage-reference',
+  'scripture-notes',
+);
+export type SearchHitSourceKind = Schema.Schema.Type<
+  typeof SearchHitSourceKind
+>;
+
+export const SearchHitSource = Schema.Struct({
+  kind: SearchHitSourceKind,
   /** One excerpt per matched term, so distant terms remain visible. */
-  readonly excerpts: ReadonlyArray<ReadonlyArray<ExcerptSegment>>;
-};
+  excerpts: Schema.Array(Schema.Array(SearchExcerptSegment)),
+});
+export type SearchHitSource = Schema.Schema.Type<typeof SearchHitSource>;
 
-const hasMatch = (excerpt: ReadonlyArray<ExcerptSegment>): boolean =>
+export const SearchHit = Schema.Struct({
+  date: JournalDateSchema,
+  words: NonNegativeInteger,
+  /** Every visible source that contributed one or more words to the match. */
+  sources: Schema.Array(SearchHitSource),
+});
+export type SearchHit = Schema.Schema.Type<typeof SearchHit>;
+
+export const SearchResults = Schema.Struct({
+  /** The line as typed, so the page can say what it answered. */
+  query: Schema.String,
+  /** Which day today is, so a result for it links to the page it lives on. */
+  today: JournalDateSchema,
+  /** The words it was reduced to; empty means nothing was actually asked. */
+  terms: Schema.Array(Schema.String),
+  hits: Schema.Array(SearchHit),
+  /** There were at least this many; the page stopped counting at the limit. */
+  limited: Schema.Boolean,
+});
+export type SearchResults = Schema.Schema.Type<typeof SearchResults>;
+
+const hasMatch = (excerpt: SearchHitSource['excerpts'][number]): boolean =>
   excerpt.some((segment) => segment.match);
 
 const sourceOf = (

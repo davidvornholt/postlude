@@ -1,6 +1,6 @@
 import { beforeEach, expect, it } from 'bun:test';
 
-import type { SearchResults } from '#/features/journal/services/search-fns.ts';
+import type { SearchResults } from '#/features/journal/search-contract.ts';
 import { applyPrivateResponseHeaders } from '#/shared/auth/private-response.ts';
 import { runSessionRequired } from '#/shared/auth/session-required.ts';
 

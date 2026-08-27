@@ -6,10 +6,13 @@ import {
   elementAttributes,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
-import { searchHitOf } from '../search-contract.ts';
+import {
+  type SearchHit,
+  type SearchResults,
+  searchHitOf,
+} from '../search-contract.ts';
 import { searchExcerpt } from '../search-excerpt.ts';
 import { searchTerms } from '../search-query.ts';
-import type { SearchHit, SearchResults } from '../services/search-fns.ts';
 import { SearchPage } from './search-page.tsx';
 
 const today = '2026-08-26';

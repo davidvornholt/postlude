@@ -21,11 +21,11 @@ import { columnClass } from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { searchFailureKind } from '../errors/search-errors.ts';
 import {
+  type SearchResults,
   searchAuthenticationMessage,
   searchQueryLengthLimit,
   searchUnavailableMessage,
 } from '../search-contract.ts';
-import type { SearchResults } from '../services/search-fns.ts';
 import { searchResponseOf } from '../services/search-response.ts';
 import { SearchAnswer } from './search-answer.tsx';
 import { SearchForm } from './search-form.tsx';
