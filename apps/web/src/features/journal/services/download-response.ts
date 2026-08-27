@@ -1,5 +1,10 @@
+import {
+  applyPrivateResponseHeaders,
+  privateHtmlRecoveryResponse,
+} from '#/shared/auth/private-response.ts';
+
 export const exportUnavailableMessage =
-  'The journal export could not be prepared. Return to the archive and try again.';
+  'Postlude could not prepare the download. Your journal is unchanged.';
 
 type ExportResponseOptions = {
   readonly body: ReadableStream<Uint8Array>;
@@ -8,23 +13,14 @@ type ExportResponseOptions = {
   readonly signal: AbortSignal;
 };
 
-const privateHeaders = (): HeadersInit => ({
-  'cache-control': 'private, no-store, max-age=0',
-  pragma: 'no-cache',
-  'x-content-type-options': 'nosniff',
-});
-
 const unavailableResponse = (): Response =>
-  new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Export unavailable</title></head><body><main><h1>Export unavailable</h1><p>${exportUnavailableMessage}</p><p><a href="/archive">Return to the archive</a></p></main></body></html>`,
-    {
-      status: 503,
-      headers: {
-        ...privateHeaders(),
-        'content-type': 'text/html; charset=utf-8',
-      },
-    },
-  );
+  privateHtmlRecoveryResponse({
+    actionHref: '/archive',
+    actionLabel: 'Return to archive',
+    heading: 'Export unavailable',
+    message: exportUnavailableMessage,
+    title: 'Export unavailable | Postlude',
+  });
 
 /**
  * Preflights the first ZIP chunk before committing attachment headers. Once
@@ -88,13 +84,12 @@ export const exportDownloadResponse = async ({
       },
     });
 
-    return new Response(download, {
-      headers: {
-        ...privateHeaders(),
-        'content-disposition': `attachment; filename="${preparedFileName}"`,
-        'content-type': 'application/zip',
-      },
+    const headers = new Headers({
+      'content-disposition': `attachment; filename="${preparedFileName}"`,
+      'content-type': 'application/zip',
     });
+    applyPrivateResponseHeaders(headers);
+    return new Response(download, { headers });
   } catch {
     finish();
     await reader.cancel().catch(() => undefined);

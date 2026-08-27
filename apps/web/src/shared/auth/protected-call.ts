@@ -1,4 +1,5 @@
 import {
+  isApprovedPrivateResponse,
   privateFailureResponse,
   unauthorizedPrivateResponse,
 } from './private-response.ts';
@@ -46,10 +47,16 @@ export const runProtectedCall = async <T>({
     const result = await next();
     const response = returnedResponse(result);
     if (response !== undefined && !response.ok) {
+      if (isApprovedPrivateResponse(response)) {
+        return result;
+      }
       throw response;
     }
     return result;
   } catch (error) {
+    if (error instanceof Response && isApprovedPrivateResponse(error)) {
+      throw error;
+    }
     throw privateFailureResponse(error);
   }
 };

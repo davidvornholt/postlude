@@ -1,7 +1,12 @@
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
+import {
+  getResponseHeaders,
+  requestHandler,
+} from '@tanstack/react-start/server';
 
 import { activityWindow } from '../src/features/journal/activity.ts';
+import { exportDownloadResponse } from '../src/features/journal/services/download-response.ts';
 import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
 import { runSessionRequired } from '../src/shared/auth/session-required.ts';
 import type { ArchivePageFixtureConfig } from './archive-page-fixture-contract.ts';
@@ -14,6 +19,9 @@ const currentYear = 2026;
 const exportRoute = '**/archive/export';
 const loginUrl = /\/login$/u;
 const exportFileName = 'postlude-2026-08-26.zip';
+const colorSchemes = ['light', 'dark'] as const;
+const unavailableStatus = 503;
+const privateFailureDetail = 'database diagnostic for private journal';
 const referenceOnly: ArchivePageFixtureConfig = {
   exportSettlement: { delayMs: 0, outcome: 'stored' },
   selectedYear: undefined,
@@ -54,6 +62,34 @@ const answerWithoutSession = async (route: playwright.Route): Promise<void> => {
     headers: Object.fromEntries(
       new Headers([...publishedHeaders, ...result.headers]),
     ),
+    status: result.status,
+  });
+};
+
+const answerWithUnavailableExport = async (
+  route: playwright.Route,
+): Promise<void> => {
+  const body = new ReadableStream<Uint8Array>({
+    start: (controller) => controller.error(new Error(privateFailureDetail)),
+  });
+  const recovery = await exportDownloadResponse({
+    body,
+    fileName: () => exportFileName,
+    signal: new AbortController().signal,
+  });
+  const request = new Request(route.request().url(), { method: 'POST' });
+  const handler = requestHandler(() =>
+    runSessionRequired({
+      request,
+      authorize: () => Promise.resolve(true),
+      next: () => Promise.resolve(recovery),
+      publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
+    }),
+  );
+  const result = await handler(request, {});
+  await route.fulfill({
+    body: await result.text(),
+    headers: Object.fromEntries(result.headers),
     status: result.status,
   });
 };
@@ -106,3 +142,38 @@ test('reference-only scripture activity can be downloaded', async ({
   expect(method).toBe('POST');
   expect(download.suggestedFilename()).toBe(exportFileName);
 });
+
+for (const colorScheme of colorSchemes) {
+  test(`a real private 503 offers focused export recovery in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await page.route(exportRoute, answerWithUnavailableExport);
+    await mountArchivePage(page, referenceOnly);
+    const responsePromise = page.waitForResponse(exportRoute);
+    await page.getByRole('button', { name: 'Download the journal' }).click();
+    const response = await responsePromise;
+
+    expect(response.status()).toBe(unavailableStatus);
+    expect(response.headers()['cache-control']).toBe(
+      'private, no-store, max-age=0',
+    );
+    expect(response.headers().pragma).toBe('no-cache');
+    expect(response.headers()['x-content-type-options']).toBe('nosniff');
+    await expect(page).toHaveTitle('Export unavailable | Postlude');
+    await expect(page.getByRole('main')).toHaveCount(1);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Export unavailable' }),
+    ).toBeVisible();
+    const recovery = page.getByRole('link', { name: 'Return to archive' });
+    await expect(recovery).toBeFocused();
+    await expect(page.getByText('Your journal is unchanged.')).toBeVisible();
+    await expect(page.locator('body')).not.toContainText(privateFailureDetail);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+    await scanArchive(page);
+  });
+}

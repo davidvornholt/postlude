@@ -1,5 +1,7 @@
 import { expect, it } from 'bun:test';
 
+import { runSessionRequired } from '#/shared/auth/session-required.ts';
+
 import {
   exportDownloadResponse,
   exportUnavailableMessage,
@@ -56,9 +58,45 @@ it('turns a failure before the first chunk into a safe retryable response', asyn
   const document = await response.text();
   expect(document).toContain(exportUnavailableMessage);
   expect(document).toContain('href="/archive"');
+  expect(document).toContain('<title>Export unavailable | Postlude</title>');
+  expect(document).toContain('<main>');
+  expect(document).toContain(
+    '<h1 id="recovery-heading">Export unavailable</h1>',
+  );
+  expect(document).toContain('autofocus');
+  expect(document).not.toContain('postgres://secret');
   expect(response.headers.get('content-type')).toContain('text/html');
   expect(response.headers.has('content-disposition')).toBeFalse();
   expect(response.headers.get('cache-control')).toContain('no-store');
+});
+
+it('keeps the actual export recovery response through session authentication', async () => {
+  const body = new ReadableStream<Uint8Array>({
+    start: (controller) => controller.error(new Error('private journal cause')),
+  });
+  const recovery = await exportDownloadResponse({
+    body,
+    fileName: () => 'postlude.zip',
+    signal: new AbortController().signal,
+  });
+
+  const result = await runSessionRequired({
+    request: new Request('https://postlude.test/archive/export', {
+      method: 'POST',
+    }),
+    authorize: () => Promise.resolve(true),
+    next: () => Promise.resolve(recovery),
+    publishHeaders: () => undefined,
+  });
+
+  expect(result).toBe(recovery);
+  expect(result.status).toBe(unavailableStatus);
+  expect(await result.text()).not.toContain('private journal cause');
+  expect(result.headers.get('cache-control')).toBe(
+    'private, no-store, max-age=0',
+  );
+  expect(result.headers.get('pragma')).toBe('no-cache');
+  expect(result.headers.get('x-content-type-options')).toBe('nosniff');
 });
 
 it('sanitizes a stream failure after attachment headers are committed', async () => {
