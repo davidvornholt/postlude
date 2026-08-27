@@ -101,6 +101,31 @@ it('evicts a confirmed coordinator and retains only its revision', async () => {
   expect(remounted.snapshot().stored).toEqual(loaded);
 });
 
+it('rejects a cached stale acquisition after a confirmed checkpoint is released', () => {
+  const revisions = createConfirmedRevisionTracker(2);
+  const registry = createAutosaveRegistry(memoryRecovery, revisions);
+  const current = {
+    draft: { ...draft, journalMarkdown: 'Current.', baseRevision: 101 },
+    revision: 101,
+  };
+  revisions.record(draft.date, current.revision);
+  const mounted = registry.acquire(current, () =>
+    Promise.resolve({ revision: 102 }),
+  );
+  const unsubscribe = mounted.subscribe(() => undefined);
+  unsubscribe();
+
+  expect(revisions.known(draft.date)).toBeUndefined();
+  expect(() =>
+    registry.acquire(stored, () => Promise.resolve({ revision: 102 })),
+  ).toThrow('stale journal snapshot');
+
+  const remounted = registry.acquire(current, () =>
+    Promise.resolve({ revision: 102 }),
+  );
+  expect(remounted.snapshot().stored).toEqual(current);
+});
+
 it('retains a failed recoverable draft until it is undone', async () => {
   const recovery = memoryRecovery();
   const registry = createAutosaveRegistry(() => recovery);

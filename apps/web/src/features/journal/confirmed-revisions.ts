@@ -1,13 +1,3 @@
-/**
- * Browser-only evidence that a save reached the database.
- *
- * A loader generation is captured before its request starts. Confirmations
- * keep their revision checkpoint until every older loader has finished and a
- * mounted page has observed that revision. The tracker stores dates, numbers,
- * and counters only. If its fixed capacity cannot represent another day, it
- * stops accepting snapshots for the rest of the browser session.
- */
-
 import type { JournalDate } from './journal-day.ts';
 
 type LoaderGeneration = {
@@ -15,13 +5,13 @@ type LoaderGeneration = {
   readonly generation: number;
 };
 
-type LoaderResult = 'accept' | 'retry' | 'unsafe';
+type LoaderResult = 'accept' | 'retry';
 
 export type ConfirmedRevisionTracker = {
   readonly record: (date: JournalDate, revision: number) => void;
   readonly known: (date: JournalDate) => number | undefined;
   readonly observe: (date: JournalDate, revision: number) => boolean;
-  readonly beginLoad: () => LoaderGeneration | undefined;
+  readonly beginLoad: () => LoaderGeneration;
   readonly completeLoad: (
     loader: LoaderGeneration,
     date: JournalDate,
@@ -43,10 +33,28 @@ export const createConfirmedRevisionTracker = (
   maximum = maximumTrackedDays,
 ): ConfirmedRevisionTracker => {
   const checkpoints = new Map<JournalDate, Checkpoint>();
+  const admissions = new Map<JournalDate, number>();
   const outstanding = new Map<number, number>();
+  const capacity = Math.max(1, maximum);
   let generation = 0;
   let nextLoaderId = 0;
-  let unsafe = false;
+  let freshnessFloor = 0;
+  let guarded = false;
+
+  const admit = (date: JournalDate, revision: number): void => {
+    if (!guarded) {
+      return;
+    }
+    admissions.delete(date);
+    admissions.set(date, revision);
+    while (admissions.size > capacity) {
+      const oldest = admissions.keys().next().value;
+      if (oldest === undefined) {
+        return;
+      }
+      admissions.delete(oldest);
+    }
+  };
 
   const hasOlderLoad = (checkpoint: Checkpoint): boolean => {
     for (const started of outstanding.values()) {
@@ -75,14 +83,20 @@ export const createConfirmedRevisionTracker = (
 
   return {
     record: (date, revision) => {
-      if (unsafe) {
-        return;
-      }
+      guarded = true;
       generation += 1;
+      admissions.delete(date);
       const current = checkpoints.get(date);
-      if (current === undefined && checkpoints.size >= maximum) {
-        unsafe = true;
-        return;
+      if (current === undefined && checkpoints.size >= capacity) {
+        const oldestDate = checkpoints.keys().next().value;
+        if (oldestDate !== undefined) {
+          const evicted = checkpoints.get(oldestDate);
+          checkpoints.delete(oldestDate);
+          freshnessFloor = Math.max(
+            freshnessFloor,
+            evicted?.generation ?? generation,
+          );
+        }
       }
       checkpoints.set(date, {
         revision: Math.max(current?.revision ?? 0, revision),
@@ -92,16 +106,18 @@ export const createConfirmedRevisionTracker = (
     },
     known: (date) => checkpoints.get(date)?.revision,
     observe: (date, revision) => {
-      if (unsafe) {
-        return false;
-      }
       const checkpoint = checkpoints.get(date);
       if (checkpoint === undefined) {
-        return true;
+        const admittedRevision = admissions.get(date);
+        return (
+          !guarded ||
+          (admittedRevision !== undefined && revision >= admittedRevision)
+        );
       }
       if (revision < checkpoint.revision) {
         return false;
       }
+      admit(date, revision);
       checkpoints.set(date, {
         ...checkpoint,
         observedRevision: Math.max(checkpoint.observedRevision, revision),
@@ -110,23 +126,26 @@ export const createConfirmedRevisionTracker = (
       return true;
     },
     beginLoad: () => {
-      if (unsafe) {
-        return;
-      }
       const loader = { id: nextLoaderId, generation };
       nextLoaderId += 1;
       outstanding.set(loader.id, loader.generation);
       return loader;
     },
     completeLoad: (loader, date, revision) => {
-      if (!outstanding.has(loader.id) || unsafe) {
-        finish(loader);
-        return 'unsafe';
+      const started = outstanding.get(loader.id);
+      if (started === undefined) {
+        return 'retry';
+      }
+      if (started < freshnessFloor) {
+        outstanding.set(loader.id, generation);
+        return 'retry';
       }
       const checkpoint = checkpoints.get(date);
       if (checkpoint !== undefined && revision < checkpoint.revision) {
+        outstanding.set(loader.id, generation);
         return 'retry';
       }
+      admit(date, revision);
       finish(loader);
       return 'accept';
     },
@@ -143,9 +162,6 @@ type RevisionedJournalDay = {
   };
 };
 
-const unsafeTrackerMessage =
-  'Confirmed journal revisions cannot be tracked safely in this session.';
-
 /** Repeat bounded reads without dropping the generation of the first read. */
 export const loadAfterConfirmedRevision = async <
   Day extends RevisionedJournalDay,
@@ -154,9 +170,6 @@ export const loadAfterConfirmedRevision = async <
   tracker: ConfirmedRevisionTracker = confirmedRevisions,
 ): Promise<Day> => {
   const loader = tracker.beginLoad();
-  if (loader === undefined) {
-    throw new Error(unsafeTrackerMessage);
-  }
 
   const readCurrent = async (remaining: number): Promise<Day> => {
     const loaded = await load();
@@ -167,9 +180,6 @@ export const loadAfterConfirmedRevision = async <
     );
     if (result === 'accept') {
       return loaded;
-    }
-    if (result === 'unsafe') {
-      throw new Error(unsafeTrackerMessage);
     }
     if (remaining === 1) {
       tracker.abandonLoad(loader);

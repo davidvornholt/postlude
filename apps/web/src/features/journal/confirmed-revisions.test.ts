@@ -3,7 +3,7 @@ import {
   createConfirmedRevisionTracker,
   loadAfterConfirmedRevision,
 } from './confirmed-revisions.ts';
-import type { JournalDate } from './journal-day.ts';
+import { type JournalDate, shiftJournalDate } from './journal-day.ts';
 
 const day = (date: JournalDate, revision: number) => ({
   entry: { date, revision },
@@ -78,21 +78,65 @@ it('keeps parallel pre-confirmation loads ordered independently', async () => {
   expect(tracker.known('2026-08-27')).toBeUndefined();
 });
 
-it('fails closed instead of evicting a checkpoint under capacity pressure', async () => {
+it('refreshes an old loader after its checkpoint leaves the bounded map', async () => {
   const tracker = createConfirmedRevisionTracker(2);
   const pending = deferred<ReturnType<typeof day>>();
-  const load = loadAfterConfirmedRevision(() => pending.promise, tracker);
+  let calls = 0;
+  const load = loadAfterConfirmedRevision(() => {
+    calls += 1;
+    return calls === 1
+      ? pending.promise
+      : Promise.resolve(day('2026-08-25', 2));
+  }, tracker);
 
   tracker.record('2026-08-25', 2);
   tracker.record('2026-08-26', 1);
   tracker.record('2026-08-27', 1);
+  expect(tracker.observe('2026-08-25', 1)).toBe(false);
   pending.resolve(day('2026-08-25', 1));
 
-  await expect(load).rejects.toThrow('cannot be tracked safely');
-  expect(tracker.known('2026-08-25')).toBe(2);
+  await expect(load).resolves.toEqual(day('2026-08-25', 2));
+  expect(calls).toBe(2);
+  expect(tracker.observe('2026-08-25', 2)).toBe(true);
+  expect(tracker.known('2026-08-25')).toBeUndefined();
   expect(tracker.known('2026-08-26')).toBe(1);
-  expect(tracker.known('2026-08-27')).toBeUndefined();
-  expect(tracker.observe('2026-08-25', 2)).toBe(false);
+  expect(tracker.known('2026-08-27')).toBe(1);
+});
+
+it('allows fresh navigation after more dates than either bounded map holds', async () => {
+  const tracker = createConfirmedRevisionTracker(2);
+  const visitedDayCount = 35;
+  const visitedDays = Array.from({ length: visitedDayCount }, (_, offset) =>
+    shiftJournalDate('2026-07-01', offset),
+  );
+
+  for (const date of visitedDays) {
+    tracker.record(date, 2);
+  }
+  const navigate = async (offset: number): Promise<void> => {
+    const date = visitedDays[offset];
+    if (date === undefined) {
+      return;
+    }
+    const loaded = await loadAfterConfirmedRevision(
+      () => Promise.resolve(day(date, 2)),
+      tracker,
+    );
+    expect(tracker.observe(date, loaded.entry.revision)).toBe(true);
+    return navigate(offset + 1);
+  };
+  await navigate(0);
+
+  const [first] = visitedDays;
+  if (first === undefined) {
+    throw new Error('The navigation fixture must include a first day.');
+  }
+  expect(tracker.observe(first, 1)).toBe(false);
+  const revisited = await loadAfterConfirmedRevision(
+    () => Promise.resolve(day(first, 2)),
+    tracker,
+  );
+  expect(tracker.observe(first, revisited.entry.revision)).toBe(true);
 });
 
 it('does not let an older confirmation lower a known revision', () => {
