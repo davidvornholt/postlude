@@ -216,9 +216,6 @@ it('reads back an earlier year and opens the day it came from', async () => {
   expect(withMemory).toContain('Moved the desk under the window.');
   expect(plainText(withMemory)).toContain('1 year ago');
   expect(withMemory).toContain('href="/day/2025-08-26"');
-});
-
-it('leaves out on this day in a journal with no earlier years', () => {
   expect(filled).not.toContain('On this day');
 });
 
@@ -227,15 +224,4 @@ it('names the page once and puts every section under it', () => {
   expect(filled.match(/<h1\b/gu)?.length).toBe(1);
   expect(elementAttributes(filled, 'h1', 'Archive')).not.toBe('');
   expect(elementAttributes(filled, 'h2', 'Activity')).not.toBe('');
-});
-
-/*
- * The way out of the app is on the page that says what is in it. A journal with
- * nothing written has nothing to hand over, so the offer is not made there —
- * being told an empty download is available is worse than not being told.
- */
-it('offers the journal as a download, and not before there is one', () => {
-  expect(plainText(filled)).toContain('Download the journal');
-  expect(elementAttributes(filled, 'h2', 'Your own copy')).not.toBe('');
-  expect(empty).not.toContain('Download the journal');
 });

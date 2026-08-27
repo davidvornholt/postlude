@@ -37,9 +37,14 @@ const emptyComponent = () => null;
 
 /** The same small router for server markup and hydrated browser fixtures. */
 export const createRenderingRouter = (element: ReactNode) => {
+  const queryClient = new QueryClient();
   // The subject is the root route's own component, so no `<Outlet />` is
   // rendered and the placeholder pages below never appear in the markup.
-  const rootRoute = createRootRoute({ component: () => element });
+  const rootRoute = createRootRoute({
+    component: () => (
+      <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>
+    ),
+  });
   return createRouter({
     history: createMemoryHistory({ initialEntries: ['/'] }),
     routeTree: rootRoute.addChildren(
@@ -57,9 +62,5 @@ export const createRenderingRouter = (element: ReactNode) => {
 export const renderInRouter = async (element: ReactNode): Promise<string> => {
   const router = createRenderingRouter(element);
   await router.load();
-  return renderToString(
-    <QueryClientProvider client={new QueryClient()}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>,
-  );
+  return renderToString(<RouterProvider router={router} />);
 };

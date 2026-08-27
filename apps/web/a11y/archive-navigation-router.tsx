@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -31,6 +32,7 @@ type ArchiveNavigationDependencies = {
 
 const navigationClass =
   'mx-auto flex w-full max-w-[76rem] justify-end px-5 pt-5 sm:px-8';
+const queryClient = new QueryClient();
 
 const FixtureShell = () => {
   const router = useRouter();
@@ -47,7 +49,7 @@ const FixtureShell = () => {
   };
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <nav aria-label="Journal sections" className={navigationClass}>
         <Link onClick={openArchive} preload={false} to="/archive">
           Open archive
@@ -56,7 +58,7 @@ const FixtureShell = () => {
       <main data-fixture-route={pathname}>
         <Outlet />
       </main>
-    </>
+    </QueryClientProvider>
   );
 };
 
