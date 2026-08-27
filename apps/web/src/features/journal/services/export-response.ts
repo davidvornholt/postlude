@@ -1,6 +1,7 @@
 /** Prepares the journal archive response for the authenticated route POST. */
 
 import { env } from '#/shared/env.ts';
+import type { ApplicationStyleSheetHrefs } from '#/shared/ui/application-style-sheets.ts';
 import { exportFileName } from '../export-archive.ts';
 import { exportDownloadResponse } from './download-response.ts';
 import { journalExportStream } from './export-stream.ts';
@@ -13,7 +14,7 @@ import { journalReadableStream } from './journal-runtime.ts';
  */
 export const exportJournalResponse = async (
   signal: AbortSignal,
-  styleSheetHref: string,
+  styleSheetHrefs: ApplicationStyleSheetHrefs,
 ): Promise<Response> => {
   let journalDate: string | undefined;
   const body = await journalReadableStream(
@@ -30,6 +31,6 @@ export const exportJournalResponse = async (
       return exportFileName(journalDate);
     },
     signal,
-    styleSheetHref,
+    styleSheetHrefs,
   });
 };

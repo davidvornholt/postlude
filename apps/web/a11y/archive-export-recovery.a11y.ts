@@ -7,8 +7,9 @@ import { runSessionRequired } from '../src/shared/auth/session-required.ts';
 import {
   answerWithUnavailableExport,
   privateFailureDetail,
-  productionStyleSheetHref,
+  productionStyleSheetHrefs,
   recoveryActionContrasts,
+  recoveryFonts,
 } from './archive-export-recovery-test-support.ts';
 import type { ArchivePageFixtureConfig } from './archive-page-fixture-contract.ts';
 import { mountArchivePage, scanArchive } from './archive-page-test-support.ts';
@@ -123,9 +124,9 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    const styleSheetHref = await productionStyleSheetHref(page);
+    const styleSheetHrefs = await productionStyleSheetHrefs(page);
     await page.route(exportRoute, (route) =>
-      answerWithUnavailableExport(route, styleSheetHref),
+      answerWithUnavailableExport(route, styleSheetHrefs),
     );
     await mountArchivePage(page, referenceOnly);
     const responsePromise = page.waitForResponse(exportRoute);
@@ -144,10 +145,19 @@ for (const colorScheme of colorSchemes) {
       page.getByRole('heading', { level: 1, name: 'Export unavailable' }),
     ).toBeVisible();
     const recovery = page.getByRole('link', { name: 'Return to archive' });
-    await expect(page.locator(`link[href="${styleSheetHref}"]`)).toHaveCount(1);
+    await Promise.all(
+      styleSheetHrefs.map((href) =>
+        expect(page.locator(`link[href="${href}"]`)).toHaveCount(1),
+      ),
+    );
     await expect(recovery).toBeFocused();
     await expect(page.getByText('Your journal is unchanged.')).toBeVisible();
     await expect(page.locator('body')).not.toContainText(privateFailureDetail);
+    const fonts = await recoveryFonts(page);
+    expect(fonts.bodyFamily).toContain('Inter Variable');
+    expect(fonts.displayFamily).toContain('Fraunces Variable');
+    expect(fonts.interLoaded).toBe(true);
+    expect(fonts.frauncesLoaded).toBe(true);
     const contrasts = await recoveryActionContrasts(page, recovery);
     expect(contrasts.hoverText).toBeGreaterThanOrEqual(textContrastMinimum);
     expect(contrasts.focusIndicator).toBeGreaterThanOrEqual(

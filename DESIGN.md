@@ -16,7 +16,7 @@ This file states the intent. The values live in `packages/ui/src/theme.css` and 
 
 ## Type
 
-Fraunces for display, Inter for everything set as text, both loaded once in `__root.tsx`. Fraunces carries an optical size axis, so its display cut sharpens on its own as the type grows. Inter stays quiet and holds tabular figures, which the archive needs. Faces resolve through `--pl-font-display`, `--pl-font-sans`, and `--pl-font-mono` rather than being named in components.
+Fraunces for display, Inter for everything set as text. `apps/web/src/shared/ui/application-style-sheets.ts` owns their stylesheets together with the app stylesheet, and both the root document and the standalone export recovery document load that complete list. Fraunces carries an optical size axis, so its display cut sharpens on its own as the type grows. Inter stays quiet and holds tabular figures, which the archive needs. Faces resolve through `--pl-font-display`, `--pl-font-sans`, and `--pl-font-mono` rather than being named in components.
 
 The monospace face is a third token but not a third webfont: it is the device's own stack and is loaded by nobody. Markdown can hold a fenced code block, where the alignment is the content and a proportional face destroys it, and a journal that contains one every few months does not deserve a download for it.
 

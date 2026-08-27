@@ -2,6 +2,7 @@ import {
   applyPrivateResponseHeaders,
   privateHtmlRecoveryResponse,
 } from '#/shared/auth/private-response.ts';
+import type { ApplicationStyleSheetHrefs } from '#/shared/ui/application-style-sheets.ts';
 
 export const exportUnavailableMessage =
   'Postlude could not prepare the download. Your journal is unchanged.';
@@ -11,16 +12,18 @@ type ExportResponseOptions = {
   /** Resolved after preflight, once the snapshot has supplied its journal day. */
   readonly fileName: () => string;
   readonly signal: AbortSignal;
-  readonly styleSheetHref: string;
+  readonly styleSheetHrefs: ApplicationStyleSheetHrefs;
 };
 
-const unavailableResponse = (styleSheetHref: string): Response =>
+const unavailableResponse = (
+  styleSheetHrefs: ApplicationStyleSheetHrefs,
+): Response =>
   privateHtmlRecoveryResponse({
     actionHref: '/archive',
     actionLabel: 'Return to archive',
     heading: 'Export unavailable',
     message: exportUnavailableMessage,
-    styleSheetHref,
+    styleSheetHrefs,
     title: 'Export unavailable | Postlude',
   });
 
@@ -33,7 +36,7 @@ export const exportDownloadResponse = async ({
   body,
   fileName,
   signal,
-  styleSheetHref,
+  styleSheetHrefs,
 }: ExportResponseOptions): Promise<Response> => {
   const reader = body.getReader();
   let settled = false;
@@ -61,7 +64,7 @@ export const exportDownloadResponse = async ({
     if (first.done || settled) {
       finish();
       await reader.cancel();
-      return unavailableResponse(styleSheetHref);
+      return unavailableResponse(styleSheetHrefs);
     }
     const preparedFileName = fileName();
 
@@ -96,6 +99,6 @@ export const exportDownloadResponse = async ({
   } catch {
     finish();
     await reader.cancel().catch(() => undefined);
-    return unavailableResponse(styleSheetHref);
+    return unavailableResponse(styleSheetHrefs);
   }
 };

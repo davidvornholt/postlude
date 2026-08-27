@@ -9,34 +9,44 @@ import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response
 import { runSessionRequired } from '../src/shared/auth/session-required.ts';
 
 const exportFileName = 'postlude-2026-08-26.zip';
-const appStyleSheet = /^\/assets\/styles-[A-Za-z\d_-]+\.css$/u;
+const styleSheetAssets = [
+  /^\/assets\/index-[A-Za-z\d_-]+\.css$/u,
+  /^\/assets\/standard-(?!italic-)[A-Za-z\d_-]+\.css$/u,
+  /^\/assets\/standard-italic-[A-Za-z\d_-]+\.css$/u,
+  /^\/assets\/styles-[A-Za-z\d_-]+\.css$/u,
+] as const;
 
 export const privateFailureDetail = 'database diagnostic for private journal';
 
-export const productionStyleSheetHref = async (
+export const productionStyleSheetHrefs = async (
   page: playwright.Page,
-): Promise<string> => {
+): Promise<readonly [string, ...Array<string>]> => {
   await page.goto('/login');
-  const assets = (
-    await page
-      .locator('link')
-      .evaluateAll((links) =>
-        links
-          .filter((link) => (link as HTMLLinkElement).rel === 'stylesheet')
-          .map((link) => new URL((link as HTMLLinkElement).href).pathname),
-      )
-  ).filter((asset) => appStyleSheet.test(asset));
-  if (assets.length !== 1) {
+  const assets = await page
+    .locator('link')
+    .evaluateAll((links) =>
+      links
+        .filter((link) => (link as HTMLLinkElement).rel === 'stylesheet')
+        .map((link) => new URL((link as HTMLLinkElement).href).pathname),
+    );
+  const unexpected = assets.filter(
+    (asset) => !styleSheetAssets.some((pattern) => pattern.test(asset)),
+  );
+  const missing = styleSheetAssets.filter(
+    (pattern) => assets.filter((asset) => pattern.test(asset)).length !== 1,
+  );
+  const [first, ...rest] = assets;
+  if (first === undefined || unexpected.length > 0 || missing.length > 0) {
     throw new Error(
-      `Expected one compiled Postlude stylesheet, found ${assets.length}.`,
+      `Expected the four canonical production stylesheets, found ${assets.join(', ')}.`,
     );
   }
-  return assets[0] ?? '';
+  return [first, ...rest];
 };
 
 export const answerWithUnavailableExport = async (
   route: playwright.Route,
-  styleSheetHref: string,
+  styleSheetHrefs: readonly [string, ...Array<string>],
 ): Promise<void> => {
   const body = new ReadableStream<Uint8Array>({
     start: (controller) => controller.error(new Error(privateFailureDetail)),
@@ -45,7 +55,7 @@ export const answerWithUnavailableExport = async (
     body,
     fileName: () => exportFileName,
     signal: new AbortController().signal,
-    styleSheetHref,
+    styleSheetHrefs,
   });
   const request = new Request(route.request().url(), { method: 'POST' });
   const handler = requestHandler(() =>
@@ -63,6 +73,39 @@ export const answerWithUnavailableExport = async (
     status: result.status,
   });
 };
+
+type RecoveryFonts = {
+  readonly bodyFamily: string;
+  readonly displayFamily: string;
+  readonly frauncesLoaded: boolean;
+  readonly interLoaded: boolean;
+};
+
+export const recoveryFonts = async (
+  page: playwright.Page,
+): Promise<RecoveryFonts> =>
+  page.evaluate(async () => {
+    const inter = '16px "Inter Variable"';
+    const fraunces = '48px "Fraunces Variable"';
+    const heading = document.querySelector('h1');
+    if (heading === null) {
+      throw new Error('The recovery heading is missing.');
+    }
+    const [interFaces, frauncesFaces] = await Promise.all([
+      document.fonts.load(inter, 'Postlude'),
+      document.fonts.load(fraunces, 'Export unavailable'),
+    ]);
+    await document.fonts.ready;
+    return {
+      bodyFamily: getComputedStyle(document.body).fontFamily,
+      displayFamily: getComputedStyle(heading).fontFamily,
+      frauncesLoaded:
+        frauncesFaces.length > 0 &&
+        document.fonts.check(fraunces, 'Export unavailable'),
+      interLoaded:
+        interFaces.length > 0 && document.fonts.check(inter, 'Postlude'),
+    };
+  });
 
 type RecoveryContrasts = {
   readonly focusIndicator: number;

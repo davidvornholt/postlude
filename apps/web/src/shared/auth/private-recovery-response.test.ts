@@ -9,6 +9,7 @@ import { runSessionRequired } from './session-required.ts';
 
 const internalServerError = 500;
 const serviceUnavailable = 503;
+const styleSheetCount = 3;
 
 const recoveryResponse = (): Response =>
   privateHtmlRecoveryResponse({
@@ -16,7 +17,11 @@ const recoveryResponse = (): Response =>
     actionLabel: 'Return to archive',
     heading: 'Export unavailable',
     message: 'The export could not be prepared.',
-    styleSheetHref: '/assets/postlude.css',
+    styleSheetHrefs: [
+      '/assets/inter.css',
+      '/assets/fraunces.css',
+      '/assets/postlude.css',
+    ],
     title: 'Export unavailable | Postlude',
   });
 
@@ -57,9 +62,12 @@ describe('approved private recovery responses', () => {
       'text/html; charset=utf-8',
     );
     const document = await response.text();
-    expect(document).toContain(
-      '<link rel="stylesheet" href="/assets/postlude.css">',
+    expect(document.match(/<link rel="stylesheet"/gu)).toHaveLength(
+      styleSheetCount,
     );
+    expect(document).toContain('href="/assets/inter.css"');
+    expect(document).toContain('href="/assets/fraunces.css"');
+    expect(document).toContain('href="/assets/postlude.css"');
     expect(document).not.toContain('<style>');
   });
 
