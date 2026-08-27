@@ -3,14 +3,15 @@
  *
  * The field owns the query in memory after hydration. A native form submits
  * the same words in a POST body, so neither path puts journal language in the
- * address or the browser's navigation history. Results never replace the
- * field, which keeps the writer's input and focus in place while the answer
- * below it changes.
+ * address or syncable URL history. A local browser can retain a POST body for
+ * navigation recovery. Results never replace the field, which keeps the
+ * writer's input and focus in place while the answer below it changes.
  */
 
 import {
   type ChangeEvent,
   type SubmitEvent,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -18,7 +19,9 @@ import {
 
 import { columnClass } from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { searchFailureKind } from '../errors/search-errors.ts';
 import {
+  searchAuthenticationMessage,
   searchQueryLengthLimit,
   searchUnavailableMessage,
 } from '../search-contract.ts';
@@ -29,6 +32,7 @@ import { searchStatus } from './search-status.ts';
 
 export type SearchPageView =
   | { readonly state: 'answered'; readonly results: SearchResults }
+  | { readonly state: 'authentication-required'; readonly query: string }
   | { readonly state: 'failed'; readonly query: string }
   | { readonly state: 'invalid'; readonly query: string };
 
@@ -45,6 +49,7 @@ const queryOf = (view: SearchPageView): string =>
   view.state === 'answered' ? view.results.query : view.query;
 
 const statusWording = {
+  'authentication-required': 'Sign-in required.',
   failed: 'Search failed.',
   invalid: 'Search not sent.',
   pending: 'Searching.',
@@ -69,8 +74,15 @@ export const SearchPage = ({
   const errorId = useId();
   const formId = useId();
   const fieldRef = useRef<HTMLInputElement>(null);
+  const signInRef = useRef<HTMLAnchorElement>(null);
   const [query, setQuery] = useState(() => queryOf(view));
   const [state, setState] = useState<SearchState>(view);
+
+  useEffect(() => {
+    if (state.state === 'authentication-required') {
+      signInRef.current?.focus();
+    }
+  }, [state.state]);
 
   const submitQuery = async (nextQuery: string) => {
     if (nextQuery.length > searchQueryLengthLimit) {
@@ -84,13 +96,20 @@ export const SearchPage = ({
         data: nextQuery === '' ? {} : { q: nextQuery },
       });
       setState({ state: 'answered', results });
-    } catch {
-      setState({ state: 'failed', query: nextQuery });
+    } catch (error) {
+      setState({
+        state:
+          searchFailureKind(error) === 'authentication'
+            ? 'authentication-required'
+            : 'failed',
+        query: nextQuery,
+      });
     }
   };
 
   const submit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
+    fieldRef.current?.focus();
     submitQuery(query).catch(() => undefined);
   };
   const change = (event: ChangeEvent<HTMLInputElement>) => {
@@ -145,6 +164,20 @@ export const SearchPage = ({
             >
               Try again
             </button>
+          </div>
+        ) : null}
+        {state.state === 'authentication-required' ? (
+          <div className="mt-10">
+            <p className="max-w-prose text-ink-muted text-lg">
+              {searchAuthenticationMessage}
+            </p>
+            <a
+              className={[quietButtonClass, 'mt-5 inline-block'].join(' ')}
+              href="/login"
+              ref={signInRef}
+            >
+              Sign in again
+            </a>
           </div>
         ) : null}
       </div>

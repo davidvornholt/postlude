@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 import { searchUnavailableMessage } from '../search-contract.ts';
-import { searchTransportBoundary } from './search-errors.ts';
+import { searchFailureKind, searchTransportBoundary } from './search-errors.ts';
 
 it('removes internal causes before a search failure reaches transport', async () => {
   const internal = new Error(
@@ -23,4 +23,16 @@ it('removes internal causes before a search failure reaches transport', async ()
   expect(transported).not.toContain('private-credential');
   expect(transported).not.toContain('private_entry');
   expect(transported).not.toContain('cause');
+});
+
+it('recognizes an expired session only from its safe public status', () => {
+  expect(
+    searchFailureKind(new Response('Not authorized.', { status: 401 })),
+  ).toBe('authentication');
+  expect(searchFailureKind({ status: 403, private: 'must not be shown' })).toBe(
+    'authentication',
+  );
+  expect(searchFailureKind(new Error('private database detail'))).toBe(
+    'unavailable',
+  );
 });

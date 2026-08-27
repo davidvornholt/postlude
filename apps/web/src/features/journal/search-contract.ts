@@ -6,6 +6,8 @@ import type { SearchMatch } from './services/entry-search.ts';
 export const searchQueryLengthLimit = 200;
 export const searchUnavailableMessage =
   'Search is unavailable right now. Try again in a moment.';
+export const searchAuthenticationMessage =
+  'Your sign-in ended before the search finished. Sign in again to search your journal.';
 
 export const SearchQuery = Schema.Struct({
   q: Schema.optional(
@@ -18,42 +20,63 @@ export type SearchQueryParams = Schema.Schema.Type<typeof SearchQuery>;
 export type SearchHit = {
   readonly date: string;
   readonly words: number;
-  /** Where the passage is what matched, so the excerpt is not the evening's. */
-  readonly fromScripture: boolean;
-  readonly excerpt: ReadonlyArray<ExcerptSegment>;
+  /** Every visible source that contributed one or more words to the match. */
+  readonly sources: ReadonlyArray<SearchHitSource>;
 };
 
-const matchedSegments = (excerpt: ReadonlyArray<ExcerptSegment>): number =>
-  excerpt.filter((segment) => segment.match).length;
+export type SearchHitSourceKind =
+  | 'evening'
+  | 'passage-reference'
+  | 'scripture-notes';
 
-const strongestExcerpt = (
+export type SearchHitSource = {
+  readonly kind: SearchHitSourceKind;
+  /** One excerpt per matched term, so distant terms remain visible. */
+  readonly excerpts: ReadonlyArray<ReadonlyArray<ExcerptSegment>>;
+};
+
+const hasMatch = (excerpt: ReadonlyArray<ExcerptSegment>): boolean =>
+  excerpt.some((segment) => segment.match);
+
+const matchedExcerpts = (
   texts: ReadonlyArray<string>,
   terms: ReadonlyArray<string>,
-): ReadonlyArray<ExcerptSegment> =>
-  texts
-    .map((text) => searchExcerpt(text, terms))
-    .reduce<ReadonlyArray<ExcerptSegment>>(
-      (strongest, candidate) =>
-        matchedSegments(candidate) > matchedSegments(strongest)
-          ? candidate
-          : strongest,
-      [],
-    );
+): ReadonlyArray<ReadonlyArray<ExcerptSegment>> => {
+  const candidates = terms.flatMap((term) =>
+    texts.map((text) => searchExcerpt(text, [term])).filter(hasMatch),
+  );
+  return [
+    ...new Map(
+      candidates.map((excerpt) => [
+        excerpt.map(({ match, text }) => `${match ? '1' : '0'}:${text}`).join(),
+        excerpt,
+      ]),
+    ).values(),
+  ];
+};
 
-/** Selects the source that visibly explains the database match most strongly. */
+const sourceOf = (
+  kind: SearchHitSourceKind,
+  texts: ReadonlyArray<string>,
+  terms: ReadonlyArray<string>,
+): SearchHitSource | undefined => {
+  const excerpts = matchedExcerpts(texts, terms);
+  return excerpts.length === 0 ? undefined : { kind, excerpts };
+};
+
+/** Keeps enough attributed evidence to explain every term in a database match. */
 export const searchHitOf =
   (terms: ReadonlyArray<string>) =>
-  (match: SearchMatch): SearchHit => {
-    const evening = searchExcerpt(match.journalText, terms);
-    const morning = strongestExcerpt(
-      [match.scriptureText, ...match.scriptureReferenceText.split('\n')],
-      terms,
-    );
-    const fromScripture = matchedSegments(morning) > matchedSegments(evening);
-    return {
-      date: match.date,
-      words: match.words,
-      fromScripture,
-      excerpt: fromScripture ? morning : evening,
-    };
-  };
+  (match: SearchMatch): SearchHit => ({
+    date: match.date,
+    words: match.words,
+    sources: [
+      sourceOf('evening', [match.journalText], terms),
+      sourceOf('scripture-notes', [match.scriptureText], terms),
+      sourceOf(
+        'passage-reference',
+        match.scriptureReferenceText.split('\n'),
+        terms,
+      ),
+    ].filter((source): source is SearchHitSource => source !== undefined),
+  });

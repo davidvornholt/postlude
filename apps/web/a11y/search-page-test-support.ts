@@ -93,7 +93,10 @@ export const mountNativeSearch = async (
   page: playwright.Page,
   outcome: 'error' | 'populated',
   query: string,
-): Promise<{ readonly submittedBody: () => string }> => {
+): Promise<{
+  readonly submittedBodies: () => ReadonlyArray<string>;
+  readonly submittedMethods: () => ReadonlyArray<string>;
+}> => {
   const initialAssets = await assetsFor('populated');
   const responseConfig: SearchPageFixtureConfig = {
     outcome,
@@ -103,9 +106,11 @@ export const mountNativeSearch = async (
         : searchFixtureView(outcome, query),
   };
   const responseAssets = await buildSearchPageFixture(responseConfig);
-  let body = '';
+  let bodies: ReadonlyArray<string> = [];
+  let methods: ReadonlyArray<string> = [];
   await page.route(`${baseUrl}search`, async (route) => {
-    body = route.request().postData() ?? '';
+    bodies = [...bodies, route.request().postData() ?? ''];
+    methods = [...methods, route.request().method()];
     await route.fulfill({
       body: documentOf(
         responseAssets.markup,
@@ -117,5 +122,8 @@ export const mountNativeSearch = async (
     });
   });
   await page.setContent(documentOf(initialAssets.markup, initialAssets.styles));
-  return { submittedBody: () => body };
+  return {
+    submittedBodies: () => bodies,
+    submittedMethods: () => methods,
+  };
 };

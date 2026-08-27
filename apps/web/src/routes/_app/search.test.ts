@@ -6,6 +6,7 @@ const today = '2026-08-26';
 const overLimitLength = 201;
 let searches: ReadonlyArray<unknown> = [];
 let rejects = false;
+let unauthorized = false;
 
 const answered = (query: string): SearchResults => ({
   query,
@@ -20,6 +21,9 @@ const search = (input: unknown): Promise<SearchResults> => {
   if (rejects) {
     return Promise.reject(new Error('private database detail'));
   }
+  if (unauthorized) {
+    return Promise.reject(new Response('Not authorized.', { status: 401 }));
+  }
   const q = (input as { data?: { q?: string } }).data?.q ?? '';
   return Promise.resolve(answered(q));
 };
@@ -27,6 +31,7 @@ const search = (input: unknown): Promise<SearchResults> => {
 beforeEach(() => {
   searches = [];
   rejects = false;
+  unauthorized = false;
 });
 
 const { handleSearchPost, loadSearchView } = await import(
@@ -86,5 +91,14 @@ it('turns a private server failure into a retryable page state', async () => {
   rejects = true;
   await expect(submit('rain')).resolves.toMatchObject({
     context: { searchView: { state: 'failed', query: 'rain' } },
+  });
+});
+
+it('turns an expired native session into a sign-in recovery state', async () => {
+  unauthorized = true;
+  await expect(submit('rain')).resolves.toMatchObject({
+    context: {
+      searchView: { state: 'authentication-required', query: 'rain' },
+    },
   });
 });

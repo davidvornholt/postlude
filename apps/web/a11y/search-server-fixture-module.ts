@@ -21,21 +21,47 @@ const longToken = `rain${'water'.repeat(longTokenRepeat)}`;
 const hit = (query: string): SearchHit => ({
   date: '2026-03-01',
   words,
-  fromScripture: false,
-  excerpt: searchExcerpt(
-    `The private ${longToken} returned after dusk.`,
-    searchTerms(query),
-  ),
+  sources: [
+    {
+      kind: 'evening',
+      excerpts: [
+        searchExcerpt(
+          `The private ${longToken} returned after dusk.`,
+          searchTerms(query),
+        ),
+      ],
+    },
+  ],
+});
+
+const multiSourceHit = (): SearchHit => ({
+  date: '2026-03-01',
+  words,
+  sources: [
+    {
+      kind: 'evening',
+      excerpts: [searchExcerpt('Rain returned after dusk.', ['rain'])],
+    },
+    {
+      kind: 'scripture-notes',
+      excerpts: [searchExcerpt('Mercy met the morning.', ['mercy'])],
+    },
+    {
+      kind: 'passage-reference',
+      excerpts: [searchExcerpt('Sprüche 12:5', ['sprüche'])],
+    },
+  ],
 });
 
 export const searchFixtureAnswer = (
   query: string,
   limited: boolean,
+  multiSource = false,
 ): SearchResults => ({
   query,
   today,
   terms: searchTerms(query),
-  hits: [hit(query)],
+  hits: [multiSource ? multiSourceHit() : hit(query)],
   limited,
 });
 
@@ -43,6 +69,9 @@ export const searchFixtureView = (
   outcome: Exclude<SearchFixtureOutcome, 'loading'>,
   query: string,
 ): SearchPageView => {
+  if (outcome === 'authentication') {
+    return { state: 'authentication-required', query };
+  }
   if (outcome === 'error') {
     return { state: 'failed', query };
   }
@@ -79,9 +108,14 @@ export const searchJournalFn = async ({
   if (config.outcome === 'error') {
     throw new Error('private fixture detail');
   }
+  if (config.outcome === 'authentication') {
+    throw new Response('Not authorized.', { status: 401 });
+  }
   const view = searchFixtureView(config.outcome, query);
   if (view.state !== 'answered') {
     throw new Error('A failed fixture must reject before producing a view.');
   }
-  return view.results;
+  return config.outcome === 'multi-source'
+    ? searchFixtureAnswer(query, false, true)
+    : view.results;
 };
