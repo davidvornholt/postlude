@@ -1,6 +1,6 @@
 {
-  "id": "94771132-e04e-433e-b04a-8c78ff166c37",
-  "prevId": "f3b0b0bf-582a-4658-a6d5-cd029d14d412",
+  "id": "ced613b0-d894-45ae-a5a5-349dfc0d07db",
+  "prevId": "94771132-e04e-433e-b04a-8c78ff166c37",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -80,19 +80,19 @@
           "name": "journal_search_text",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "scripture_search_text": {
           "name": "scripture_search_text",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "scripture_reference_search_text": {
           "name": "scripture_reference_search_text",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -107,9 +107,35 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "to_tsvector('simple', journal_search_text || ' ' || scripture_search_text || ' ' || scripture_reference_search_text)",
+            "type": "stored"
+          }
         }
       },
-      "indexes": {},
+      "indexes": {
+        "entry_search_vector_index": {
+          "name": "entry_search_vector_index",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

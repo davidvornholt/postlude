@@ -7,7 +7,7 @@ The Postlude application: TanStack Start + Vite on Bun, GitHub OAuth via better-
 ```sh
 just dev-env-generate                      # compose .env.local from config/dev.yaml + secrets/dev.yaml
 just dev-db-start                          # local Postgres container (postlude-dev-postgres)
-bun run --cwd ../../packages/db db:migrate # apply migrations; a freshly created container is empty
+bun run db:migrate                         # apply generated and application migrations
 bun run dev                                # vite dev server on port 3000
 ```
 
@@ -60,7 +60,7 @@ Both editors render safe semantic Markdown on the server and hand over to Tiptap
 
 `src/features/journal/services/journal-runtime.ts` is the journal's single seam between Effect and the rest of the app, as `AGENTS.local.md` describes: journal services keep typed error and requirement channels, and everything above the seam — server functions, React Query, components — stays on plain promises. The feature owns its service composition and depends on the shared database pool; shared code never imports the journal feature. The runtime is built lazily, because building it opens the pool, and a pool must not be opened merely because a client bundle imported a route module.
 
-The repository's own tests run against a real Postgres, since whether an upsert replaces a row and whether a DATE column survives the round trip are properties of the database rather than of the code. `src/shared/testing/test-database.ts` creates the configured database with `_test` appended, migrates it from the same generated migrations the app deploys, and rolls every test body back, so the journal you write in is never touched. `DATABASE_URL` must be present: a database test that silently skips is a gate that silently does not hold.
+The repository's own tests run against a real Postgres, since whether an upsert replaces a row and whether a DATE column survives the round trip are properties of the database rather than of the code. `src/shared/testing/test-database.ts` creates the configured database with `_test` appended, applies the same generated and application migrations the app deploys, and rolls every ordinary test body back, so the journal you write in is never touched. The migration upgrade test uses and removes its own isolated database because migration commits cannot live inside that rollback. `DATABASE_URL` must be present: a database test that silently skips is a gate that silently does not hold.
 
 `src/features/journal/testing/database-harness.ts` is what a test file calls to get that: one pool, one migrated database and one Effect runtime holding both journal services. It is a function rather than a module that installs itself on import, because Bun caches a module across the files that import it, so hooks registered at import time would attach to whichever file loaded it first and to no other.
 
@@ -78,7 +78,7 @@ The grid draws a day as a square whose depth is where its word count falls among
 
 ## Search
 
-`/search?q=rain` finds a day by what is written on it. The search is in the address rather than in a component's state, so a search can be bookmarked, shared, and reached with the back button, and the form is a real `GET` form pointed at the same route — without JavaScript it submits and the server answers, and with it the submit is intercepted and the router navigates instead.
+`/search` finds a day by what is written on it without putting the private query in the address, browser history, referrer headers, or routine URL logs. The server function accepts only `POST`. After hydration, the page keeps the query and answer in component memory. Without JavaScript, the native form posts to the same route and the server carries its answer only in that request's context while rendering the response. The privacy tradeoff is deliberate: a search cannot be bookmarked, shared, recovered with Back, or restored after refresh, so the writer must type it again.
 
 The index is a `tsvector` Postgres keeps for every row as a stored generated column over app-owned visible-text projections. Those projections remove hidden Markdown, normalize Unicode to NFKC, and render a scripture reference under every accepted English, German, and alias spelling. The app writes them with the entry, and the database recomputes the vector in that same statement, so every searchable lexeme has a source the result can show and highlight.
 

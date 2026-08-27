@@ -11,6 +11,8 @@
     "generate-routes": "tsr generate",
     "build": "vite build",
     "start": "bun run scripts/serve.ts",
+    "db:migrate": "bun --env-file=.env.local run scripts/migrate.ts",
+    "db:migrate:deploy": "bun run scripts/migrate.ts",
     "check-types": "tsc --noEmit",
     "lint": "biome check --error-on-warnings .",
     "lint:fix": "biome check --write --error-on-warnings .",

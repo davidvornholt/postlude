@@ -10,11 +10,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-/**
- * Postgres's own full-text type. Drizzle has no built-in for it, and the column
- * is never read or written by the app — the database computes it and the search
- * query matches against it — so it needs a name and a type and nothing else.
- */
+/** PostgreSQL's generated full-text search vector. */
 const tsvector = customType<{ data: string; driverData: string }>({
   dataType: () => 'tsvector',
 });

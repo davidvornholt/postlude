@@ -8,7 +8,7 @@ Drizzle schema, migrations, and the shared Postgres pool factory.
 - `src/pool.ts` — `createPool(connectionString)`; one shared pool per process, with an `error` listener so a dropped idle connection is logged instead of crashing the process.
 - `src/postgres-date.ts` — `preservePostgresDates()`; installs pg's global DATE parser so a calendar date never passes through a timezone. It applies only to raw `pool.query` reads: Drizzle attaches its own per-query parser that already returns DATE as text, and a per-query parser wins over the global one. Nothing in the app reads outside Drizzle today, so the guard exists to make the first raw query correct by default.
 - `src/effect-client.ts` — `pgClientLayer(pool)`; the Effect SQL client wrapped around a pool this package already created. It only hands the pool over and never opens or closes one, because better-auth's Drizzle adapter holds the same object: one process, one pool, one place the connection string is configured.
-- `src/migrate.ts` / `scripts/migrate.ts` — Effect-wrapped migration runner.
+- `src/migrate.ts` — the staged Drizzle migration runner. It applies generated DDL through a named barrier, runs the application-owned data transformation supplied by the web entrypoint, then applies the remaining generated constraints and indexes.
 
 ## Workflow
 
@@ -16,22 +16,21 @@ Migrations are always generated, never handwritten:
 
 ```sh
 bun run db:generate        # drizzle-kit generate (reads .env.local)
-bun run db:migrate         # apply locally (reads .env.local)
-bun run db:migrate:deploy  # apply with DATABASE_URL from the environment
+bun run --cwd ../../apps/web db:migrate # generated DDL plus application backfills
 ```
 
 `.env.local` is composed by `just dev-env-generate`; the dev Postgres container is managed by `just dev-db-start` (see the repo README).
 
 ## Pre-release migration policy
 
-Until the first deployment, the initial migration may be regenerated in place. No database holds data that has to survive, so a schema fix is made by deleting `drizzle/` and running `bun run db:generate` again, not by stacking a follow-up migration on top.
+Until the first deployment, generated migrations may be regenerated in place. Once a branch has a supported upgrade path, however, each phase must still carry existing local data forward; an empty development database is not an acceptable assumption.
 
 Regenerating invalidates every database that already applied the previous version. Drizzle re-runs any migration whose folder timestamp is newer than the newest one it has recorded, so the regenerated migration runs a second time and fails at `CREATE TABLE` on tables that already exist. Each regeneration therefore requires dropping and re-migrating every local database, `postlude_dev` included:
 
 ```sh
 podman exec postlude-dev-postgres psql -U postlude -d postgres \
   -c 'drop database postlude_dev' -c 'create database postlude_dev'
-bun run db:migrate
+bun run --cwd ../../apps/web db:migrate
 ```
 
 From the first deployment on, migrations are append-only: a schema change adds a new migration and never edits or replaces one that has already been applied anywhere.
@@ -40,4 +39,4 @@ From the first deployment on, migrations are append-only: a schema change adds a
 
 | Variable       | Purpose                                       | Required                                                                                         | Source                                                                       |
 | -------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
-| `DATABASE_URL` | Postgres connection string for the db:* scripts | Required, no default. `drizzle.config.ts` and `scripts/migrate.ts` throw `DATABASE_URL is not set.` when it is missing or empty | `config/dev.yaml` under `packages.db`, generated into `.env.local` by `just dev-env-generate` |
+| `DATABASE_URL` | Postgres connection string for Drizzle generation | Required, no default. `drizzle.config.ts` throws `DATABASE_URL is not set.` when it is missing or empty | `config/dev.yaml` under `packages.db`, generated into `.env.local` by `just dev-env-generate` |

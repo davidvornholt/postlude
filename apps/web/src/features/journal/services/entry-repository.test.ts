@@ -20,6 +20,7 @@ import {
 import type { EntryDraft } from '../schemas/entry.ts';
 import { inArchiveSnapshot } from './archive-snapshot.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { migrateJournalDatabase } from './journal-migration.ts';
 
 let resourceScope: Scope.CloseableScope | undefined;
 let runtime: ManagedRuntime.ManagedRuntime<
@@ -28,7 +29,7 @@ let runtime: ManagedRuntime.ManagedRuntime<
 >;
 
 const acquireRepositoryResources = Effect.gen(function* () {
-  const acquiredPool = yield* openTestDatabase();
+  const acquiredPool = yield* openTestDatabase(migrateJournalDatabase);
   const clientLayer = pgClientLayer(acquiredPool);
   const acquiredRuntime = ManagedRuntime.make(
     Layer.provideMerge(

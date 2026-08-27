@@ -29,6 +29,7 @@ import {
 import type { EntryDraft } from '../schemas/entry.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
 import { EntrySearch } from '../services/entry-search.ts';
+import { migrateJournalDatabase } from '../services/journal-migration.ts';
 
 type JournalServices = EntryRepository | EntrySearch | SqlClient.SqlClient;
 
@@ -49,7 +50,7 @@ export const journalDatabase = () => {
   let runtime: ManagedRuntime.ManagedRuntime<JournalServices, never>;
 
   const acquireResources = Effect.gen(function* () {
-    const pool = yield* openTestDatabase();
+    const pool = yield* openTestDatabase(migrateJournalDatabase);
     const clientLayer = pgClientLayer(pool);
     const acquiredRuntime = ManagedRuntime.make(
       Layer.provideMerge(
