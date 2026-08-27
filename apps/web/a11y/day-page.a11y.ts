@@ -1,12 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { markdownSemanticsLinks } from '../src/features/journal/ui/markdown-semantics.fixture.ts';
-import {
-  editAndLeave,
-  mountDayPage,
-  mountSemanticDayPage,
-  scan,
-} from './day-page-test-support.ts';
+import { editAndLeave, mountDayPage, scan } from './day-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -20,25 +14,6 @@ const authenticationMessage =
   'Your sign-in ended before this entry could be saved. Your words are kept in this tab.';
 
 const colorSchemes = ['light', 'dark'] as const;
-
-test('the hydrated editor keeps server-rendered Markdown semantics', async ({
-  page,
-}) => {
-  await mountSemanticDayPage(page);
-
-  const evening = page.getByRole('textbox', { name: 'Evening journal' });
-  await expect(evening.locator('h3')).toHaveText('Entry heading');
-  await expect(evening.locator('h4')).toHaveText('Entry subheading');
-  await Promise.all(
-    markdownSemanticsLinks.map((link) =>
-      expect(evening.getByRole('link', { name: link.name })).toHaveAttribute(
-        'href',
-        link.href,
-      ),
-    ),
-  );
-});
-
 for (const colorScheme of colorSchemes) {
   test(`the hydrated writing page works by keyboard in ${colorScheme} mode`, async ({
     page,

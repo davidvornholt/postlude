@@ -68,25 +68,30 @@ body {
     margin-top: 1em;
   }
 
-  .journal-prose :is(h1, h2, h3, h4) {
+  .journal-prose :is(h3, h4, h5, h6) {
     font-family: var(--pl-font-display);
     line-height: 1.2;
   }
 
-  .journal-prose :is(h1, h2, h3, h4):not(:first-child) {
+  .journal-prose :is(h3, h4, h5, h6):not(:first-child) {
     margin-top: 1.6em;
   }
 
-  .journal-prose h1 {
+  .journal-prose h3 {
     font-size: 1.6em;
   }
 
-  .journal-prose h2 {
+  .journal-prose h4 {
     font-size: 1.35em;
   }
 
-  .journal-prose h3 {
+  .journal-prose h5 {
     font-size: 1.15em;
+  }
+
+  .journal-prose h6 {
+    font-size: 1em;
+    font-weight: 600;
   }
 
   .journal-prose :is(ul, ol) {
@@ -135,6 +140,7 @@ body {
      the structure, and an underline works on the parchment and on the deep
      ground without a second token. */
   .journal-prose a {
+    padding-block: 0.25em;
     text-decoration: underline;
     text-underline-offset: 0.2em;
   }

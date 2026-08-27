@@ -2,6 +2,14 @@ export const markdownSemanticsFixture = `# Entry heading
 
 ## Entry subheading
 
+### Entry detail
+
+#### Entry note
+
+##### Entry aside
+
+###### Entry footnote
+
 [Secure uppercase](HTTPS://Example.com/Upper)
 
 [Web mixed case](hTtP://example.com/Mixed)`;
