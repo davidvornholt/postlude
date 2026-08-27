@@ -3,6 +3,7 @@
 import { Schema } from 'effect';
 
 import { isTimeZone } from '#/shared/time-zone.ts';
+import { journalDayBoundary } from './journal-day.ts';
 import { JournalDateSchema } from './schemas/entry.ts';
 
 export const exportFormatVersion = 1;
@@ -11,7 +12,7 @@ export const exportManifestMediaType =
 export const exportEntriesMediaType = 'application/x-ndjson';
 export const manifestPath = 'manifest.json';
 export const entriesPath = 'entries.ndjson';
-export const journalDayStartsAt = '04:00';
+export const journalDayStartsAt = journalDayBoundary.clockTime;
 
 const utcTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/u;
 const millisecondTimestampEnd = 23;

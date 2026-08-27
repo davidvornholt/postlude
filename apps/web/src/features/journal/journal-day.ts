@@ -21,7 +21,12 @@
 /** A Common Era calendar date as `YYYY-MM-DD`, from 0001 through 9999. */
 export type JournalDate = string;
 
-const dayStartsAtHour = 4;
+export const journalDayBoundary = {
+  hour: 4,
+  minute: 0,
+  clockTime: '04:00',
+} as const;
+
 const monthsPerYear = 12;
 const firstJournalYear = 1;
 const lastJournalYear = 9999;
@@ -179,13 +184,14 @@ export const journalDateWeekday = (date: JournalDate): number => {
 const wallClock = (
   instant: Date,
   timeZone: string,
-): CalendarDate & { readonly hour: number } => {
+): CalendarDate & { readonly hour: number; readonly minute: number } => {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
+    minute: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(instant);
 
@@ -197,14 +203,16 @@ const wallClock = (
     month: read('month'),
     day: read('day'),
     hour: read('hour'),
+    minute: read('minute'),
   };
 };
 
 /** The journal day an instant falls in, as the zone's clock reads it. */
 export const journalDateAt = (instant: Date, timeZone: string): JournalDate => {
-  const { hour, ...date } = wallClock(instant, timeZone);
+  const { hour, minute, ...date } = wallClock(instant, timeZone);
   const calendarDate = formatJournalDate(date);
-  return hour < dayStartsAtHour
-    ? shiftJournalDate(calendarDate, -1)
-    : calendarDate;
+  const beforeBoundary =
+    hour < journalDayBoundary.hour ||
+    (hour === journalDayBoundary.hour && minute < journalDayBoundary.minute);
+  return beforeBoundary ? shiftJournalDate(calendarDate, -1) : calendarDate;
 };

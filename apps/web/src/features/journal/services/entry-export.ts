@@ -11,7 +11,7 @@ import {
 } from '../export-format.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { EntryFromRow } from '../schemas/entry.ts';
-import { currentMeaningfulEntry } from './entry-content-sql.ts';
+import { exportableStoredEntry } from './entry-content-sql.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const TimestampTextRow = Schema.Struct({
@@ -29,11 +29,8 @@ const TimestampTextRow = Schema.Struct({
   ),
 });
 
-const CountRow = Schema.Struct({
-  count: Schema.NumberFromString.pipe(Schema.int(), Schema.nonNegative()),
-});
-
 const SnapshotRow = Schema.Struct({
+  count: Schema.NumberFromString.pipe(Schema.int(), Schema.nonNegative()),
   exportedAt: Schema.propertySignature(UtcTimestampSchema).pipe(
     Schema.fromKey('exported_at'),
   ),
@@ -43,7 +40,6 @@ const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
 const decodeTimestampRows = Schema.decodeUnknown(
   Schema.Array(TimestampTextRow),
 );
-const decodeCounts = Schema.decodeUnknown(Schema.Array(CountRow));
 const decodeExportEntries = Schema.decodeUnknown(
   Schema.Array(ExportEntrySchema),
 );
@@ -74,37 +70,33 @@ export class EntryExport extends Effect.Service<EntryExport>()(
   {
     effect: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      const meaningful = currentMeaningfulEntry(sql);
+      const exportable = exportableStoredEntry(sql);
 
-      const countEntries = () =>
-        sql`
-          select count(*)::text as count
-          from entry
-          where ${meaningful}
-        `.pipe(
-          Effect.flatMap(decodeCounts),
-          Effect.flatMap((rows) =>
-            rows[0] === undefined
-              ? Effect.fail(new Error('The export count did not come back.'))
-              : Effect.succeed(rows[0].count),
-          ),
-          Effect.mapError(journalReadError),
-        );
-
+      /**
+       * This is deliberately the transaction's first entry read. PostgreSQL
+       * fixes the repeatable-read snapshot for this statement. The aggregate
+       * then reads the database clock after that snapshot exists.
+       */
       const readSnapshot = (): Effect.Effect<
-        ExportSnapshot,
+        { readonly count: number; readonly exportedAt: string },
         ReturnType<typeof journalReadError>
       > =>
         sql`
-          select to_char(
-            transaction_timestamp() at time zone 'UTC',
-            'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
-          ) as exported_at
+          select
+            count(*)::text as count,
+            to_char(
+              clock_timestamp() at time zone 'UTC',
+              'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+            ) as exported_at
+          from entry
+          where ${exportable}
         `.pipe(
           Effect.flatMap(decodeSnapshotRows),
           Effect.flatMap((rows) =>
             rows[0] === undefined
-              ? Effect.fail(new Error('The export instant did not come back.'))
+              ? Effect.fail(
+                  new Error('The export snapshot context did not come back.'),
+                )
               : Effect.succeed(rows[0]),
           ),
           Effect.mapError(journalReadError),
@@ -152,7 +144,7 @@ export class EntryExport extends Effect.Service<EntryExport>()(
               'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
             ) as updated_at_text
           from entry
-          where ${meaningful} ${afterEntry}
+          where ${exportable} ${afterEntry}
           order by entry_date
           limit ${pageSize}
         `.pipe(
@@ -199,8 +191,9 @@ export class EntryExport extends Effect.Service<EntryExport>()(
         inRepeatableReadSnapshot(
           sql,
           Effect.gen(function* () {
-            yield* visitor.onSnapshot(yield* readSnapshot());
-            yield* visitor.onCount(yield* countEntries());
+            const snapshot = yield* readSnapshot();
+            yield* visitor.onSnapshot({ exportedAt: snapshot.exportedAt });
+            yield* visitor.onCount(snapshot.count);
             for (const pass of visitor.passes) {
               yield* pass.before;
               let after: JournalDate | undefined;

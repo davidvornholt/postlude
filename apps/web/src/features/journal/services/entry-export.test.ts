@@ -56,7 +56,7 @@ const collect = (exports: EntryExport, pageSize = 2) =>
     return { count, first, second };
   });
 
-it('visits meaningful days in ascending keyset pages on every pass', async () => {
+it('visits exportable days in ascending keyset pages on every pass', async () => {
   const result = await withJournal(({ entries, exports }) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-04', 'Fourth.'));
