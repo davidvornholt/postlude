@@ -11,6 +11,14 @@ import {
 } from './autosave-registry.test-support.ts';
 import { journalWriteMessage } from './errors/journal-errors.ts';
 
+const deferredRead = <A>() => {
+  let resolve: (value: A) => void = () => undefined;
+  const promise = new Promise<A>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+};
+
 it('flushes quiet edits and waits for their save before a dependent read', async () => {
   const pending = deferredSave();
   const registry = createTestAutosaveRegistry();
@@ -133,4 +141,51 @@ it('identifies an unmounted failed day and lets that day recover on remount', as
     },
   });
   expect(recovery.read(draft.date)).toBeUndefined();
+});
+
+it('reads again when an edit is stored during a dependent read', async () => {
+  const registry = createTestAutosaveRegistry();
+  const coordinator = registry.acquire(stored, () =>
+    Promise.resolve({ revision: 101 }),
+  );
+  const unsubscribe = coordinator.subscribe(() => undefined);
+  const firstRead = deferredRead<string>();
+  const reads: Array<string> = [];
+
+  const reading = registry.readAfterSettled(() => {
+    const value = coordinator.snapshot().stored.draft.journalMarkdown;
+    reads.push(value);
+    return reads.length === 1 ? firstRead.promise : Promise.resolve(value);
+  });
+  await settleEffects();
+  coordinator.edit({ journalMarkdown: 'Written while the archive loaded.' });
+  firstRead.resolve('');
+
+  await expect(reading).resolves.toBe('Written while the archive loaded.');
+  expect(reads).toEqual(['', 'Written while the archive loaded.']);
+  unsubscribe();
+});
+
+it('rejects a dependent read when an edit made during it cannot be stored', async () => {
+  const recovery = memoryRecovery();
+  const registry = createTestAutosaveRegistry(() => recovery);
+  const coordinator = registry.acquire(stored, () =>
+    Promise.reject(new TypeError('offline')),
+  );
+  const unsubscribe = coordinator.subscribe(() => undefined);
+  const firstRead = deferredRead<string>();
+
+  const reading = registry.readAfterSettled(() => firstRead.promise);
+  await settleEffects();
+  coordinator.edit({ journalMarkdown: 'Do not leave this behind.' });
+  firstRead.resolve('stale archive');
+
+  await expect(reading).rejects.toMatchObject({ date: draft.date });
+  expect(coordinator.snapshot().draft.journalMarkdown).toBe(
+    'Do not leave this behind.',
+  );
+  expect(recovery.read(draft.date)?.journalMarkdown).toBe(
+    'Do not leave this behind.',
+  );
+  unsubscribe();
 });

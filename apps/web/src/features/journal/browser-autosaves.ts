@@ -38,15 +38,6 @@ export const navigateAfterAutosavesSettle = async (
   return { _tag: 'navigated' };
 };
 
-/** Leaves the current page in place when its forced save cannot be confirmed. */
-export const navigateAfterSettlingBrowserAutosaves = (
-  navigate: () => Promise<void>,
-): Promise<SettledNavigationResult> =>
-  navigateAfterAutosavesSettle(settleBrowserAutosaves, navigate);
-
 export const readAfterSettlingBrowserAutosaves = async <A>(
   read: () => Promise<A>,
-): Promise<A> => {
-  await settleBrowserAutosaves();
-  return read();
-};
+): Promise<A> => registry.readAfterSettled(read);

@@ -16,7 +16,11 @@ import {
   useState,
 } from 'react';
 
-import { navigateAfterSettlingBrowserAutosaves } from '#/features/journal/browser-autosaves.ts';
+import {
+  discardPreparedArchiveNavigation,
+  prepareRollingArchiveNavigation,
+} from '#/features/journal/browser-archive-navigation.ts';
+import { navigateAfterAutosavesSettle } from '#/features/journal/browser-autosaves.ts';
 import type { JournalDate } from '#/features/journal/journal-day.ts';
 import { ArchiveNavigationFailure } from '#/features/journal/ui/archive-navigation-failure.tsx';
 import { authClient } from '#/shared/auth/auth-client.ts';
@@ -55,6 +59,7 @@ const AppShell = () => {
   });
   const previousLocationPath = useRef<string>(locationPath);
   const main = useRef<HTMLElement>(null);
+  const archiveNavigationStarted: RefObject<boolean> = useRef(false);
   // Client navigation removes the link that held focus. Move focus to the
   // landmark containing the new route, but leave an initial page load alone.
   useEffect(() => {
@@ -95,10 +100,20 @@ const AppShell = () => {
       return;
     }
     event.preventDefault();
-    const result = await navigateAfterSettlingBrowserAutosaves(() =>
-      router.navigate({ to: '/archive' }),
-    );
-    setBlockedArchiveDay(result._tag === 'blocked' ? result.date : undefined);
+    if (archiveNavigationStarted.current) {
+      return;
+    }
+    archiveNavigationStarted.current = true;
+    try {
+      const result = await navigateAfterAutosavesSettle(
+        prepareRollingArchiveNavigation,
+        () => router.navigate({ to: '/archive' }),
+      );
+      setBlockedArchiveDay(result._tag === 'blocked' ? result.date : undefined);
+    } finally {
+      discardPreparedArchiveNavigation();
+      archiveNavigationStarted.current = false;
+    }
   };
 
   return (

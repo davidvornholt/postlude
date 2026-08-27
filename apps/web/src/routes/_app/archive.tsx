@@ -1,11 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { Option, Schema } from 'effect';
-import { readAfterSettlingBrowserAutosaves } from '#/features/journal/browser-autosaves.ts';
+import { readArchiveRoute } from '#/features/journal/browser-archive-navigation.ts';
 import {
   ArchiveQuery,
   type ArchiveQueryParams,
 } from '#/features/journal/schemas/archive-query.ts';
-import { readArchiveFn } from '#/features/journal/services/archive-fns.ts';
 import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
@@ -36,10 +35,7 @@ const ArchiveRoute = () => {
 export const Route = createFileRoute('/_app/archive')({
   validateSearch: archiveSearch,
   loaderDeps: ({ search }) => ({ year: search.year }),
-  loader: ({ deps }) =>
-    readAfterSettlingBrowserAutosaves(() =>
-      readArchiveFn({ data: { year: deps.year } }),
-    ),
+  loader: ({ deps }) => readArchiveRoute({ year: deps.year }),
   component: ArchiveRoute,
   head: () => ({ meta: [{ title: pageTitle('Archive') }] }),
 });

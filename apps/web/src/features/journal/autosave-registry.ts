@@ -31,6 +31,8 @@ export type AutosaveRegistry = {
   ) => AutosaveCoordinator;
   /** Starts every queued save and rejects if any draft remains unconfirmed. */
   readonly settle: () => Promise<void>;
+  /** Repeats a read when a confirmed save lands before that read finishes. */
+  readonly readAfterSettled: <A>(read: () => Promise<A>) => Promise<A>;
 };
 
 export class AutosaveSettlementError extends Data.TaggedError(
@@ -72,6 +74,7 @@ export const createAutosaveRegistry = (
   revisions: ConfirmedRevisionTracker = confirmedRevisions,
 ): AutosaveRegistry => {
   const coordinators = new Map<string, AutosaveCoordinator>();
+  let confirmedSaveGeneration = 0;
 
   const settle = async (): Promise<void> => {
     await Promise.all(Array.from(coordinators.values(), settleCoordinator));
@@ -87,6 +90,17 @@ export const createAutosaveRegistry = (
     if (!allSettled) {
       return settle();
     }
+  };
+
+  const readAfterSettled = async <A>(read: () => Promise<A>): Promise<A> => {
+    await settle();
+    const generationBeforeRead = confirmedSaveGeneration;
+    const result = await read();
+    await settle();
+    if (confirmedSaveGeneration === generationBeforeRead) {
+      return result;
+    }
+    return readAfterSettled(read);
   };
 
   return {
@@ -107,7 +121,10 @@ export const createAutosaveRegistry = (
         stored,
         save,
         recovery: recovery(),
-        onConfirmed: (saved) => revisions.record(date, saved.revision),
+        onConfirmed: (saved) => {
+          confirmedSaveGeneration += 1;
+          revisions.record(date, saved.revision);
+        },
         onIdle: () => {
           if (coordinators.get(date) === created) {
             coordinators.delete(date);
@@ -117,6 +134,7 @@ export const createAutosaveRegistry = (
       coordinators.set(date, created);
       return created;
     },
+    readAfterSettled,
     settle,
   };
 };

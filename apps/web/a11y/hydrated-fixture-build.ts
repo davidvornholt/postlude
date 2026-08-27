@@ -8,6 +8,8 @@ export type FixtureAssets = {
   readonly styles: string;
 };
 
+export type BrowserFixtureAssets = Omit<FixtureAssets, 'markup'>;
+
 export type FixtureModuleReplacement = {
   readonly fixtureModulePath: string;
   readonly productionModulePath: string;
@@ -40,6 +42,48 @@ const fixtureModules = (
 const asText = (source: string | Uint8Array): string =>
   typeof source === 'string' ? source : new TextDecoder().decode(source);
 
+export const buildBrowserFixture = async ({
+  clientEntryPath,
+  plugins = [],
+}: {
+  readonly clientEntryPath: string;
+  readonly plugins?: ReadonlyArray<Plugin>;
+}): Promise<BrowserFixtureAssets> => {
+  const result = await build({
+    build: {
+      assetsInlineLimit: Number.POSITIVE_INFINITY,
+      cssCodeSplit: false,
+      lib: {
+        entry: clientEntryPath,
+        fileName: 'hydrated-fixture',
+        formats: ['es'],
+      },
+      minify: false,
+      rollupOptions: { output: { codeSplitting: false } },
+      write: false,
+    },
+    configFile: false,
+    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
+    logLevel: 'silent',
+    plugins: [...plugins, tailwindcss(), viteReact()],
+    resolve: { tsconfigPaths: true },
+  });
+  const results = Array.isArray(result) ? result : [result];
+  const finished = results.filter((item) => 'output' in item);
+  if (finished.length !== 1) {
+    throw new Error('The browser fixture did not produce one finished build.');
+  }
+  const output = finished[0]?.output ?? [];
+  const script = output.find((item) => item.type === 'chunk')?.code;
+  const stylesheet = output.find(
+    (item) => item.type === 'asset' && item.fileName.endsWith('.css'),
+  );
+  if (script === undefined || stylesheet?.type !== 'asset') {
+    throw new Error('The browser fixture produced no script or stylesheet.');
+  }
+  return { script, styles: asText(stylesheet.source) };
+};
+
 const renderFixture = async (
   config: unknown,
   options: HydratedFixtureOptions,
@@ -68,41 +112,12 @@ export const buildHydratedFixture = async (
   config: unknown,
   options: HydratedFixtureOptions,
 ): Promise<FixtureAssets> => {
-  const result = await build({
-    build: {
-      assetsInlineLimit: Number.POSITIVE_INFINITY,
-      cssCodeSplit: false,
-      lib: {
-        entry: options.clientEntryPath,
-        fileName: 'hydrated-fixture',
-        formats: ['es'],
-      },
-      minify: false,
-      rollupOptions: { output: { codeSplitting: false } },
-      write: false,
-    },
-    configFile: false,
-    define: { 'process.env.NODE_ENV': JSON.stringify('production') },
-    logLevel: 'silent',
-    plugins: [fixtureModules(options.replacements), tailwindcss(), viteReact()],
-    resolve: { tsconfigPaths: true },
+  const browserAssets = await buildBrowserFixture({
+    clientEntryPath: options.clientEntryPath,
+    plugins: [fixtureModules(options.replacements)],
   });
-  const results = Array.isArray(result) ? result : [result];
-  const finished = results.filter((item) => 'output' in item);
-  if (finished.length !== 1) {
-    throw new Error('The hydrated fixture did not produce one finished build.');
-  }
-  const output = finished[0]?.output ?? [];
-  const script = output.find((item) => item.type === 'chunk')?.code;
-  const stylesheet = output.find(
-    (item) => item.type === 'asset' && item.fileName.endsWith('.css'),
-  );
-  if (script === undefined || stylesheet?.type !== 'asset') {
-    throw new Error('The hydrated fixture produced no script or stylesheet.');
-  }
   return {
     markup: await renderFixture(config, options),
-    script,
-    styles: asText(stylesheet.source),
+    ...browserAssets,
   };
 };

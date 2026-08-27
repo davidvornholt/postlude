@@ -1,7 +1,9 @@
-import { RouterProvider } from '@tanstack/react-router';
-import { hydrateRoot } from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createBrowserHistory, RouterProvider } from '@tanstack/react-router';
+import { createRoot } from 'react-dom/client';
 
 import { activityTotals } from '../src/features/journal/activity.ts';
+import type { EntryDraft } from '../src/features/journal/schemas/entry.ts';
 import { countJournalWords } from '../src/features/journal/word-count.ts';
 import type { ArchiveNavigationFixtureWindow } from './archive-navigation-fixture-contract.ts';
 import {
@@ -13,18 +15,23 @@ const fixtureWindow = globalThis as unknown as ArchiveNavigationFixtureWindow;
 const config = fixtureWindow.postludeArchiveNavigationFixture;
 let view = emptyArchiveView(config);
 let revision = new Date(config.entry.updatedAt).getTime();
+let releaseArchiveRead = (): void => undefined;
+const firstArchiveRead = new Promise<void>((resolve) => {
+  releaseArchiveRead = resolve;
+});
+let firstReadPending = config.deferFirstArchiveRead;
 
 const saveDelayMs = 75;
 const isoYearEnd = 4;
-const save = async (draft: {
-  readonly journalMarkdown: string;
-}): Promise<{ readonly revision: number }> => {
+const save = async (
+  draft: EntryDraft,
+): Promise<{ readonly revision: number }> => {
   await new Promise((resolve) => setTimeout(resolve, saveDelayMs));
   if (config.saveOutcome === 'failed') {
     throw new TypeError('offline');
   }
   const day = {
-    date: config.today,
+    date: draft.date,
     journalWords: countJournalWords(draft.journalMarkdown),
     scriptureWords: 0,
     hasScripture: false,
@@ -34,8 +41,8 @@ const save = async (draft: {
   revision += 1;
   view = {
     ...view,
-    days: [day],
-    years: [Number(config.today.slice(0, isoYearEnd))],
+    days: [...view.days.filter(({ date }) => date !== day.date), day],
+    years: [Number(draft.date.slice(0, isoYearEnd))],
     journalStreak: { current: 1, longest: 1 },
     totals: activityTotals([day]),
   };
@@ -43,13 +50,24 @@ const save = async (draft: {
   return { revision };
 };
 
-const router = createArchiveNavigationRouter({
-  config,
-  readArchive: () => {
+fixtureWindow.postludeArchiveNavigationRuntime = {
+  readArchive: async () => {
+    const snapshot = view;
     const reads = Number(document.documentElement.dataset.archiveReads ?? '0');
     document.documentElement.dataset.archiveReads = String(reads + 1);
-    return Promise.resolve(view);
+    if (firstReadPending) {
+      firstReadPending = false;
+      document.documentElement.dataset.archiveReadStarted = 'true';
+      await firstArchiveRead;
+    }
+    return snapshot;
   },
+  releaseArchiveRead,
+};
+
+const router = createArchiveNavigationRouter({
+  config,
+  history: createBrowserHistory(),
   save,
 });
 await router.load();
@@ -59,6 +77,10 @@ if (root === null) {
   throw new Error('The archive navigation fixture root is missing.');
 }
 
-hydrateRoot(root, <RouterProvider router={router} />);
+createRoot(root).render(
+  <QueryClientProvider client={new QueryClient()}>
+    <RouterProvider router={router} />
+  </QueryClientProvider>,
+);
 document.documentElement.dataset.archiveReads = '0';
 document.documentElement.dataset.hydrated = 'true';
