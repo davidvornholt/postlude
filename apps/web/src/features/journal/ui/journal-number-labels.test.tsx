@@ -27,6 +27,7 @@ const view: ArchiveView = {
     },
   ],
   years: [todayYear],
+  exportAvailable: true,
   journalStreak: { current: 1, longest: 1 },
   scriptureStreak: { current: 0, longest: 0 },
   totals: { daysWritten: thousand, words: million },

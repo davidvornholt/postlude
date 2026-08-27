@@ -119,7 +119,7 @@ describe('dated journal route', () => {
     type HeadInput = Parameters<typeof dayHead>[0];
     const metadata = await dayHead({ loaderData: loadedDay } as HeadInput);
     expect(metadata.meta).toContainEqual({
-      title: 'Tuesday 25 August 2026 · Postlude',
+      title: 'Tuesday, August 25, 2026 · Postlude',
     });
   });
 

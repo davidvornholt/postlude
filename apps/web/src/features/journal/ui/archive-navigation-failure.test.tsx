@@ -13,7 +13,7 @@ it('raises the blocked archive navigation and links to the retained day', async 
     <ArchiveNavigationFailure date="2025-11-02" onOpen={() => undefined} />,
   );
   const alert = openingTag(html, 'p');
-  const day = elementAttributes(html, 'a', 'Sunday 2 November 2025');
+  const day = elementAttributes(html, 'a', 'Sunday, November 2, 2025');
 
   expect(alert).toContain('role="alert"');
   expect(attributeValue(day, 'href')).toBe('/day/2025-11-02');

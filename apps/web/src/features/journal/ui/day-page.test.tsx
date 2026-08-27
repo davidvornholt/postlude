@@ -88,7 +88,7 @@ it('leads back to today from the day before it', async () => {
 it('omits the previous-day link at the start of the journal calendar', async () => {
   const html = await render(entryOn({ date: '0001-01-01' }));
 
-  expect(html).toContain('Monday 1 January 1');
+  expect(html).toContain('Monday, January 1, 1');
   expect(html).not.toContain('Previous day');
   expect(elementAttributes(html, 'a', 'Next day →')).toContain(
     'href="/day/0001-01-02"',
@@ -134,7 +134,7 @@ it('keeps entry headings below the page and section headings', async () => {
   );
 
   expect(headingSequence(html)).toEqual([
-    'h1: Wednesday 26 August 2026',
+    'h1: Wednesday, August 26, 2026',
     'h2: Morning scripture',
     'h3: Morning thought',
     'h4: What opened',
