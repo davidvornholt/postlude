@@ -1,6 +1,6 @@
 import { RouterProvider } from '@tanstack/react-router';
 import { hydrateRoot } from 'react-dom/client';
-
+import { journalWriteConflictMessage } from '../src/features/journal/errors/journal-errors.ts';
 import { createRenderingRouter } from '../src/shared/testing/render-in-router.tsx';
 import type {
   DayPageFixtureWindow,
@@ -34,6 +34,11 @@ const save = (): Promise<unknown> => {
     // TanStack Start can resolve a raw middleware Response rather than reject
     // it, so the fixture exercises the browser boundary's real semantics.
     return Promise.resolve(new Response('', { status: 401 }));
+  }
+  if (outcome === 'conflict') {
+    return Promise.resolve(
+      new Response(journalWriteConflictMessage, { status: 409 }),
+    );
   }
   const message =
     outcome === 'validation'

@@ -5,6 +5,7 @@ export type SaveOutcome =
   | 'failed'
   | 'validation'
   | 'authentication'
+  | 'conflict'
   | 'pending';
 
 export type FixtureEntry = Omit<JournalEntry, 'createdAt' | 'updatedAt'> & {

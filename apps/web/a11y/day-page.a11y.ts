@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { journalWriteConflictMessage } from '../src/features/journal/errors/journal-errors.ts';
 import { editAndLeave, mountDayPage, scan } from './day-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
@@ -134,6 +135,34 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
       0,
     );
+    await scan(page);
+  });
+
+  test(`a stale-write conflict stays recoverable in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountDayPage(page, ['conflict']);
+    const editedProse = 'Keep this version from the stale tab.';
+    await editAndLeave(page, 'Evening journal', editedProse);
+
+    const conflictStatus = page.locator('[aria-live="polite"]');
+    await expect(conflictStatus).toBeVisible();
+    await expect(conflictStatus).toHaveText(journalWriteConflictMessage);
+    await expect(
+      page.getByRole('textbox', { name: 'Evening journal' }),
+    ).toContainText(editedProse);
+    await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole('link', { name: 'Sign in again' })).toHaveCount(
+      0,
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
     await scan(page);
   });
 
