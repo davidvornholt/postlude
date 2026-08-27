@@ -11,6 +11,7 @@
 import type { RefObject, SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 
+import { readingMeasureClass } from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 
@@ -67,7 +68,7 @@ export const ExportControl = ({
       onSubmit={submitAfterSettling}
       ref={form}
     >
-      <p className="max-w-prose text-ink-muted text-lg">
+      <p className={[readingMeasureClass, 'text-ink-muted text-lg'].join(' ')}>
         Every day you have written, as markdown files in a zip — one file to a
         day, in a folder for each year. It opens in a text editor and in
         anything that reads markdown, with or without Postlude.
@@ -83,7 +84,10 @@ export const ExportControl = ({
       </button>
       {state === 'failed' ? (
         <p
-          className="mt-4 max-w-prose border border-critical bg-critical-subtle px-3 py-2 text-ink text-sm"
+          className={[
+            readingMeasureClass,
+            'mt-4 border border-critical bg-critical-subtle px-3 py-2 text-ink text-sm',
+          ].join(' ')}
           id={failureId}
           role="alert"
         >

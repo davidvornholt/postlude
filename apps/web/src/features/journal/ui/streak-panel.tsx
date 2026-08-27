@@ -13,13 +13,10 @@
  */
 
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
-import { groupDigits } from '../activity-labels.ts';
+import { journalCountLabel, journalNumberLabel } from '../journal-labels.ts';
 import type { Streak } from '../streaks.ts';
 
 const one = 1;
-
-const days = (count: number): string =>
-  `${groupDigits(count)} day${count === one ? '' : 's'}`;
 
 const StreakFigure = ({
   label,
@@ -31,13 +28,13 @@ const StreakFigure = ({
   <div>
     <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>{label}</p>
     <p className="mt-3 font-display text-5xl text-ink tabular-nums">
-      {groupDigits(streak.current)}
+      {journalNumberLabel(streak.current)}
     </p>
     <p className="mt-1 text-ink-muted">
       {streak.current === one ? 'day in a row' : 'days in a row'}
     </p>
     <p className="mt-4 text-ink-faint text-sm">
-      {`Longest run: ${days(streak.longest)}`}
+      {`Longest run: ${journalCountLabel(streak.longest, 'day')}`}
     </p>
   </div>
 );

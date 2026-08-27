@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 
+import { countRecipe } from '#/shared/testing/rendered-html.ts';
+import { readingMeasureClass } from '#/shared/ui/design-classes.ts';
 import {
   privateHtmlRecoveryResponse,
   privateResponseHeaders,
@@ -69,6 +71,7 @@ describe('approved private recovery responses', () => {
     expect(document).toContain('href="/assets/fraunces.css"');
     expect(document).toContain('href="/assets/postlude.css"');
     expect(document).not.toContain('<style>');
+    expect(countRecipe(document, readingMeasureClass)).toBe(1);
   });
 
   it('keeps approved nested and thrown responses without widening approval', async () => {

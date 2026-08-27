@@ -18,8 +18,9 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * exist, not a day that does not exist, so it does not deserve the not-found
  * page the way `/day/<nonsense>` does.
  *
- * The page sets its own measure — the wider one, which a year of days needs —
- * because the shell hands no column to any page.
+ * The page sets the shared frame itself, because the shell hands no frame to
+ * any page. That frame is the width a year of days needs, which is where it
+ * came from: the archive is the page that set it for all the others.
  */
 const decodeSearch = Schema.decodeUnknownOption(ArchiveQuery);
 

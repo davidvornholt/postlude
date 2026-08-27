@@ -14,9 +14,8 @@
 
 import { useMemo } from 'react';
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
+import { journalCountLabel } from '../journal-labels.ts';
 import { countJournalCharacters, countJournalWords } from '../word-count.ts';
-
-const one = 1;
 
 /**
  * The line is assembled here rather than out of several JSX children, so it
@@ -24,9 +23,6 @@ const one = 1;
  * adjacent children, and a count read aloud as "3", "words" is being read as
  * two things when it is one.
  */
-const counted = (count: number, unit: string): string =>
-  `${count} ${unit}${count === one ? '' : 's'}`;
-
 type EntryCountsProps = {
   readonly markdown: string;
 };
@@ -34,7 +30,7 @@ type EntryCountsProps = {
 export const EntryCounts = ({ markdown }: EntryCountsProps) => {
   const line = useMemo(
     () =>
-      `${counted(countJournalWords(markdown), 'word')} · ${counted(
+      `${journalCountLabel(countJournalWords(markdown), 'word')} · ${journalCountLabel(
         countJournalCharacters(markdown),
         'character',
       )}`,

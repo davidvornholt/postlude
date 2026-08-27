@@ -59,7 +59,7 @@ const headingSequence = (html: string): ReadonlyArray<string> =>
 it('names the day in full, and how long ago it was', async () => {
   const html = await render(entryOn({ date: '2026-08-24' }));
 
-  expect(html).toContain('Monday 24 August 2026');
+  expect(html).toContain('Monday, August 24, 2026');
   expect(html).toContain('2 days ago');
 });
 
@@ -88,11 +88,21 @@ it('leads back to today from the day before it', async () => {
 it('omits the previous-day link at the start of the journal calendar', async () => {
   const html = await render(entryOn({ date: '0001-01-01' }));
 
-  expect(html).toContain('Monday 1 January 1');
+  expect(html).toContain('Monday, January 1, 1');
   expect(html).not.toContain('Previous day');
   expect(elementAttributes(html, 'a', 'Next day →')).toContain(
     'href="/day/0001-01-02"',
   );
+});
+
+it('renders supported low years without changing their calendar day', async () => {
+  const year99 = await render(entryOn({ date: '0099-01-01' }));
+  const year100 = await render(entryOn({ date: '0100-01-01' }));
+
+  expect(year99).toContain('Thursday, January 1, 99');
+  expect(year99).toContain('href="/day/0098-12-31"');
+  expect(year100).toContain('Friday, January 1, 100');
+  expect(year100).toContain('href="/day/0099-12-31"');
 });
 
 /**
@@ -124,7 +134,7 @@ it('keeps entry headings below the page and section headings', async () => {
   );
 
   expect(headingSequence(html)).toEqual([
-    'h1: Wednesday 26 August 2026',
+    'h1: Wednesday, August 26, 2026',
     'h2: Morning scripture',
     'h3: Morning thought',
     'h4: What opened',

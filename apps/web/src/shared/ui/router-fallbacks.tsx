@@ -14,7 +14,10 @@
 
 import { createContext, type ReactNode, useContext, useEffect } from 'react';
 
-import { columnClass } from '#/shared/ui/design-classes.ts';
+import {
+  pageFrameClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 import { UnmarkedLink } from '#/shared/ui/unmarked-link.tsx';
@@ -48,7 +51,12 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
   return (
     <section>
       <h1 className="font-display text-4xl text-ink sm:text-5xl">{heading}</h1>
-      <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
+      <p
+        className={[
+          readingMeasureClass,
+          'mt-8 border-border border-t pt-8 text-ink-muted text-lg',
+        ].join(' ')}
+      >
         {message}
       </p>
       {/* The way back is an action, and the failing address can be "/" itself
@@ -68,25 +76,25 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
 };
 
 /*
- * The shell sets no column — each page picks its own measure — so the fallback
- * sets the text column either way, and both branches below render that one
+ * The shell sets no frame — every page sets the shared frame itself — so the
+ * fallback sets that frame either way, and both branches below render that one
  * wrapper exactly once. What the branches decide is only the landmark: inside
  * the shell the fallback is already in the one <main> the page gets, and a
  * failure that never reached the shell has to open it, the way the sign-in
  * page does.
  */
 const FallbackPage = ({ heading, message }: FallbackContent) => {
-  const column = (
-    <div className={columnClass}>
+  const frame = (
+    <div className={pageFrameClass}>
       <FallbackBody heading={heading} message={message} />
     </div>
   );
 
   return useContext(MainLandmarkContext) ? (
-    column
+    frame
   ) : (
     <main className="flex min-h-svh flex-col justify-center bg-background py-16">
-      {column}
+      {frame}
     </main>
   );
 };

@@ -1,6 +1,9 @@
 import type { ChangeEvent, RefObject, SubmitEvent } from 'react';
 
-import { eyebrowClass } from '#/shared/ui/design-classes.ts';
+import {
+  eyebrowClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { fieldClass, primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { searchQueryLengthLimit } from '../search-contract.ts';
 
@@ -31,7 +34,10 @@ export const SearchForm = ({
 }: SearchFormProps) => (
   <form
     action="/search"
-    className="mt-8 flex flex-wrap items-end gap-x-6 gap-y-4"
+    className={[
+      readingMeasureClass,
+      'mt-8 flex flex-wrap items-end gap-x-6 gap-y-4',
+    ].join(' ')}
     id={formId}
     method="post"
     onSubmit={onSubmit}

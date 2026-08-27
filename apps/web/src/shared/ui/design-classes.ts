@@ -1,8 +1,8 @@
 /**
- * The shape vocabulary every page shares: the set column, the letterspaced
- * eyebrow, the focus ring. `DESIGN.md` says what each one is for; this file is
- * where the classes that build them live, so one page cannot drift from another
- * by retyping them.
+ * The shape vocabulary every page shares: the page frame, the reading measure
+ * inside it, the letterspaced eyebrow, the focus ring. `DESIGN.md` says what
+ * each one is for; this file is where the classes that build them live, so one
+ * page cannot drift from another by retyping them.
  *
  * These carry shape, and callers add the colour a state needs. The one colour
  * held here is the focus ring's, which is fixed because no caller re-colours it:
@@ -33,11 +33,18 @@ export const deepFocusRingClass =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep-ink';
 
 /**
- * The set column the writing page keeps to: roughly 65 characters of Inter
- * once the gutters are taken off, which is a comfortable measure to read a
- * long evening entry at.
+ * The page frame: one width for every page and for the masthead above them, so
+ * the brand, the navigation, and whatever a page opens with all start on the
+ * same vertical line. It is set at the width the archive needs for a year of
+ * days, because a frame that changed between pages would move the masthead
+ * under the reader as they walked from one to the next.
  */
-export const columnClass = 'mx-auto w-full max-w-2xl px-5 sm:px-8';
+export const pageFrameClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 
-/** The archive needs the year of days to fit, so it sets a wider measure. */
-export const wideColumnClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
+/**
+ * The measure text is read and written at: roughly 65 characters, which is a
+ * comfortable line for a long evening entry and much shorter than the frame.
+ * It sits at the left of the frame rather than centred in it, so a paragraph
+ * begins on the same line as the heading above it.
+ */
+export const readingMeasureClass = 'max-w-prose';

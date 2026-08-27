@@ -7,15 +7,13 @@ import {
   journalDayStartsAt,
   manifestPath,
 } from './export-format.ts';
-
-const days = (count: number): string =>
-  count === 1 ? '1 day' : `${count} days`;
+import { journalCountLabel } from './journal-labels.ts';
 
 /** Documentation that travels with the archive and does not hard-wrap prose. */
 export const exportReadme = (metadata: ExportMetadata): string =>
   [
     '# Postlude journal export',
-    `This archive was created at ${metadata.exportedAt} and contains ${days(metadata.entryCount)} with recoverable stored content as of journal day ${metadata.journalDate}.`,
+    `This archive was created at ${metadata.exportedAt} and contains ${journalCountLabel(metadata.entryCount, 'day')} with recoverable stored content as of journal day ${metadata.journalDate}.`,
     '## Authoritative data',
     `\`${manifestPath}\` is the manifest for version ${exportFormatVersion} of \`${exportManifestMediaType}\`. It records the export instant, journal date, entry count, and journal-day rules.`,
     `\`${entriesPath}\` uses \`${exportEntriesMediaType}\`. Each UTF-8 line is one JSON object followed by a line feed. JSON escaping preserves every stored Markdown code point and newline when parsed. The records also carry the structured scripture reference, the independent first-use timestamps for both sections, and the row creation and update timestamps.`,

@@ -3,6 +3,7 @@ import { expect, it } from 'bun:test';
 import {
   activityMarkNames,
   colorTokenNames,
+  deepRegisterFindings,
   rampFindings,
   schemeDeclarations,
   shadowTokenNames,
@@ -86,6 +87,28 @@ it('the activity ramp stays readable as a sequence', () => {
     ...rampFindings('light', 'light', light, '--pl-background'),
     ...rampFindings('dark', 'dark', dark, '--pl-background'),
   ]).toEqual([]);
+});
+
+it('keeps the deep register rule visible against its ground', () => {
+  expect([
+    ...deepRegisterFindings('light', light),
+    ...deepRegisterFindings('dark', dark),
+  ]).toEqual([]);
+});
+
+it('rejects a deep register rule that blends into its ground', () => {
+  for (const [scheme, palette] of [
+    ['light', light],
+    ['dark', dark],
+  ] as const) {
+    const mutated = {
+      ...palette,
+      '--pl-deep-rule': palette['--pl-deep-ground'],
+    };
+    expect(deepRegisterFindings(`mutated ${scheme}`, mutated)).toEqual([
+      `mutated ${scheme}: --pl-deep-rule on --pl-deep-ground = 1.000:1`,
+    ]);
+  }
 });
 
 it('rejects activity marks that blend into the page', () => {

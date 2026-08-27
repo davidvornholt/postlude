@@ -143,7 +143,7 @@ for (const colorScheme of colorSchemes) {
     await releaseArchiveRead(page);
 
     await expect(page).toHaveURL(writingDayUrl);
-    await expect(page).toHaveTitle('Tuesday, 25 August 2026 · Postlude');
+    await expect(page).toHaveTitle('Tuesday, August 25, 2026 · Postlude');
     await expect(evening).toContainText('Keep this late failed draft visible.');
     await expect(evening).toBeFocused();
     await expect(
@@ -152,7 +152,7 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
     const alert = page.getByRole('alert');
     await expect(alert).toContainText('Archive stayed closed');
-    await expect(alert).toContainText('Tuesday, 25 August 2026');
+    await expect(alert).toContainText('Tuesday, August 25, 2026');
     await expect(page.getByRole('heading', { name: 'Archive' })).toHaveCount(0);
     await expect(page.locator('html')).toHaveAttribute(
       'data-archive-reads',
@@ -167,15 +167,15 @@ for (const colorScheme of colorSchemes) {
     await expect(page).toHaveURL(previousDayUrl);
     await expect(page.locator('main')).toBeFocused();
     const recovery = page.getByRole('link', {
-      name: 'Tuesday, 25 August 2026',
+      name: 'Tuesday, August 25, 2026',
     });
     await recovery.focus();
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL(writingDayUrl);
-    await expect(page).toHaveTitle('Tuesday, 25 August 2026 · Postlude');
+    await expect(page).toHaveTitle('Tuesday, August 25, 2026 · Postlude');
     await expect(
-      page.getByRole('heading', { name: 'Tuesday, 25 August 2026' }),
+      page.getByRole('heading', { name: 'Tuesday, August 25, 2026' }),
     ).toBeVisible();
     await expect(page.locator('main')).toBeFocused();
     await expect(

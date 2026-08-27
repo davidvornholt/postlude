@@ -1,7 +1,7 @@
 /*
  * The Postlude theme. The journal is set like a thoughtfully made periodical:
  * parchment grounds and deep warm inks, structure from typography and hairline
- * rules rather than from boxes, square corners everywhere, and one deep inverse
+ * rules rather than from boxes, square corners everywhere, and one deep
  * register that carries the weight a card would carry elsewhere. Nothing
  * floats, so both shadow tokens stay off.
  *
@@ -75,19 +75,21 @@
   --pl-heat-q3: oklch(0.44 0.09 155);
   --pl-heat-q4: oklch(0.36 0.085 155);
 
-  /* The deep register: the one inverse surface, dark ink-ground under light
+  /* The deep register: the one separate surface, an ink-ground under light
      type, kept to a section or two a page. */
   --pl-deep-ground: oklch(0.24 0.02 55);
   --pl-deep-ink: oklch(0.94 0.015 85);
   --pl-deep-ink-muted: oklch(0.76 0.016 80);
-  --pl-deep-rule: oklch(0.38 0.02 58);
+  --pl-deep-rule: oklch(0.54 0.02 60);
 }
 
 /*
  * Dark mode is not a second palette: the page becomes the deep register's
- * world, growing out of its ground and its ink. The register itself then has to
- * invert to parchment, or turning to it would stop feeling like turning a page
- * and start feeling like nothing happened.
+ * world, growing out of its ground and its ink. The register then has to
+ * separate from the page some other way, or turning to it would stop feeling
+ * like turning a page and start feeling like nothing happened. It lifts rather
+ * than inverting: a parchment panel in a dark room is a lamp shining out of the
+ * page, and the journal is written in the evening.
  */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -125,10 +127,13 @@
     --pl-heat-q3: oklch(0.68 0.09 155);
     --pl-heat-q4: oklch(0.76 0.095 155);
 
-    --pl-deep-ground: oklch(0.96 0.015 85);
-    --pl-deep-ink: oklch(0.25 0.02 50);
-    --pl-deep-ink-muted: oklch(0.45 0.02 52);
-    --pl-deep-rule: oklch(0.8 0.015 82);
+    /* Lifted off the page rather than inverted: a ground a little lighter than
+       the background reads as a band edge to edge without glare, and the ink
+       and the rule keep the ratios they hold in the light scheme. */
+    --pl-deep-ground: oklch(0.32 0.022 58);
+    --pl-deep-ink: oklch(0.95 0.015 85);
+    --pl-deep-ink-muted: oklch(0.78 0.016 80);
+    --pl-deep-rule: oklch(0.6 0.02 60);
   }
 }
 

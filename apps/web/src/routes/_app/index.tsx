@@ -14,9 +14,9 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * 04:00 rule. That is what keeps a phone opened at half past midnight on the
  * same page as the laptop it was left on.
  *
- * The page sets its own measure rather than taking one from the shell, because
- * the morning scripture's deep register has to run edge to edge and cannot
- * escape a column the shell has already closed around it.
+ * The page sets the shared frame itself rather than taking one from the shell,
+ * because the morning scripture's deep register has to run edge to edge and
+ * cannot escape a frame the shell has already closed around it.
  */
 const TodayRoute = () => {
   const { entry, today } = Route.useLoaderData();

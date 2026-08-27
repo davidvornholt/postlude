@@ -82,7 +82,7 @@ export const mountArchiveNavigation = async (
   try {
     await page.locator('html[data-hydrated="true"]').waitFor({ timeout: 5000 });
     await expect(
-      page.getByRole('heading', { name: 'Tuesday, 25 August 2026' }),
+      page.getByRole('heading', { name: 'Tuesday, August 25, 2026' }),
     ).toBeVisible();
   } catch (error) {
     throw new Error(

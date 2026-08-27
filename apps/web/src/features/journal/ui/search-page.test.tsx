@@ -135,7 +135,7 @@ it('lists a found day as a link to the day it was written on', async () => {
   const link = elementAttributes(
     html,
     'a',
-    'Sunday 1 March 2026EveningThe rain fell all night.',
+    'Sunday, March 1, 2026EveningThe rain fell all night.',
   );
   expect(attributeValue(link, 'href')).toBe('/day/2026-03-01');
 });

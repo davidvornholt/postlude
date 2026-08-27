@@ -14,9 +14,10 @@
 import { useId } from 'react';
 
 import {
-  columnClass,
   eyebrowClass,
   focusRingClass,
+  pageFrameClass,
+  readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel, journalDayRelation } from '../day-label.ts';
@@ -84,11 +85,14 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
 
   return (
     <>
-      <header className={columnClass}>
+      <header className={pageFrameClass}>
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           {journalDayRelation(entry.date, today)}
         </p>
-        <h1 className="mt-3 font-display text-4xl text-ink sm:text-5xl">
+        {/* Balanced, because a date is one thing and breaking it after the
+            month leaves a year alone on a line. The browser evens the lines
+            out instead of filling the first one and dropping what is left. */}
+        <h1 className="mt-3 text-balance font-display text-4xl text-ink sm:text-5xl">
           {journalDateLabel(entry.date)}
         </h1>
         <nav aria-label="Nearby days" className="mt-8 flex gap-8">
@@ -122,7 +126,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
 
       <section
         aria-labelledby={eveningId}
-        className={[columnClass, 'mt-10 sm:mt-14'].join(' ')}
+        className={[pageFrameClass, 'mt-10 sm:mt-14'].join(' ')}
       >
         <h2
           className={[eyebrowClass, 'text-ink-muted'].join(' ')}
@@ -130,7 +134,10 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
         >
           Evening
         </h2>
-        <div className="mt-6">
+        {/* The frame is the archive's now, which is wider than anyone wants to
+            write a paragraph across, so the writing keeps its own measure
+            inside it and starts on the same line as everything above it. */}
+        <div className={[readingMeasureClass, 'mt-6'].join(' ')}>
           <MarkdownEditor
             focusClass={focusRingClass}
             initialMarkdown={autosave.draft.journalMarkdown}
@@ -146,7 +153,12 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             to the words while they are being typed. The rule above them is the
             writing area's own, which follows the words down as the entry
             grows; a second one here would be the same line drawn twice. */}
-        <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3">
+        <div
+          className={[
+            readingMeasureClass,
+            'mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3',
+          ].join(' ')}
+        >
           <EntryCounts markdown={autosave.draft.journalMarkdown} />
           <SaveStatusLine
             failure={autosave.failure}

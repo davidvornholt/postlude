@@ -130,6 +130,7 @@ const textPairs: ReadonlyArray<readonly [string, string]> = [
 ];
 
 const normalTextMinimum = 4.5;
+const nonTextMinimum = 3;
 const reportedDecimals = 3;
 
 const ratio = (palette: Palette, foreground: string, background: string) =>
@@ -149,6 +150,21 @@ export const textPairFindings = (
         ];
   });
 
+/** Whether the register's structural rule remains visible on its own ground. */
+export const deepRegisterFindings = (
+  label: string,
+  palette: Palette,
+): ReadonlyArray<string> => {
+  const foreground = '--pl-deep-rule';
+  const background = '--pl-deep-ground';
+  const measured = ratio(palette, foreground, background);
+  return measured >= nonTextMinimum
+    ? []
+    : [
+        `${label}: ${foreground} on ${background} = ${measured.toFixed(reportedDecimals)}:1`,
+      ];
+};
+
 const rampSteps = [
   '--pl-heat-q1',
   '--pl-heat-q2',
@@ -157,7 +173,7 @@ const rampSteps = [
 ] as const;
 export const activityMarkNames = ['--pl-heat-none-mark', ...rampSteps] as const;
 const minimumLightnessStep = 0.06;
-const markMinimum = 3;
+const markMinimum = nonTextMinimum;
 const stepDecimals = 3;
 
 /**

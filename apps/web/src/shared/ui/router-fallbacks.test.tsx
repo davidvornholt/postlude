@@ -34,7 +34,7 @@ import {
   elementContent,
 } from '#/shared/testing/rendered-html.ts';
 import { BrandLink } from './brand-link.tsx';
-import { columnClass } from './design-classes.ts';
+import { pageFrameClass } from './design-classes.ts';
 import {
   InsideMainLandmark,
   RouterError,
@@ -44,8 +44,8 @@ import {
 /**
  * Only the part of `_app` a fallback's position depends on: a wordmark it can
  * be marked against, and the one main landmark it can land inside. It is not
- * the shell — the real header sets the text column around the masthead, and
- * this omits it — so the column counts below read inside `<main>` only, and
+ * the shell — the real header sets the page frame around the masthead, and
+ * this omits it — so the frame counts below read inside `<main>` only, and
  * what the real shell sets on `<main>` is pinned in `routes/_app.test.tsx`
  * against the real thing.
  */
@@ -122,8 +122,8 @@ const renderAt = async (path: string): Promise<string> => {
 
 const mainLandmarks = (html: string): number => countElements(html, 'main');
 
-const columnWrappers = (html: string): number =>
-  countRecipe(elementContent(html, 'main'), columnClass);
+const frameWrappers = (html: string): number =>
+  countRecipe(elementContent(html, 'main'), pageFrameClass);
 
 /** The attributes of the one anchor with this exact text. */
 const linkAttributes = (html: string, text: string): string =>
@@ -158,17 +158,17 @@ it('opens a main landmark when the shell guard itself fails', async () => {
 });
 
 /*
- * The fallback owns its measure in both positions, because the shell hands the
+ * The fallback owns its frame in both positions, because the shell hands the
  * page none. Two counts of one rather than a single count of two: a fallback
- * nested in a second column reads as an indent, and one with no column runs to
+ * nested in a second frame reads as an indent, and one with no frame runs to
  * the viewport edges, and both would still total two across the pair.
  */
-it('sets the text column exactly once wherever a fallback lands', async () => {
+it('sets the page frame exactly once wherever a fallback lands', async () => {
   const insideShell = await renderAt('/gone');
   const neverReachedShell = await renderAt('/nowhere');
 
-  expect(columnWrappers(insideShell)).toBe(1);
-  expect(columnWrappers(neverReachedShell)).toBe(1);
+  expect(frameWrappers(insideShell)).toBe(1);
+  expect(frameWrappers(neverReachedShell)).toBe(1);
 });
 
 /*

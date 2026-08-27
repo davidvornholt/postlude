@@ -16,9 +16,10 @@
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
 import type { ActivityCell } from '../activity-cells.ts';
-import { groupDigits, heatLevelLabels } from '../activity-labels.ts';
+import { heatLevelLabels } from '../activity-labels.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
+import { journalNumberLabel } from '../journal-labels.ts';
 import { DayLink } from './day-link.tsx';
 
 const summaryClass = [
@@ -61,7 +62,7 @@ export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
   return (
     <details className="mt-6 border-border border-t pt-4 text-sm">
       <summary className={summaryClass}>
-        Every day written ({written.length})
+        Every day written ({journalNumberLabel(written.length)})
       </summary>
       <section
         aria-label="Days written, scrollable"
@@ -103,7 +104,7 @@ export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
                   {heatLevelLabels[cell.level]}
                 </td>
                 <td className="px-3 py-2 text-right text-ink tabular-nums">
-                  {groupDigits(cell.words)}
+                  {journalNumberLabel(cell.words)}
                 </td>
               </tr>
             ))}

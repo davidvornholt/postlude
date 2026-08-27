@@ -17,7 +17,10 @@ import {
   useState,
 } from 'react';
 
-import { columnClass } from '#/shared/ui/design-classes.ts';
+import {
+  pageFrameClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { searchFailureKind } from '../errors/search-errors.ts';
 import {
@@ -133,7 +136,7 @@ export const SearchPage = ({
   };
 
   return (
-    <div className={columnClass}>
+    <div className={pageFrameClass}>
       <h1 className="font-display text-4xl text-ink sm:text-5xl">Search</h1>
       <SearchForm
         errorId={errorId}
@@ -161,7 +164,11 @@ export const SearchPage = ({
         ) : null}
         {state.state === 'failed' ? (
           <div className="mt-10">
-            <p className="max-w-prose text-ink-muted text-lg">
+            <p
+              className={[readingMeasureClass, 'text-ink-muted text-lg'].join(
+                ' ',
+              )}
+            >
               {searchUnavailableMessage}
             </p>
             <button
@@ -175,7 +182,11 @@ export const SearchPage = ({
         ) : null}
         {state.state === 'authentication-required' ? (
           <div className="mt-10">
-            <p className="max-w-prose text-ink-muted text-lg">
+            <p
+              className={[readingMeasureClass, 'text-ink-muted text-lg'].join(
+                ' ',
+              )}
+            >
               {searchAuthenticationMessage}
             </p>
             <a

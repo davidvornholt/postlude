@@ -89,12 +89,24 @@ const captureRejected = async (run: () => Promise<unknown>): Promise<unknown> =>
 
 describe('dated journal route', () => {
   it('rejects malformed and impossible dates before loading', () => {
-    const errors = ['not-a-date', '2026-02-30'].map((date) =>
+    const errors = ['not-a-date', '0000-01-01', '2026-02-30'].map((date) =>
       captureThrown(() => parseDay({ date })),
     );
 
-    expect(errors.map(isNotFound)).toEqual([true, true]);
+    expect(errors.map(isNotFound)).toEqual([true, true, true]);
     expect(readInputs).toEqual([]);
+  });
+
+  it('preserves every supported low year at the address boundary', () => {
+    expect(
+      ['0001-01-01', '0099-01-01', '0100-01-01'].map((date) =>
+        parseDay({ date }),
+      ),
+    ).toEqual([
+      { date: '0001-01-01' },
+      { date: '0099-01-01' },
+      { date: '0100-01-01' },
+    ]);
   });
 
   it('loads a valid past date and names it in metadata', async () => {
@@ -107,7 +119,7 @@ describe('dated journal route', () => {
     type HeadInput = Parameters<typeof dayHead>[0];
     const metadata = await dayHead({ loaderData: loadedDay } as HeadInput);
     expect(metadata.meta).toContainEqual({
-      title: 'Tuesday 25 August 2026 · Postlude',
+      title: 'Tuesday, August 25, 2026 · Postlude',
     });
   });
 

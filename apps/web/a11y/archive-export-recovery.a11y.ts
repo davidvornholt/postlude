@@ -13,6 +13,10 @@ import {
 } from './archive-export-recovery-test-support.ts';
 import type { ArchivePageFixtureConfig } from './archive-page-fixture-contract.ts';
 import { mountArchivePage, scanArchive } from './archive-page-test-support.ts';
+import {
+  expectPageFrameGeometry,
+  expectReadingMeasureGeometry,
+} from './reading-comfort-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -151,7 +155,10 @@ for (const colorScheme of colorSchemes) {
       ),
     );
     await expect(recovery).toBeFocused();
-    await expect(page.getByText('Your journal is unchanged.')).toBeVisible();
+    const message = page.getByText('Your journal is unchanged.');
+    await expect(message).toBeVisible();
+    await expectPageFrameGeometry(message.locator('xpath=../..'));
+    await expectReadingMeasureGeometry(page, message);
     await expect(page.locator('body')).not.toContainText(privateFailureDetail);
     const fonts = await recoveryFonts(page);
     expect(fonts.bodyFamily).toContain('Inter Variable');

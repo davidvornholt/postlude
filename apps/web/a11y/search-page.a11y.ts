@@ -9,7 +9,7 @@ import {
 test.describe.configure({ mode: 'serial' });
 
 const colorSchemes = ['light', 'dark'] as const;
-const resultLink = /Sunday,? 1 March 2026/u;
+const resultLink = /Sunday, March 1, 2026/u;
 const limitedLabel = /The first 1 day holding/u;
 const overLimitLength = 201;
 
