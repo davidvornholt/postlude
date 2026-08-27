@@ -25,4 +25,4 @@ env files with `just dev-env-generate`.
 
 ## Container release
 
-Every push to `main` is published as `ghcr.io/davidvornholt/postlude:main` only after the Standards gate succeeds for that exact commit. The workflow announces the immutable image digest to personal-infra, which owns promotion and deployment. The deploy host runs `bun run db:migrate:deploy` from `/app/apps/web` before starting the server.
+Every push to `main` is published as `ghcr.io/davidvornholt/postlude:main` only after the Standards gate succeeds for that exact commit and the commit is still current `main`. A completed-run follow-up announces the immutable image digest to personal-infra, which owns promotion and deployment. The deploy host runs `bun run db:migrate:deploy` from `/app/apps/web` before starting the server.

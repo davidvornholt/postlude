@@ -47,6 +47,7 @@ COPY --chown=app:app --from=builder /app/apps/web/package.json ./package.json
 COPY --chown=app:app --from=builder /app/apps/web/scripts ./scripts
 COPY --chown=app:app --from=builder /app/apps/web/src ./src
 COPY --chown=app:app --from=builder /app/packages/db /app/packages/db
+COPY --chown=app:app --from=builder /app/packages/ui /app/packages/ui
 
 EXPOSE 3000
 

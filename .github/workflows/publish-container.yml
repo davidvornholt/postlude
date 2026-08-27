@@ -13,6 +13,7 @@ permissions: {}
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
+  queue: max
 
 jobs:
   gate:
@@ -92,10 +93,35 @@ jobs:
         with:
           push: true
           provenance: false
-          tags: ghcr.io/davidvornholt/postlude:main
+          tags: ghcr.io/davidvornholt/postlude:${{ github.sha }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Promote the image only while this commit is current main
+        env:
+          BUILD_DIGEST: ${{ steps.build.outputs.digest }}
+          GATED_SHA: ${{ needs.gate.outputs.gated-sha }}
+          GH_TOKEN: ${{ github.token }}
+          IMAGE: ghcr.io/davidvornholt/postlude
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$GATED_SHA" = "$SHA"
+          test "$(git rev-parse HEAD)" = "$SHA"
+          current_main=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$current_main" != "$SHA" ]; then
+            echo "::error::Refusing to publish stale main commit $SHA; current main is $current_main"
+            exit 1
+          fi
+          docker buildx imagetools create --prefer-index=false --tag "$IMAGE:main" "$IMAGE@$BUILD_DIGEST"
+          resolved=$(docker buildx imagetools inspect "$IMAGE:main" --format '{{json .Manifest}}' | jq -er .digest)
+          test "$resolved" = "$BUILD_DIGEST"
+          current_main=$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)
+          if [ "$current_main" != "$SHA" ]; then
+            echo "::error::Main advanced to $current_main while $SHA was being published"
+            exit 1
+          fi
 
       - name: Emit immutable promotion record
         env:
@@ -111,65 +137,3 @@ jobs:
           marker_left=IMAGE_PROMOTION
           marker_right=_RECORD
           printf '%s %s\n' "${marker_left}${marker_right}" "$record"
-
-  announce:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout the canonical SOPS action
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-
-      - name: Resolve the broker app id
-        uses: ./.github/actions/sops-secret
-        with:
-          age-key: ${{ secrets.SOPS_AGE_KEY }}
-          secret-file: secrets/ci.yaml
-          secret-key: broker_app.app_id
-          env-name: BROKER_APP_ID
-
-      - name: Resolve the broker private key
-        uses: ./.github/actions/sops-secret
-        with:
-          age-key: ${{ secrets.SOPS_AGE_KEY }}
-          secret-file: secrets/ci.yaml
-          secret-key: broker_app.private_key
-          env-name: BROKER_APP_PRIVATE_KEY
-
-      - name: Mint an infrastructure announcement token
-        id: broker
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ env.BROKER_APP_ID }}
-          private-key: ${{ env.BROKER_APP_PRIVATE_KEY }}
-          owner: davidvornholt
-          repositories: personal-infra
-          permission-contents: write
-
-      - name: Announce image digest
-        env:
-          BUILD_DIGEST: ${{ needs.build.outputs.digest }}
-          GH_TOKEN: ${{ steps.broker.outputs.token }}
-          IMAGE_REPOSITORY: ghcr.io/davidvornholt/postlude
-          SOURCE_REF: ${{ github.ref }}
-          SOURCE_REPOSITORY: ${{ github.repository }}
-          SOURCE_RUN_ID: ${{ github.run_id }}
-          SOURCE_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          [[ "$BUILD_DIGEST" =~ ^sha256:[0-9a-f]{64}$ && "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ && "$SOURCE_RUN_ID" =~ ^[1-9][0-9]*$ ]]
-          test "$SOURCE_REPOSITORY" = davidvornholt/postlude
-          test "$SOURCE_REF" = refs/heads/main
-          test "$IMAGE_REPOSITORY" = ghcr.io/davidvornholt/postlude
-          gh api repos/davidvornholt/personal-infra/dispatches \
-            -f event_type=image-bump \
-            -f "client_payload[app]=postlude" \
-            -f "client_payload[source_repository]=$SOURCE_REPOSITORY" \
-            -f "client_payload[source_ref]=$SOURCE_REF" \
-            -f "client_payload[source_sha]=$SOURCE_SHA" \
-            -f "client_payload[source_run_id]=$SOURCE_RUN_ID" \
-            -f "client_payload[image_repository]=$IMAGE_REPOSITORY" \
-            -f "client_payload[digest]=$BUILD_DIGEST"
