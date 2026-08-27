@@ -20,13 +20,13 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  */
 export const Route = createFileRoute('/_app/day/')({
   validateSearch: (search: Record<string, unknown>) => ({
-    date: typeof search.date === 'string' ? search.date : undefined,
+    date: search.date,
   }),
   beforeLoad: ({ search }) => {
     if (search.date === undefined || search.date === '') {
       throw redirect({ to: '/' });
     }
-    if (!isJournalDate(search.date)) {
+    if (typeof search.date !== 'string' || !isJournalDate(search.date)) {
       throw notFound();
     }
     throw redirect({ params: { date: search.date }, to: '/day/$date' });

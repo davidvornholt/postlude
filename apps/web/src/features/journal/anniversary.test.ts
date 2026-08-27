@@ -14,6 +14,7 @@ const entry = (date: string, markdown: string): AnniversaryEntry => ({
   date,
   journalMarkdown: markdown,
   journalWordCount: markdown === '' ? 0 : markdown.split(' ').length,
+  revision: 1,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
 });

@@ -14,6 +14,10 @@ export type JournalDayView = {
   readonly entry: JournalEntry;
   readonly today: JournalDate;
   readonly anniversaries: ReadonlyArray<Anniversary>;
+  readonly anniversaryRevisions: ReadonlyArray<{
+    readonly date: JournalDate;
+    readonly revision: number;
+  }>;
 };
 
 export type DatedJournalDay =
@@ -43,6 +47,10 @@ export const makeJournalDayReader = (run: RunJournalReadEffect) => {
           entry: entry ?? emptyJournalEntry(date),
           today,
           anniversaries: earlier.map(anniversaryOf(date)),
+          anniversaryRevisions: earlier.map((earlierEntry) => ({
+            date: earlierEntry.date,
+            revision: earlierEntry.revision,
+          })),
         };
       }),
     );

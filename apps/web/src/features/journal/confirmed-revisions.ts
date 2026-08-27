@@ -6,6 +6,10 @@ type LoaderGeneration = {
 };
 
 type LoaderResult = 'accept' | 'retry';
+type RevisionEvidence = {
+  readonly date: JournalDate;
+  readonly revision: number;
+};
 
 export type ConfirmedRevisionTracker = {
   readonly record: (date: JournalDate, revision: number) => void;
@@ -14,8 +18,7 @@ export type ConfirmedRevisionTracker = {
   readonly beginLoad: () => LoaderGeneration;
   readonly completeLoad: (
     loader: LoaderGeneration,
-    date: JournalDate,
-    revision: number,
+    revisions: ReadonlyArray<RevisionEvidence>,
   ) => LoaderResult;
   readonly abandonLoad: (loader: LoaderGeneration) => void;
 };
@@ -110,11 +113,8 @@ export const createConfirmedRevisionTracker = (
     observe: (date, revision) => {
       const checkpoint = checkpoints.get(date);
       if (checkpoint === undefined) {
-        const admittedRevision = admissions.get(date);
-        return (
-          !guarded ||
-          (admittedRevision !== undefined && revision >= admittedRevision)
-        );
+        const admitted = admissions.get(date);
+        return !guarded || (admitted !== undefined && revision >= admitted);
       }
       if (revision < checkpoint.revision) {
         return false;
@@ -133,7 +133,7 @@ export const createConfirmedRevisionTracker = (
       outstanding.set(loader.id, loader.generation);
       return loader;
     },
-    completeLoad: (loader, date, revision) => {
+    completeLoad: (loader, revisions) => {
       const started = outstanding.get(loader.id);
       if (started === undefined) {
         return 'retry';
@@ -142,12 +142,16 @@ export const createConfirmedRevisionTracker = (
         outstanding.set(loader.id, generation);
         return 'retry';
       }
-      const checkpoint = checkpoints.get(date);
-      if (checkpoint !== undefined && revision < checkpoint.revision) {
-        outstanding.set(loader.id, generation);
-        return 'retry';
+      for (const { date, revision } of revisions) {
+        const checkpoint = checkpoints.get(date);
+        if (checkpoint !== undefined && revision < checkpoint.revision) {
+          outstanding.set(loader.id, generation);
+          return 'retry';
+        }
       }
-      admit(date, revision);
+      for (const { date, revision } of revisions) {
+        admit(date, revision);
+      }
       finish(loader);
       return 'accept';
     },
@@ -158,10 +162,8 @@ export const createConfirmedRevisionTracker = (
 export const confirmedRevisions = createConfirmedRevisionTracker();
 
 type RevisionedJournalDay = {
-  readonly entry: {
-    readonly date: JournalDate;
-    readonly revision: number;
-  };
+  readonly entry: RevisionEvidence;
+  readonly anniversaryRevisions: ReadonlyArray<RevisionEvidence>;
 };
 
 export const loadAfterConfirmedRevision = async <
@@ -174,16 +176,14 @@ export const loadAfterConfirmedRevision = async <
 
   const readCurrent = async (remaining: number): Promise<Day> => {
     const loaded = await load();
-    const result = tracker.completeLoad(
-      loader,
-      loaded.entry.date,
-      loaded.entry.revision,
-    );
+    const result = tracker.completeLoad(loader, [
+      loaded.entry,
+      ...loaded.anniversaryRevisions,
+    ]);
     if (result === 'accept') {
       return loaded;
     }
     if (remaining === 1) {
-      tracker.abandonLoad(loader);
       throw new Error(
         'Fresh journal reads did not include the confirmed save.',
       );

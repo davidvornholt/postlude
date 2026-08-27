@@ -303,6 +303,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             entry_date,
             journal_markdown,
             journal_word_count,
+            revision,
             scripture_markdown,
             scripture_word_count
           from entry

@@ -7,6 +7,7 @@ import { type JournalDate, shiftJournalDate } from './journal-day.ts';
 
 const day = (date: JournalDate, revision: number) => ({
   entry: { date, revision },
+  anniversaryRevisions: [],
 });
 
 const deferred = <Value>() => {

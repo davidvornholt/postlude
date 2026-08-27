@@ -300,6 +300,7 @@ it('reads only the bounded memory projection from rows with large search data', 
     'date',
     'journalMarkdown',
     'journalWordCount',
+    'revision',
     'scriptureMarkdown',
     'scriptureWordCount',
   ]);

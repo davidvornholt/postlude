@@ -53,6 +53,7 @@ describe('dated journal day service boundary', () => {
         date: '2025-08-25',
         journalMarkdown: '## Last year\n\nA clear opening.',
         journalWordCount: 5,
+        revision: 4,
         scriptureMarkdown: '',
         scriptureWordCount: 7,
       },
@@ -60,6 +61,7 @@ describe('dated journal day service boundary', () => {
         date: '2023-08-25',
         journalMarkdown: 'Three years back.',
         journalWordCount: 3,
+        revision: 2,
         scriptureMarkdown: '',
         scriptureWordCount: 2,
       },
@@ -104,6 +106,10 @@ describe('dated journal day service boundary', () => {
             words: 5,
             yearsAgo: 3,
           },
+        ],
+        anniversaryRevisions: [
+          { date: '2025-08-25', revision: 4 },
+          { date: '2023-08-25', revision: 2 },
         ],
       },
     });
