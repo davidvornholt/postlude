@@ -10,6 +10,7 @@ const draft: EntryDraft = {
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 100,
 };
 const stored = { draft, revision: 100 };
 const savedRevision = 101;
@@ -85,7 +86,11 @@ it('evicts a confirmed coordinator and retains only its revision', async () => {
   expect(revisions.known(draft.date)).toBe(savedRevision);
 
   const loaded = {
-    draft: { ...draft, journalMarkdown: 'In flight.' },
+    draft: {
+      ...draft,
+      journalMarkdown: 'In flight.',
+      baseRevision: savedRevision,
+    },
     revision: savedRevision,
   };
   const remounted = registry.acquire(loaded, () =>

@@ -9,6 +9,7 @@ const draft: EntryDraft = {
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 1,
 };
 
 const memoryDraftRecovery = (): DraftRecovery => ({

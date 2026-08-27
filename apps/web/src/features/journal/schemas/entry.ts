@@ -190,12 +190,16 @@ export const emptyJournalEntry = (date: string): JournalEntry => ({
  * The reference arrives as the line the writer typed rather than as parsed
  * parts, so one parser decides what a reference is, on the server, for every
  * way an entry can reach the table.
+ *
+ * `baseRevision` is the row version the editor opened or last confirmed. The
+ * write succeeds only while PostgreSQL still holds that version.
  */
 export const EntryDraftSchema = Schema.Struct({
   date: JournalDateSchema,
   journalMarkdown: Schema.String,
   scriptureMarkdown: Schema.String,
   scriptureReference: Schema.String,
+  baseRevision: Revision,
 });
 
 export type EntryDraft = Schema.Schema.Type<typeof EntryDraftSchema>;

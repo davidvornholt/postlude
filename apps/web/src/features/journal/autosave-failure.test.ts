@@ -24,6 +24,7 @@ const blank: EntryDraft = {
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 1,
 };
 const wrote = (text: string): EntryDraft => ({
   ...blank,

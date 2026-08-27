@@ -1,18 +1,39 @@
 /**
  * Browser-only evidence that a save reached the database.
  *
- * A route loader can start before that save finishes and return afterwards. Its
- * row is then older than the save response even though it arrived later. The
- * tracker keeps only a day and its numeric revision, never journal prose, and
- * bounds the long-session set by discarding the oldest comparison.
+ * A loader generation is captured before its request starts. Confirmations
+ * keep their revision checkpoint until every older loader has finished and a
+ * mounted page has observed that revision. The tracker stores dates, numbers,
+ * and counters only. If its fixed capacity cannot represent another day, it
+ * stops accepting snapshots for the rest of the browser session.
  */
 
 import type { JournalDate } from './journal-day.ts';
 
+type LoaderGeneration = {
+  readonly id: number;
+  readonly generation: number;
+};
+
+type LoaderResult = 'accept' | 'retry' | 'unsafe';
+
 export type ConfirmedRevisionTracker = {
   readonly record: (date: JournalDate, revision: number) => void;
   readonly known: (date: JournalDate) => number | undefined;
-  readonly observe: (date: JournalDate, revision: number) => void;
+  readonly observe: (date: JournalDate, revision: number) => boolean;
+  readonly beginLoad: () => LoaderGeneration | undefined;
+  readonly completeLoad: (
+    loader: LoaderGeneration,
+    date: JournalDate,
+    revision: number,
+  ) => LoaderResult;
+  readonly abandonLoad: (loader: LoaderGeneration) => void;
+};
+
+type Checkpoint = {
+  readonly revision: number;
+  readonly generation: number;
+  readonly observedRevision: number;
 };
 
 const maximumTrackedDays = 32;
@@ -21,28 +42,95 @@ const maximumLoaderReads = 3;
 export const createConfirmedRevisionTracker = (
   maximum = maximumTrackedDays,
 ): ConfirmedRevisionTracker => {
-  const revisions = new Map<JournalDate, number>();
+  const checkpoints = new Map<JournalDate, Checkpoint>();
+  const outstanding = new Map<number, number>();
+  let generation = 0;
+  let nextLoaderId = 0;
+  let unsafe = false;
+
+  const hasOlderLoad = (checkpoint: Checkpoint): boolean => {
+    for (const started of outstanding.values()) {
+      if (started < checkpoint.generation) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const pruneObserved = (): void => {
+    for (const [date, checkpoint] of checkpoints) {
+      if (
+        checkpoint.observedRevision >= checkpoint.revision &&
+        !hasOlderLoad(checkpoint)
+      ) {
+        checkpoints.delete(date);
+      }
+    }
+  };
+
+  const finish = (loader: LoaderGeneration): void => {
+    outstanding.delete(loader.id);
+    pruneObserved();
+  };
 
   return {
     record: (date, revision) => {
-      const current = revisions.get(date) ?? 0;
-      revisions.delete(date);
-      revisions.set(date, Math.max(current, revision));
-      while (revisions.size > maximum) {
-        const oldest = revisions.keys().next().value;
-        if (oldest === undefined) {
-          return;
-        }
-        revisions.delete(oldest);
+      if (unsafe) {
+        return;
       }
+      generation += 1;
+      const current = checkpoints.get(date);
+      if (current === undefined && checkpoints.size >= maximum) {
+        unsafe = true;
+        return;
+      }
+      checkpoints.set(date, {
+        revision: Math.max(current?.revision ?? 0, revision),
+        generation,
+        observedRevision: current?.observedRevision ?? 0,
+      });
     },
-    known: (date) => revisions.get(date),
+    known: (date) => checkpoints.get(date)?.revision,
     observe: (date, revision) => {
-      const confirmed = revisions.get(date);
-      if (confirmed !== undefined && revision >= confirmed) {
-        revisions.delete(date);
+      if (unsafe) {
+        return false;
       }
+      const checkpoint = checkpoints.get(date);
+      if (checkpoint === undefined) {
+        return true;
+      }
+      if (revision < checkpoint.revision) {
+        return false;
+      }
+      checkpoints.set(date, {
+        ...checkpoint,
+        observedRevision: Math.max(checkpoint.observedRevision, revision),
+      });
+      pruneObserved();
+      return true;
     },
+    beginLoad: () => {
+      if (unsafe) {
+        return;
+      }
+      const loader = { id: nextLoaderId, generation };
+      nextLoaderId += 1;
+      outstanding.set(loader.id, loader.generation);
+      return loader;
+    },
+    completeLoad: (loader, date, revision) => {
+      if (!outstanding.has(loader.id) || unsafe) {
+        finish(loader);
+        return 'unsafe';
+      }
+      const checkpoint = checkpoints.get(date);
+      if (checkpoint !== undefined && revision < checkpoint.revision) {
+        return 'retry';
+      }
+      finish(loader);
+      return 'accept';
+    },
+    abandonLoad: finish,
   };
 };
 
@@ -55,19 +143,36 @@ type RevisionedJournalDay = {
   };
 };
 
-/** Repeat bounded loader reads while their snapshots predate confirmed saves. */
-export const loadAfterConfirmedRevision = <Day extends RevisionedJournalDay>(
+const unsafeTrackerMessage =
+  'Confirmed journal revisions cannot be tracked safely in this session.';
+
+/** Repeat bounded reads without dropping the generation of the first read. */
+export const loadAfterConfirmedRevision = async <
+  Day extends RevisionedJournalDay,
+>(
   load: () => Promise<Day>,
   tracker: ConfirmedRevisionTracker = confirmedRevisions,
 ): Promise<Day> => {
+  const loader = tracker.beginLoad();
+  if (loader === undefined) {
+    throw new Error(unsafeTrackerMessage);
+  }
+
   const readCurrent = async (remaining: number): Promise<Day> => {
     const loaded = await load();
-    const confirmed = tracker.known(loaded.entry.date);
-    if (confirmed === undefined || loaded.entry.revision >= confirmed) {
-      tracker.observe(loaded.entry.date, loaded.entry.revision);
+    const result = tracker.completeLoad(
+      loader,
+      loaded.entry.date,
+      loaded.entry.revision,
+    );
+    if (result === 'accept') {
       return loaded;
     }
+    if (result === 'unsafe') {
+      throw new Error(unsafeTrackerMessage);
+    }
     if (remaining === 1) {
+      tracker.abandonLoad(loader);
       throw new Error(
         'Fresh journal reads did not include the confirmed save.',
       );
@@ -75,5 +180,10 @@ export const loadAfterConfirmedRevision = <Day extends RevisionedJournalDay>(
     return readCurrent(remaining - 1);
   };
 
-  return readCurrent(maximumLoaderReads);
+  try {
+    return await readCurrent(maximumLoaderReads);
+  } catch (error) {
+    tracker.abandonLoad(loader);
+    throw error;
+  }
 };

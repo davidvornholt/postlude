@@ -36,17 +36,14 @@ export const createAutosaveRegistry = (
       const {
         draft: { date },
       } = stored;
+      if (!revisions.observe(date, stored.revision)) {
+        throw new Error('A stale journal snapshot reached autosave.');
+      }
       const existing = coordinators.get(date);
       if (existing !== undefined) {
         existing.update(stored, save);
         return existing;
       }
-      const confirmed = revisions.known(date);
-      if (confirmed !== undefined && stored.revision < confirmed) {
-        throw new Error('A stale journal snapshot reached autosave.');
-      }
-      revisions.observe(date, stored.revision);
-
       let created: AutosaveCoordinator;
       created = createAutosaveCoordinator({
         stored,

@@ -84,6 +84,7 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
     entry.scriptureReference === undefined
       ? ''
       : formatScriptureReference(entry.scriptureReference),
+  baseRevision: entry.revision,
 });
 
 const DayBody = ({ entry, today, save }: DayPageProps) => {

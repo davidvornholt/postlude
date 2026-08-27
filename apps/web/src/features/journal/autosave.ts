@@ -20,7 +20,7 @@ export type AutosaveFailure =
       readonly message: string;
     }
   | {
-      readonly kind: 'authentication' | 'network';
+      readonly kind: 'authentication' | 'conflict' | 'network';
       readonly message: string;
     };
 
@@ -109,17 +109,20 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
   }
+  const confirmedDraft = { ...state.inFlight, baseRevision: revision };
+  const rebasedDraft = { ...state.draft, baseRevision: revision };
   const settled: AutosaveState = {
     ...state,
-    stored: { draft: state.inFlight, revision },
+    draft: rebasedDraft,
+    stored: { draft: confirmedDraft, revision },
     inFlight: undefined,
     failure: undefined,
   };
   return sameDraft(settled.draft, settled.stored.draft)
     ? [settled, []]
     : [
-        { ...settled, inFlight: settled.draft },
-        [{ _tag: 'save', draft: settled.draft }],
+        { ...settled, inFlight: rebasedDraft },
+        [{ _tag: 'save', draft: rebasedDraft }],
       ];
 };
 

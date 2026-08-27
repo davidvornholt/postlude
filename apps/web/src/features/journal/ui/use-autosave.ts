@@ -49,15 +49,34 @@ export const useAutosave = (
   save: SaveDraft,
 ): Autosave => {
   const {
-    draft: { date, journalMarkdown, scriptureMarkdown, scriptureReference },
+    draft: {
+      date,
+      journalMarkdown,
+      scriptureMarkdown,
+      scriptureReference,
+      baseRevision,
+    },
     revision,
   } = stored;
   const stableStored = useMemo<ConfirmedDraft>(
     () => ({
-      draft: { date, journalMarkdown, scriptureMarkdown, scriptureReference },
+      draft: {
+        date,
+        journalMarkdown,
+        scriptureMarkdown,
+        scriptureReference,
+        baseRevision,
+      },
       revision,
     }),
-    [date, journalMarkdown, revision, scriptureMarkdown, scriptureReference],
+    [
+      baseRevision,
+      date,
+      journalMarkdown,
+      revision,
+      scriptureMarkdown,
+      scriptureReference,
+    ],
   );
   const serverState = useMemo(() => openAutosave(stableStored), [stableStored]);
   const coordinator = useMemo<AutosaveCoordinator | undefined>(

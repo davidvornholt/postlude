@@ -21,19 +21,9 @@ bun run db:migrate:deploy  # apply with DATABASE_URL from the environment
 
 `.env.local` is composed by `just dev-env-generate`; the dev Postgres container is managed by `just dev-db-start` (see the repo README).
 
-## Pre-release migration policy
+## Migration history
 
-Until the first deployment, the initial migration may be regenerated in place. No database holds data that has to survive, so a schema fix is made by deleting `drizzle/` and running `bun run db:generate` again, not by stacking a follow-up migration on top.
-
-Regenerating invalidates every database that already applied the previous version. Drizzle re-runs any migration whose folder timestamp is newer than the newest one it has recorded, so the regenerated migration runs a second time and fails at `CREATE TABLE` on tables that already exist. Each regeneration therefore requires dropping and re-migrating every local database, `postlude_dev` included:
-
-```sh
-podman exec postlude-dev-postgres psql -U postlude -d postgres \
-  -c 'drop database postlude_dev' -c 'create database postlude_dev'
-bun run db:migrate
-```
-
-From the first deployment on, migrations are append-only: a schema change adds a new migration and never edits or replaces one that has already been applied anywhere.
+The checked-in migration history is append-only because journal databases already carry its Drizzle timestamps. Keep `0000` and `0001` unchanged. Change the schema source, run `bun run db:generate`, and commit the new migration with its snapshot and journal entry.
 
 ## Environment
 
