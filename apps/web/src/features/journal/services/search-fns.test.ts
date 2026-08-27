@@ -6,6 +6,7 @@ import {
   searchHitOf,
   searchQueryLengthLimit,
 } from '../search-contract.ts';
+import { searchTerms } from '../search-query.ts';
 
 const distantWordGap = 80;
 
@@ -73,6 +74,28 @@ it('shows distant terms from one source in separate excerpts', () => {
       excerpt.find((segment) => segment.match)?.text.toLowerCase(),
     ),
   ).toEqual(['rain', 'orchard']);
+});
+
+it('attributes canonical dotted I and final sigma matches to original prose', () => {
+  const hit = searchHitOf(searchTerms('istanbul τελικόσ'))({
+    date: '2026-03-01',
+    journalText: 'İstanbul after dusk.',
+    scriptureText: 'Μια σκέψη τελικός.',
+    scriptureReferenceText: '',
+    words: 6,
+  });
+
+  expect(hit.sources.map(({ kind }) => kind)).toEqual([
+    'evening',
+    'scripture-notes',
+  ]);
+  expect(
+    hit.sources.flatMap(({ excerpts }) =>
+      excerpts.flatMap((excerpt) =>
+        excerpt.filter(({ match }) => match).map(({ text }) => text),
+      ),
+    ),
+  ).toEqual(['İstanbul', 'τελικός']);
 });
 
 it('keeps the query length contract shared and fail-closed', () => {

@@ -7,7 +7,8 @@ export type SearchFixtureOutcome =
   | 'limited'
   | 'loading'
   | 'multi-source'
-  | 'populated';
+  | 'populated'
+  | 'unicode';
 
 export type SearchPageFixtureConfig = {
   readonly outcome: SearchFixtureOutcome;

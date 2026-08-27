@@ -6,7 +6,9 @@ import {
   elementAttributes,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
-import { searchExcerpt, searchTerms } from '../search-query.ts';
+import { searchHitOf } from '../search-contract.ts';
+import { searchExcerpt } from '../search-excerpt.ts';
+import { searchTerms } from '../search-query.ts';
 import type { SearchHit, SearchResults } from '../services/search-fns.ts';
 import { SearchPage } from './search-page.tsx';
 
@@ -66,4 +68,24 @@ it('offers sign-in recovery without exposing a private failure', async () => {
     attributeValue(elementAttributes(html, 'a', 'Sign in again'), 'href'),
   ).toBe('/login');
   expect(html).not.toContain('database');
+});
+
+it('renders dotted I and final sigma evidence as the writer entered it', async () => {
+  const query = 'istanbul τελικόσ';
+  const hit = searchHitOf(searchTerms(query))({
+    date: '2026-03-01',
+    journalText: 'İstanbul after dusk.',
+    scriptureText: 'Μια σκέψη τελικός.',
+    scriptureReferenceText: '',
+    words,
+  });
+  const html = await renderHit(query, hit);
+
+  expect(plainText(html)).toContain('Eveningİstanbul after dusk.');
+  expect(plainText(html)).toContain('Morning notesΜια σκέψη τελικός.');
+  expect(
+    [...html.matchAll(/<mark[^>]*>(?<marked>[^<]+)<\/mark>/gu)].map(
+      (match) => match.groups?.marked,
+    ),
+  ).toEqual(['İstanbul', 'τελικός']);
 });

@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import { type ExcerptSegment, searchExcerpt } from './search-query.ts';
+import { type ExcerptSegment, searchExcerpts } from './search-excerpt.ts';
 import type { SearchMatch } from './services/entry-search.ts';
 
 export const searchQueryLengthLimit = 200;
@@ -38,29 +38,14 @@ export type SearchHitSource = {
 const hasMatch = (excerpt: ReadonlyArray<ExcerptSegment>): boolean =>
   excerpt.some((segment) => segment.match);
 
-const matchedExcerpts = (
-  texts: ReadonlyArray<string>,
-  terms: ReadonlyArray<string>,
-): ReadonlyArray<ReadonlyArray<ExcerptSegment>> => {
-  const candidates = terms.flatMap((term) =>
-    texts.map((text) => searchExcerpt(text, [term])).filter(hasMatch),
-  );
-  return [
-    ...new Map(
-      candidates.map((excerpt) => [
-        excerpt.map(({ match, text }) => `${match ? '1' : '0'}:${text}`).join(),
-        excerpt,
-      ]),
-    ).values(),
-  ];
-};
-
 const sourceOf = (
   kind: SearchHitSourceKind,
-  texts: ReadonlyArray<string>,
+  text: string,
   terms: ReadonlyArray<string>,
 ): SearchHitSource | undefined => {
-  const excerpts = matchedExcerpts(texts, terms);
+  const excerpts = searchExcerpts(text, terms, {
+    hardLineBoundaries: kind === 'passage-reference',
+  }).excerpts.filter(hasMatch);
   return excerpts.length === 0 ? undefined : { kind, excerpts };
 };
 
@@ -71,12 +56,8 @@ export const searchHitOf =
     date: match.date,
     words: match.words,
     sources: [
-      sourceOf('evening', [match.journalText], terms),
-      sourceOf('scripture-notes', [match.scriptureText], terms),
-      sourceOf(
-        'passage-reference',
-        match.scriptureReferenceText.split('\n'),
-        terms,
-      ),
+      sourceOf('evening', match.journalText, terms),
+      sourceOf('scripture-notes', match.scriptureText, terms),
+      sourceOf('passage-reference', match.scriptureReferenceText, terms),
     ].filter((source): source is SearchHitSource => source !== undefined),
   });

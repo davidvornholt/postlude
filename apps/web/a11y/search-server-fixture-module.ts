@@ -1,7 +1,6 @@
-import {
-  searchExcerpt,
-  searchTerms,
-} from '../src/features/journal/search-query.ts';
+import { searchHitOf } from '../src/features/journal/search-contract.ts';
+import { searchExcerpt } from '../src/features/journal/search-excerpt.ts';
+import { searchTerms } from '../src/features/journal/search-query.ts';
 import type {
   SearchHit,
   SearchResults,
@@ -52,6 +51,15 @@ const multiSourceHit = (): SearchHit => ({
     },
   ],
 });
+
+const unicodeHit = (query: string): SearchHit =>
+  searchHitOf(searchTerms(query))({
+    date: '2026-03-01',
+    journalText: 'İstanbul after dusk.',
+    scriptureText: 'Μια σκέψη τελικός.',
+    scriptureReferenceText: '',
+    words,
+  });
 
 export const searchFixtureAnswer = (
   query: string,
@@ -115,7 +123,11 @@ export const searchJournalFn = async ({
   if (view.state !== 'answered') {
     throw new Error('A failed fixture must reject before producing a view.');
   }
-  return config.outcome === 'multi-source'
-    ? searchFixtureAnswer(query, false, true)
-    : view.results;
+  if (config.outcome === 'multi-source') {
+    return searchFixtureAnswer(query, false, true);
+  }
+  if (config.outcome === 'unicode') {
+    return { ...searchFixtureAnswer(query, false), hits: [unicodeHit(query)] };
+  }
+  return view.results;
 };

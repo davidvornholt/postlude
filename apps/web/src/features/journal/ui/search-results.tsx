@@ -15,7 +15,7 @@ import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import type { SearchHitSource } from '../search-contract.ts';
-import type { ExcerptSegment } from '../search-query.ts';
+import type { ExcerptSegment } from '../search-excerpt.ts';
 import type { SearchHit } from '../services/search-fns.ts';
 import { DayLink } from './day-link.tsx';
 

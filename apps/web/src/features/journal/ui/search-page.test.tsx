@@ -19,7 +19,8 @@ import {
   plainText,
 } from '#/shared/testing/rendered-html.ts';
 import type { SearchHitSourceKind } from '../search-contract.ts';
-import { searchExcerpt, searchTerms } from '../search-query.ts';
+import { searchExcerpt } from '../search-excerpt.ts';
+import { searchTerms } from '../search-query.ts';
 import type { SearchHit, SearchResults } from '../services/search-fns.ts';
 import { SearchPage, type SearchPageView } from './search-page.tsx';
 

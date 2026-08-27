@@ -84,6 +84,19 @@ for (const colorScheme of colorSchemes) {
     await scanSearch(page);
   });
 
+  test(`canonical Unicode matches keep their original prose in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountSearchPage(page, 'unicode');
+    await searchFor(page, 'istanbul τελικόσ');
+    const result = page.getByRole('link', { name: resultLink });
+    await expect(result.locator('mark')).toHaveText(['İstanbul', 'τελικός']);
+    await expect(result.getByText('Evening')).toBeVisible();
+    await expect(result.getByText('Morning notes')).toBeVisible();
+    await scanSearch(page);
+  });
+
   test(`a limited search answer passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
     page,
   }) => {
