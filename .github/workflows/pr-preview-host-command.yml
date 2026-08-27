@@ -2,6 +2,10 @@ name: Postlude preview host command
 
 on:
   workflow_call:
+    secrets:
+      sops_age_key:
+        description: Repository bootstrap key for the encrypted preview SSH key
+        required: true
     inputs:
       operation:
         description: Exact forced-command operation
@@ -110,7 +114,7 @@ jobs:
 
       - name: Resolve the dedicated preview SSH key
         env:
-          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+          SOPS_AGE_KEY: ${{ secrets.sops_age_key }}
         run: |
           set -euo pipefail
           test -n "$SOPS_AGE_KEY"
