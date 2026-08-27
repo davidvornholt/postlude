@@ -1,9 +1,5 @@
 /** The authenticated native-download boundary for a journal archive. */
 
-import { createServerFn } from '@tanstack/react-start';
-import { getRequest } from '@tanstack/react-start/server';
-
-import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
 import { exportFileName } from '../export-archive.ts';
 import { exportDownloadResponse } from './export-response.ts';
@@ -31,8 +27,3 @@ export const exportJournalResponse = async (
     signal,
   });
 };
-
-/** Kept until the concurrent archive UI batch replaces its RPC prop with the form. */
-export const exportJournalFn = createServerFn({ method: 'POST' })
-  .middleware([sessionRequired])
-  .handler(() => exportJournalResponse(getRequest().signal));
