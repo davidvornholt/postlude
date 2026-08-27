@@ -2,6 +2,7 @@ import type { ArchiveView } from '../src/features/journal/services/archive-fns.t
 import type { FixtureEntry } from './day-page-fixture-contract.ts';
 
 export type ArchiveNavigationFixtureConfig = {
+  readonly archiveReadOutcome: 'failed' | 'stored';
   readonly deferFirstArchiveRead: boolean;
   readonly entry: FixtureEntry;
   readonly saveOutcome: 'failed' | 'stored';

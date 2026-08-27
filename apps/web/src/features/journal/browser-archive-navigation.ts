@@ -1,6 +1,10 @@
 /** A stable archive snapshot handed from the writing page to its route loader. */
 
-import { readAfterSettlingBrowserAutosaves } from './browser-autosaves.ts';
+import { AutosaveSettlementError } from './autosave-registry.ts';
+import {
+  readAfterSettlingBrowserAutosaves,
+  settleBrowserAutosaves,
+} from './browser-autosaves.ts';
 import type { ArchiveQueryParams } from './schemas/archive-query.ts';
 import type { ArchiveView } from './services/archive-fns.ts';
 
@@ -14,7 +18,17 @@ const readArchive = (year: number | undefined): Promise<ArchiveView> =>
 
 /** Prepares the main Archive link before its current writing page can unmount. */
 export const prepareRollingArchiveNavigation = async (): Promise<void> => {
-  preparedRollingArchive = await readArchive(undefined);
+  try {
+    preparedRollingArchive = await readArchive(undefined);
+  } catch (error) {
+    if (error instanceof AutosaveSettlementError) {
+      throw error;
+    }
+    preparedRollingArchive = undefined;
+    // The route loader owns read failures. Settle once more first, because an
+    // edit may have arrived while the failed pre-navigation read was pending.
+    await settleBrowserAutosaves();
+  }
 };
 
 export const discardPreparedArchiveNavigation = (): void => {

@@ -11,6 +11,7 @@ test.describe.configure({ mode: 'serial' });
 
 const archiveUrl = /\/archive$/u;
 const colorSchemes = ['light', 'dark'] as const;
+const pageErrorTitle = 'Something went wrong · Postlude';
 const previousDayUrl = /\/day\/2026-08-24$/u;
 const quietPeriodMs = 1200;
 const revision = /\d+/u;
@@ -49,6 +50,45 @@ test('the first archive render includes an edit made inside the autosave quiet p
 });
 
 for (const colorScheme of colorSchemes) {
+  test(`a failed pre-navigation read reaches the route error boundary in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    const pageErrors: Array<string> = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountArchiveNavigation(page, {
+      archiveReadOutcome: 'failed',
+      deferFirstArchiveRead: false,
+      saveOutcome: 'stored',
+    });
+
+    const archive = page.getByRole('link', { name: 'Archive' });
+    await archive.focus();
+    await page.keyboard.press('Enter');
+
+    await expect(page).toHaveURL(archiveUrl);
+    await expect(page).toHaveTitle(pageErrorTitle);
+    await expect(
+      page.getByRole('heading', { name: 'Something went wrong' }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        'This page could not be loaded, and trying again is usually enough.',
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Back to Postlude' }),
+    ).toBeVisible();
+    await expect(page.locator('main')).toBeFocused();
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-archive-reads',
+      '2',
+    );
+    expect(pageErrors).toEqual([]);
+    await expectNoPageOverflow(page);
+    await scanArchive(page);
+  });
+
   test(`an edit stored during the archive read reaches its first render in ${colorScheme} mode`, async ({
     page,
   }) => {
@@ -88,6 +128,7 @@ for (const colorScheme of colorSchemes) {
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountArchiveNavigation(page, {
+      archiveReadOutcome: 'failed',
       deferFirstArchiveRead: true,
       saveOutcome: 'failed',
     });
@@ -113,6 +154,10 @@ for (const colorScheme of colorSchemes) {
     await expect(alert).toContainText('Archive stayed closed');
     await expect(alert).toContainText('Tuesday, 25 August 2026');
     await expect(page.getByRole('heading', { name: 'Archive' })).toHaveCount(0);
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-archive-reads',
+      '1',
+    );
     await expectNoPageOverflow(page);
     await scanArchive(page);
 

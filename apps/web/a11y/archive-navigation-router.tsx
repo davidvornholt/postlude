@@ -15,6 +15,7 @@ import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
+import { RouterError } from '../src/shared/ui/router-fallbacks.tsx';
 import { ArchivePage } from './archive-navigation-archive-module.ts';
 import { AppShell, DayPage } from './archive-navigation-day-module.ts';
 import type { ArchiveNavigationFixtureConfig } from './archive-navigation-fixture-contract.ts';
@@ -100,6 +101,7 @@ export const createArchiveNavigationRouter = ({
   });
 
   return createRouter({
+    defaultErrorComponent: RouterError,
     history,
     routeTree: rootRoute.addChildren([
       appRoute.addChildren([todayRoute, datedRoute, archiveRoute]),

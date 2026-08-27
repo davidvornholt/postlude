@@ -101,6 +101,7 @@ export const scanArchive = async (page: playwright.Page): Promise<void> => {
 };
 
 const navigationConfig: ArchiveNavigationFixtureConfig = {
+  archiveReadOutcome: 'stored',
   deferFirstArchiveRead: false,
   today,
   saveOutcome: 'stored',
@@ -123,7 +124,9 @@ let navigationAssets: BrowserFixtureAssets | undefined;
 type ArchiveNavigationOptions = Pick<
   ArchiveNavigationFixtureConfig,
   'deferFirstArchiveRead' | 'saveOutcome'
->;
+> & {
+  readonly archiveReadOutcome?: ArchiveNavigationFixtureConfig['archiveReadOutcome'];
+};
 
 const navigationDocument = [
   '<html lang="en">',
@@ -138,6 +141,7 @@ const navigationDocument = [
 export const mountArchiveNavigation = async (
   page: playwright.Page,
   options: ArchiveNavigationOptions = {
+    archiveReadOutcome: 'stored',
     deferFirstArchiveRead: false,
     saveOutcome: 'stored',
   },

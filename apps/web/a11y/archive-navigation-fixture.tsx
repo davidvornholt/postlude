@@ -60,6 +60,9 @@ fixtureWindow.postludeArchiveNavigationRuntime = {
       document.documentElement.dataset.archiveReadStarted = 'true';
       await firstArchiveRead;
     }
+    if (config.archiveReadOutcome === 'failed') {
+      throw new TypeError('The archive transport failed.');
+    }
     return snapshot;
   },
   releaseArchiveRead,
