@@ -34,7 +34,7 @@ import { parseScriptureReference } from '../scripture-reference.ts';
 import { searchDocumentOf } from '../search-document.ts';
 import { countJournalWords } from '../word-count.ts';
 import {
-  currentMeaningfulEntry,
+  archiveActivityEntry,
   exportableStoredEntry,
 } from './entry-content-sql.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
@@ -84,7 +84,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
   {
     effect: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      const hasCurrentMeaningfulContent = currentMeaningfulEntry(sql);
+      const hasArchiveActivity = archiveActivityEntry(sql);
 
       /**
        * The one day, or nothing. The caller decides what an unwritten day looks
@@ -260,8 +260,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         });
 
       /**
-       * Every currently meaningful day in a range, oldest first, as the archive
-       * needs them: the counts that decide a mark's weight and each section's
+       * Every day with current archive activity in a range, oldest first: the
+       * counts that decide a mark's weight and each section's
        * first-use stamp, which decides whether that habit counts toward its
        * streak. Cleared rows remain stored but have nothing to show here.
        *
@@ -279,7 +279,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_book is not null as has_scripture_reference
           from entry
           where entry_date between ${from} and ${to}
-            and ${hasCurrentMeaningfulContent}
+            and ${hasArchiveActivity}
           order by entry_date
         `.pipe(Effect.flatMap(decodeSummaries));
 
@@ -313,7 +313,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         sql`
           select min(entry_date) as entry_date
           from entry
-          where ${hasCurrentMeaningfulContent}
+          where ${hasArchiveActivity}
             and entry_date <= ${today}
         `.pipe(
           Effect.flatMap(decodeEarliestDates),
