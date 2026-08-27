@@ -24,8 +24,11 @@ import { ArchivePage } from './archive-page.tsx';
 const today = '2026-08-26';
 const seed = 20_260_826;
 const sampleDays = 400;
+const todayYear = 2026;
+const heatStepCount = 4;
 const describedBy = /aria-describedby="(?<id>[^"]+)"/u;
 const dayLinks = /href="\/day\/\d{4}-\d{2}-\d{2}"/gu;
+const currentPage = /aria-current="page"/gu;
 
 const journal = sampleJournal(today, sampleDays, seed);
 
@@ -71,6 +74,33 @@ it('says the journal is empty rather than drawing an empty one', () => {
   expect(empty).toContain('Nothing has been written yet');
   expect(empty).not.toContain('Streaks');
   expect(empty).not.toContain('role="img"');
+});
+
+it('shows reference-only scripture activity instead of the empty journal', async () => {
+  const scriptureOnly = await renderInRouter(
+    <ArchivePage
+      download={noDownload}
+      selectedYear={undefined}
+      view={{
+        ...emptyView,
+        days: [
+          {
+            date: today,
+            journalWords: 0,
+            scriptureWords: 0,
+            hasScripture: true,
+            journalWrittenOnTheDay: false,
+            scriptureUsedOnTheDay: true,
+          },
+        ],
+        years: [todayYear],
+      }}
+    />,
+  );
+
+  expect(scriptureOnly).not.toContain('Nothing has been written yet');
+  expect(scriptureOnly).toContain('Activity');
+  expect(scriptureOnly).toContain('role="img"');
 });
 
 it('states both runs, each with the longest it has ever been', () => {
@@ -121,7 +151,42 @@ it('offers the rolling year and every year the journal covers', () => {
 it('marks the year being shown so it is not told apart by colour alone', () => {
   const rolling = elementAttributes(filled, 'a', 'Past year');
   expect(attributeValue(rolling, 'href')).toBe('/archive');
+  expect(attributeValue(rolling, 'aria-current')).toBe('page');
   expect(rolling).toContain('after:scale-x-100');
+  expect(filled.match(currentPage)).toHaveLength(1);
+});
+
+it('keeps an accepted selected year coherent when the journal has no row there', async () => {
+  const selectedYear = 2024;
+  const selected = await renderInRouter(
+    <ArchivePage
+      download={noDownload}
+      selectedYear={selectedYear}
+      view={{
+        ...sampleArchiveView(journal, today),
+        days: [],
+        window: activityWindow(today, selectedYear),
+      }}
+    />,
+  );
+  const selectedLink = elementAttributes(selected, 'a', String(selectedYear));
+
+  expect(attributeValue(selectedLink, 'href')).toBe(
+    `/archive?year=${selectedYear}`,
+  );
+  expect(attributeValue(selectedLink, 'aria-current')).toBe('page');
+  expect(selected.match(currentPage)).toHaveLength(1);
+  expect(selected).toContain('Nothing was written in this stretch');
+});
+
+it('separates no writing from the four-step Less–More ramp', () => {
+  const legendStart = filled.indexOf('<figcaption');
+  const legendEnd = filled.indexOf('</figcaption>', legendStart);
+  const legend = filled.slice(legendStart, legendEnd);
+
+  expect(plainText(legend)).toContain('No writingLessMore');
+  expect(legend.match(/bg-heat-q[1-4]/gu)).toHaveLength(heatStepCount);
+  expect(legend).toContain('border-heat-none-mark');
 });
 
 /*

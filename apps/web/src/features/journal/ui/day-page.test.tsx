@@ -16,6 +16,7 @@ import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import {
   attributeValue,
   elementAttributes,
+  plainText,
 } from '#/shared/testing/rendered-html.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import { DayPage } from './day-page.tsx';
@@ -26,8 +27,10 @@ const entryOn = (overrides: Partial<JournalEntry> = {}): JournalEntry => ({
   date: today,
   journalMarkdown: '',
   journalWordCount: 0,
+  journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
   ...overrides,
@@ -43,6 +46,13 @@ const neverSaves = () => new Promise<never>(() => undefined);
 
 const render = (entry: JournalEntry): Promise<string> =>
   renderInRouter(<DayPage entry={entry} save={neverSaves} today={today} />);
+
+const headingSequence = (html: string): ReadonlyArray<string> =>
+  Array.from(
+    html.matchAll(/<(?<tag>h[1-6])[^>]*>(?<text>.*?)<\/h[1-6]>/gsu),
+    (match) =>
+      `${match.groups?.tag ?? ''}: ${plainText(match.groups?.text ?? '')}`,
+  );
 
 it('names the day in full, and how long ago it was', async () => {
   const html = await render(entryOn({ date: '2026-08-24' }));
@@ -73,6 +83,16 @@ it('leads back to today from the day before it', async () => {
   );
 });
 
+it('omits the previous-day link at the start of the journal calendar', async () => {
+  const html = await render(entryOn({ date: '0001-01-01' }));
+
+  expect(html).toContain('Monday 1 January 1');
+  expect(html).not.toContain('Previous day');
+  expect(elementAttributes(html, 'a', 'Next day →')).toContain(
+    'href="/day/0001-01-02"',
+  );
+});
+
 /**
  * The entry, before the editor exists. ProseMirror needs a live document to
  * attach to and has none while the page is being rendered, so an entry that
@@ -87,9 +107,32 @@ it('renders the writing before the editor attaches', async () => {
     }),
   );
 
-  expect(html).toContain('A long evening.');
-  expect(html).toContain('Then a second thought.');
-  expect(html).toContain('On mercy.');
+  expect(html).toContain('<p>A <strong>long</strong> evening.</p>');
+  expect(html).toContain('<p>Then a second thought.</p>');
+  expect(html).toContain('<p>On mercy.</p>');
+});
+
+it('keeps entry headings below the page and section headings', async () => {
+  const html = await render(
+    entryOn({
+      journalMarkdown:
+        '# Evening thought\n\n## What stayed\n\n- A **clear** thought\n- [A source](https://example.com)\n\n```ts\nconst kept = true;\n```',
+      scriptureMarkdown: '# Morning thought\n\n## What opened',
+    }),
+  );
+
+  expect(headingSequence(html)).toEqual([
+    'h1: Wednesday 26 August 2026',
+    'h2: Morning scripture',
+    'h3: Morning thought',
+    'h4: What opened',
+    'h2: Evening',
+    'h3: Evening thought',
+    'h4: What stayed',
+  ]);
+  expect(html).toContain('<strong>clear</strong>');
+  expect(html).toContain('<a href="https://example.com">A source</a>');
+  expect(html).toContain('<pre><code>const kept = true;</code></pre>');
 });
 
 /*

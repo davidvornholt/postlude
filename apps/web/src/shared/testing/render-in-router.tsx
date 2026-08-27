@@ -35,11 +35,12 @@ const appPaths = ['/', '/archive', '/day/$date'] as const;
 
 const emptyComponent = () => null;
 
-export const renderInRouter = async (element: ReactNode): Promise<string> => {
+/** The same small router for server markup and hydrated browser fixtures. */
+export const createRenderingRouter = (element: ReactNode) => {
   // The subject is the root route's own component, so no `<Outlet />` is
   // rendered and the placeholder pages below never appear in the markup.
   const rootRoute = createRootRoute({ component: () => element });
-  const router = createRouter({
+  return createRouter({
     history: createMemoryHistory({ initialEntries: ['/'] }),
     routeTree: rootRoute.addChildren(
       appPaths.map((path) =>
@@ -51,6 +52,10 @@ export const renderInRouter = async (element: ReactNode): Promise<string> => {
       ),
     ),
   });
+};
+
+export const renderInRouter = async (element: ReactNode): Promise<string> => {
+  const router = createRenderingRouter(element);
   await router.load();
   return renderToString(
     <QueryClientProvider client={new QueryClient()}>

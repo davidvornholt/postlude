@@ -5,14 +5,12 @@ import { runProtectedCall } from './protected-call.ts';
 import { hasAuthorizedSession } from './session.ts';
 
 /**
- * Attach to every server function that reads or writes journal data:
- * `createServerFn().middleware([sessionRequired]).handler(...)`.
+ * Attach to every server function or route handler that reads or writes
+ * journal data.
  */
-export const sessionRequired = createMiddleware({
-  type: 'function',
-}).server(({ next }) =>
+export const sessionRequired = createMiddleware().server(async ({ next }) =>
   runProtectedCall({
     authorize: () => hasAuthorizedSession(getRequest().headers),
-    next,
+    next: async () => next(),
   }),
 );

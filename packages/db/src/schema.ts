@@ -10,11 +10,7 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core';
 
-/**
- * Postgres's own full-text type. Drizzle has no built-in for it, and the column
- * is never read or written by the app — the database computes it and the search
- * query matches against it — so it needs a name and a type and nothing else.
- */
+/** PostgreSQL's generated full-text search vector. */
 const tsvector = customType<{ data: string; driverData: string }>({
   dataType: () => 'tsvector',
 });
@@ -54,12 +50,23 @@ export const entry = pgTable(
     entryDate: date('entry_date').primaryKey(),
     journalMarkdown: text('journal_markdown'),
     journalWordCount: integer('journal_word_count').notNull().default(0),
+    journalFirstUsedAt: timestamp('journal_first_used_at', {
+      withTimezone: true,
+    }),
     scriptureMarkdown: text('scripture_markdown'),
     scriptureWordCount: integer('scripture_word_count').notNull().default(0),
+    scriptureFirstUsedAt: timestamp('scripture_first_used_at', {
+      withTimezone: true,
+    }),
     scriptureBook: text('scripture_book'),
     scriptureChapter: integer('scripture_chapter'),
     scriptureVerseStart: integer('scripture_verse_start'),
     scriptureVerseEnd: integer('scripture_verse_end'),
+    journalSearchText: text('journal_search_text').notNull(),
+    scriptureSearchText: text('scripture_search_text').notNull(),
+    scriptureReferenceSearchText: text(
+      'scripture_reference_search_text',
+    ).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -72,11 +79,12 @@ export const entry = pgTable(
      * the row it describes. The `simple` configuration neither stems nor drops
      * stopwords, because the journal is written in more than one language and a
      * stemmer told the wrong one mangles the words it is given; the app matches
-     * every term as a prefix instead. The passage's book is indexed with the
-     * prose, so searching for a book name finds the mornings that read it.
+     * every term as a prefix instead. Only the visible-text projections are
+     * indexed. They also carry every accepted passage-book spelling, so every
+     * database match has a source the result row can show and highlight.
      */
     searchVector: tsvector('search_vector').generatedAlwaysAs(
-      sql`to_tsvector('simple', coalesce(journal_markdown, '') || ' ' || coalesce(scripture_markdown, '') || ' ' || coalesce(scripture_book, ''))`,
+      sql`to_tsvector('simple', journal_search_text || ' ' || scripture_search_text || ' ' || scripture_reference_search_text)`,
     ),
   },
   (table) => [

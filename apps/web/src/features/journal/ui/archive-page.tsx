@@ -63,26 +63,38 @@ const YearNav = ({
 }: {
   readonly years: ReadonlyArray<number>;
   readonly selected: number | undefined;
-}) => (
-  <nav aria-label="Activity years">
-    <ul className="flex flex-wrap items-center gap-x-6 gap-y-3">
-      {[undefined, ...years].map((year) => (
-        <li key={year ?? 'rolling'}>
-          <Link
-            className={[
-              navLinkClass,
-              year === selected ? navLinkActiveClass : navLinkInactiveClass,
-            ].join(' ')}
-            search={year === undefined ? {} : { year }}
-            to="/archive"
-          >
-            {year === undefined ? 'Past year' : String(year)}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  </nav>
-);
+}) => {
+  const availableYears =
+    selected === undefined || years.includes(selected)
+      ? years
+      : [...years, selected].sort((first, second) => second - first);
+
+  return (
+    <nav aria-label="Activity years">
+      <ul className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {[undefined, ...availableYears].map((year) => {
+          const current = year === selected;
+          return (
+            <li key={year ?? 'rolling'}>
+              <Link
+                activeOptions={{ exact: true, includeSearch: true }}
+                aria-current={current ? 'page' : undefined}
+                className={[
+                  navLinkClass,
+                  current ? navLinkActiveClass : navLinkInactiveClass,
+                ].join(' ')}
+                search={year === undefined ? {} : { year }}
+                to="/archive"
+              >
+                {year === undefined ? 'Past year' : String(year)}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+};
 
 type ArchivePageProps = {
   readonly view: ArchiveView;
@@ -98,11 +110,12 @@ export const ArchivePage = ({
 }: ArchivePageProps) => {
   const cells = activityCells(view.days, view.window);
   const written = view.totals.daysWritten;
+  const journalIsEmpty = view.years.length === 0;
 
   return (
     <div className={wideColumnClass}>
       <h1 className={headingClass}>Archive</h1>
-      {written === 0 ? (
+      {journalIsEmpty ? (
         <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
           Nothing has been written yet. The streaks, the year of days, and the
           entries from earlier years all appear here as the journal fills up.

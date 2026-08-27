@@ -25,28 +25,31 @@ import { journalReadError } from '../errors/journal-errors.ts';
 import { JournalDateSchema } from '../schemas/entry.ts';
 
 /**
- * A matched day, with the prose the excerpt is cut from and nothing else. The
+ * A matched day, with the visible projections the excerpt is cut from. The
  * stored search vector is deliberately not selected: it holds every lexeme of
- * every entry it describes, and reading a page of them to throw them all away
- * would cost more than the prose does.
+ * every entry it describes, while these are also the exact text it indexed.
  */
 const SearchRow = Schema.Struct({
   date: Schema.propertySignature(JournalDateSchema).pipe(
     Schema.fromKey('entry_date'),
   ),
-  journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
-    Schema.fromKey('journal_markdown'),
+  journalText: Schema.propertySignature(Schema.String).pipe(
+    Schema.fromKey('journal_search_text'),
   ),
-  scriptureMarkdown: Schema.propertySignature(
-    Schema.NullOr(Schema.String),
-  ).pipe(Schema.fromKey('scripture_markdown')),
+  scriptureText: Schema.propertySignature(Schema.String).pipe(
+    Schema.fromKey('scripture_search_text'),
+  ),
+  scriptureReferenceText: Schema.propertySignature(Schema.String).pipe(
+    Schema.fromKey('scripture_reference_search_text'),
+  ),
   words: Schema.propertySignature(Schema.Number).pipe(Schema.fromKey('words')),
 });
 
 export type SearchMatch = {
   readonly date: string;
-  readonly journalMarkdown: string;
-  readonly scriptureMarkdown: string;
+  readonly journalText: string;
+  readonly scriptureText: string;
+  readonly scriptureReferenceText: string;
   readonly words: number;
 };
 
@@ -54,8 +57,9 @@ const decodeRows = Schema.decodeUnknown(Schema.Array(SearchRow));
 
 const matchOf = (row: Schema.Schema.Type<typeof SearchRow>): SearchMatch => ({
   date: row.date,
-  journalMarkdown: row.journalMarkdown ?? '',
-  scriptureMarkdown: row.scriptureMarkdown ?? '',
+  journalText: row.journalText,
+  scriptureText: row.scriptureText,
+  scriptureReferenceText: row.scriptureReferenceText,
   words: row.words,
 });
 
@@ -83,8 +87,9 @@ export class EntrySearch extends Effect.Service<EntrySearch>()(
         sql`
           select
             entry_date,
-            journal_markdown,
-            scripture_markdown,
+            journal_search_text,
+            scripture_search_text,
+            scripture_reference_search_text,
             journal_word_count + scripture_word_count as words
           from entry
           where search_vector @@ to_tsquery('simple', ${tsQuery})

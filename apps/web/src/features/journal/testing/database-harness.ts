@@ -18,19 +18,19 @@
  */
 
 import { afterAll, beforeAll } from 'bun:test';
-import type { SqlClient } from '@effect/sql';
+import { SqlClient } from '@effect/sql';
 import { pgClientLayer } from '@postlude/db/effect-client';
-import { Effect, Layer, ManagedRuntime } from 'effect';
+import { Effect, Exit, Layer, ManagedRuntime, Scope } from 'effect';
 
 import {
   openTestDatabase,
   rolledBack,
-  type TestPool,
 } from '#/shared/testing/test-database.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
 import { EntryExport } from '../services/entry-export.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
 import { EntrySearch } from '../services/entry-search.ts';
+import { migrateJournalDatabase } from '../services/journal-migration.ts';
 
 type JournalServices =
   | EntryRepository
@@ -51,13 +51,13 @@ export const draft = (
 });
 
 export const journalDatabase = () => {
-  let pool: TestPool;
+  let resourceScope: Scope.CloseableScope | undefined;
   let runtime: ManagedRuntime.ManagedRuntime<JournalServices, never>;
 
-  beforeAll(async () => {
-    pool = await openTestDatabase();
+  const acquireResources = Effect.gen(function* () {
+    const pool = yield* openTestDatabase(migrateJournalDatabase);
     const clientLayer = pgClientLayer(pool);
-    runtime = ManagedRuntime.make(
+    const acquiredRuntime = ManagedRuntime.make(
       Layer.provideMerge(
         Layer.provide(
           Layer.mergeAll(
@@ -70,18 +70,52 @@ export const journalDatabase = () => {
         clientLayer,
       ).pipe(Layer.orDie),
     );
+    yield* Effect.addFinalizer(() =>
+      Effect.promise(() => acquiredRuntime.dispose()),
+    );
+    return acquiredRuntime;
+  });
+
+  const openResources = Scope.make().pipe(
+    Effect.flatMap((scope) =>
+      acquireResources.pipe(
+        Effect.provideService(Scope.Scope, scope),
+        Effect.map((acquiredRuntime) => ({
+          runtime: acquiredRuntime,
+          scope,
+        })),
+        Effect.onError(() => Scope.close(scope, Exit.void)),
+      ),
+    ),
+  );
+
+  beforeAll(async () => {
+    ({ runtime, scope: resourceScope } =
+      await Effect.runPromise(openResources));
   });
 
   afterAll(async () => {
-    await runtime.dispose();
-    await pool.end();
+    if (resourceScope !== undefined) {
+      await Effect.runPromise(Scope.close(resourceScope, Exit.void));
+    }
   });
 
   /** Runs the body against a service and leaves the table as it was. */
   const withService =
     <S>(tag: Effect.Effect<S, never, JournalServices>) =>
-    <A, E>(body: (service: S) => Effect.Effect<A, E>): Promise<A> =>
-      runtime.runPromise(rolledBack(Effect.flatMap(tag, body)));
+    <A, E>(
+      body: (service: S) => Effect.Effect<A, E, SqlClient.SqlClient>,
+    ): Promise<A> =>
+      runtime.runPromise(
+        rolledBack(
+          Effect.gen(function* () {
+            const sql = yield* SqlClient.SqlClient;
+            yield* sql`set transaction isolation level repeatable read`;
+            const service = yield* tag;
+            return yield* body(service);
+          }),
+        ),
+      );
 
   return {
     withRepository: withService(EntryRepository),

@@ -13,17 +13,16 @@
  * per square and the rest of the journal has already been reduced to two runs
  * and two totals by the time it leaves the server.
  *
- * Whether a day was written on the day it is about is decided here rather than
- * in the browser, because the comparison needs the configured zone — and the
- * browser's zone is whatever a phone was carried into last week.
+ * Whether each section was first used on the day it is about is decided here
+ * rather than in the browser, because the comparison needs the configured zone
+ * — and the browser's zone is whatever a phone was carried into last week.
  */
 
 import { createServerFn } from '@tanstack/react-start';
-import { Effect, Schema } from 'effect';
+import { Effect } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import {
   type ActivityDay,
   type ActivityTotals,
@@ -36,11 +35,14 @@ import {
   journalDateAt,
   parseJournalDate,
 } from '../journal-day.ts';
-import type { EntrySummary, JournalEntry } from '../schemas/entry.ts';
+import { decodeArchiveQuery } from '../schemas/archive-query.ts';
+import type { JournalEntry } from '../schemas/entry.ts';
+import type { EntrySummary } from '../schemas/entry-summary.ts';
 import { journalSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
+import { runJournalEffect } from './journal-runtime.ts';
 
 /** One earlier year's entry for the same day of the month. */
 export type Anniversary = {
@@ -68,30 +70,6 @@ export type ArchiveView = {
 const anniversaryLimit = 4;
 const isoMonthStart = 5;
 
-const firstYear = 1000;
-const lastYear = 9999;
-
-/**
- * What the archive can be asked for: a year, or nothing.
- *
- * The map either shows the rolling year ending this week or one calendar year,
- * so a year is the whole of the question. Four digits is the whole of what a
- * year can be, because that is what the ISO dates the journal stores hold.
- *
- * The route validates its `?year=` search parameter against this same schema
- * rather than restating the bounds, so the address bar and the server function
- * cannot come to disagree about what a year is.
- */
-export const ArchiveQuery = Schema.Struct({
-  year: Schema.optional(
-    Schema.Number.pipe(Schema.int(), Schema.between(firstYear, lastYear)),
-  ),
-});
-
-export type ArchiveQueryParams = Schema.Schema.Type<typeof ArchiveQuery>;
-
-const decodeQuery = Schema.decodeUnknownSync(ArchiveQuery);
-
 const activityDayOf =
   (timeZone: string) =>
   (summary: EntrySummary): ActivityDay => ({
@@ -99,8 +77,12 @@ const activityDayOf =
     journalWords: summary.journalWordCount,
     scriptureWords: summary.scriptureWordCount,
     hasScripture: summary.hasScriptureReference,
-    writtenOnTheDay:
-      journalDateAt(summary.createdAt, timeZone) === summary.date,
+    journalWrittenOnTheDay:
+      summary.journalFirstUsedAt !== null &&
+      journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,
+    scriptureUsedOnTheDay:
+      summary.scriptureFirstUsedAt !== null &&
+      journalDateAt(summary.scriptureFirstUsedAt, timeZone) === summary.date,
   });
 
 /**
@@ -134,24 +116,20 @@ const anniversaryOf =
 
 export const readArchiveFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .validator((input: unknown) => decodeQuery(input ?? {}))
+  .validator((input: unknown) => decodeArchiveQuery(input ?? {}))
   .handler(({ data }): Promise<ArchiveView> => {
     const today = currentJournalDate();
     const window = activityWindow(today, data.year);
-    return runServerEffect(
+    return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
-        const earliest = yield* entries.earliestDate();
-        const summaries =
-          earliest === undefined
-            ? []
-            : yield* entries.listBetween(earliest, today);
-        const history = summaries.map(activityDayOf(env.JOURNAL_TIME_ZONE));
-        const anniversaries = yield* entries.readAnniversaries(
-          today.slice(isoMonthStart),
+        const snapshot = yield* entries.readArchive({
           today,
+          anniversaryMonthDay: today.slice(isoMonthStart),
           anniversaryLimit,
-        );
+        });
+        const { earliest, summaries, anniversaries } = snapshot;
+        const history = summaries.map(activityDayOf(env.JOURNAL_TIME_ZONE));
 
         return {
           today,

@@ -34,11 +34,10 @@ it('reads a typed line as the words it holds, lowercased', () => {
 });
 
 /*
- * Punctuation is dropped rather than escaped. A comma in a search box is a typo,
- * and what matters here is that nothing survives that `to_tsquery` could read as
- * an operator.
+ * Punctuation is a word boundary rather than an operator. It must not merge two
+ * words into a third word the writer never typed.
  */
-it('strips everything that is not a letter or a digit', () => {
+it('turns everything that is not a letter or a digit into a boundary', () => {
   expect(searchTerms("rain, & fell! (twice) 'quoted' 2026")).toEqual([
     'rain',
     'fell',
@@ -46,6 +45,7 @@ it('strips everything that is not a letter or a digit', () => {
     'quoted',
     '2026',
   ]);
+  expect(searchTerms('rain,fell')).toEqual(['rain', 'fell']);
 });
 
 it('reads a line of pure punctuation as no search at all', () => {
@@ -58,6 +58,11 @@ it('keeps a word written in another script', () => {
     'über',
     'sprüche',
   ]);
+});
+
+it('normalizes canonically equivalent Unicode before searching', () => {
+  expect(searchTerms('Spru\u0308che')).toEqual(['sprüche']);
+  expect(searchTerms('Ｆａｉｔｈ')).toEqual(['faith']);
 });
 
 it('asks for every term, each as a prefix', () => {
@@ -88,6 +93,12 @@ it('marks a match whatever case the day was written in', () => {
   expect(marked(searchExcerpt('Rain, and more RAIN.', ['rain']))).toEqual([
     'Rain',
     'RAIN',
+  ]);
+});
+
+it('marks canonically equivalent Unicode text', () => {
+  expect(marked(searchExcerpt('Sprüche', ['spru\u0308che']))).toEqual([
+    'Sprüche',
   ]);
 });
 

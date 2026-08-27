@@ -103,6 +103,18 @@ export const secondFn = createServerFn({ method: 'POST' }).middleware([sessionRe
 const server = { handlers: { GET: () => Response.json({ ok: true }) } };
 export const Route = createFileRoute('/api/shorthand-options')({ server });
 `,
+  'routes/guarded.ts': `import { createFileRoute } from '@tanstack/react-router';
+${guardImport}
+export const Route = createFileRoute('/guarded')({ server: { middleware: [sessionRequired], handlers: { POST: () => Response.json({ ok: true }) } } });
+`,
+  'routes/decoy-handler.ts': `import { createFileRoute } from '@tanstack/react-router';
+${guardImport}
+export const Route = createFileRoute('/decoy-handler')({ server: { handlers: { POST: () => { const decoy = { middleware: [sessionRequired] }; return Response.json(decoy); } } } });
+`,
+  'routes/decoy-options.ts': `import { createFileRoute } from '@tanstack/react-router';
+${guardImport}
+export const Route = createFileRoute('/decoy-options')({ middleware: [sessionRequired], server: { handlers: { POST: () => Response.json({ ok: true }) } } });
+`,
   'journal/re-exported-marker.ts': `import { createServerFn } from '#/shared/start-re-export.ts';
 export const reExportedFn = createServerFn({ method: 'GET' }).handler(() => 'secret');
 `,
@@ -163,6 +175,21 @@ describe('sensitive server surfaces', () => {
     expect(
       surfacesAt(fixture.routeHandlers, 'routes/api/shorthand-options.ts'),
     ).toEqual([{ name: '(unreadable handlers)', guarded: false }]);
+  });
+
+  it('credits request middleware attached to the route server boundary', () => {
+    expect(surfacesAt(fixture.routeHandlers, 'routes/guarded.ts')).toEqual([
+      { name: 'POST', guarded: true },
+    ]);
+  });
+
+  it('does not credit middleware-shaped decoys elsewhere in route options', () => {
+    expect(
+      surfacesAt(fixture.routeHandlers, 'routes/decoy-handler.ts'),
+    ).toEqual([{ name: 'POST', guarded: false }]);
+    expect(
+      surfacesAt(fixture.routeHandlers, 'routes/decoy-options.ts'),
+    ).toEqual([{ name: 'POST', guarded: false }]);
   });
 
   it('resolves the marker from any module and the guard from only one', () => {

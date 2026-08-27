@@ -26,7 +26,12 @@ export const JournalDateSchema = Schema.String.pipe(
   }),
 );
 
+const WordCount = Schema.Number.pipe(
+  Schema.int(),
+  Schema.greaterThanOrEqualTo(0),
+);
 const VerseNumber = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
+const containsLetter = /\p{L}/u;
 
 /** A row of `entry`, under the column names Postgres actually returns. */
 const EntryRow = Schema.Struct({
@@ -36,15 +41,21 @@ const EntryRow = Schema.Struct({
   journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
     Schema.fromKey('journal_markdown'),
   ),
-  journalWordCount: Schema.propertySignature(Schema.Number).pipe(
+  journalWordCount: Schema.propertySignature(WordCount).pipe(
     Schema.fromKey('journal_word_count'),
   ),
+  journalFirstUsedAt: Schema.propertySignature(
+    Schema.NullOr(Schema.ValidDateFromSelf),
+  ).pipe(Schema.fromKey('journal_first_used_at')),
   scriptureMarkdown: Schema.propertySignature(
     Schema.NullOr(Schema.String),
   ).pipe(Schema.fromKey('scripture_markdown')),
-  scriptureWordCount: Schema.propertySignature(Schema.Number).pipe(
+  scriptureWordCount: Schema.propertySignature(WordCount).pipe(
     Schema.fromKey('scripture_word_count'),
   ),
+  scriptureFirstUsedAt: Schema.propertySignature(
+    Schema.NullOr(Schema.ValidDateFromSelf),
+  ).pipe(Schema.fromKey('scripture_first_used_at')),
   scriptureBook: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
     Schema.fromKey('scripture_book'),
   ),
@@ -63,20 +74,36 @@ const EntryRow = Schema.Struct({
   updatedAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
     Schema.fromKey('updated_at'),
   ),
-});
+}).pipe(
+  Schema.filter(
+    (row) =>
+      (row.scriptureBook === null) === (row.scriptureChapter === null) &&
+      (row.scriptureVerseStart === null || row.scriptureChapter !== null) &&
+      (row.scriptureVerseEnd === null ||
+        (row.scriptureVerseStart !== null &&
+          row.scriptureVerseEnd >= row.scriptureVerseStart)) &&
+      (row.scriptureBook === null || containsLetter.test(row.scriptureBook)),
+    {
+      identifier: 'CoherentScriptureReferenceColumns',
+      description:
+        'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
+    },
+  ),
+);
 
 export type JournalEntry = {
   readonly date: string;
   /** Empty rather than absent: a day with no evening prose has none, not null. */
   readonly journalMarkdown: string;
   readonly journalWordCount: number;
+  readonly journalFirstUsedAt: Date | null;
   readonly scriptureMarkdown: string;
   readonly scriptureWordCount: number;
+  readonly scriptureFirstUsedAt: Date | null;
   readonly scriptureReference?: ScriptureReference;
   /**
-   * When the row was first written, which is not the day it is about. The
-   * streaks read this to tell a day written on the day from one filled in
-   * later.
+   * When the row was first stored, which is not necessarily when either
+   * section first held meaningful content.
    */
   readonly createdAt: Date;
   readonly updatedAt: Date;
@@ -116,8 +143,10 @@ const entryOf = (row: Schema.Schema.Type<typeof EntryRow>): JournalEntry => {
     date: row.date,
     journalMarkdown: row.journalMarkdown ?? '',
     journalWordCount: row.journalWordCount,
+    journalFirstUsedAt: row.journalFirstUsedAt,
     scriptureMarkdown: row.scriptureMarkdown ?? '',
     scriptureWordCount: row.scriptureWordCount,
+    scriptureFirstUsedAt: row.scriptureFirstUsedAt,
     ...(reference === undefined ? {} : { scriptureReference: reference }),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -130,6 +159,13 @@ export const EntryFromRow = Schema.transform(
   { strict: false, decode: entryOf, encode: (entry) => entry },
 );
 
+/** The nullable aggregate row returned by `min(entry_date)`. */
+export const EarliestDateFromRow = Schema.Struct({
+  date: Schema.propertySignature(Schema.NullOr(JournalDateSchema)).pipe(
+    Schema.fromKey('entry_date'),
+  ),
+});
+
 /**
  * What a day looks like before it has ever been written. The writing page opens
  * on one of these for any date with no row, so the editor and the counts have
@@ -139,8 +175,10 @@ export const emptyJournalEntry = (date: string): JournalEntry => ({
   date,
   journalMarkdown: '',
   journalWordCount: 0,
+  journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
 });
@@ -164,27 +202,11 @@ export const EntryDraftSchema = Schema.Struct({
 
 export type EntryDraft = Schema.Schema.Type<typeof EntryDraftSchema>;
 
-/**
- * One day as the archive needs it: enough to place a mark on the heatmap and to
- * decide a streak, and nothing else. The entry bodies are deliberately not here
- * — a year of them is a lot of prose to send in order to draw 365 squares.
- */
-export const EntrySummaryFromRow = Schema.Struct({
-  date: Schema.propertySignature(JournalDateSchema).pipe(
-    Schema.fromKey('entry_date'),
-  ),
-  journalWordCount: Schema.propertySignature(Schema.Number).pipe(
-    Schema.fromKey('journal_word_count'),
-  ),
-  scriptureWordCount: Schema.propertySignature(Schema.Number).pipe(
-    Schema.fromKey('scripture_word_count'),
-  ),
-  hasScriptureReference: Schema.propertySignature(Schema.Boolean).pipe(
-    Schema.fromKey('has_scripture_reference'),
-  ),
-  createdAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
-    Schema.fromKey('created_at'),
-  ),
+/** The database-issued revision returned after a write is committed. */
+export const SaveConfirmationSchema = Schema.Struct({
+  revision: Schema.Number.pipe(Schema.greaterThanOrEqualTo(0)),
 });
 
-export type EntrySummary = Schema.Schema.Type<typeof EntrySummaryFromRow>;
+export type SaveConfirmation = Schema.Schema.Type<
+  typeof SaveConfirmationSchema
+>;

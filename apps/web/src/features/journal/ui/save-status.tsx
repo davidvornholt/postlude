@@ -12,7 +12,7 @@
 
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
 import { quietButtonClass } from '#/shared/ui/form-classes.ts';
-import type { SaveStatus } from '../autosave.ts';
+import type { AutosaveFailure, SaveStatus } from '../autosave.ts';
 
 const wording: Record<SaveStatus, string> = {
   saved: 'Saved',
@@ -23,26 +23,52 @@ const wording: Record<SaveStatus, string> = {
 
 type SaveStatusProps = {
   readonly status: SaveStatus;
+  readonly failure: AutosaveFailure | undefined;
   readonly onRetry: () => void;
 };
 
-export const SaveStatusLine = ({ status, onRetry }: SaveStatusProps) => (
-  <p className={[eyebrowClass, 'flex items-baseline gap-4'].join(' ')}>
-    {/*
-      `aria-live` sits on an element that is in the document from the start.
-      A region that appears at the moment it has something to say is announced
-      by nothing, because there was no region to watch when the text arrived.
-    */}
-    <span
-      aria-live="polite"
-      className={status === 'failed' ? 'text-critical' : 'text-ink-faint'}
-    >
-      {wording[status]}
-    </span>
-    {status === 'failed' ? (
-      <button className={quietButtonClass} onClick={onRetry} type="button">
-        Try again
-      </button>
-    ) : null}
-  </p>
-);
+const failureAction = (
+  failure: AutosaveFailure | undefined,
+  onRetry: () => void,
+) => {
+  if (failure?.kind === 'authentication') {
+    return (
+      <a className={quietButtonClass} href="/login">
+        Sign in again
+      </a>
+    );
+  }
+  return failure?.kind === 'network' ? (
+    <button className={quietButtonClass} onClick={onRetry} type="button">
+      Try again
+    </button>
+  ) : null;
+};
+
+export const SaveStatusLine = ({
+  status,
+  failure,
+  onRetry,
+}: SaveStatusProps) => {
+  const message =
+    status === 'failed' && failure !== undefined
+      ? failure.message
+      : wording[status];
+
+  return (
+    <p className={[eyebrowClass, 'flex items-baseline gap-4'].join(' ')}>
+      {/*
+        `aria-live` sits on an element that is in the document from the start.
+        A region that appears at the moment it has something to say is announced
+        by nothing, because there was no region to watch when the text arrived.
+      */}
+      <span
+        aria-live="polite"
+        className={status === 'failed' ? 'text-critical' : 'text-ink-faint'}
+      >
+        {message}
+      </span>
+      {status === 'failed' ? failureAction(failure, onRetry) : null}
+    </p>
+  );
+};

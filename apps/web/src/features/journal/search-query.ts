@@ -8,12 +8,12 @@
  * was written in, and no word is ever dropped from a day for being common in a
  * language the writer was not using.
  *
- * A term is cut down to letters and digits before it goes anywhere near the
+ * Non-word runs become boundaries before a term goes anywhere near the
  * database. That is what makes appending the prefix marker safe: there is
  * nothing left in a term that Postgres's query parser could read as syntax.
  */
 
-const wordCharacters = /[^\p{L}\p{N}]+/gu;
+const wordBoundaries = /[^\p{L}\p{N}]+/gu;
 const whitespaceRuns = /\s+/gu;
 
 /** How much of the day is shown around the first match. */
@@ -30,15 +30,23 @@ export type ExcerptSegment = {
 };
 
 /**
- * The words to look for. Punctuation is dropped rather than escaped, because a
- * journal search is for words and a stray quote or comma is a typo rather than
- * an operator the writer meant.
+ * Text has one canonical Unicode shape before it is indexed, queried, or shown
+ * as a match. NFKC also makes compatibility forms such as full-width letters
+ * mean the same thing as their ordinary keyboard forms.
+ */
+export const normalizeSearchText = (text: string): string =>
+  text.normalize('NFKC');
+
+/**
+ * The words to look for. Punctuation is a boundary rather than query syntax,
+ * so `rain,fell` asks for two words instead of silently becoming `rainfell`.
  */
 export const searchTerms = (query: string): ReadonlyArray<string> =>
-  query
+  normalizeSearchText(query)
     .toLowerCase()
+    .replace(wordBoundaries, ' ')
+    .trim()
     .split(whitespaceRuns)
-    .map((word) => word.replace(wordCharacters, ''))
     .filter((word) => word.length > 0);
 
 /**
@@ -50,7 +58,10 @@ export const searchTsQuery = (terms: ReadonlyArray<string>): string =>
 
 /** Matches a term where a word starts, and takes the rest of that word with it. */
 const termPattern = (terms: ReadonlyArray<string>): RegExp =>
-  new RegExp(`(?<![\\p{L}\\p{N}])(?:${terms.join('|')})[\\p{L}\\p{N}]*`, 'giu');
+  new RegExp(
+    `(?<![\\p{L}\\p{N}])(?:${terms.map(normalizeSearchText).join('|')})[\\p{L}\\p{N}]*`,
+    'giu',
+  );
 
 /** Steps back to the space before `at`, so an excerpt never opens mid-word. */
 const wordStartAt = (text: string, at: number): number => {
@@ -109,7 +120,9 @@ export const searchExcerpt = (
   plainText: string,
   terms: ReadonlyArray<string>,
 ): ReadonlyArray<ExcerptSegment> => {
-  const text = plainText.replace(whitespaceRuns, ' ').trim();
+  const text = normalizeSearchText(plainText)
+    .replace(whitespaceRuns, ' ')
+    .trim();
   if (text === '') {
     return [];
   }

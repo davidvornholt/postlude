@@ -18,7 +18,6 @@ import { Effect } from 'effect';
 import { zipSync } from 'fflate';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
-import { runServerEffect } from '#/shared/runtime/app-runtime.ts';
 import {
   type ExportFile,
   exportFileName,
@@ -26,6 +25,7 @@ import {
 } from '../export-archive.ts';
 import { EntryExport } from './entry-export.ts';
 import { currentJournalDate } from './journal-fns.ts';
+import { runJournalEffect } from './journal-runtime.ts';
 
 const encoder = new TextEncoder();
 
@@ -60,7 +60,7 @@ export const exportJournalFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
   .handler(
     (): Promise<Response> =>
-      runServerEffect(
+      runJournalEffect(
         Effect.gen(function* () {
           const today = currentJournalDate();
           const entries = yield* (yield* EntryExport).readAll();
