@@ -1,12 +1,19 @@
 import { sql } from 'drizzle-orm';
 import {
   check,
+  customType,
   date,
+  index,
   integer,
   pgTable,
   text,
   timestamp,
 } from 'drizzle-orm/pg-core';
+
+/** PostgreSQL's generated full-text search vector. */
+const tsvector = customType<{ data: string; driverData: string }>({
+  dataType: () => 'tsvector',
+});
 
 /**
  * One row per journal day. A journal day runs 04:00–04:00 local time, so a
@@ -58,6 +65,13 @@ export const entry = pgTable(
     scriptureVerseStart: integer('scripture_verse_start'),
     scriptureVerseEnd: integer('scripture_verse_end'),
     revision: integer('revision').notNull().default(1),
+    journalSearchText: text('journal_search_text').notNull(),
+    scriptureSearchText: text('scripture_search_text').notNull(),
+    scriptureReferenceSearchText: text(
+      'scripture_reference_search_text',
+    ).notNull(),
+    searchTokenText: text('search_token_text').notNull(),
+    searchProjectionRevision: integer('search_projection_revision').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -65,9 +79,24 @@ export const entry = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => sql`now()`),
+    /**
+     * What the search reads, kept by the database from the application-owned
+     * token stream. `array_to_tsvector` accepts those tokens as lexemes instead
+     * of parsing or case-folding them again. The application matches each query
+     * token as a prefix. The separate visible-text projections give every match
+     * a source the result row can show and highlight.
+     */
+    searchVector: tsvector('search_vector').generatedAlwaysAs(
+      sql`case when search_token_text = '' then ''::tsvector else array_to_tsvector(string_to_array(search_token_text, ' ')) end`,
+    ),
   },
   (table) => [
     check('entry_revision_positive', sql`${table.revision} >= 1`),
+    check(
+      'entry_search_projection_current',
+      sql`${table.searchProjectionRevision} = ${table.revision}`,
+    ),
+    index('entry_search_vector_index').using('gin', table.searchVector),
     check(
       'entry_journal_word_count_non_negative',
       sql`${table.journalWordCount} >= 0`,

@@ -20,9 +20,10 @@ import { Cause, Effect, Layer, ManagedRuntime } from 'effect';
 
 import { pool } from '#/shared/db/pool.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { EntrySearch } from './entry-search.ts';
 
 const journalLayer = Layer.provide(
-  EntryRepository.Default,
+  Layer.mergeAll(EntryRepository.Default, EntrySearch.Default),
   Layer.suspend(() => pgClientLayer(pool)),
 );
 
@@ -33,7 +34,10 @@ const journalLayer = Layer.provide(
  * that is down should fail the request that needed it, not the module that
  * mentioned it.
  */
-type JournalRuntime = ManagedRuntime.ManagedRuntime<EntryRepository, SqlError>;
+type JournalRuntime = ManagedRuntime.ManagedRuntime<
+  EntryRepository | EntrySearch,
+  SqlError
+>;
 
 let runtime: JournalRuntime | undefined;
 
@@ -57,7 +61,7 @@ const journalRuntime = (): JournalRuntime => {
  * on success or failure, so that browser contract is sufficient.
  */
 export const runJournalEffect = <A, E>(
-  effect: Effect.Effect<A, E, EntryRepository>,
+  effect: Effect.Effect<A, E, EntryRepository | EntrySearch>,
 ): Promise<A> =>
   journalRuntime().runPromise(
     effect.pipe(

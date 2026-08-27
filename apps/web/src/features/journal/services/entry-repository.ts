@@ -31,6 +31,7 @@ import {
   EntrySummaryFromRow,
 } from '../schemas/entry-summary.ts';
 import { parseScriptureReference } from '../scripture-reference.ts';
+import { searchDocumentOf } from '../search-document.ts';
 import { countJournalWords } from '../word-count.ts';
 import { inArchiveSnapshot } from './archive-snapshot.ts';
 
@@ -113,6 +114,11 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           const journalUsed = journalWordCount > 0;
           const scriptureUsed =
             scriptureWordCount > 0 || reference !== undefined;
+          const searchDocument = searchDocumentOf({
+            journalMarkdown: draft.journalMarkdown,
+            scriptureMarkdown: draft.scriptureMarkdown,
+            scriptureReference: reference,
+          });
           const saved = yield* sql`
           with candidate (
             entry_date,
@@ -126,6 +132,11 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_chapter,
             scripture_verse_start,
             scripture_verse_end,
+            journal_search_text,
+            scripture_search_text,
+            scripture_reference_search_text,
+            search_token_text,
+            search_projection_revision,
             base_revision
           ) as (values (
             ${draft.date}::date,
@@ -139,6 +150,11 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             ${reference?.chapter ?? null}::integer,
             ${reference?.verseStart ?? null}::integer,
             ${reference?.verseEnd ?? null}::integer,
+            ${searchDocument.journalText}::text,
+            ${searchDocument.scriptureText}::text,
+            ${searchDocument.scriptureReferenceText}::text,
+            ${searchDocument.searchTokenText}::text,
+            ${draft.baseRevision + 1}::integer,
             ${draft.baseRevision}::integer
           )), updated as (
             update entry set
@@ -158,6 +174,11 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_chapter = candidate.scripture_chapter,
             scripture_verse_start = candidate.scripture_verse_start,
             scripture_verse_end = candidate.scripture_verse_end,
+            journal_search_text = candidate.journal_search_text,
+            scripture_search_text = candidate.scripture_search_text,
+            scripture_reference_search_text = candidate.scripture_reference_search_text,
+            search_token_text = candidate.search_token_text,
+            search_projection_revision = candidate.search_projection_revision,
             revision = entry.revision + 1,
             updated_at = now()
             from candidate
@@ -176,7 +197,12 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               scripture_book,
               scripture_chapter,
               scripture_verse_start,
-              scripture_verse_end
+              scripture_verse_end,
+              journal_search_text,
+              scripture_search_text,
+              scripture_reference_search_text,
+              search_token_text,
+              search_projection_revision
             ) select
               entry_date,
               journal_markdown,
@@ -188,7 +214,12 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               scripture_book,
               scripture_chapter,
               scripture_verse_start,
-              scripture_verse_end
+              scripture_verse_end,
+              journal_search_text,
+              scripture_search_text,
+              scripture_reference_search_text,
+              search_token_text,
+              search_projection_revision
             from candidate
             where base_revision = 0
             on conflict (entry_date) do nothing

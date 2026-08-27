@@ -13,7 +13,7 @@ export type BrowserFixtureAssets = Omit<FixtureAssets, 'markup'>;
 export type FixtureModuleReplacement = {
   readonly fixtureModulePath: string;
   readonly productionModulePath: string;
-  readonly exportName: string;
+  readonly exportNames: ReadonlyArray<string>;
 };
 
 type HydratedFixtureOptions = {
@@ -35,7 +35,7 @@ const fixtureModules = (
     );
     return replacement === undefined
       ? undefined
-      : `import ${JSON.stringify(stylesPath)}; export { ${replacement.exportName} } from ${JSON.stringify(replacement.productionModulePath)};`;
+      : `import ${JSON.stringify(stylesPath)}; export { ${replacement.exportNames.join(', ')} } from ${JSON.stringify(replacement.productionModulePath)};`;
   },
 });
 

@@ -99,6 +99,23 @@
       }
     },
     {
+      // The private search route owns a server POST handler. Its `POST` key and
+      // the `-` prefix that excludes its colocated helper from route generation
+      // are TanStack Start contracts, not authored naming choices.
+      "includes": [
+        "apps/web/src/routes/_app/search.tsx",
+        "apps/web/src/routes/_app/-search-request.ts"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off",
+            "useNamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
       // The TanStack Start document shell renders the literal <head> element;
       // noHeadElement is a Next.js-domain rule and this is not a Next app.
       // Biome's resolver also cannot follow Vite's `?url` asset-query import
@@ -159,6 +176,21 @@
         "rules": {
           "suspicious": {
             "noUndeclaredEnvVars": "off"
+          }
+        }
+      }
+    },
+    {
+      // Test support modules import `bun:test` to register the hooks the files
+      // that call them run under. Biome does not resolve Bun's virtual modules,
+      // which is why biome.base.jsonc already turns this rule off for every
+      // `*.test.ts` and for the standards CLI's own `*-test-support.ts` files;
+      // these are the same modules under the paths this repo puts them on.
+      "includes": ["apps/web/src/**/testing/**"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnresolvedImports": "off"
           }
         }
       }

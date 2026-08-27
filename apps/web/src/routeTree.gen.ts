@@ -13,6 +13,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppArchiveRouteImport } from './routes/_app/archive'
+import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -36,6 +37,11 @@ const AppArchiveRoute = AppArchiveRouteImport.update({
   path: '/archive',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSearchRoute = AppSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiHealthzRoute = ApiHealthzRouteImport.update({
   id: '/api/healthz',
   path: '/api/healthz',
@@ -56,6 +62,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
+  '/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
+  '/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/': typeof AppIndexRoute
   '/day/$date': typeof AppDayDateRoute
@@ -73,6 +81,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/archive': typeof AppArchiveRoute
+  '/_app/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/_app/': typeof AppIndexRoute
   '/_app/day/$date': typeof AppDayDateRoute
@@ -81,15 +90,28 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/archive' | '/api/healthz' | '/day/$date' | '/api/auth/$'
+    | '/'
+    | '/login'
+    | '/archive'
+    | '/search'
+    | '/api/healthz'
+    | '/day/$date'
+    | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/login' | '/archive' | '/api/healthz' | '/' | '/day/$date' | '/api/auth/$'
+    | '/login'
+    | '/archive'
+    | '/search'
+    | '/api/healthz'
+    | '/'
+    | '/day/$date'
+    | '/api/auth/$'
   id:
     | '__root__'
     | '/_app'
     | '/login'
     | '/_app/archive'
+    | '/_app/search'
     | '/api/healthz'
     | '/_app/'
     | '/_app/day/$date'
@@ -133,6 +155,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppArchiveRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/search': {
+      id: '/_app/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AppSearchRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/healthz': {
       id: '/api/healthz'
       path: '/api/healthz'
@@ -159,12 +188,14 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppArchiveRoute: typeof AppArchiveRoute
+  AppSearchRoute: typeof AppSearchRoute
   AppIndexRoute: typeof AppIndexRoute
   AppDayDateRoute: typeof AppDayDateRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppArchiveRoute: AppArchiveRoute,
+  AppSearchRoute: AppSearchRoute,
   AppIndexRoute: AppIndexRoute,
   AppDayDateRoute: AppDayDateRoute,
 }

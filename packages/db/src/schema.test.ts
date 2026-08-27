@@ -55,6 +55,32 @@ it('each section carries an independent nullable first-use stamp', () => {
   }
 });
 
+it('keeps raw result text and indexes only the canonical token stream', () => {
+  const config = getTableConfig(entry);
+  const searchTextColumns = config.columns.filter((column) =>
+    column.name.endsWith('_search_text'),
+  );
+  expect(searchTextColumns.map((column) => column.name)).toEqual([
+    'journal_search_text',
+    'scripture_search_text',
+    'scripture_reference_search_text',
+  ]);
+  for (const column of searchTextColumns) {
+    expect(column.notNull).toBe(true);
+    expect(column.hasDefault).toBe(false);
+  }
+  const searchVector = config.columns.find(
+    (column) => column.name === 'search_vector',
+  );
+  const expression = renderSql(searchVector?.generated?.as);
+  expect(expression).toContain('search_token_text');
+  expect(expression).toContain('array_to_tsvector');
+  expect(expression).not.toContain('journal_search_text');
+  expect(expression).not.toContain('scripture_search_text');
+  expect(expression).not.toContain('scripture_reference_search_text');
+  expect(expression).not.toContain('_markdown');
+});
+
 it('stamps updated_at from the database clock on every write, not just on insert', () => {
   const config = getTableConfig(entry);
   const updatedAt = config.columns.find(
@@ -75,9 +101,22 @@ it('starts each entry with a positive per-row revision', () => {
   expect(revision?.default).toBe(1);
 });
 
+it('requires every search projection to name the entry revision it covers', () => {
+  const config = getTableConfig(entry);
+  const projectionRevision = config.columns.find(
+    (column) => column.name === 'search_projection_revision',
+  );
+  expect(projectionRevision?.notNull).toBe(true);
+  expect(projectionRevision?.hasDefault).toBe(false);
+});
+
 /** Constraint name paired with the predicate Postgres will enforce. */
 const expectedChecks: ReadonlyArray<readonly [string, string]> = [
   ['entry_revision_positive', '"entry"."revision" >= 1'],
+  [
+    'entry_search_projection_current',
+    '"entry"."search_projection_revision" = "entry"."revision"',
+  ],
   [
     'entry_journal_word_count_non_negative',
     '"entry"."journal_word_count" >= 0',

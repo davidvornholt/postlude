@@ -8,6 +8,7 @@ import {
 } from '#/shared/testing/test-database.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { migrateJournalDatabase } from './journal-migration.ts';
 
 const runWithRepository = <A, E>(
   body: (entries: EntryRepository) => Effect.Effect<A, E, SqlClient.SqlClient>,
@@ -15,7 +16,7 @@ const runWithRepository = <A, E>(
   Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const pool = yield* openTestDatabase();
+        const pool = yield* openTestDatabase(migrateJournalDatabase);
         const clientLayer = pgClientLayer(pool);
         const repositoryLayer = Layer.provideMerge(
           Layer.provide(EntryRepository.Default, clientLayer),

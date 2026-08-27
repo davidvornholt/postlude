@@ -56,6 +56,39 @@ it('replaces a day rather than failing on the second save', async () => {
   expect(entry.journalMarkdown).toBe('Rewritten, and shorter.');
   expect(entry.journalWordCount).toBe(words);
 });
+
+it('advances the search projection with the same CAS revision', async () => {
+  const stored = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const first = yield* entries.save(
+        draft('2026-08-25', 'First searchable thought.'),
+      );
+      const second = yield* entries.save(
+        draft('2026-08-25', 'Second searchable thought.', '', first.revision),
+      );
+      const sql = yield* SqlClient.SqlClient;
+      const projections = yield* sql<{
+        readonly revision: number;
+        readonly searchProjectionRevision: number;
+        readonly searchTokenText: string;
+      }>`
+        select
+          revision,
+          search_projection_revision as "searchProjectionRevision",
+          search_token_text as "searchTokenText"
+        from entry
+        where entry_date = '2026-08-25'
+      `;
+      return { second, projection: projections[0] } as const;
+    }),
+  );
+  expect(stored.second.revision).toBe(2);
+  expect(stored.projection).toEqual({
+    revision: 2,
+    searchProjectionRevision: 2,
+    searchTokenText: 'second searchable thought',
+  });
+});
 it('keeps the creation stamp of the day it is rewriting', async () => {
   const [first, second] = await withRepository((entries) =>
     Effect.gen(function* () {

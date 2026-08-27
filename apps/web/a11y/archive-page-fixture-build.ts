@@ -22,6 +22,10 @@ export const buildArchivePageFixture = (
     serverModuleId: '/a11y/archive-page-fixture-render.tsx',
     serverRenderName: 'renderArchivePageFixture',
     replacements: [
-      { fixtureModulePath, productionModulePath, exportName: 'ArchivePage' },
+      {
+        fixtureModulePath,
+        productionModulePath,
+        exportNames: ['ArchivePage'],
+      },
     ],
   });

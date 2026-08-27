@@ -1,5 +1,5 @@
-import type { AnyExtension, NodeConfig } from '@tiptap/core';
-import { Markdown } from '@tiptap/markdown';
+import type { AnyExtension, JSONContent, NodeConfig } from '@tiptap/core';
+import { Markdown, MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 
 const headingTags = ['h3', 'h4', 'h5', 'h6', 'h6', 'h6'] as const;
@@ -33,10 +33,45 @@ const JournalStarterKit = StarterKit.extend({
   },
 });
 
-/** The Markdown vocabulary shared by the editor and its server rendering. */
+/** The Markdown vocabulary shared by the editor, server rendering and search. */
 export const journalMarkdownExtensions = () => [
   // Underline has no Markdown spelling. Leaving it in would let a keyboard
   // shortcut produce formatting that the next save silently discards.
   JournalStarterKit.configure({ underline: false }),
   Markdown,
 ];
+
+const markdownManager = new MarkdownManager({
+  extensions: journalMarkdownExtensions(),
+});
+
+/** Parses stored Markdown with the same model used by the editor. */
+export const parseJournalMarkdown = (markdown: string): JSONContent =>
+  markdownManager.parse(markdown);
+
+const blockWithLineSeparatedChildren = new Set([
+  'blockquote',
+  'bulletList',
+  'doc',
+  'listItem',
+  'orderedList',
+]);
+
+const visibleTextOf = (node: JSONContent): string => {
+  if (node.type === 'text') {
+    return node.text ?? '';
+  }
+  if (node.type === 'hardBreak') {
+    return '\n';
+  }
+  if (node.type === 'image') {
+    return typeof node.attrs?.alt === 'string' ? node.attrs.alt : '';
+  }
+  return (node.content ?? [])
+    .map(visibleTextOf)
+    .join(blockWithLineSeparatedChildren.has(node.type ?? '') ? '\n' : '');
+};
+
+/** The text the read-only Markdown model puts on the page. */
+export const journalMarkdownText = (markdown: string): string =>
+  visibleTextOf(parseJournalMarkdown(markdown));

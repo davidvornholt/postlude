@@ -5,6 +5,9 @@
  * for each, whether the session guard is attached to it.
  */
 
+import { serverFactoryNames } from './sensitive-module-bindings.ts';
+import { resolveSpecifier } from './sensitive-module-syntax.ts';
+import { routeServerConfiguration } from './sensitive-route-middleware-source.ts';
 import {
   type Chain,
   chainsOf,
@@ -44,8 +47,6 @@ const unreadableHandlers = '(unreadable handlers)';
 const importStatement =
   /import\s*(?:type\s+)?(?:\{(?<clause>[^}]*)\}|\*\s*as\s+(?<namespace>[$\p{ID_Start}][$\p{ID_Continue}]*))\s*from\s*['"](?<specifier>[^'"]+)['"]/gu;
 const importAlias = /\s+as\s+/u;
-const handlerMethod =
-  /\b(?:GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\b(?=\s*:)/gu;
 const handlerHint = /\b(?:server|handlers)\b/u;
 
 /**
@@ -71,61 +72,39 @@ const localNamesOf = (
             .map(([imported, local = imported]) => local),
     );
 
-/** Where a specifier points, relative to `apps/web/src`; `''` when nowhere. */
-const resolveSpecifier = (specifier: string, importer: string): string => {
-  if (specifier.startsWith('#/')) {
-    return specifier.slice(2);
-  }
-  if (!specifier.startsWith('.')) {
-    return '';
-  }
-  const segments = importer.split('/').slice(0, -1);
-  for (const part of specifier.split('/')) {
-    if (part === '..') {
-      segments.pop();
-    } else if (part !== '.' && part !== '') {
-      segments.push(part);
-    }
-  }
-  return segments.join('/');
-};
-
-/**
- * A marker is whatever local name stands for `createServerFn` or
- * `createFileRoute`, from wherever it was imported. Taking the name from any
- * module rather than only from the framework package keeps a local file that
- * re-exports the framework from hiding the declarations built on it. The cost
- * is over-flagging a same-named import from an unrelated module, which fails
- * loudly rather than quietly.
- */
-const anySource = () => true;
-
 /**
  * The request handlers a route declaration exposes. The scan only ever proves a
  * route handler-free, never handler-bearing: every route under `routes/api/`
- * counts as serving requests, and so does any other route whose chain so much
- * as mentions `server` or `handlers`, however it is spelled. A handler-bearing
- * route whose verbs cannot be read — options assembled elsewhere in the file,
- * say — reports one unreadable handler, which no allowlist entry matches by
- * accident.
+ * counts as serving requests, as does any other route whose chain mentions
+ * `server` or `handlers`. An unresolved route-options spread also counts,
+ * because it may contain either. A handler-bearing route whose effective verbs
+ * cannot be read reports one unreadable handler, which no allowlist entry
+ * matches by accident.
  */
-const handlersOf = (path: string, { text }: Chain): ReadonlyArray<string> => {
+const handlersOf = (
+  path: string,
+  { text }: Chain,
+  configured: ReadonlyArray<string> | null,
+): ReadonlyArray<string> => {
+  if (configured === null) {
+    return [unreadableHandlers];
+  }
   if (!(path.startsWith(apiRoutes) || handlerHint.test(text))) {
     return [];
   }
-  const verbs = [
-    ...new Set([...text.matchAll(handlerMethod)].map(({ 0: verb }) => verb)),
-  ];
-  return verbs.length > 0 ? verbs : [unreadableHandlers];
+  return configured.length > 0 ? configured : [unreadableHandlers];
 };
 
-const scanModule = ({ path, code }: Module) => {
-  const serverFunctionNames = localNamesOf(code, 'createServerFn', anySource);
-  const routeNames = localNamesOf(code, 'createFileRoute', anySource);
+const scanModule = (
+  namesOf: ReturnType<typeof serverFactoryNames>,
+  { path, code }: Module,
+) => {
+  const serverFunctionNames = namesOf(path, 'createServerFn');
+  const routeNames = namesOf(path, 'createFileRoute');
   const boundaryNames = [
     ...serverFunctionNames,
     ...routeNames,
-    ...localNamesOf(code, 'createMiddleware', anySource),
+    ...namesOf(path, 'createMiddleware'),
   ];
   const guards = localNamesOf(
     code,
@@ -136,16 +115,28 @@ const scanModule = ({ path, code }: Module) => {
     middlewareArguments.some((list) =>
       guards.some((guard) => mentions(list, guard)),
     );
+  const isRouteGuarded = (
+    { middlewareArguments }: Chain,
+    routeMiddlewareArguments: ReadonlyArray<string>,
+  ) =>
+    [...middlewareArguments, ...routeMiddlewareArguments].some((list) =>
+      guards.some((guard) => mentions(list, guard)),
+    );
   return {
     serverFunctions: chainsOf(code, serverFunctionNames, boundaryNames).map(
       (chain) => ({ path, name: chain.name, guarded: isGuarded(chain) }),
     ),
-    routeHandlers: chainsOf(code, routeNames, boundaryNames).flatMap((chain) =>
-      handlersOf(path, chain).map((name) => ({
-        path,
-        name,
-        guarded: isGuarded(chain),
-      })),
+    routeHandlers: chainsOf(code, routeNames, boundaryNames).flatMap(
+      (chain) => {
+        const configuration = routeServerConfiguration(chain.text);
+        return handlersOf(path, chain, configuration.handlers).map((name) => ({
+          path,
+          name,
+          guarded:
+            configuration.handlers !== null &&
+            isRouteGuarded(chain, configuration.middlewareArguments),
+        }));
+      },
     ),
   };
 };
@@ -156,7 +147,8 @@ const bySurface = (left: Surface, right: Surface) =>
     : left.path.localeCompare(right.path);
 
 export const scanModules = (modules: ReadonlyArray<Module>): Scan => {
-  const scanned = modules.map(scanModule);
+  const namesOf = serverFactoryNames(modules);
+  const scanned = modules.map((module) => scanModule(namesOf, module));
   return {
     serverFunctions: scanned
       .flatMap(({ serverFunctions }) => serverFunctions)

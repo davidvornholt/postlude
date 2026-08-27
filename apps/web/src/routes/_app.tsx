@@ -39,6 +39,7 @@ import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 const navItems = [
   { to: '/', label: 'Today' },
   { to: '/archive', label: 'Archive' },
+  { to: '/search', label: 'Search' },
 ] as const;
 
 // `focus`, not `focus-visible`: the link is only reachable by keyboard, so it

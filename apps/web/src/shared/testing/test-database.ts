@@ -15,7 +15,6 @@
 import process from 'node:process';
 import { SqlClient } from '@effect/sql';
 import type { SqlError } from '@effect/sql/SqlError';
-import { migrateDatabase } from '@postlude/db/migrate';
 import { createPool } from '@postlude/db/pool';
 import { Data, Effect, type Exit, type Scope } from 'effect';
 
@@ -48,7 +47,10 @@ const fromGeneratedDevEnv = (): string => {
  * quietly does not run is a gate that quietly does not hold, and the two are
  * indistinguishable in a green build.
  */
-const databaseUrl = (): Effect.Effect<string, TestDatabaseSetupError> => {
+export const configuredDatabaseUrl = (): Effect.Effect<
+  string,
+  TestDatabaseSetupError
+> => {
   const configured = process.env.DATABASE_URL || fromGeneratedDevEnv();
   if (configured === '') {
     return Effect.fail(
@@ -144,12 +146,10 @@ export const acquireTestDatabase = <Pool>(
  * name cannot be a bound parameter, so it is quoted instead; it comes from
  * configuration rather than from input.
  */
-export const openTestDatabase = (): Effect.Effect<
-  TestPool,
-  TestDatabaseSetupError,
-  Scope.Scope
-> =>
-  databaseUrl().pipe(
+export const openTestDatabase = (
+  migrateDatabase: TestDatabaseDependencies<TestPool>['migrateDatabase'],
+): Effect.Effect<TestPool, TestDatabaseSetupError, Scope.Scope> =>
+  configuredDatabaseUrl().pipe(
     Effect.flatMap((configured) =>
       acquireTestDatabase(configured, {
         createPool,

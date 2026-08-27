@@ -5,11 +5,15 @@ import { PgDialect } from 'drizzle-orm/pg-core';
 import { Effect } from 'effect';
 import type { Pool } from 'pg';
 
-import { migrateDatabase, migrationFolder } from './migrate.ts';
+import {
+  migrateDatabase,
+  migrationFolder,
+  searchProjectionColumnsMigrationTag,
+} from './migrate.ts';
 import { createPool } from './pool.ts';
 
 const latestLegacyMigration = 2;
-const expectedMigrationCount = 4;
+const expectedMigrationCount = 6;
 const testTimeoutMilliseconds = 30_000;
 const generatedEnvFile = new URL('../.env.local', import.meta.url).pathname;
 
@@ -126,6 +130,27 @@ const firstUseColumnCount = async (pool: Pool): Promise<number> => {
   return result.rows[0]?.count ?? 0;
 };
 
+const migrateTestDatabase = (pool: Pool) =>
+  migrateDatabase(pool, {
+    afterTag: searchProjectionColumnsMigrationTag,
+    run: (migrationPool) =>
+      migrationPool
+        .query(`
+          update entry
+          set journal_search_text = '',
+              scripture_search_text = '',
+              scripture_reference_search_text = '',
+              search_token_text = '',
+              search_projection_revision = revision
+          where journal_search_text is null
+             or scripture_search_text is null
+             or scripture_reference_search_text is null
+             or search_token_text is null
+             or search_projection_revision is null
+        `)
+        .then(() => undefined),
+  });
+
 it(
   'preserves a 0002 database and keeps fresh migration runs idempotent',
   async () => {
@@ -137,7 +162,7 @@ it(
             yield* migrateLegacyDatabase(pool);
             yield* seedLegacyRows(pool);
             const before = yield* Effect.promise(() => legacySnapshots(pool));
-            yield* migrateDatabase(pool);
+            yield* migrateTestDatabase(pool);
             const after = yield* Effect.promise(() => legacySnapshots(pool));
             const firstUse = yield* Effect.promise(() =>
               pool.query<{
@@ -162,14 +187,14 @@ it(
         );
         yield* withTemporaryDatabase(configured, (pool) =>
           Effect.gen(function* () {
-            yield* migrateDatabase(pool);
+            yield* migrateTestDatabase(pool);
             expect(yield* Effect.promise(() => firstUseColumnCount(pool))).toBe(
               2,
             );
             expect(yield* Effect.promise(() => migrationCount(pool))).toBe(
               expectedMigrationCount,
             );
-            yield* migrateDatabase(pool);
+            yield* migrateTestDatabase(pool);
             expect(yield* Effect.promise(() => migrationCount(pool))).toBe(
               expectedMigrationCount,
             );

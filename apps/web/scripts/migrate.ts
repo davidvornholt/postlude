@@ -1,7 +1,6 @@
+import { createPool } from '@postlude/db/pool';
 import { Effect } from 'effect';
-
-import { migrateDatabase } from '../src/migrate.ts';
-import { createPool } from '../src/pool.ts';
+import { migrateJournalDatabase } from '../src/features/journal/services/journal-migration.ts';
 
 const databaseUrl = Bun.env.DATABASE_URL;
 if (databaseUrl === undefined || databaseUrl === '') {
@@ -11,7 +10,7 @@ if (databaseUrl === undefined || databaseUrl === '') {
 const migrationPool = createPool(databaseUrl);
 
 await Effect.runPromise(
-  migrateDatabase(migrationPool).pipe(
+  migrateJournalDatabase(migrationPool).pipe(
     Effect.ensuring(Effect.promise(() => migrationPool.end())),
   ),
 );

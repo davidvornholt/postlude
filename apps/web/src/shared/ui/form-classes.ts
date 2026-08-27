@@ -2,8 +2,9 @@
  * The controls the app has so far, in the design's own terms: one filled button
  * for the single action a page exists for, one quiet control that is type on a
  * rule, one navigation link that is the same eyebrow with the rule as its
- * state, and one text field that is also type on a rule, so a control never
- * arrives as a box on a page built out of rules.
+ * state, and two text fields that are also type on a rule — one for the
+ * parchment ground and one for the deep register — so a control never arrives
+ * as a box on a page built out of rules.
  *
  * Both recipes hold their state colours rather than leaving them to a caller,
  * and every caller passes the recipe alone. Two utilities that set the same
@@ -80,6 +81,21 @@ export const quietButtonClass = [
 ].join(' ');
 
 /*
+ * A single-line field on the parchment ground: the same rule with type on it as
+ * the deep register's, in the page's own ink. It is a separate recipe rather
+ * than the deep one with colours appended, for the reason at the top of this
+ * file — two utilities that set the same property are ordered by the generated
+ * stylesheet, so a colour added at a call site cannot be relied on to win.
+ */
+export const fieldClass = [
+  'w-full border-border border-b bg-transparent pb-1',
+  'text-ink placeholder:text-ink-muted placeholder:italic',
+  'transition-colors duration-150 ease-standard',
+  'hover:border-ink-muted focus:border-ink',
+  focusRingClass,
+].join(' ');
+
+/*
  * A single-line field, in the deep register. It is a rule with type on it
  * rather than a box: an outlined input would be the one card on a page that has
  * none, and the rule under the words is what a paper form uses to say "write
@@ -89,9 +105,8 @@ export const quietButtonClass = [
  * never is. Nothing else separates a prompt from a short line someone typed,
  * and a reference the writer believes is stored is worse than an empty field.
  *
- * Only the deep variant exists because only the deep register has a field so
- * far. The ring is the register's own recipe rather than the standard one with
- * a colour appended, for the reason `deepFocusRingClass` gives.
+ * The ring is the register's own recipe rather than the standard one with a
+ * colour appended, for the reason `deepFocusRingClass` gives.
  */
 export const deepFieldClass = [
   'w-full border-deep-rule border-b bg-transparent pb-1',

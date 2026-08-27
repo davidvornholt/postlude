@@ -70,6 +70,24 @@ for (const book of scriptureBooks) {
 export const findScriptureBook = (name: string): ScriptureBook | undefined =>
   byFoldedName.get(foldName(name));
 
+/** Every accepted name worth indexing, including keyboard-only umlaut forms. */
+export const scriptureBookSearchNames = (
+  name: string,
+): ReadonlyArray<string> => {
+  const book = findScriptureBook(name);
+  if (book === undefined) {
+    return [];
+  }
+  return [
+    ...new Set(
+      [book.english, book.german, ...book.aliases].flatMap((candidate) => [
+        candidate,
+        spellOutUmlauts(candidate),
+      ]),
+    ),
+  ];
+};
+
 /**
  * A reference is a book, then a chapter, then optionally verses. The separator
  * between chapter and verse may be a colon or a comma, because English writes
