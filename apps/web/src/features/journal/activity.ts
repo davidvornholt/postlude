@@ -38,12 +38,6 @@ export type ActivityWindow = {
   readonly to: JournalDate;
 };
 
-export type ActivityCell = {
-  readonly date: JournalDate;
-  readonly words: number;
-  readonly level: HeatLevel;
-};
-
 const daysPerWeek = 7;
 const saturday = 6;
 /** How many week columns a rolling year shows, which is what a year needs. */
@@ -147,51 +141,4 @@ export const heatLevel = (words: number, thresholds: Quartiles): HeatLevel => {
     return 'q2';
   }
   return words <= thresholds[2] ? 'q3' : 'q4';
-};
-
-/**
- * Every day of the window, written or not, in calendar order. The days that
- * exist arrive as rows and the rest are the gaps between them, so the grid is
- * built by walking the calendar rather than by trusting the query to have
- * returned one row per square.
- */
-export const activityCells = (
-  days: ReadonlyArray<ActivityDay>,
-  window: ActivityWindow,
-): ReadonlyArray<ActivityCell> => {
-  const thresholds = quartiles(days);
-  const byDate = new Map(days.map((day) => [day.date, day]));
-  const cells: Array<ActivityCell> = [];
-  for (
-    let date = window.from;
-    date <= window.to;
-    date = shiftJournalDate(date, 1)
-  ) {
-    const day = byDate.get(date);
-    const words = day === undefined ? 0 : dayWords(day);
-    cells.push({ date, words, level: heatLevel(words, thresholds) });
-  }
-  return cells;
-};
-
-/** The cells as calendar-week columns, including a clipped first week. */
-export const activityWeeks = (
-  cells: ReadonlyArray<ActivityCell>,
-): ReadonlyArray<ReadonlyArray<ActivityCell>> => {
-  const [first] = cells;
-  if (first === undefined) {
-    return [];
-  }
-  const firstWeekLength = daysPerWeek - journalDateWeekday(first.date);
-  const weeks: Array<ReadonlyArray<ActivityCell>> = [
-    cells.slice(0, firstWeekLength),
-  ];
-  for (
-    let offset = firstWeekLength;
-    offset < cells.length;
-    offset += daysPerWeek
-  ) {
-    weeks.push(cells.slice(offset, offset + daysPerWeek));
-  }
-  return weeks;
 };

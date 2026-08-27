@@ -25,8 +25,12 @@ import {
   navLinkClass,
   navLinkInactiveClass,
 } from '#/shared/ui/form-classes.ts';
-import { activityCells } from '../activity.ts';
-import { groupDigits, monthYearLabel } from '../activity-labels.ts';
+import { activityCells } from '../activity-cells.ts';
+import {
+  dayCountLabel,
+  monthYearLabel,
+  wordCountLabel,
+} from '../activity-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
 import { OnThisDay } from './on-this-day.tsx';
@@ -102,7 +106,7 @@ type ArchivePageProps = {
 };
 
 export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
-  const cells = activityCells(view.days, view.window);
+  const cells = activityCells(view.days, view.window, view.today);
   const written = view.totals.daysWritten;
   const journalIsEmpty = view.years.length === 0;
 
@@ -117,7 +121,7 @@ export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
       ) : (
         <>
           <p className="mt-4 max-w-prose text-ink-muted text-lg">
-            {`${groupDigits(written)} days written, ${groupDigits(view.totals.words)} words in all.`}
+            {`${dayCountLabel(written)} written, ${wordCountLabel(view.totals.words)} in all.`}
           </p>
 
           <Section title="Streaks">

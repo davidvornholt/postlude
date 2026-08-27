@@ -26,7 +26,7 @@ test('the first archive render includes an edit made inside the autosave quiet p
   expect(Date.now() - editedAt).toBeLessThan(quietPeriodMs);
 
   await expect(page.getByRole('heading', { name: 'Archive' })).toBeVisible();
-  await expect(page.getByText('1 days written, 3 words in all.')).toBeVisible();
+  await expect(page.getByText('1 day written, 3 words in all.')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute(
     'data-stored-revision',
     revision,

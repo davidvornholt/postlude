@@ -9,7 +9,8 @@
  * The number formatter is fixed to one locale for the same reason.
  */
 
-import type { ActivityCell, HeatLevel } from './activity.ts';
+import type { HeatLevel } from './activity.ts';
+import type { ActivityCell } from './activity-cells.ts';
 
 type MonthActivity = {
   readonly date: string;
@@ -49,8 +50,15 @@ const monthNames = [
 ] as const;
 
 const digitGroups = new Intl.NumberFormat('en-GB');
+const one = 1;
 
 export const groupDigits = (value: number): string => digitGroups.format(value);
+
+export const dayCountLabel = (value: number): string =>
+  `${groupDigits(value)} ${value === one ? 'day' : 'days'}`;
+
+export const wordCountLabel = (value: number): string =>
+  `${groupDigits(value)} ${value === one ? 'word' : 'words'}`;
 
 const monthNameOf = (date: string): string =>
   monthNames[Number(date.slice(isoMonthStart, isoMonthEnd)) - 1] ?? '';
@@ -77,10 +85,14 @@ export const monthColumnLabels = (
 
 /** What the grid says when it is read rather than looked at. */
 export const activitySummary = (cells: ReadonlyArray<ActivityCell>): string => {
-  const first = monthYearLabel(cells[0]?.date ?? '');
-  const last = monthYearLabel(cells.at(-1)?.date ?? '');
-  const written = cells.filter((cell) => cell.words > 0).length;
-  return `Journal activity from ${first} to ${last}: ${written} days written`;
+  const days = cells.filter((cell) => cell.kind === 'day');
+  const [first] = days;
+  const last = days.at(-1);
+  if (first === undefined || last === undefined) {
+    return 'Journal activity: this range has not started';
+  }
+  const written = days.filter((cell) => cell.words > 0).length;
+  return `Journal activity from ${monthYearLabel(first.date)} to ${monthYearLabel(last.date)}: ${dayCountLabel(written)} written`;
 };
 
 /** Monthly distribution and volume, compact enough to replace 371 cells. */
@@ -89,29 +101,35 @@ export const activityDescription = (
 ): string => {
   const months: Array<MonthActivity> = [];
   for (const cell of cells) {
-    const month = cell.date.slice(0, isoMonthEnd);
-    const open = months.at(-1);
-    if (open?.date.slice(0, isoMonthEnd) === month) {
-      months[months.length - 1] = {
-        ...open,
-        days: open.days + 1,
-        written: open.written + Number(cell.words > 0),
-        words: open.words + cell.words,
-      };
-    } else {
-      months.push({
-        date: cell.date,
-        days: 1,
-        written: Number(cell.words > 0),
-        words: cell.words,
-      });
+    if (cell.kind === 'day') {
+      const month = cell.date.slice(0, isoMonthEnd);
+      const open = months.at(-1);
+      if (open?.date.slice(0, isoMonthEnd) === month) {
+        months[months.length - 1] = {
+          ...open,
+          days: open.days + 1,
+          written: open.written + Number(cell.words > 0),
+          words: open.words + cell.words,
+        };
+      } else {
+        months.push({
+          date: cell.date,
+          days: 1,
+          written: Number(cell.words > 0),
+          words: cell.words,
+        });
+      }
     }
+  }
+
+  if (months.length === 0) {
+    return 'This range has not started.';
   }
 
   return `Monthly breakdown. ${months
     .map(
       (month) =>
-        `${monthYearLabel(month.date)}: ${month.written} of ${month.days} days written, ${groupDigits(month.words)} words`,
+        `${monthYearLabel(month.date)}: ${month.written} of ${dayCountLabel(month.days)} written, ${wordCountLabel(month.words)}`,
     )
     .join('. ')}.`;
 };

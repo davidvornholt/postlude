@@ -88,6 +88,31 @@ it('shows reference-only scripture activity instead of the empty journal', async
   expect(scriptureOnly).toContain('role="img"');
 });
 
+it('uses singular counts in the archive summary', async () => {
+  const oneDay = await renderInRouter(
+    <ArchivePage
+      selectedYear={undefined}
+      view={{
+        ...emptyView,
+        days: [
+          {
+            date: today,
+            journalWords: 1,
+            scriptureWords: 0,
+            hasScripture: false,
+            journalWrittenOnTheDay: true,
+            scriptureUsedOnTheDay: false,
+          },
+        ],
+        years: [todayYear],
+        totals: { daysWritten: 1, words: 1 },
+      }}
+    />,
+  );
+
+  expect(plainText(oneDay)).toContain('1 day written, 1 word in all.');
+});
+
 it('states both runs, each with the longest it has ever been', () => {
   const view = sampleArchiveView(journal, today);
   expect(filled).toContain('Evening journal');

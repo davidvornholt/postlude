@@ -2,15 +2,12 @@ import { expect, it } from 'bun:test';
 
 import {
   type ActivityDay,
-  activityCells,
   activityTotals,
-  activityWeeks,
   activityWindow,
   heatLevel,
   quartiles,
 } from './activity.ts';
 import { daysBetweenJournalDates, journalDateWeekday } from './journal-day.ts';
-import { lastArchiveYear } from './schemas/archive-query.ts';
 
 const day = (date: string, journalWords: number): ActivityDay => ({
   date,
@@ -24,7 +21,6 @@ const day = (date: string, journalWords: number): ActivityDay => ({
 const sunday = 0;
 const saturday = 6;
 const daysPerWeek = 7;
-const firstClippedWeekDays = 6;
 const rollingWeeksShown = 53;
 const today = '2026-08-26';
 const namedYear = 2025;
@@ -59,27 +55,6 @@ it('wraps a named year in the weeks that hold it', () => {
   expect(window.to).toBe('2026-01-03');
 });
 
-it('keeps the first supported year inside the journal date range', () => {
-  const window = activityWindow(today, 1);
-  const weeks = activityWeeks(activityCells([], window));
-
-  expect(window).toEqual({ from: '0001-01-01', to: '0002-01-05' });
-  expect(weeks[0]?.[0]?.date).toBe('0001-01-01');
-  expect(weeks[0]).toHaveLength(firstClippedWeekDays);
-  expect(weeks.slice(1).every((week) => week.length === daysPerWeek)).toBe(
-    true,
-  );
-});
-
-it('draws the maximum named year as 53 complete four-digit weeks', () => {
-  const window = activityWindow(today, lastArchiveYear);
-  const weeks = activityWeeks(activityCells([], window));
-
-  expect(window).toEqual({ from: '9997-12-28', to: '9999-01-02' });
-  expect(weeks).toHaveLength(rollingWeeksShown);
-  expect(weeks.every((week) => week.length === daysPerWeek)).toBe(true);
-});
-
 it('splits the written days into four groups by nearest rank', () => {
   const days = [
     day('2026-01-01', words.low),
@@ -106,21 +81,6 @@ it('reads a day with nothing on it as no step of the ramp', () => {
   expect(heatLevel(words.none, thresholds)).toBe('none');
 });
 
-it('draws a square for every day of the window, written or not', () => {
-  const window = activityWindow(today, namedYear);
-  const cells = activityCells([day('2025-06-01', words.most)], window);
-  expect(cells.length).toBe(
-    daysBetweenJournalDates(window.from, window.to) + 1,
-  );
-  expect(cells.filter((cell) => cell.level !== 'none').length).toBe(1);
-});
-
-it('leaves the days outside the window off the grid', () => {
-  const window = activityWindow(today, namedYear);
-  const cells = activityCells([day('2023-06-01', words.most)], window);
-  expect(cells.every((cell) => cell.words === words.none)).toBe(true);
-});
-
 it('weighs a day by both of the sections it holds', () => {
   const scriptureWords = 40;
   const both: ActivityDay = {
@@ -135,10 +95,4 @@ it('weighs a day by both of the sections it holds', () => {
     daysWritten: 1,
     words: words.more + scriptureWords,
   });
-});
-
-it('lays the squares out as columns of a week each', () => {
-  const window = activityWindow(today);
-  const weeks = activityWeeks(activityCells([], window));
-  expect(weeks.every((week) => week.length === daysPerWeek)).toBe(true);
 });

@@ -18,8 +18,8 @@
 import { useId } from 'react';
 
 import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
-import type { ActivityCell, HeatLevel } from '../activity.ts';
-import { activityWeeks } from '../activity.ts';
+import type { HeatLevel } from '../activity.ts';
+import { type ActivityCell, activityWeeks } from '../activity-cells.ts';
 import {
   activityDescription,
   activitySummary,
@@ -100,7 +100,11 @@ export const ActivityMap = ({ cells, today }: ActivityMapProps) => {
                 {week.map((cell) => (
                   <div
                     aria-hidden="true"
-                    className={cellClass[cell.level]}
+                    className={
+                      cell.kind === 'future-padding'
+                        ? 'size-3'
+                        : cellClass[cell.level]
+                    }
                     key={cell.date}
                   />
                 ))}
