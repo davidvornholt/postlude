@@ -205,15 +205,21 @@ it('finds the same day of the month in earlier years, newest first', async () =>
   ]);
 });
 /*
- * A day whose morning holds a passage and whose evening holds nothing has
- * nothing to show in a list of openings, so it is left out rather than listed
- * as a blank line.
+ * Scripture prose can carry a memory without evening prose. A reference alone
+ * has nothing to show in a list of openings, so it remains excluded.
  */
-it('leaves out an anniversary with no evening prose', async () => {
+it('includes scripture prose and leaves out a reference-only anniversary', async () => {
   const anniversaries = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save({
         date: '2025-08-26',
+        journalMarkdown: '',
+        scriptureMarkdown: 'A morning worth remembering.',
+        scriptureReference: '',
+        baseRevision: 0,
+      });
+      yield* entries.save({
+        date: '2024-08-26',
         journalMarkdown: '',
         scriptureMarkdown: '',
         scriptureReference: 'Psalms 23',
@@ -222,7 +228,17 @@ it('leaves out an anniversary with no evening prose', async () => {
       return yield* entries.readArchive(archiveRequest('2026-08-26'));
     }),
   );
-  expect(anniversaries.anniversaries).toEqual([]);
+  expect(
+    anniversaries.anniversaries.map((entry) => ({
+      date: entry.date,
+      scriptureMarkdown: entry.scriptureMarkdown,
+    })),
+  ).toEqual([
+    {
+      date: '2025-08-26',
+      scriptureMarkdown: 'A morning worth remembering.',
+    },
+  ]);
 });
 
 it('reports no archive coverage while the journal is empty', async () => {
@@ -230,6 +246,20 @@ it('reports no archive coverage while the journal is empty', async () => {
     entries.readArchive(archiveRequest('2026-08-26')),
   );
   expect(archive.earliest).toBeUndefined();
+});
+
+it('does not let future rows open the archive', async () => {
+  const archive = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2026-12-01', 'Later this year.'));
+      yield* entries.save(draft('2027-01-01', 'Next year.'));
+      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+    }),
+  );
+
+  expect(archive.earliest).toBeUndefined();
+  expect(archive.summaries).toEqual([]);
+  expect(archive.anniversaries).toEqual([]);
 });
 
 it('reports the oldest written day as where the archive starts', async () => {

@@ -232,10 +232,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
 
       /**
        * The same day of the month in earlier years, newest first. Only days
-       * with evening prose come back: "on this day" exists to hand the writer
-       * something to read, and a day holding a passage reference and nothing
-       * else has nothing to say here. The upper bound is exclusive, so today is
-       * never its own memory.
+       * with prose in either section come back: "on this day" exists to hand
+       * the writer something to read, and a day holding a passage reference and
+       * nothing else has nothing to say here. The upper bound is exclusive, so
+       * today is never its own memory.
        */
       const readAnniversaries = (
         monthDay: string,
@@ -247,17 +247,21 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           from entry
           where to_char(entry_date, 'MM-DD') = ${monthDay}
             and entry_date < ${before}
-            and journal_word_count > 0
+            and (
+              journal_word_count > 0
+              or scripture_word_count > 0
+            )
           order by entry_date desc
           limit ${limit}
         `.pipe(Effect.flatMap(decodeEntries));
 
       /** The oldest day that still has something for the archive to show. */
-      const earliestDate = () =>
+      const earliestDate = (today: JournalDate) =>
         sql`
           select min(entry_date) as entry_date
           from entry
           where ${hasCurrentMeaningfulContent}
+            and entry_date <= ${today}
         `.pipe(
           Effect.flatMap(decodeEarliestDates),
           Effect.map((rows) => rows[0]?.date ?? undefined),
@@ -274,7 +278,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         inArchiveSnapshot(
           sql,
           Effect.gen(function* () {
-            const earliest = yield* earliestDate();
+            const earliest = yield* earliestDate(today);
             const summaries =
               earliest === undefined ? [] : yield* listBetween(earliest, today);
             const anniversaries = yield* readAnniversaries(

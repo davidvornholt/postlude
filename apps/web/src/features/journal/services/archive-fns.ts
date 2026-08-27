@@ -38,7 +38,7 @@ import {
 import { decodeArchiveQuery } from '../schemas/archive-query.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import type { EntrySummary } from '../schemas/entry-summary.ts';
-import { journalSnippet } from '../snippet.ts';
+import { archiveSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
@@ -111,7 +111,7 @@ const anniversaryOf =
     date: entry.date,
     yearsAgo: parseJournalDate(today).year - parseJournalDate(entry.date).year,
     words: entry.journalWordCount + entry.scriptureWordCount,
-    snippet: journalSnippet(entry.journalMarkdown),
+    snippet: archiveSnippet(entry),
   });
 
 export const readArchiveFn = createServerFn({ method: 'GET' })
