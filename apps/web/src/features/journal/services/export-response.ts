@@ -13,6 +13,7 @@ import { journalReadableStream } from './journal-runtime.ts';
  */
 export const exportJournalResponse = async (
   signal: AbortSignal,
+  styleSheetHref: string,
 ): Promise<Response> => {
   let journalDate: string | undefined;
   const body = await journalReadableStream(
@@ -29,5 +30,6 @@ export const exportJournalResponse = async (
       return exportFileName(journalDate);
     },
     signal,
+    styleSheetHref,
   });
 };

@@ -1,14 +1,15 @@
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import {
-  getResponseHeaders,
-  requestHandler,
-} from '@tanstack/react-start/server';
 
 import { activityWindow } from '../src/features/journal/activity.ts';
-import { exportDownloadResponse } from '../src/features/journal/services/download-response.ts';
 import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
 import { runSessionRequired } from '../src/shared/auth/session-required.ts';
+import {
+  answerWithUnavailableExport,
+  privateFailureDetail,
+  productionStyleSheetHref,
+  recoveryActionContrasts,
+} from './archive-export-recovery-test-support.ts';
 import type { ArchivePageFixtureConfig } from './archive-page-fixture-contract.ts';
 import { mountArchivePage, scanArchive } from './archive-page-test-support.ts';
 
@@ -21,7 +22,8 @@ const loginUrl = /\/login$/u;
 const exportFileName = 'postlude-2026-08-26.zip';
 const colorSchemes = ['light', 'dark'] as const;
 const unavailableStatus = 503;
-const privateFailureDetail = 'database diagnostic for private journal';
+const textContrastMinimum = 4.5;
+const nonTextContrastMinimum = 3;
 const referenceOnly: ArchivePageFixtureConfig = {
   exportSettlement: { delayMs: 0, outcome: 'stored' },
   selectedYear: undefined,
@@ -63,34 +65,6 @@ const answerWithoutSession = async (route: playwright.Route): Promise<void> => {
     headers: Object.fromEntries(
       new Headers([...publishedHeaders, ...result.headers]),
     ),
-    status: result.status,
-  });
-};
-
-const answerWithUnavailableExport = async (
-  route: playwright.Route,
-): Promise<void> => {
-  const body = new ReadableStream<Uint8Array>({
-    start: (controller) => controller.error(new Error(privateFailureDetail)),
-  });
-  const recovery = await exportDownloadResponse({
-    body,
-    fileName: () => exportFileName,
-    signal: new AbortController().signal,
-  });
-  const request = new Request(route.request().url(), { method: 'POST' });
-  const handler = requestHandler(() =>
-    runSessionRequired({
-      request,
-      authorize: () => Promise.resolve(true),
-      next: () => Promise.resolve(recovery),
-      publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
-    }),
-  );
-  const result = await handler(request, {});
-  await route.fulfill({
-    body: await result.text(),
-    headers: Object.fromEntries(result.headers),
     status: result.status,
   });
 };
@@ -149,7 +123,10 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await page.route(exportRoute, answerWithUnavailableExport);
+    const styleSheetHref = await productionStyleSheetHref(page);
+    await page.route(exportRoute, (route) =>
+      answerWithUnavailableExport(route, styleSheetHref),
+    );
     await mountArchivePage(page, referenceOnly);
     const responsePromise = page.waitForResponse(exportRoute);
     await page.getByRole('button', { name: 'Download the journal' }).click();
@@ -167,9 +144,15 @@ for (const colorScheme of colorSchemes) {
       page.getByRole('heading', { level: 1, name: 'Export unavailable' }),
     ).toBeVisible();
     const recovery = page.getByRole('link', { name: 'Return to archive' });
+    await expect(page.locator(`link[href="${styleSheetHref}"]`)).toHaveCount(1);
     await expect(recovery).toBeFocused();
     await expect(page.getByText('Your journal is unchanged.')).toBeVisible();
     await expect(page.locator('body')).not.toContainText(privateFailureDetail);
+    const contrasts = await recoveryActionContrasts(page, recovery);
+    expect(contrasts.hoverText).toBeGreaterThanOrEqual(textContrastMinimum);
+    expect(contrasts.focusIndicator).toBeGreaterThanOrEqual(
+      nonTextContrastMinimum,
+    );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth,

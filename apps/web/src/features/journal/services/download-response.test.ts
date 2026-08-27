@@ -9,6 +9,7 @@ import {
 
 const okStatus = 200;
 const unavailableStatus = 503;
+const styleSheetHref = '/assets/postlude.css';
 
 const bodyOf = (...chunks: ReadonlyArray<string>) => {
   const encoder = new TextEncoder();
@@ -27,6 +28,7 @@ it('keeps every streamed chunk and sets private native-download headers', async 
     body: bodyOf('first', 'second'),
     fileName: () => 'postlude-2026-08-26.zip',
     signal: new AbortController().signal,
+    styleSheetHref,
   });
 
   expect(response.status).toBe(okStatus);
@@ -52,6 +54,7 @@ it('turns a failure before the first chunk into a safe retryable response', asyn
     body,
     fileName: () => 'postlude.zip',
     signal: new AbortController().signal,
+    styleSheetHref,
   });
 
   expect(response.status).toBe(unavailableStatus);
@@ -59,10 +62,10 @@ it('turns a failure before the first chunk into a safe retryable response', asyn
   expect(document).toContain(exportUnavailableMessage);
   expect(document).toContain('href="/archive"');
   expect(document).toContain('<title>Export unavailable | Postlude</title>');
-  expect(document).toContain('<main>');
-  expect(document).toContain(
-    '<h1 id="recovery-heading">Export unavailable</h1>',
-  );
+  expect(document).toContain('<main class=');
+  expect(document).toContain('id="recovery-heading">Export unavailable</h1>');
+  expect(document).toContain(`href="${styleSheetHref}"`);
+  expect(document).not.toContain('<style>');
   expect(document).toContain('autofocus');
   expect(document).not.toContain('postgres://secret');
   expect(response.headers.get('content-type')).toContain('text/html');
@@ -78,6 +81,7 @@ it('keeps the actual export recovery response through session authentication', a
     body,
     fileName: () => 'postlude.zip',
     signal: new AbortController().signal,
+    styleSheetHref,
   });
 
   const result = await runSessionRequired({
@@ -119,6 +123,7 @@ it('sanitizes a stream failure after attachment headers are committed', async ()
     body,
     fileName: () => 'postlude.zip',
     signal: new AbortController().signal,
+    styleSheetHref,
   });
 
   await expect(response.text()).rejects.toThrow(exportUnavailableMessage);
@@ -137,6 +142,7 @@ it('cancels the producer when its request is aborted', async () => {
     body,
     fileName: () => 'postlude.zip',
     signal: request.signal,
+    styleSheetHref,
   });
 
   request.abort();
@@ -158,6 +164,7 @@ it('cancels a producer when the request closes during first-chunk preflight', as
     body,
     fileName: () => 'postlude.zip',
     signal: request.signal,
+    styleSheetHref,
   });
 
   request.abort();

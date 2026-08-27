@@ -11,14 +11,16 @@ type ExportResponseOptions = {
   /** Resolved after preflight, once the snapshot has supplied its journal day. */
   readonly fileName: () => string;
   readonly signal: AbortSignal;
+  readonly styleSheetHref: string;
 };
 
-const unavailableResponse = (): Response =>
+const unavailableResponse = (styleSheetHref: string): Response =>
   privateHtmlRecoveryResponse({
     actionHref: '/archive',
     actionLabel: 'Return to archive',
     heading: 'Export unavailable',
     message: exportUnavailableMessage,
+    styleSheetHref,
     title: 'Export unavailable | Postlude',
   });
 
@@ -31,6 +33,7 @@ export const exportDownloadResponse = async ({
   body,
   fileName,
   signal,
+  styleSheetHref,
 }: ExportResponseOptions): Promise<Response> => {
   const reader = body.getReader();
   let settled = false;
@@ -58,7 +61,7 @@ export const exportDownloadResponse = async ({
     if (first.done || settled) {
       finish();
       await reader.cancel();
-      return unavailableResponse();
+      return unavailableResponse(styleSheetHref);
     }
     const preparedFileName = fileName();
 
@@ -93,6 +96,6 @@ export const exportDownloadResponse = async ({
   } catch {
     finish();
     await reader.cancel().catch(() => undefined);
-    return unavailableResponse();
+    return unavailableResponse(styleSheetHref);
   }
 };

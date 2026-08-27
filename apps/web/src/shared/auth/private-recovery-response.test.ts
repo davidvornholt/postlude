@@ -16,6 +16,7 @@ const recoveryResponse = (): Response =>
     actionLabel: 'Return to archive',
     heading: 'Export unavailable',
     message: 'The export could not be prepared.',
+    styleSheetHref: '/assets/postlude.css',
     title: 'Export unavailable | Postlude',
   });
 
@@ -55,6 +56,11 @@ describe('approved private recovery responses', () => {
     expect(response.headers.get('content-type')).toBe(
       'text/html; charset=utf-8',
     );
+    const document = await response.text();
+    expect(document).toContain(
+      '<link rel="stylesheet" href="/assets/postlude.css">',
+    );
+    expect(document).not.toContain('<style>');
   });
 
   it('keeps approved nested and thrown responses without widening approval', async () => {
