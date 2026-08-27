@@ -47,5 +47,5 @@ it('opens an early Common Era year with its four-digit journal label', async () 
 
   expect(attributeValue(selectedLink, 'href')).toBe('/archive?year=1');
   expect(attributeValue(selectedLink, 'aria-current')).toBe('page');
-  expect(selected).toContain('January 0001');
+  expect(selected).toContain('January 1');
 });
