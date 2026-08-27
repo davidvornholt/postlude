@@ -24,7 +24,7 @@ const save = (): Promise<unknown> => {
   document.documentElement.dataset.saveAttempts = String(saveAttempt);
   if (outcome === 'stored') {
     return Promise.resolve({
-      revision: new Date(config.entry.updatedAt).getTime() + saveAttempt,
+      revision: config.entry.revision + saveAttempt,
     });
   }
   if (outcome === 'pending') {

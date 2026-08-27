@@ -29,6 +29,7 @@ const entryOn = (overrides: Partial<JournalEntry> = {}): JournalEntry => ({
   journalWordCount: 0,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  revision: 0,
   createdAt: new Date(0),
   updatedAt: new Date(0),
   ...overrides,

@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 
 import { createAutosaveRegistry } from './autosave-registry.ts';
+import { createConfirmedRevisionTracker } from './confirmed-revisions.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
 
@@ -11,6 +12,7 @@ const draft: EntryDraft = {
   scriptureReference: '',
 };
 const stored = { draft, revision: 100 };
+const savedRevision = 101;
 
 const memoryRecovery = (): DraftRecovery => {
   let recovered: EntryDraft | undefined;
@@ -63,9 +65,10 @@ it('retains a coordinator while its quiet timer carries an edit', () => {
   expect(registry.acquire(stored, save)).not.toBe(first);
 });
 
-it('retains an in-flight coordinator across mounts, then evicts it', async () => {
+it('evicts a confirmed coordinator and retains only its revision', async () => {
   const pending = deferred();
-  const registry = createAutosaveRegistry(memoryRecovery);
+  const revisions = createConfirmedRevisionTracker();
+  const registry = createAutosaveRegistry(memoryRecovery, revisions);
   const first = registry.acquire(stored, () => pending.promise);
   const unsubscribe = first.subscribe(() => undefined);
   first.edit({ journalMarkdown: 'In flight.' });
@@ -74,29 +77,23 @@ it('retains an in-flight coordinator across mounts, then evicts it', async () =>
 
   expect(registry.acquire(stored, () => pending.promise)).toBe(first);
 
-  pending.resolve({ revision: 101 });
+  pending.resolve({ revision: savedRevision });
   await settleEffects();
-  const remounted = registry.acquire(stored, () =>
+  expect(() =>
+    registry.acquire(stored, () => Promise.resolve({ revision: 102 })),
+  ).toThrow('stale journal snapshot');
+  expect(revisions.known(draft.date)).toBe(savedRevision);
+
+  const loaded = {
+    draft: { ...draft, journalMarkdown: 'In flight.' },
+    revision: savedRevision,
+  };
+  const remounted = registry.acquire(loaded, () =>
     Promise.resolve({ revision: 102 }),
   );
   expect(remounted).not.toBe(first);
-  expect(remounted.snapshot()).toMatchObject({
-    draft: { ...draft, journalMarkdown: 'In flight.' },
-    stored: {
-      draft: { ...draft, journalMarkdown: 'In flight.' },
-      revision: 101,
-    },
-  });
-
-  const genuinelyNewer = {
-    draft: { ...draft, journalMarkdown: 'Loaded after the save.' },
-    revision: 102,
-  };
-  registry.acquire(genuinelyNewer, () => Promise.resolve({ revision: 103 }));
-  expect(remounted.snapshot()).toMatchObject({
-    draft: genuinelyNewer.draft,
-    stored: genuinelyNewer,
-  });
+  expect(revisions.known(draft.date)).toBeUndefined();
+  expect(remounted.snapshot().stored).toEqual(loaded);
 });
 
 it('retains a failed recoverable draft until it is undone', async () => {

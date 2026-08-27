@@ -27,6 +27,7 @@ const fixtureConfig = (
     journalWordCount: 0,
     scriptureMarkdown: '',
     scriptureWordCount: 0,
+    revision: 1,
     createdAt: timestamp,
     updatedAt: timestamp,
   },

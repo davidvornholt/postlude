@@ -134,6 +134,22 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
       [{ _tag: 'cancel' }],
     ];
   }
+  if (!sameDraft(state.draft, state.inFlight)) {
+    const correctedReference =
+      failure.kind === 'validation' &&
+      (state.draft.scriptureReference.trim() === '' ||
+        parseScriptureReference(state.draft.scriptureReference) !== undefined);
+    if (failure.kind !== 'validation' || correctedReference) {
+      return [
+        {
+          ...state,
+          inFlight: state.draft,
+          failure: correctedReference ? undefined : failure,
+        },
+        [{ _tag: 'save', draft: state.draft }],
+      ];
+    }
+  }
   return [{ ...state, inFlight: undefined, failure }, []];
 };
 

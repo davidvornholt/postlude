@@ -72,7 +72,7 @@ const DayLink = ({
 
 /**
  * The entry as the editors and the autosave rule take it: markdown and a typed
- * reference line, with the counts and the timestamps left behind. The stored
+ * reference line, with counts and database metadata left behind. The stored
  * reference is re-rendered in the one house style rather than kept as whatever
  * was typed, so a day reopened weeks later reads the way the archive does.
  */
@@ -88,7 +88,7 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
 
 const DayBody = ({ entry, today, save }: DayPageProps) => {
   const autosave = useAutosave(
-    { draft: draftOf(entry), revision: entry.updatedAt.getTime() },
+    { draft: draftOf(entry), revision: entry.revision },
     save,
   );
   const referenceError =

@@ -1,5 +1,5 @@
 {
-  "id": "f2a84bf4-eee8-4b58-ad7a-3e6eaf70702d",
+  "id": "fa28008c-87be-4eac-b96d-7d8a891c2ca3",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -64,6 +64,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -85,6 +92,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "entry_revision_positive": {
+          "name": "entry_revision_positive",
+          "value": "\"entry\".\"revision\" >= 1"
+        },
         "entry_journal_word_count_non_negative": {
           "name": "entry_journal_word_count_non_negative",
           "value": "\"entry\".\"journal_word_count\" >= 0"
@@ -95,7 +106,11 @@
         },
         "entry_scripture_reference_complete": {
           "name": "entry_scripture_reference_complete",
-          "value": "num_nonnulls(\"entry\".\"scripture_book\", \"entry\".\"scripture_chapter\", \"entry\".\"scripture_verse_start\") in (0, 3)"
+          "value": "num_nonnulls(\"entry\".\"scripture_book\", \"entry\".\"scripture_chapter\") in (0, 2)"
+        },
+        "entry_scripture_verse_start_needs_chapter": {
+          "name": "entry_scripture_verse_start_needs_chapter",
+          "value": "\"entry\".\"scripture_verse_start\" is null or \"entry\".\"scripture_chapter\" is not null"
         },
         "entry_scripture_verse_end_after_start": {
           "name": "entry_scripture_verse_end_after_start",

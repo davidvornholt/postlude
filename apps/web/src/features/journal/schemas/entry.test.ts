@@ -13,6 +13,7 @@ const columnNames = {
   scriptureChapter: 'scripture_chapter',
   scriptureVerseStart: 'scripture_verse_start',
   scriptureVerseEnd: 'scripture_verse_end',
+  revision: 'revision',
   createdAt: 'created_at',
   updatedAt: 'updated_at',
 } as const;
@@ -27,6 +28,7 @@ const baseRow = {
   scriptureChapter: null,
   scriptureVerseStart: null,
   scriptureVerseEnd: null,
+  revision: 1,
   createdAt: new Date('2026-08-25T12:00:00Z'),
   updatedAt: new Date('2026-08-25T12:00:00Z'),
 };

@@ -30,6 +30,10 @@ const WordCount = Schema.Number.pipe(
   Schema.int(),
   Schema.greaterThanOrEqualTo(0),
 );
+const Revision = Schema.Number.pipe(
+  Schema.int(),
+  Schema.greaterThanOrEqualTo(0),
+);
 const VerseNumber = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
 const containsLetter = /\p{L}/u;
 
@@ -62,6 +66,7 @@ const EntryRow = Schema.Struct({
   scriptureVerseEnd: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
     Schema.fromKey('scripture_verse_end'),
   ),
+  revision: Schema.propertySignature(Revision).pipe(Schema.fromKey('revision')),
   createdAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
     Schema.fromKey('created_at'),
   ),
@@ -93,6 +98,8 @@ export type JournalEntry = {
   readonly scriptureMarkdown: string;
   readonly scriptureWordCount: number;
   readonly scriptureReference?: ScriptureReference;
+  /** Monotonic for this day, incremented by the same upsert that stores it. */
+  readonly revision: number;
   /**
    * When the row was first written, which is not the day it is about. The
    * streaks read this to tell a day written on the day from one filled in
@@ -139,6 +146,7 @@ const entryOf = (row: Schema.Schema.Type<typeof EntryRow>): JournalEntry => {
     scriptureMarkdown: row.scriptureMarkdown ?? '',
     scriptureWordCount: row.scriptureWordCount,
     ...(reference === undefined ? {} : { scriptureReference: reference }),
+    revision: row.revision,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -168,6 +176,7 @@ export const emptyJournalEntry = (date: string): JournalEntry => ({
   journalWordCount: 0,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  revision: 0,
   createdAt: new Date(0),
   updatedAt: new Date(0),
 });
@@ -193,7 +202,7 @@ export type EntryDraft = Schema.Schema.Type<typeof EntryDraftSchema>;
 
 /** The database-issued revision returned after a write is committed. */
 export const SaveConfirmationSchema = Schema.Struct({
-  revision: Schema.Number.pipe(Schema.greaterThanOrEqualTo(0)),
+  revision: Revision,
 });
 
 export type SaveConfirmation = Schema.Schema.Type<

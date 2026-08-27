@@ -113,6 +113,8 @@ it('keeps the creation stamp of the day it is rewriting', async () => {
     }),
   );
   expect(second.createdAt.getTime()).toBe(first.createdAt.getTime());
+  expect(second.updatedAt.getTime()).toBe(first.updatedAt.getTime());
+  expect([first.revision, second.revision]).toEqual([1, 2]);
 });
 it('stores a verse range as the four columns the archive reads', async () => {
   const entry = await withRepository((entries) =>
@@ -160,7 +162,6 @@ it('explains an invalid reference without changing the stored entry', async () =
     chapter: 23,
   });
 });
-
 it('lists a range inclusively and in calendar order', async () => {
   const summaries = await withRepository((entries) =>
     Effect.gen(function* () {
@@ -182,7 +183,6 @@ it('lists a range inclusively and in calendar order', async () => {
     false,
   ]);
 });
-
 it('reports no earliest day while the journal is empty', async () => {
   const earliest = await withRepository((entries) => entries.earliestDate());
   expect(earliest).toBeUndefined();

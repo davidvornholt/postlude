@@ -12,6 +12,10 @@ import {
   createAutosaveCoordinator,
   type SaveDraft,
 } from './autosave-coordinator.ts';
+import {
+  type ConfirmedRevisionTracker,
+  confirmedRevisions,
+} from './confirmed-revisions.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 
 export type AutosaveRegistry = {
@@ -23,35 +27,32 @@ export type AutosaveRegistry = {
 
 export const createAutosaveRegistry = (
   recovery: () => DraftRecovery,
+  revisions: ConfirmedRevisionTracker = confirmedRevisions,
 ): AutosaveRegistry => {
   const coordinators = new Map<string, AutosaveCoordinator>();
-  const confirmed = new Map<string, ConfirmedDraft>();
 
   return {
     acquire: (stored, save) => {
       const {
         draft: { date },
       } = stored;
-      const checkpoint = confirmed.get(date);
-      const loaderIsStale =
-        checkpoint !== undefined && checkpoint.revision > stored.revision;
-      const current =
-        loaderIsStale && checkpoint !== undefined ? checkpoint : stored;
-      if (!loaderIsStale) {
-        confirmed.delete(date);
-      }
       const existing = coordinators.get(date);
       if (existing !== undefined) {
-        existing.update(current, save);
+        existing.update(stored, save);
         return existing;
       }
+      const confirmed = revisions.known(date);
+      if (confirmed !== undefined && stored.revision < confirmed) {
+        throw new Error('A stale journal snapshot reached autosave.');
+      }
+      revisions.observe(date, stored.revision);
 
       let created: AutosaveCoordinator;
       created = createAutosaveCoordinator({
-        stored: current,
+        stored,
         save,
         recovery: recovery(),
-        onConfirmed: (saved) => confirmed.set(date, saved),
+        onConfirmed: (saved) => revisions.record(date, saved.revision),
         onIdle: () => {
           if (coordinators.get(date) === created) {
             coordinators.delete(date);

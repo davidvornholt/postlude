@@ -117,6 +117,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_chapter = excluded.scripture_chapter,
             scripture_verse_start = excluded.scripture_verse_start,
             scripture_verse_end = excluded.scripture_verse_end,
+            revision = entry.revision + 1,
             updated_at = now()
           returning *
           `.pipe(
