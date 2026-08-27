@@ -21,7 +21,6 @@ import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
 import { ArchivePage } from './archive-navigation-archive-module.ts';
 import { DayPage } from './archive-navigation-day-module.ts';
 import type { ArchiveNavigationFixtureConfig } from './archive-navigation-fixture-contract.ts';
-import { neverDownloads } from './archive-page-fixture-contract.ts';
 import { journalEntryFromFixture } from './day-page-fixture-contract.ts';
 
 type ArchiveNavigationDependencies = {
@@ -95,7 +94,6 @@ export const createArchiveNavigationRouter = ({
   const archiveRoute = createRoute({
     component: () => (
       <ArchivePage
-        download={neverDownloads}
         selectedYear={undefined}
         view={archiveRoute.useLoaderData()}
       />

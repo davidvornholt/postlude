@@ -32,17 +32,8 @@ const currentPage = /aria-current="page"/gu;
 
 const journal = sampleJournal(today, sampleDays, seed);
 
-/*
- * The download is a prop rather than the real server function, which is what
- * lets the page be rendered here at all: the route owns which function the page
- * talks to, and nothing on the server side of it is reachable from a test about
- * markup.
- */
-const noDownload = () => Promise.resolve(new Response());
-
 const filled = await renderInRouter(
   <ArchivePage
-    download={noDownload}
     selectedYear={undefined}
     view={sampleArchiveView(journal, today)}
   />,
@@ -59,11 +50,7 @@ const emptyView: ArchiveView = {
   anniversaries: [],
 };
 const empty = await renderInRouter(
-  <ArchivePage
-    download={noDownload}
-    selectedYear={undefined}
-    view={emptyView}
-  />,
+  <ArchivePage selectedYear={undefined} view={emptyView} />,
 );
 
 /*
@@ -79,7 +66,6 @@ it('says the journal is empty rather than drawing an empty one', () => {
 it('shows reference-only scripture activity instead of the empty journal', async () => {
   const scriptureOnly = await renderInRouter(
     <ArchivePage
-      download={noDownload}
       selectedYear={undefined}
       view={{
         ...emptyView,
@@ -101,6 +87,7 @@ it('shows reference-only scripture activity instead of the empty journal', async
   expect(scriptureOnly).not.toContain('Nothing has been written yet');
   expect(scriptureOnly).toContain('Activity');
   expect(scriptureOnly).toContain('role="img"');
+  expect(scriptureOnly).toContain('Download the journal');
 });
 
 it('states both runs, each with the longest it has ever been', () => {
@@ -160,7 +147,6 @@ it('keeps an accepted selected year coherent when the journal has no row there',
   const selectedYear = 2024;
   const selected = await renderInRouter(
     <ArchivePage
-      download={noDownload}
       selectedYear={selectedYear}
       view={{
         ...sampleArchiveView(journal, today),
@@ -197,7 +183,6 @@ it('separates no writing from the four-step Less–More ramp', () => {
 it('reads back an earlier year and opens the day it came from', async () => {
   const withMemory = await renderInRouter(
     <ArchivePage
-      download={noDownload}
       selectedYear={undefined}
       view={{
         ...sampleArchiveView(journal, today),

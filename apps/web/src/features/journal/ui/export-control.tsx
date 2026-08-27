@@ -1,102 +1,90 @@
 /**
  * Taking the journal out of the app.
  *
- * The whole point of the control is that it hands over something that does not
- * need Postlude to be read, so what it says is what the writer gets — markdown
- * files, one to a day, in a zip — rather than "export", which says only that
- * something will happen.
- *
- * The server builds the archive and answers with it as bytes; this saves those
- * bytes under a name. A failure has to be visible, because a download that
- * silently does nothing is indistinguishable from a browser that saved the file
- * somewhere the writer has not looked yet.
- *
- * The call arrives as a prop, the way the writing page's save does. A page's
- * route owns which server function a page talks to, so the component stays a
- * component: it can be rendered in a test without the server runtime, and the
- * only thing it knows about the download is that it answers with a response.
+ * The browser owns the download. A native POST preserves the response stream,
+ * filename, authentication redirect, and safe server error page instead of
+ * turning the archive into a blob held in client memory. Before a hydrated
+ * page submits, it settles any browser autosave so the archive cannot omit the
+ * latest words. With JavaScript absent, the same form posts directly.
  */
 
-import { useMutation } from '@tanstack/react-query';
-import type { RefObject } from 'react';
-import { useRef } from 'react';
+import type { RefObject, SyntheticEvent } from 'react';
+import { useRef, useState } from 'react';
 
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
-import { exportFileName } from '../export-archive.ts';
-import type { JournalDate } from '../journal-day.ts';
+import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 
-export type DownloadJournal = () => Promise<Response>;
+type ExportState = 'failed' | 'idle' | 'settling';
+export type SettleAutosaves = () => Promise<void>;
 
-/*
- * The object URL outlives the click by a moment on purpose: revoking it in the
- * same task as the click races the browser's own read of it, and the download
- * that loses that race fails with nothing to show for it.
- */
-const releaseDelay = 1000;
-
-const saveArchive = (blob: Blob, name: string) => {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), releaseDelay);
-};
+const failureId = 'journal-export-failure';
 
 type ExportControlProps = {
-  readonly today: JournalDate;
-  readonly download: DownloadJournal;
+  readonly settleAutosaves?: SettleAutosaves;
 };
 
-export const ExportControl = ({ today, download }: ExportControlProps) => {
-  // The same guard the sign-out control uses: mutation state lands in a later
-  // render, so two activations inside one React batch would both read "not
-  // pending" and build the archive twice.
+export const ExportControl = ({
+  settleAutosaves = settleBrowserAutosaves,
+}: ExportControlProps) => {
+  const [state, setState] = useState<ExportState>('idle');
+  const form: RefObject<HTMLFormElement | null> = useRef(null);
   const started: RefObject<boolean> = useRef(false);
-  const gathering = useMutation({
-    mutationFn: async () => {
-      const response = await download();
-      saveArchive(await response.blob(), exportFileName(today));
-    },
-    onSettled: () => {
-      started.current = false;
-    },
-  });
-  const start = () => {
+  const settling = state === 'settling';
+
+  const submitAfterSettling = (
+    event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
+  ): Promise<void> => {
+    event.preventDefault();
     if (started.current) {
-      return;
+      return Promise.resolve();
     }
     started.current = true;
-    gathering.mutate();
+    setState('settling');
+    return settleAutosaves()
+      .then(
+        () => {
+          form.current?.submit();
+          setState('idle');
+        },
+        () => setState('failed'),
+      )
+      .finally(() => {
+        started.current = false;
+      });
   };
 
   return (
-    <div>
+    <form
+      action="/archive/export"
+      aria-busy={settling}
+      method="post"
+      onSubmit={submitAfterSettling}
+      ref={form}
+    >
       <p className="max-w-prose text-ink-muted text-lg">
         Every day you have written, as markdown files in a zip — one file to a
         day, in a folder for each year. It opens in a text editor and in
         anything that reads markdown, with or without Postlude.
       </p>
       <button
-        // Staying enabled keeps focus on the button while the archive is being
-        // built; disabling it here would drop focus to the document and
-        // announce the new label to nobody.
-        aria-busy={gathering.isPending}
+        aria-busy={settling}
+        aria-describedby={state === 'failed' ? failureId : undefined}
+        aria-disabled={settling}
         className={[primaryButtonClass, 'mt-6'].join(' ')}
-        onClick={start}
-        type="button"
+        type="submit"
       >
-        {gathering.isPending ? 'Gathering the days …' : 'Download the journal'}
+        {settling ? 'Saving before download …' : 'Download the journal'}
       </button>
-      {gathering.isError ? (
+      {state === 'failed' ? (
         <p
           className="mt-4 max-w-prose border border-critical bg-critical-subtle px-3 py-2 text-ink text-sm"
+          id={failureId}
           role="alert"
         >
-          The journal could not be gathered. Nothing has changed; check your
-          connection and try again.
+          The latest journal changes could not be saved, so the download did not
+          start. Check your connection and try the download again.
         </p>
       ) : null}
-    </div>
+    </form>
   );
 };

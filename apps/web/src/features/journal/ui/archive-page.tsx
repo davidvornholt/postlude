@@ -32,7 +32,7 @@ import { activityCells } from '../activity.ts';
 import { groupDigits, monthYearLabel } from '../activity-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
-import { type DownloadJournal, ExportControl } from './export-control.tsx';
+import { ExportControl, type SettleAutosaves } from './export-control.tsx';
 import { OnThisDay } from './on-this-day.tsx';
 import { StreakPanel } from './streak-panel.tsx';
 
@@ -100,13 +100,13 @@ type ArchivePageProps = {
   readonly view: ArchiveView;
   /** The year in the address, absent when the map shows the rolling year. */
   readonly selectedYear: number | undefined;
-  readonly download: DownloadJournal;
+  readonly settleAutosaves?: SettleAutosaves;
 };
 
 export const ArchivePage = ({
   view,
   selectedYear,
-  download,
+  settleAutosaves,
 }: ArchivePageProps) => {
   const cells = activityCells(view.days, view.window);
   const written = view.totals.daysWritten;
@@ -153,7 +153,7 @@ export const ArchivePage = ({
           )}
 
           <Section title="Your own copy">
-            <ExportControl download={download} today={view.today} />
+            <ExportControl settleAutosaves={settleAutosaves} />
           </Section>
         </>
       )}

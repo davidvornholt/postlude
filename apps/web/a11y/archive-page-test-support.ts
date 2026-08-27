@@ -23,11 +23,22 @@ const today = '2026-08-26';
 const namedYear = 2024;
 const sampleDays = 400;
 const sampleSeed = 20_260_826;
+const exportSettlementDelayMs = 1500;
 const journal = sampleJournal(today, sampleDays, sampleSeed);
 const filledView = sampleArchiveView(journal, today);
+const fixtureDocument = '**/__postlude-archive-fixture';
+
+const openFixtureDocument = async (page: playwright.Page): Promise<void> => {
+  await page.route(fixtureDocument, (route) =>
+    route.fulfill({ body: '<!doctype html><html></html>', status: 200 }),
+  );
+  await page.goto('/__postlude-archive-fixture');
+  await page.unroute(fixtureDocument);
+};
 
 export const archiveFixtureConfigs = {
   empty: {
+    exportSettlement: { delayMs: 0, outcome: 'stored' },
     selectedYear: undefined,
     view: {
       today,
@@ -40,8 +51,31 @@ export const archiveFixtureConfigs = {
       anniversaries: [],
     },
   },
-  filled: { selectedYear: undefined, view: filledView },
+  exportFailed: {
+    exportSettlement: { delayMs: 0, outcome: 'failed' },
+    selectedYear: undefined,
+    view: filledView,
+  },
+  exportDelayed: {
+    exportSettlement: {
+      delayMs: exportSettlementDelayMs,
+      outcome: 'stored',
+    },
+    selectedYear: undefined,
+    view: filledView,
+  },
+  exportPending: {
+    exportSettlement: { delayMs: 0, outcome: 'pending' },
+    selectedYear: undefined,
+    view: filledView,
+  },
+  filled: {
+    exportSettlement: { delayMs: 0, outcome: 'stored' },
+    selectedYear: undefined,
+    view: filledView,
+  },
   namedYear: {
+    exportSettlement: { delayMs: 0, outcome: 'stored' },
     selectedYear: namedYear,
     view: {
       ...filledView,
@@ -72,6 +106,7 @@ export const mountArchivePage = async (
   const fixtureAssets = await assetsFor(config);
   const browserErrors: Array<string> = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
+  await openFixtureDocument(page);
   await page.setContent(
     `<html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Archive fixture</title></head><body><main id="archive-page-fixture">${fixtureAssets.markup}</main></body></html>`,
   );
@@ -89,6 +124,19 @@ export const mountArchivePage = async (
       { cause: error },
     );
   }
+  await expect(page.getByRole('heading', { name: 'Archive' })).toBeVisible();
+};
+
+export const mountArchivePageWithoutJavaScript = async (
+  page: playwright.Page,
+  config: ArchivePageFixtureConfig,
+): Promise<void> => {
+  const fixtureAssets = await assetsFor(config);
+  await openFixtureDocument(page);
+  await page.setContent(
+    `<html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Archive fixture</title></head><body><main id="archive-page-fixture">${fixtureAssets.markup}</main></body></html>`,
+  );
+  await page.addStyleTag({ content: fixtureAssets.styles });
   await expect(page.getByRole('heading', { name: 'Archive' })).toBeVisible();
 };
 
