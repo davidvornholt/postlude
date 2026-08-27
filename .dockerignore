@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.codex
+.agents
+.turbo
+**/.turbo
+**/node_modules
+**/dist
+**/.tanstack
+**/.output
+**/playwright-report
+**/test-results
+**/.env.local
+node_modules
+secrets
