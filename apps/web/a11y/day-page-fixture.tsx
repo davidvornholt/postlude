@@ -56,6 +56,13 @@ const router = createRenderingRouter(
   />,
 );
 await router.load();
+const recordRoute = (pathname: string) => {
+  document.documentElement.dataset.route = pathname;
+};
+recordRoute(router.state.location.pathname);
+router.subscribe('onResolved', ({ toLocation }) => {
+  recordRoute(toLocation.pathname);
+});
 
 const root = document.querySelector('#day-page-fixture');
 if (root === null) {
