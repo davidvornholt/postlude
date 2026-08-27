@@ -46,9 +46,9 @@ The way back out is `authorizeSession`. Every session check re-reads the linked 
 - `services/archive-fns.ts` — the one guarded server function the archive loads from. It reads the whole history to count the runs and only ships the window's days, so a run that began before the window is still counted while the page carries a year of small records rather than the journal.
 - `services/entry-search.ts` — the index read, behind its own Effect service. It is separate from the repository because the repository reads and writes a day keyed by a date, while search reads an index and owns a small query language; the two touch the same table and answer different questions about it.
 - `services/search-fns.ts` — the one guarded server function the search loads from. It cuts each excerpt on the server, so a page of results is a page of lines rather than every matching day's markdown in full.
-- `export-archive.ts` — the journal as a folder of named markdown documents, as pure text work. It knows nothing about zip: it turns entries into files, and the caller decides what container they travel in.
-- `services/entry-export.ts` — the whole table in one read, behind its own Effect service. It is separate from the repository because every repository read is bounded by something a page asked for and this one is bounded by nothing; keeping it apart is what stops an unbounded read from sitting one autocomplete away from the calls a page makes.
-- `services/export-fns.ts` — the one guarded server function the download comes through. It builds the zip and returns a `Response` rather than data, which TanStack Start hands back untouched.
+- `export-format.ts`, `export-readme.ts`, and `export-archive.ts`. These own the versioned machine contract, the documentation that travels with it, and the non-authoritative daily Markdown projections. They are pure format work and know nothing about the database or ZIP streaming.
+- `services/entry-export.ts`. This reads bounded pages of current meaningful entries under one repeatable-read snapshot. It is separate from the repository because an export walks the full journal while page reads answer bounded questions about one screen.
+- `services/export-fns.ts`. This guarded server function streams the snapshot into a ZIP response without collecting the journal in memory.
 - `ui/` — the writing page, the archive and the search. `use-autosave.ts` is the only part that touches the browser, turning each of the rule's decisions into a timer or a request; `markdown-editor.tsx` is the Tiptap surface, where markdown is typed and set in place rather than previewed.
 
 ## The writing page
@@ -93,13 +93,15 @@ What the page says when it has nothing to list is most of its behaviour. Not hav
 
 ## Taking the journal out
 
-The foot of the archive hands the whole journal over as a zip of markdown files — one file per day, named `2026-08-26.md`, under a folder for the year. The name sorts chronologically in any file browser without depending on a timestamp the copy might not survive, and the year folders keep a long journal opening as a handful of folders rather than as one listing of thousands.
+The foot of the archive hands the journal over as `postlude-YYYY-MM-DD.zip`. The name uses the server-selected journal day and remains stable within that day, so a second same-day download may replace the first. Inside the ZIP, `manifest.json` and `entries.ndjson` are authoritative. The files under `days/YYYY/YYYY-MM-DD.md` are reading copies.
 
-Each file opens with YAML front matter carrying the journal day and, where one was noted, the passage in the house style, followed by a `## Morning` section and a `## Evening` section. A section that was never written is left out rather than left empty. The zip also carries a `README.md` stating the format and the 04:00 journal-day rule, because an export that needs the app to explain it is not an export.
+`manifest.json` identifies version 1 of `application/vnd.postlude.journal-export+json`. It records the six-digit UTC export instant, the journal date, the configured IANA time zone, the 04:00 journal-day boundary, and the path, media type, and count of the NDJSON records. `entries.ndjson` has one UTF-8 JSON object and one line feed per day. Each record preserves both Markdown strings exactly, including Unicode and newline spelling, plus the structured scripture reference, each section's independent first-use timestamp, and the row creation and update timestamps. Every machine timestamp uses `YYYY-MM-DDTHH:mm:ss.ssssssZ`.
 
-The archive is built in memory and sent as one response. A journal is prose: a decade of daily entries is a few megabytes before compression and less after it, so streaming it out entry by entry would buy nothing but a second code path for the failure the whole-read already reports.
+The export includes current meaningful days only. A row qualifies when its evening word count is positive, its morning word count is positive, or it has a scripture reference. Cleared rows and rows that were never meaningfully written remain database history but do not become phantom exported days. A reference-only morning still appears.
 
-The download travels through a guarded server function rather than an API route. A server function that returns a `Response` has it handed back to the caller unserialised, so the bytes arrive with the name they should be saved under while still sitting behind the same `sessionRequired` middleware every other read here carries — which is also what `sensitive-server-fns.test.ts` can see and check. A route outside that middleware could not be proven guarded.
+Each reading copy uses quoted YAML front matter generated by the directly declared `yaml` package. Morning and Evening source sit inside separate backtick fences, and each fence is longer than every backtick run in its exact stored source. An unclosed fence in Morning therefore cannot consume Evening. These Markdown files are deliberately non-authoritative; re-import reads `entries.ndjson`.
+
+The ZIP also carries a `README.md` with the same contract and selection rule. Its paragraphs stay on one logical line. The export service reads bounded pages under one database snapshot and streams files to the response, while the browser's native download handling owns progress and the server-issued filename. The guarded response is private and non-cacheable.
 
 ## Environment
 
