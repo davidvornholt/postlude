@@ -6,8 +6,6 @@ A few files are longer because they are one boundary and splitting them would ma
 
 ## `apps/web/src/features/journal/services/entry-repository.test.ts`
 
-The repository's tests run against a real Postgres. One `beforeAll` opens the test database, runs the migrations, and builds the Effect runtime the whole file shares; one `afterAll` disposes both. Everything below that is a short test of one query.
+The repository's tests run against a real Postgres. `entry-repository-test-support.ts` owns the migrated pool, Effect layer, transaction isolation, and rollback. The test file holds the repository's read, save, archive, and snapshot contracts in the order the service declares them.
 
-Splitting the file means either duplicating that setup — a second pool, a second migration run, against the same database — or moving it behind a shared helper that each file calls to register its own hooks. Both trade one honest long file for machinery that exists only to satisfy a line count, and the second one quietly doubles what the test run does to the database.
-
-The file stays one file. What keeps it readable is that it holds nothing but tests of one service, in the order the service's methods are declared.
+Splitting the file by query would make the service's database contract harder to audit without removing setup or production complexity. The concurrency cases already live separately because they need simultaneous writes rather than the ordinary rolled-back harness. This file stays as the broad test boundary for the remaining methods.

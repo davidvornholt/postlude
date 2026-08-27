@@ -1,3 +1,9 @@
+import {
+  type AutosaveRegistry,
+  createAutosaveRegistry,
+} from './autosave-registry.ts';
+import { createConfirmedRevisionTracker } from './confirmed-revisions.ts';
+import type { JournalDate } from './journal-day.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
 
@@ -6,11 +12,12 @@ export const draft: EntryDraft = {
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 100,
 };
 
 export const stored = { draft, revision: 100 };
 
-export const storedFor = (date: string) => ({
+export const storedFor = (date: JournalDate) => ({
   draft: { ...draft, date },
   revision: stored.revision,
 });
@@ -27,6 +34,11 @@ export const memoryRecovery = (): DraftRecovery => {
     },
   };
 };
+
+export const createTestAutosaveRegistry = (
+  recovery: () => DraftRecovery = memoryRecovery,
+): AutosaveRegistry =>
+  createAutosaveRegistry(recovery, createConfirmedRevisionTracker());
 
 export const deferredSave = () => {
   let resolve: (value: SaveConfirmation) => void = () => undefined;

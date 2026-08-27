@@ -32,11 +32,15 @@ it('server-renders the Markdown structure a reader uses', () => {
   expect(html).not.toContain('<img');
 });
 
-it('keeps safe mixed-case web links and subordinate heading levels', () => {
+it('keeps safe mixed-case web links and every subordinate heading level', () => {
   const html = render(markdownSemanticsFixture);
 
   expect(html).toContain('<h3>Entry heading</h3>');
   expect(html).toContain('<h4>Entry subheading</h4>');
+  expect(html).toContain('<h5>Entry detail</h5>');
+  expect(html).toContain('<h6>Entry note</h6>');
+  expect(html).toContain('<h6>Entry aside</h6>');
+  expect(html).toContain('<h6>Entry footnote</h6>');
   for (const link of markdownSemanticsLinks) {
     expect(html).toContain(`<a href="${link.href}">${link.name}</a>`);
   }

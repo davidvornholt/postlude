@@ -7,6 +7,7 @@ const draft: EntryDraft = {
   journalMarkdown: 'Still here.',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 1,
 };
 
 const memoryStorage = () => {

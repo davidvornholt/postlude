@@ -36,6 +36,8 @@ import {
  * column default, `updated_at` from the `now()` that Drizzle writes into every
  * update it issues. Neither reads an app process's clock, so the pair cannot
  * invert because a process disagrees with the database about the time.
+ * `revision` starts at one and the journal upsert increments it with the row,
+ * so browser ordering does not depend on those timestamps' JavaScript precision.
  */
 export const entry = pgTable(
   'entry',
@@ -55,6 +57,7 @@ export const entry = pgTable(
     scriptureChapter: integer('scripture_chapter'),
     scriptureVerseStart: integer('scripture_verse_start'),
     scriptureVerseEnd: integer('scripture_verse_end'),
+    revision: integer('revision').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -64,6 +67,7 @@ export const entry = pgTable(
       .$onUpdate(() => sql`now()`),
   },
   (table) => [
+    check('entry_revision_positive', sql`${table.revision} >= 1`),
     check(
       'entry_journal_word_count_non_negative',
       sql`${table.journalWordCount} >= 0`,

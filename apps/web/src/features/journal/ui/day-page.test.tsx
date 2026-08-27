@@ -5,10 +5,11 @@
  * the moment before the editor attaches — so this is both the markup test and
  * the test that the entry is legible without JavaScript having done anything.
  *
- * None of it is covered anywhere else. The browser accessibility suite in
- * `a11y/routes.a11y.ts` stops at the sign-in page, because getting past it needs
- * a real GitHub OAuth round trip, so every page behind the sign-in is rendered
- * by these tests alone.
+ * The production-route browser scan stops at the sign-in page because getting
+ * past it needs a real GitHub OAuth round trip. An isolated browser fixture
+ * hydrates this same component for computed style, keyboard, and accessibility
+ * checks. This test owns the server markup before hydration and the day's
+ * route-independent content rules.
  */
 
 import { expect, it } from 'bun:test';
@@ -30,6 +31,7 @@ const entryOn = (overrides: Partial<JournalEntry> = {}): JournalEntry => ({
   journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  revision: 0,
   scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),

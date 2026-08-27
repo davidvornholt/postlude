@@ -3,6 +3,7 @@ import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { markdownSemanticsFixture } from '../src/features/journal/ui/markdown-semantics.fixture.ts';
+import { viewportContent } from '../src/shared/ui/viewport.ts';
 import {
   buildDayPageFixture,
   type FixtureAssets,
@@ -28,6 +29,7 @@ const fixtureConfig = (
     journalFirstUsedAt: null,
     scriptureMarkdown: '',
     scriptureWordCount: 0,
+    revision: 1,
     scriptureFirstUsedAt: null,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -49,7 +51,7 @@ const mountFixture = async (
   const browserErrors: Array<string> = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
   await page.setContent(
-    `<html lang="en"><head><title>Writing page fixture</title></head><body><main id="day-page-fixture">${assets.markup}</main></body></html>`,
+    `<html lang="en"><head><meta name="viewport" content="${viewportContent}"><title>Writing page fixture</title></head><body><main id="day-page-fixture">${assets.markup}</main></body></html>`,
   );
   await page.addStyleTag({ content: assets.styles });
   await page.evaluate((fixture) => {

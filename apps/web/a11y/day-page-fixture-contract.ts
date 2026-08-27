@@ -5,6 +5,7 @@ export type SaveOutcome =
   | 'failed'
   | 'validation'
   | 'authentication'
+  | 'conflict'
   | 'pending';
 
 type FixtureTimestamp = string | null;

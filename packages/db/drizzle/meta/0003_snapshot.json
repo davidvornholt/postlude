@@ -1,6 +1,6 @@
 {
-  "id": "0608fa22-a125-491f-8b5d-8f685c8560ec",
-  "prevId": "3580edbd-b64c-4f1b-8087-86e0ef7b8a50",
+  "id": "d8ad6dd7-2523-47fc-bb7a-131ca6a61287",
+  "prevId": "0608fa22-a125-491f-8b5d-8f685c8560ec",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -27,6 +27,12 @@
           "notNull": true,
           "default": 0
         },
+        "journal_first_used_at": {
+          "name": "journal_first_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "scripture_markdown": {
           "name": "scripture_markdown",
           "type": "text",
@@ -39,6 +45,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "scripture_first_used_at": {
+          "name": "scripture_first_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "scripture_book": {
           "name": "scripture_book",

@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 
 import {
+  createTestAutosaveRegistry,
   deferredSave,
   draft,
   memoryRecovery,
@@ -8,12 +9,11 @@ import {
   stored,
   storedFor,
 } from './autosave-registry.test-support.ts';
-import { createAutosaveRegistry } from './autosave-registry.ts';
 import { journalWriteMessage } from './errors/journal-errors.ts';
 
 it('flushes quiet edits and waits for their save before a dependent read', async () => {
   const pending = deferredSave();
-  const registry = createAutosaveRegistry(memoryRecovery);
+  const registry = createTestAutosaveRegistry();
   const coordinator = registry.acquire(stored, () => pending.promise);
   coordinator.edit({ journalMarkdown: 'Include me in the archive.' });
   let finished = false;
@@ -37,7 +37,7 @@ it('keeps watching a clean day while another day is still saving', async () => {
   const firstSave = deferredSave();
   const secondSave = deferredSave();
   const otherSave = deferredSave();
-  const registry = createAutosaveRegistry(memoryRecovery);
+  const registry = createTestAutosaveRegistry();
   let firstSaveCount = 0;
   const first = registry.acquire(storedFor('2026-08-26'), () => {
     firstSaveCount += 1;
@@ -73,7 +73,7 @@ it('keeps watching a clean day while another day is still saving', async () => {
 
 it('rejects settlement when the forced save fails and retains the draft', async () => {
   const recovery = memoryRecovery();
-  const registry = createAutosaveRegistry(() => recovery);
+  const registry = createTestAutosaveRegistry(() => recovery);
   const coordinator = registry.acquire(stored, () =>
     Promise.reject(new TypeError('offline')),
   );
@@ -93,7 +93,7 @@ it('rejects settlement when the forced save fails and retains the draft', async 
 
 it('identifies an unmounted failed day and lets that day recover on remount', async () => {
   const recovery = memoryRecovery();
-  const registry = createAutosaveRegistry(() => recovery);
+  const registry = createTestAutosaveRegistry(() => recovery);
   const first = registry.acquire(stored, () =>
     Promise.reject(new TypeError('offline')),
   );
@@ -116,11 +116,19 @@ it('identifies an unmounted failed day and lets that day recover on remount', as
   await registry.settle();
 
   expect(remounted.snapshot()).toMatchObject({
-    draft: { ...draft, journalMarkdown: 'Recover this day.' },
+    draft: {
+      ...draft,
+      journalMarkdown: 'Recover this day.',
+      baseRevision: 101,
+    },
     failure: undefined,
     inFlight: undefined,
     stored: {
-      draft: { ...draft, journalMarkdown: 'Recover this day.' },
+      draft: {
+        ...draft,
+        journalMarkdown: 'Recover this day.',
+        baseRevision: 101,
+      },
       revision: 101,
     },
   });

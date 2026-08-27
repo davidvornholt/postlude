@@ -54,6 +54,26 @@ const publicServerFunctions = [
 ];
 
 /**
+ * Journal functions covered by `sessionRequired`. That one middleware owns both
+ * the session check and the private response policy, so this exact list also
+ * prevents a journal function from returning cacheable private data.
+ */
+const privateServerFunctions = [
+  {
+    path: 'features/journal/services/archive-fns.ts',
+    name: 'readArchiveFn',
+  },
+  {
+    path: 'features/journal/services/journal-fns.ts',
+    name: 'readJournalDayFn',
+  },
+  {
+    path: 'features/journal/services/journal-fns.ts',
+    name: 'saveEntryFn',
+  },
+];
+
+/**
  * Request handlers that answer without a session, each because it owns that
  * decision itself. `routes/api/healthz.ts` is the container liveness probe: it
  * answers before anyone signs in and returns a fixed status with no data behind
@@ -66,6 +86,11 @@ const publicRouteHandlers = [
   { path: 'routes/api/auth/$.ts', name: 'POST' },
   { path: 'routes/api/healthz.ts', name: 'GET' },
 ];
+
+const privateRouteHandlers: ReadonlyArray<{
+  readonly path: string;
+  readonly name: string;
+}> = [];
 
 const app = scanModules(
   await Promise.all(
@@ -139,8 +164,24 @@ describe('sensitive server surfaces', () => {
     );
   });
 
+  it('lists every server function covered by the private response boundary', () => {
+    expect(
+      app.serverFunctions
+        .filter(({ guarded }) => guarded)
+        .map(({ path, name }) => ({ path, name })),
+    ).toEqual(privateServerFunctions);
+  });
+
   it('lists every route handler reachable signed out on the allowlist', () => {
     expect(reachableSignedOut(app.routeHandlers)).toEqual(publicRouteHandlers);
+  });
+
+  it('lists every route handler covered by the private response boundary', () => {
+    expect(
+      app.routeHandlers
+        .filter(({ guarded }) => guarded)
+        .map(({ path, name }) => ({ path, name })),
+    ).toEqual([...privateRouteHandlers]);
   });
 
   it('credits a guard only to the declaration it is chained onto', () => {

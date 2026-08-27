@@ -1,9 +1,10 @@
 /**
- * React's view of the day-scoped autosave coordinator.
+ * React's adapter for the day-scoped autosave coordinator.
  *
- * The component subscribes, edits, and asks for a flush. It owns no request,
- * timer, or recovery data, so navigating away cannot destroy a save queue that
- * still has work in it.
+ * The hook subscribes the component and translates visibility, page exit, and
+ * unmount signals. The coordinator owns requests and timers. The registry,
+ * draft recovery, and confirmed-revision tracker own state that outlives a
+ * component.
  */
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
@@ -46,15 +47,34 @@ export const useAutosave = (
   save: SaveDraft,
 ): Autosave => {
   const {
-    draft: { date, journalMarkdown, scriptureMarkdown, scriptureReference },
+    draft: {
+      date,
+      journalMarkdown,
+      scriptureMarkdown,
+      scriptureReference,
+      baseRevision,
+    },
     revision,
   } = stored;
   const stableStored = useMemo<ConfirmedDraft>(
     () => ({
-      draft: { date, journalMarkdown, scriptureMarkdown, scriptureReference },
+      draft: {
+        date,
+        journalMarkdown,
+        scriptureMarkdown,
+        scriptureReference,
+        baseRevision,
+      },
       revision,
     }),
-    [date, journalMarkdown, revision, scriptureMarkdown, scriptureReference],
+    [
+      baseRevision,
+      date,
+      journalMarkdown,
+      revision,
+      scriptureMarkdown,
+      scriptureReference,
+    ],
   );
   const serverState = useMemo(() => openAutosave(stableStored), [stableStored]);
   const coordinator = useMemo<AutosaveCoordinator | undefined>(

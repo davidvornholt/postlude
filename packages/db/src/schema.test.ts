@@ -67,8 +67,17 @@ it('stamps updated_at from the database clock on every write, not just on insert
   expect(createdAt?.onUpdateFn).toBeUndefined();
 });
 
+it('starts each entry with a positive per-row revision', () => {
+  const config = getTableConfig(entry);
+  const revision = config.columns.find((column) => column.name === 'revision');
+  expect(revision?.notNull).toBe(true);
+  expect(revision?.hasDefault).toBe(true);
+  expect(revision?.default).toBe(1);
+});
+
 /** Constraint name paired with the predicate Postgres will enforce. */
 const expectedChecks: ReadonlyArray<readonly [string, string]> = [
+  ['entry_revision_positive', '"entry"."revision" >= 1'],
   [
     'entry_journal_word_count_non_negative',
     '"entry"."journal_word_count" >= 0',

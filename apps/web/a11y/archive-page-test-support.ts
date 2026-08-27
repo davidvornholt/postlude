@@ -107,6 +107,7 @@ const navigationConfig: ArchiveNavigationFixtureConfig = {
     scriptureMarkdown: '',
     scriptureWordCount: 0,
     scriptureFirstUsedAt: null,
+    revision: 1,
     createdAt: '2026-08-26T18:00:00.000Z',
     updatedAt: '2026-08-26T18:00:00.000Z',
   },

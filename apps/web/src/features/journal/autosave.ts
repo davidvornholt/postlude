@@ -1,16 +1,6 @@
-/**
- * When a typed draft becomes a stored one.
- *
- * One save is in flight at a time, always. Edits made while a save is in the
- * air are not queued behind it; they simply become the next save, once, when
- * the reply lands. So a burst of typing costs two writes rather than twenty,
- * and the last write always carries the newest text.
- */
-
 import type { EntryDraft } from './schemas/entry.ts';
 import { parseScriptureReference } from './scripture-reference.ts';
 
-/** What the writer is told, in the order of urgency the page shows it in. */
 export type SaveStatus = 'saving' | 'failed' | 'unsaved' | 'saved';
 
 export type AutosaveFailure =
@@ -20,7 +10,7 @@ export type AutosaveFailure =
       readonly message: string;
     }
   | {
-      readonly kind: 'authentication' | 'network';
+      readonly kind: 'authentication' | 'conflict' | 'network';
       readonly message: string;
     };
 
@@ -31,7 +21,7 @@ export type AutosaveState = {
   readonly stored: ConfirmedDraft;
   /** The snapshot currently being written, or nothing when none is. */
   readonly inFlight: EntryDraft | undefined;
-  /** The last actionable failure, cleared by recovery or a confirmed save. */
+  /** Conflicts stay actionable and block writes until current prose matches. */
   readonly failure: AutosaveFailure | undefined;
 };
 
@@ -40,13 +30,11 @@ export type ConfirmedDraft = {
   readonly revision: number;
 };
 
-/** Work the state machine asks its coordinator to perform. */
 export type AutosaveCommand =
   | { readonly _tag: 'save'; readonly draft: EntryDraft }
   | { readonly _tag: 'schedule' }
   | { readonly _tag: 'cancel' };
 
-/** Events from the editor, coordinator, and in-flight request. */
 export type AutosaveEvent =
   | { readonly _tag: 'edited'; readonly draft: EntryDraft }
   | { readonly _tag: 'quiet' }
@@ -56,7 +44,6 @@ export type AutosaveEvent =
 
 type Step = readonly [AutosaveState, ReadonlyArray<AutosaveCommand>];
 
-/** Compare fields so object key order can never read as an edit. */
 export const sameDraft = (a: EntryDraft, b: EntryDraft): boolean =>
   a.date === b.date &&
   a.journalMarkdown === b.journalMarkdown &&
@@ -71,11 +58,6 @@ export const openAutosave = (stored: ConfirmedDraft): AutosaveState => ({
   failure: undefined,
 });
 
-/**
- * What the writer is told. A save in the air outranks a past failure, and a
- * past failure outranks unsaved text, because "failed" is the only one of the
- * three that says something is wrong rather than merely pending.
- */
 export const saveStatus = (state: AutosaveState): SaveStatus => {
   if (state.inFlight !== undefined) {
     return 'saving';
@@ -86,14 +68,12 @@ export const saveStatus = (state: AutosaveState): SaveStatus => {
   return sameDraft(state.draft, state.stored.draft) ? 'saved' : 'unsaved';
 };
 
-/**
- * Starts a save, unless one is already in flight or there is nothing to write.
- * Shared by the two events that ask for one, so waiting for the quiet period
- * and pressing retry cannot drift apart.
- */
 const beginSave = (state: AutosaveState): Step => {
   if (state.inFlight !== undefined) {
     return [state, []];
+  }
+  if (state.failure?.kind === 'conflict') {
+    return [state, [{ _tag: 'cancel' }]];
   }
   if (sameDraft(state.draft, state.stored.draft)) {
     return [state, [{ _tag: 'cancel' }]];
@@ -109,17 +89,20 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
   }
+  const confirmedDraft = { ...state.inFlight, baseRevision: revision };
+  const rebasedDraft = { ...state.draft, baseRevision: revision };
   const settled: AutosaveState = {
     ...state,
-    stored: { draft: state.inFlight, revision },
+    draft: rebasedDraft,
+    stored: { draft: confirmedDraft, revision },
     inFlight: undefined,
     failure: undefined,
   };
   return sameDraft(settled.draft, settled.stored.draft)
     ? [settled, []]
     : [
-        { ...settled, inFlight: settled.draft },
-        [{ _tag: 'save', draft: settled.draft }],
+        { ...settled, inFlight: rebasedDraft },
+        [{ _tag: 'save', draft: rebasedDraft }],
       ];
 };
 
@@ -128,21 +111,45 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
   }
+  if (failure.kind === 'conflict') {
+    const recoverableDraft = sameDraft(state.draft, state.stored.draft)
+      ? state.inFlight
+      : state.draft;
+    return [
+      {
+        ...state,
+        draft: recoverableDraft,
+        inFlight: undefined,
+        failure,
+      },
+      [{ _tag: 'cancel' }],
+    ];
+  }
   if (sameDraft(state.draft, state.stored.draft)) {
     return [
       { ...state, inFlight: undefined, failure: undefined },
       [{ _tag: 'cancel' }],
     ];
   }
+  if (!sameDraft(state.draft, state.inFlight)) {
+    const correctedReference =
+      failure.kind === 'validation' &&
+      (state.draft.scriptureReference.trim() === '' ||
+        parseScriptureReference(state.draft.scriptureReference) !== undefined);
+    if (failure.kind !== 'validation' || correctedReference) {
+      return [
+        {
+          ...state,
+          inFlight: state.draft,
+          failure: correctedReference ? undefined : failure,
+        },
+        [{ _tag: 'save', draft: state.draft }],
+      ];
+    }
+  }
   return [{ ...state, inFlight: undefined, failure }, []];
 };
 
-/**
- * Every event that carries nothing but its name, and what it settles into. A
- * record rather than a switch: the key type is the tag union, so adding an
- * event to `AutosaveEvent` and forgetting to handle it is a type error rather
- * than a case that quietly falls through.
- */
 const settling: Record<
   Exclude<
     AutosaveEvent,
@@ -169,20 +176,13 @@ const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
   };
 
   if (state.inFlight === undefined && sameDraft(draft, state.stored.draft)) {
-    return [{ ...edited, failure: undefined }, [{ _tag: 'cancel' }]];
+    return state.failure?.kind === 'conflict'
+      ? [edited, [{ _tag: 'cancel' }]]
+      : [{ ...edited, failure: undefined }, [{ _tag: 'cancel' }]];
   }
   return [edited, [{ _tag: 'schedule' }]];
 };
 
-/**
- * The rule itself: the state this event leaves behind, and what the caller
- * should do about it.
- *
- * An edit does not clear a past failure. The writer has unsaved text and the
- * last attempt to store it did not work, and both of those are still true
- * until a save succeeds; saying "unsaved" instead would quietly downgrade a
- * problem to a pending change.
- */
 export const advanceAutosave = (
   state: AutosaveState,
   event: AutosaveEvent,
