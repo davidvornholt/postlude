@@ -19,7 +19,7 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import { loadAfterConfirmedRevision } from '../confirmed-revisions.ts';
+import { loadAfterConfirmedRevision } from '../confirmed-revision-loader.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
