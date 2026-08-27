@@ -50,10 +50,11 @@ it('streams a million separated backtick runs without losing source or joining s
     updatedAt: timestamp,
   };
   const chunks = await Effect.runPromise(
-    exportArchiveStream(exportsOf(entry), 'Europe/Berlin', () => undefined).pipe(
-      Stream.runCollect,
-      Effect.map(Chunk.toReadonlyArray),
-    ),
+    exportArchiveStream(
+      exportsOf(entry),
+      'Europe/Berlin',
+      () => undefined,
+    ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray)),
   );
   const files = unzipSync(bytesOf(chunks));
   const decoder = new TextDecoder();
