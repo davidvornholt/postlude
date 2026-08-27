@@ -9,7 +9,7 @@ keys:
   - &david-debian age1j4lkxpdweugkfz900u023kx8p6k7yuhdp8jmxthj0qse3w6ahfesyqnj96
 
   # GitHub Actions CI recipient (private key: SOPS_AGE_KEY Actions secret).
-  - &github_actions_ci age1myr35w6m52zp32gywzws2y3s3w8uxkjtgduzjw63e2g5c0znz9usydhgvl
+  - &github_actions_ci age13lmqk3hlmegnvm477hk3g4kxh0mpxr8rffghxg5lzunf4nlet5nqdydd8a
 
 creation_rules:
   - path_regex: secrets/dev\.yaml$

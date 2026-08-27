@@ -7,8 +7,8 @@ A calm, single-user journaling app for closing out the day. Each journal day run
 - Runtime: TanStack Start + Vite on Bun, deployed as a Podman container on
   personal-infra (`postlude.vornholt.online`).
 - Auth: GitHub OAuth via better-auth, restricted to a single allowed account.
-- Data: Postgres (Drizzle) on the shared prod-1 instance; pasted images go to a
-  private Cloudflare R2 bucket and are served through an auth-gated route.
+- Data: Postgres (Drizzle) on the shared prod-1 instance. The editor currently
+  stores Markdown only; it has no image-upload storage.
 
 ## Workspaces
 
@@ -22,3 +22,7 @@ Non-secret dev config lives in `config/dev.yaml`; secrets in SOPS-encrypted
 `secrets/dev.yaml` / `secrets/ci.yaml` (shapes mirrored in
 `secrets/*.example.yaml`, edited via `just secrets edit dev`). Generate local
 env files with `just dev-env-generate`.
+
+## Container release
+
+Every push to `main` is published as `ghcr.io/davidvornholt/postlude:main` only after the Standards gate succeeds for that exact commit. The workflow announces the immutable image digest to personal-infra, which owns promotion and deployment. The deploy host runs `bun run db:migrate:deploy` from `/app/apps/web` before starting the server.
