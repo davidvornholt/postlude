@@ -1,6 +1,6 @@
 import { isJournalDate } from '../journal-day.ts';
 import type { SearchHitSource } from '../search-contract.ts';
-import type { ExcerptSegment } from '../search-query.ts';
+import type { ExcerptSegment } from '../search-excerpt.ts';
 import type { SearchResults } from './search-fns.ts';
 
 export type SearchResponse =
