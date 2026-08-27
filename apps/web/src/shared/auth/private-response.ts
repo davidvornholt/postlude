@@ -1,7 +1,11 @@
 import { Cause, Option, ParseResult, Runtime } from 'effect';
 
 import type { ApplicationStyleSheetHrefs } from '#/shared/ui/application-style-sheets.ts';
-import { eyebrowClass, pageFrameClass } from '#/shared/ui/design-classes.ts';
+import {
+  eyebrowClass,
+  pageFrameClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 
 export const privateResponseHeaders = {
@@ -50,7 +54,7 @@ export const privateHtmlRecoveryResponse = ({
     .map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}">`)
     .join('');
   const response = new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title>${styleSheetLinks}</head><body><main class="flex min-h-svh flex-col justify-center bg-background py-16"><div class="${pageFrameClass}"><section aria-labelledby="recovery-heading"><p class="${eyebrowClass} text-ink-faint">Postlude</p><h1 class="mt-5 font-display text-4xl text-ink sm:text-5xl" id="recovery-heading">${escapeHtml(heading)}</h1><p class="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">${escapeHtml(message)}</p><p class="mt-10"><a autofocus class="${primaryButtonClass}" href="${escapeHtml(actionHref)}">${escapeHtml(actionLabel)}</a></p></section></div></main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title>${styleSheetLinks}</head><body><main class="flex min-h-svh flex-col justify-center bg-background py-16"><div class="${pageFrameClass}"><section aria-labelledby="recovery-heading"><p class="${eyebrowClass} text-ink-faint">Postlude</p><h1 class="mt-5 font-display text-4xl text-ink sm:text-5xl" id="recovery-heading">${escapeHtml(heading)}</h1><p class="${readingMeasureClass} mt-8 border-border border-t pt-8 text-ink-muted text-lg">${escapeHtml(message)}</p><p class="mt-10"><a autofocus class="${primaryButtonClass}" href="${escapeHtml(actionHref)}">${escapeHtml(actionLabel)}</a></p></section></div></main></body></html>`,
     {
       status: 503,
       headers: {

@@ -1,9 +1,15 @@
-import { eyebrowClass } from '#/shared/ui/design-classes.ts';
+import {
+  eyebrowClass,
+  readingMeasureClass,
+} from '#/shared/ui/design-classes.ts';
 import type { SearchResults as Results } from '../search-contract.ts';
 import { SearchResults } from './search-results.tsx';
 
 const one = 1;
-const quietTextClass = 'mt-10 max-w-prose text-ink-muted text-lg';
+const quietTextClass = [
+  readingMeasureClass,
+  'mt-10 text-ink-muted text-lg',
+].join(' ');
 
 const foundLabel = (results: Results): string => {
   const count = results.hits.length;
