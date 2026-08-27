@@ -2,7 +2,8 @@ import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { activityWindow } from '../src/features/journal/activity.ts';
-import { runProtectedCall } from '../src/shared/auth/protected-call.ts';
+import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
+import { runSessionRequired } from '../src/shared/auth/session-required.ts';
 import type { ArchivePageFixtureConfig } from './archive-page-fixture-contract.ts';
 import { mountArchivePage, scanArchive } from './archive-page-test-support.ts';
 
@@ -11,7 +12,7 @@ test.describe.configure({ mode: 'serial' });
 const today = '2026-08-26';
 const currentYear = 2026;
 const exportRoute = '**/archive/export';
-const exportUrl = /\/archive\/export$/u;
+const loginUrl = /\/login$/u;
 const exportFileName = 'postlude-2026-08-26.zip';
 const referenceOnly: ArchivePageFixtureConfig = {
   exportSettlement: { delayMs: 0, outcome: 'stored' },
@@ -38,16 +39,21 @@ const referenceOnly: ArchivePageFixtureConfig = {
 };
 
 const answerWithoutSession = async (route: playwright.Route): Promise<void> => {
-  const result = await runProtectedCall({
+  const publishedHeaders = new Headers();
+  const result = await runSessionRequired({
+    request: new Request(route.request().url(), { method: 'POST' }),
     authorize: () => Promise.resolve(false),
     next: () => Promise.resolve('private export'),
+    publishHeaders: () => applyPrivateResponseHeaders(publishedHeaders),
   }).catch((error: unknown) => error);
   if (!(result instanceof Response)) {
     throw new TypeError('The protected export did not return a response.');
   }
   await route.fulfill({
     body: await result.text(),
-    headers: Object.fromEntries(result.headers),
+    headers: Object.fromEntries(
+      new Headers([...publishedHeaders, ...result.headers]),
+    ),
     status: result.status,
   });
 };
@@ -63,13 +69,11 @@ test('an expired session opens the native sign-in recovery page', async ({
   await mountArchivePage(page, referenceOnly);
   await page.getByRole('button', { name: 'Download the journal' }).click();
 
-  await expect(page).toHaveURL(exportUrl);
+  await expect(page).toHaveURL(loginUrl);
+  await expect(page.getByRole('heading', { name: 'Postlude' })).toBeVisible();
   await expect(
-    page.getByRole('heading', { name: 'Sign in again' }),
+    page.getByRole('button', { name: 'Sign in with GitHub' }),
   ).toBeVisible();
-  await expect(
-    page.getByRole('link', { name: 'Sign in again' }),
-  ).toHaveAttribute('href', '/login');
   expect(method).toBe('POST');
   await scanArchive(page);
 });

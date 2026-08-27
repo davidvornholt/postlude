@@ -4,6 +4,7 @@ import {
   authenticationSaveMessage,
   autosaveFailureOf,
 } from './autosave-error.ts';
+import { journalWriteConflictMessage } from './errors/journal-errors.ts';
 
 describe('autosave failure boundary', () => {
   it('recognizes authentication and the one safe validation message', () => {
@@ -32,5 +33,16 @@ describe('autosave failure boundary', () => {
     expect(failure.kind).toBe('network');
     expect(failure.message).not.toContain('password');
     expect(failure.message).toContain('check your connection');
+  });
+
+  it('classifies a compare-and-swap conflict without calling it saved', () => {
+    expect(
+      autosaveFailureOf(
+        new Error(`FiberFailure: ${journalWriteConflictMessage}`),
+      ),
+    ).toEqual({
+      kind: 'conflict',
+      message: journalWriteConflictMessage,
+    });
   });
 });

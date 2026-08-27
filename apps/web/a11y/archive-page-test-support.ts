@@ -7,11 +7,6 @@ import {
   sampleArchiveView,
   sampleJournal,
 } from '../src/features/journal/testing/archive-view.ts';
-import { buildArchiveNavigationFixture } from './archive-navigation-fixture-build.ts';
-import type {
-  ArchiveNavigationFixtureConfig,
-  ArchiveNavigationFixtureWindow,
-} from './archive-navigation-fixture-contract.ts';
 import { buildArchivePageFixture } from './archive-page-fixture-build.ts';
 import type {
   ArchivePageFixtureConfig,
@@ -142,46 +137,4 @@ export const mountArchivePageWithoutJavaScript = async (
 
 export const scanArchive = async (page: playwright.Page): Promise<void> => {
   expect(await scanWcag22AaViolations(page)).toEqual([]);
-};
-
-const navigationConfig: ArchiveNavigationFixtureConfig = {
-  today,
-  saveOutcome: 'stored',
-  entry: {
-    date: today,
-    journalMarkdown: '',
-    journalWordCount: 0,
-    journalFirstUsedAt: null,
-    scriptureMarkdown: '',
-    scriptureWordCount: 0,
-    scriptureFirstUsedAt: null,
-    createdAt: '2026-08-26T18:00:00.000Z',
-    updatedAt: '2026-08-26T18:00:00.000Z',
-  },
-};
-
-let navigationAssets: FixtureAssets | undefined;
-
-export const mountArchiveNavigation = async (
-  page: playwright.Page,
-  saveOutcome: ArchiveNavigationFixtureConfig['saveOutcome'] = 'stored',
-): Promise<void> => {
-  navigationAssets ??= await buildArchiveNavigationFixture(navigationConfig);
-  await page.setContent(
-    `<html lang="en"><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Archive navigation fixture</title></head><body><div id="archive-navigation-fixture">${navigationAssets.markup}</div></body></html>`,
-  );
-  await page.addStyleTag({ content: navigationAssets.styles });
-  await page.evaluate(
-    (fixture) => {
-      const fixtureWindow =
-        globalThis as unknown as ArchiveNavigationFixtureWindow;
-      fixtureWindow.postludeArchiveNavigationFixture = fixture;
-    },
-    { ...navigationConfig, saveOutcome },
-  );
-  await page.addScriptTag({
-    content: navigationAssets.script,
-    type: 'module',
-  });
-  await page.locator('html[data-hydrated="true"]').waitFor({ timeout: 5000 });
 };

@@ -1,16 +1,13 @@
 /**
- * The year of days the activity map draws: which days it covers, how much was
- * written on each, and which step of the ramp that puts a day on.
+ * The archive activity map's dates, word volume, and heat steps.
+ * Today is decided once in `journal-day.ts` against the configured zone.
  *
- * Nothing here reads a clock. Today arrives as an argument, decided once by
- * `journal-day.ts` against the configured zone, so the map cannot disagree with
- * the page that asked for it about which day the year ends on.
- *
- * The window is always whole weeks, Sunday to Saturday, because the grid draws
- * a week as a column and a ragged column is a hole in the middle of the year.
+ * The window uses whole Sunday-to-Saturday weeks except where year 0001 meets
+ * the journal's lower bound. The grid pads that first column's missing Sunday.
  */
 
 import {
+  earliestJournalDate,
   formatJournalDate,
   type JournalDate,
   journalDateWeekday,
@@ -18,10 +15,7 @@ import {
   shiftJournalDate,
 } from './journal-day.ts';
 
-/**
- * One day as the archive knows it. The bodies are deliberately absent: a year
- * of prose is a lot to send in order to draw 371 squares and count two runs.
- */
+/** One archive day without the prose bodies the map does not draw. */
 export type ActivityDay = {
   readonly date: JournalDate;
   readonly journalWords: number;
@@ -44,12 +38,6 @@ export type ActivityWindow = {
   readonly to: JournalDate;
 };
 
-export type ActivityCell = {
-  readonly date: JournalDate;
-  readonly words: number;
-  readonly level: HeatLevel;
-};
-
 const daysPerWeek = 7;
 const saturday = 6;
 /** How many week columns a rolling year shows, which is what a year needs. */
@@ -67,9 +55,11 @@ export const dayWords = (day: ActivityDay): number =>
 const weekEnd = (date: JournalDate): JournalDate =>
   shiftJournalDate(date, saturday - journalDateWeekday(date));
 
-/** The Sunday on or before a date, so a window starts on a whole week. */
+/** The Sunday on or before a date, clamped to the journal's first day. */
 const weekStart = (date: JournalDate): JournalDate =>
-  shiftJournalDate(date, -journalDateWeekday(date));
+  date === earliestJournalDate
+    ? earliestJournalDate
+    : shiftJournalDate(date, -journalDateWeekday(date));
 
 /**
  * The days the map covers. With no year it is the rolling year ending this
@@ -152,38 +142,3 @@ export const heatLevel = (words: number, thresholds: Quartiles): HeatLevel => {
   }
   return words <= thresholds[2] ? 'q3' : 'q4';
 };
-
-/**
- * Every day of the window, written or not, in calendar order. The days that
- * exist arrive as rows and the rest are the gaps between them, so the grid is
- * built by walking the calendar rather than by trusting the query to have
- * returned one row per square.
- */
-export const activityCells = (
-  days: ReadonlyArray<ActivityDay>,
-  window: ActivityWindow,
-): ReadonlyArray<ActivityCell> => {
-  const thresholds = quartiles(days);
-  const byDate = new Map(days.map((day) => [day.date, day]));
-  const cells: Array<ActivityCell> = [];
-  for (
-    let date = window.from;
-    date <= window.to;
-    date = shiftJournalDate(date, 1)
-  ) {
-    const day = byDate.get(date);
-    const words = day === undefined ? 0 : dayWords(day);
-    cells.push({ date, words, level: heatLevel(words, thresholds) });
-  }
-  return cells;
-};
-
-/** The cells as the columns the grid draws them in, one column a week. */
-export const activityWeeks = (
-  cells: ReadonlyArray<ActivityCell>,
-): ReadonlyArray<ReadonlyArray<ActivityCell>> =>
-  Array.from(
-    { length: Math.ceil(cells.length / daysPerWeek) },
-    (_unused, week) =>
-      cells.slice(week * daysPerWeek, week * daysPerWeek + daysPerWeek),
-  );

@@ -38,7 +38,7 @@ import {
 import { decodeArchiveQuery } from '../schemas/archive-query.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import type { EntrySummary } from '../schemas/entry-summary.ts';
-import { journalSnippet } from '../snippet.ts';
+import { archiveSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
@@ -54,7 +54,7 @@ export type Anniversary = {
 
 export type ArchiveView = {
   readonly today: JournalDate;
-  /** The stretch the map draws, always whole weeks. */
+  /** The stretch the map draws, clipped only at the first journal day. */
   readonly window: ActivityWindow;
   /** Every day in the window that has a row; the gaps are the days without. */
   readonly days: ReadonlyArray<ActivityDay>;
@@ -111,7 +111,7 @@ const anniversaryOf =
     date: entry.date,
     yearsAgo: parseJournalDate(today).year - parseJournalDate(entry.date).year,
     words: entry.journalWordCount + entry.scriptureWordCount,
-    snippet: journalSnippet(entry.journalMarkdown),
+    snippet: archiveSnippet(entry),
   });
 
 export const readArchiveFn = createServerFn({ method: 'GET' })

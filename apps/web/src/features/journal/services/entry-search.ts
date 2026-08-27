@@ -11,7 +11,7 @@
  *
  * The index is a stored `tsvector` the database keeps for every row, so it can
  * never fall behind the words it describes; `packages/db/src/schema.ts` is where
- * it is declared and says why it uses the `simple` configuration.
+ * it is declared and binds it to the app-owned token stream.
  *
  * Results come back newest first rather than by relevance score. A journal is
  * read in time: two days that both hold the word are told apart by which was
@@ -26,8 +26,9 @@ import { JournalDateSchema } from '../schemas/entry.ts';
 
 /**
  * A matched day, with the visible projections the excerpt is cut from. The
- * stored search vector is deliberately not selected: it holds every lexeme of
- * every entry it describes, while these are also the exact text it indexed.
+ * stored search vector is deliberately not selected: it holds the canonical
+ * lexemes derived from these raw sources, while a result needs the exact text
+ * the Markdown reader showed.
  */
 const SearchRow = Schema.Struct({
   date: Schema.propertySignature(JournalDateSchema).pipe(
@@ -72,10 +73,10 @@ export class EntrySearch extends Effect.Service<EntrySearch>()(
       /**
        * The days matching a `tsquery`, newest first.
        *
-       * The query arrives as text because that is what `to_tsquery` takes, and
-       * it is built by `search-query.ts` out of terms already stripped to
-       * letters and digits — there is nothing left in one that Postgres could
-       * read as syntax. It is bound as a parameter all the same.
+       * The query arrives as the application-owned canonical tokens joined by
+       * tsquery operators. Casting it preserves those lexemes instead of asking
+       * Postgres to parse and case-fold the source text a second way. Each token
+       * contains only letters and digits, so none can become query syntax.
        */
       const search = (
         tsQuery: string,
@@ -92,7 +93,7 @@ export class EntrySearch extends Effect.Service<EntrySearch>()(
             scripture_reference_search_text,
             journal_word_count + scripture_word_count as words
           from entry
-          where search_vector @@ to_tsquery('simple', ${tsQuery})
+          where search_vector @@ ${tsQuery}::tsquery
           order by entry_date desc
           limit ${limit}
         `.pipe(

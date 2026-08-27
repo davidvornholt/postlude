@@ -18,8 +18,13 @@ import {
   openingTag,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
-import { searchExcerpt, searchTerms } from '../search-query.ts';
-import type { SearchHit, SearchResults } from '../services/search-fns.ts';
+import type {
+  SearchHit,
+  SearchHitSourceKind,
+  SearchResults,
+} from '../search-contract.ts';
+import { searchExcerpt } from '../search-excerpt.ts';
+import { searchTerms } from '../search-query.ts';
 import { SearchPage, type SearchPageView } from './search-page.tsx';
 
 const today = '2026-08-26';
@@ -34,12 +39,11 @@ const hit = (
   date: string,
   prose: string,
   terms: ReadonlyArray<string>,
-  fromScripture = false,
+  kind: SearchHitSourceKind = 'evening',
 ): SearchHit => ({
   date,
   words,
-  fromScripture,
-  excerpt: searchExcerpt(prose, terms),
+  sources: [{ kind, excerpts: [searchExcerpt(prose, terms)] }],
 });
 
 const answered = (
@@ -131,7 +135,7 @@ it('lists a found day as a link to the day it was written on', async () => {
   const link = elementAttributes(
     html,
     'a',
-    'Sunday 1 March 2026The rain fell all night.',
+    'Sunday 1 March 2026EveningThe rain fell all night.',
   );
   expect(attributeValue(link, 'href')).toBe('/day/2026-03-01');
 });
@@ -176,15 +180,6 @@ it('says a full page is the first of them rather than all of them', async () => 
   const text = plainText(html);
   expect(text).toContain(`The first ${one} day holding all of those words`);
   expect(text).not.toContain(`${one} day holds all of those words`);
-});
-
-it('says when it is the morning passage that matched, not the evening', async () => {
-  const html = await render(
-    answered('hirte', [
-      hit('2026-03-01', 'Der Herr ist mein Hirte.', searchTerms('hirte'), true),
-    ]),
-  );
-  expect(plainText(html)).toContain('Sunday 1 March 2026 · Morning');
 });
 
 /* A result arriving without a page load has to be announced, not just drawn. */

@@ -5,10 +5,24 @@ import {
   Outlet,
   redirect,
   useRouter,
+  useRouterState,
 } from '@tanstack/react-router';
-import { type MouseEvent, type RefObject, useId, useRef } from 'react';
+import {
+  type MouseEvent,
+  type RefObject,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 
-import { navigateAfterSettlingBrowserAutosaves } from '#/features/journal/browser-autosaves.ts';
+import {
+  discardPreparedArchiveNavigation,
+  prepareRollingArchiveNavigation,
+} from '#/features/journal/browser-archive-navigation.ts';
+import { navigateAfterAutosavesSettle } from '#/features/journal/browser-autosaves.ts';
+import type { JournalDate } from '#/features/journal/journal-day.ts';
+import { ArchiveNavigationFailure } from '#/features/journal/ui/archive-navigation-failure.tsx';
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
@@ -38,6 +52,24 @@ const skipLinkClass =
 const AppShell = () => {
   const mainId = useId();
   const router = useRouter();
+  const [blockedArchiveDay, setBlockedArchiveDay] = useState<
+    JournalDate | undefined
+  >();
+  const locationPath = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const previousLocationPath = useRef<string>(locationPath);
+  const main = useRef<HTMLElement>(null);
+  const archiveNavigationStarted: RefObject<boolean> = useRef(false);
+  // Client navigation removes the link that held focus. Move focus to the
+  // landmark containing the new route, but leave an initial page load alone.
+  useEffect(() => {
+    if (previousLocationPath.current === locationPath) {
+      return;
+    }
+    previousLocationPath.current = locationPath;
+    main.current?.focus();
+  }, [locationPath]);
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
   // fire the request twice. Flipping a ref before the call closes that window.
@@ -69,9 +101,20 @@ const AppShell = () => {
       return;
     }
     event.preventDefault();
-    await navigateAfterSettlingBrowserAutosaves(() =>
-      router.navigate({ to: '/archive' }),
-    );
+    if (archiveNavigationStarted.current) {
+      return;
+    }
+    archiveNavigationStarted.current = true;
+    try {
+      const result = await navigateAfterAutosavesSettle(
+        prepareRollingArchiveNavigation,
+        () => router.navigate({ to: '/archive' }),
+      );
+      setBlockedArchiveDay(result._tag === 'blocked' ? result.date : undefined);
+    } finally {
+      discardPreparedArchiveNavigation();
+      archiveNavigationStarted.current = false;
+    }
   };
 
   return (
@@ -110,11 +153,24 @@ const AppShell = () => {
           </nav>
         </div>
       </header>
+      {blockedArchiveDay === undefined ? null : (
+        <div className={[columnClass, 'pt-6'].join(' ')}>
+          <ArchiveNavigationFailure
+            date={blockedArchiveDay}
+            onOpen={() => setBlockedArchiveDay(undefined)}
+          />
+        </div>
+      )}
       {/* No column here. The page sets its own measure — the text column for
           writing, the wider one for the archive — because the deep register
           has to run edge to edge, and it cannot escape a column the shell has
           already set around every page. */}
-      <main className="flex-1 py-10 sm:py-14" id={mainId} tabIndex={-1}>
+      <main
+        className="flex-1 py-10 sm:py-14"
+        id={mainId}
+        ref={main}
+        tabIndex={-1}
+      >
         {/* A route that fails renders its fallback here, in place of the page
             it replaces, so the fallback has to know it is already inside the
             one main landmark this page gets. */}

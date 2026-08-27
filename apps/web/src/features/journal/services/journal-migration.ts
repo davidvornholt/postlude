@@ -15,17 +15,23 @@ const ProjectionRow = Schema.Struct({
   scriptureChapter: Schema.NullOr(Schema.Number),
   scriptureVerseStart: Schema.NullOr(Schema.Number),
   scriptureVerseEnd: Schema.NullOr(Schema.Number),
+  revision: Schema.Number,
 });
 
 const decodeRows = Schema.decodeUnknownSync(Schema.Array(ProjectionRow));
 
 type MigrationPool = ReturnType<typeof createPool>;
 
-const backfillSearchDocuments = async (pool: MigrationPool): Promise<void> => {
+export const searchBackfillBatchSize = 100;
+
+const backfillSearchDocumentBatch = async (
+  pool: MigrationPool,
+): Promise<number> => {
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const result = await client.query(`
+    const result = await client.query(
+      `
       select
         entry_date as date,
         journal_markdown as "journalMarkdown",
@@ -33,54 +39,83 @@ const backfillSearchDocuments = async (pool: MigrationPool): Promise<void> => {
         scripture_book as "scriptureBook",
         scripture_chapter as "scriptureChapter",
         scripture_verse_start as "scriptureVerseStart",
-        scripture_verse_end as "scriptureVerseEnd"
+        scripture_verse_end as "scriptureVerseEnd",
+        revision
       from entry
       where journal_search_text is null
          or scripture_search_text is null
          or scripture_reference_search_text is null
+         or search_token_text is null
+         or search_projection_revision is distinct from revision
+      order by entry_date
+      limit $1
       for update
-    `);
-    await Promise.all(
-      decodeRows(result.rows).map((row) => {
-        const scriptureReference =
-          row.scriptureBook === null || row.scriptureChapter === null
-            ? undefined
-            : {
-                book: row.scriptureBook,
-                chapter: row.scriptureChapter,
-                ...(row.scriptureVerseStart === null
-                  ? {}
-                  : { verseStart: row.scriptureVerseStart }),
-                ...(row.scriptureVerseEnd === null
-                  ? {}
-                  : { verseEnd: row.scriptureVerseEnd }),
-              };
-        const document = searchDocumentOf({
-          journalMarkdown: row.journalMarkdown ?? '',
-          scriptureMarkdown: row.scriptureMarkdown ?? '',
-          scriptureReference,
-        });
-        return client.query(
-          `update entry
+    `,
+      [searchBackfillBatchSize],
+    );
+    const rows = decodeRows(result.rows);
+    const updateRows = async (
+      remaining: ReturnType<typeof decodeRows>,
+    ): Promise<void> => {
+      const [row, ...rest] = remaining;
+      if (!row) {
+        return;
+      }
+      const scriptureReference =
+        row.scriptureBook === null || row.scriptureChapter === null
+          ? undefined
+          : {
+              book: row.scriptureBook,
+              chapter: row.scriptureChapter,
+              ...(row.scriptureVerseStart === null
+                ? {}
+                : { verseStart: row.scriptureVerseStart }),
+              ...(row.scriptureVerseEnd === null
+                ? {}
+                : { verseEnd: row.scriptureVerseEnd }),
+            };
+      const document = searchDocumentOf({
+        journalMarkdown: row.journalMarkdown ?? '',
+        scriptureMarkdown: row.scriptureMarkdown ?? '',
+        scriptureReference,
+      });
+      await client.query(
+        `update entry
          set journal_search_text = $1,
              scripture_search_text = $2,
-             scripture_reference_search_text = $3
-         where entry_date = $4`,
-          [
-            document.journalText,
-            document.scriptureText,
-            document.scriptureReferenceText,
-            row.date,
-          ],
-        );
-      }),
-    );
+             scripture_reference_search_text = $3,
+             search_token_text = $4,
+             search_projection_revision = $5
+         where entry_date = $6
+           and revision = $5`,
+        [
+          document.journalText,
+          document.scriptureText,
+          document.scriptureReferenceText,
+          document.searchTokenText,
+          row.revision,
+          row.date,
+        ],
+      );
+      await updateRows(rest);
+    };
+    await updateRows(rows);
     await client.query('commit');
+    return rows.length;
   } catch (error) {
     await client.query('rollback');
     throw error;
   } finally {
     client.release();
+  }
+};
+
+const backfillSearchDocuments = async (pool: MigrationPool): Promise<void> => {
+  const count = await backfillSearchDocumentBatch(pool);
+  if (count === searchBackfillBatchSize) {
+    // A full batch may have another row behind it. The next ordered batch owns
+    // a fresh transaction, so the migration never locks the whole journal.
+    await backfillSearchDocuments(pool);
   }
 };
 

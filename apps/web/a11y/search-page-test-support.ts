@@ -1,8 +1,10 @@
 import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
-import { searchQueryLengthLimit } from '../src/features/journal/search-contract.ts';
-import type { SearchResults } from '../src/features/journal/services/search-fns.ts';
+import {
+  type SearchResults,
+  searchQueryLengthLimit,
+} from '../src/features/journal/search-contract.ts';
 import { buildSearchPageFixture } from './search-page-fixture-build.ts';
 import type {
   SearchFixtureOutcome,
@@ -52,7 +54,7 @@ const documentOf = (
 export const mountSearchPage = async (
   page: playwright.Page,
   outcome: SearchFixtureOutcome,
-): Promise<void> => {
+): Promise<{ readonly pageErrors: () => ReadonlyArray<string> }> => {
   const fixtureAssets = await assetsFor(outcome);
   const browserErrors: Array<string> = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
@@ -71,6 +73,14 @@ export const mountSearchPage = async (
     );
   }
   await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  const hydratedErrorCount = browserErrors.length;
+  return { pageErrors: () => browserErrors.slice(hydratedErrorCount) };
 };
 
 export const changeSearchOutcome = (
@@ -93,7 +103,10 @@ export const mountNativeSearch = async (
   page: playwright.Page,
   outcome: 'error' | 'populated',
   query: string,
-): Promise<{ readonly submittedBody: () => string }> => {
+): Promise<{
+  readonly submittedBodies: () => ReadonlyArray<string>;
+  readonly submittedMethods: () => ReadonlyArray<string>;
+}> => {
   const initialAssets = await assetsFor('populated');
   const responseConfig: SearchPageFixtureConfig = {
     outcome,
@@ -103,9 +116,11 @@ export const mountNativeSearch = async (
         : searchFixtureView(outcome, query),
   };
   const responseAssets = await buildSearchPageFixture(responseConfig);
-  let body = '';
+  let bodies: ReadonlyArray<string> = [];
+  let methods: ReadonlyArray<string> = [];
   await page.route(`${baseUrl}search`, async (route) => {
-    body = route.request().postData() ?? '';
+    bodies = [...bodies, route.request().postData() ?? ''];
+    methods = [...methods, route.request().method()];
     await route.fulfill({
       body: documentOf(
         responseAssets.markup,
@@ -117,5 +132,8 @@ export const mountNativeSearch = async (
     });
   });
   await page.setContent(documentOf(initialAssets.markup, initialAssets.styles));
-  return { submittedBody: () => body };
+  return {
+    submittedBodies: () => bodies,
+    submittedMethods: () => methods,
+  };
 };

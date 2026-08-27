@@ -16,7 +16,8 @@ export const migrationFolder = decodeURIComponent(
   new URL('../drizzle', import.meta.url).pathname,
 );
 
-export const searchProjectionColumnsMigrationTag = '0003_white_black_crow';
+export const searchProjectionColumnsMigrationTag =
+  '0004_charming_cassandra_nova';
 
 export type ApplicationMigration = {
   readonly afterTag: string;

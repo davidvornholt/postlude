@@ -55,7 +55,7 @@ it('each section carries an independent nullable first-use stamp', () => {
   }
 });
 
-it('indexes only required visible-text projections', () => {
+it('keeps raw result text and indexes only the canonical token stream', () => {
   const config = getTableConfig(entry);
   const searchTextColumns = config.columns.filter((column) =>
     column.name.endsWith('_search_text'),
@@ -73,9 +73,11 @@ it('indexes only required visible-text projections', () => {
     (column) => column.name === 'search_vector',
   );
   const expression = renderSql(searchVector?.generated?.as);
-  expect(expression).toContain('journal_search_text');
-  expect(expression).toContain('scripture_search_text');
-  expect(expression).toContain('scripture_reference_search_text');
+  expect(expression).toContain('search_token_text');
+  expect(expression).toContain('array_to_tsvector');
+  expect(expression).not.toContain('journal_search_text');
+  expect(expression).not.toContain('scripture_search_text');
+  expect(expression).not.toContain('scripture_reference_search_text');
   expect(expression).not.toContain('_markdown');
 });
 
@@ -91,8 +93,30 @@ it('stamps updated_at from the database clock on every write, not just on insert
   expect(createdAt?.onUpdateFn).toBeUndefined();
 });
 
+it('starts each entry with a positive per-row revision', () => {
+  const config = getTableConfig(entry);
+  const revision = config.columns.find((column) => column.name === 'revision');
+  expect(revision?.notNull).toBe(true);
+  expect(revision?.hasDefault).toBe(true);
+  expect(revision?.default).toBe(1);
+});
+
+it('requires every search projection to name the entry revision it covers', () => {
+  const config = getTableConfig(entry);
+  const projectionRevision = config.columns.find(
+    (column) => column.name === 'search_projection_revision',
+  );
+  expect(projectionRevision?.notNull).toBe(true);
+  expect(projectionRevision?.hasDefault).toBe(false);
+});
+
 /** Constraint name paired with the predicate Postgres will enforce. */
 const expectedChecks: ReadonlyArray<readonly [string, string]> = [
+  ['entry_revision_positive', '"entry"."revision" >= 1'],
+  [
+    'entry_search_projection_current',
+    '"entry"."search_projection_revision" = "entry"."revision"',
+  ],
   [
     'entry_journal_word_count_non_negative',
     '"entry"."journal_word_count" >= 0',

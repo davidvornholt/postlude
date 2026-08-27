@@ -16,6 +16,7 @@ import { Effect, Schema } from 'effect';
 import {
   invalidScriptureReferenceError,
   journalReadError,
+  journalWriteConflictError,
   journalWriteError,
 } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
@@ -96,6 +97,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
       ): Effect.Effect<
         JournalEntry,
         | ReturnType<typeof invalidScriptureReferenceError>
+        | ReturnType<typeof journalWriteConflictError>
         | ReturnType<typeof journalWriteError>
       > =>
         Effect.gen(function* () {
@@ -114,8 +116,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scriptureMarkdown: draft.scriptureMarkdown,
             scriptureReference: reference,
           });
-          return yield* sql`
-          insert into entry (
+          const saved = yield* sql`
+          with candidate (
             entry_date,
             journal_markdown,
             journal_word_count,
@@ -129,54 +131,107 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_verse_end,
             journal_search_text,
             scripture_search_text,
-            scripture_reference_search_text
-          ) values (
-            ${draft.date},
-            ${draft.journalMarkdown},
-            ${journalWordCount},
-            case when ${journalUsed} then now() else null end,
-            ${draft.scriptureMarkdown},
-            ${scriptureWordCount},
-            case when ${scriptureUsed} then now() else null end,
-            ${reference?.book ?? null},
-            ${reference?.chapter ?? null},
-            ${reference?.verseStart ?? null},
-            ${reference?.verseEnd ?? null},
-            ${searchDocument.journalText},
-            ${searchDocument.scriptureText},
-            ${searchDocument.scriptureReferenceText}
-          )
-          on conflict (entry_date) do update set
-            journal_markdown = excluded.journal_markdown,
-            journal_word_count = excluded.journal_word_count,
+            scripture_reference_search_text,
+            search_token_text,
+            search_projection_revision,
+            base_revision
+          ) as (values (
+            ${draft.date}::date,
+            ${draft.journalMarkdown}::text,
+            ${journalWordCount}::integer,
+            case when ${journalUsed}::boolean then now() else null end,
+            ${draft.scriptureMarkdown}::text,
+            ${scriptureWordCount}::integer,
+            case when ${scriptureUsed}::boolean then now() else null end,
+            ${reference?.book ?? null}::text,
+            ${reference?.chapter ?? null}::integer,
+            ${reference?.verseStart ?? null}::integer,
+            ${reference?.verseEnd ?? null}::integer,
+            ${searchDocument.journalText}::text,
+            ${searchDocument.scriptureText}::text,
+            ${searchDocument.scriptureReferenceText}::text,
+            ${searchDocument.searchTokenText}::text,
+            ${draft.baseRevision + 1}::integer,
+            ${draft.baseRevision}::integer
+          )), updated as (
+            update entry set
+            journal_markdown = candidate.journal_markdown,
+            journal_word_count = candidate.journal_word_count,
             journal_first_used_at = coalesce(
               entry.journal_first_used_at,
-              excluded.journal_first_used_at
+              candidate.journal_first_used_at
             ),
-            scripture_markdown = excluded.scripture_markdown,
-            scripture_word_count = excluded.scripture_word_count,
+            scripture_markdown = candidate.scripture_markdown,
+            scripture_word_count = candidate.scripture_word_count,
             scripture_first_used_at = coalesce(
               entry.scripture_first_used_at,
-              excluded.scripture_first_used_at
+              candidate.scripture_first_used_at
             ),
-            scripture_book = excluded.scripture_book,
-            scripture_chapter = excluded.scripture_chapter,
-            scripture_verse_start = excluded.scripture_verse_start,
-            scripture_verse_end = excluded.scripture_verse_end,
-            journal_search_text = excluded.journal_search_text,
-            scripture_search_text = excluded.scripture_search_text,
-            scripture_reference_search_text = excluded.scripture_reference_search_text,
+            scripture_book = candidate.scripture_book,
+            scripture_chapter = candidate.scripture_chapter,
+            scripture_verse_start = candidate.scripture_verse_start,
+            scripture_verse_end = candidate.scripture_verse_end,
+            journal_search_text = candidate.journal_search_text,
+            scripture_search_text = candidate.scripture_search_text,
+            scripture_reference_search_text = candidate.scripture_reference_search_text,
+            search_token_text = candidate.search_token_text,
+            search_projection_revision = candidate.search_projection_revision,
+            revision = entry.revision + 1,
             updated_at = now()
-          returning *
+            from candidate
+            where entry.entry_date = candidate.entry_date
+              and entry.revision = candidate.base_revision
+            returning entry.*
+          ), inserted as (
+            insert into entry (
+              entry_date,
+              journal_markdown,
+              journal_word_count,
+              journal_first_used_at,
+              scripture_markdown,
+              scripture_word_count,
+              scripture_first_used_at,
+              scripture_book,
+              scripture_chapter,
+              scripture_verse_start,
+              scripture_verse_end,
+              journal_search_text,
+              scripture_search_text,
+              scripture_reference_search_text,
+              search_token_text,
+              search_projection_revision
+            ) select
+              entry_date,
+              journal_markdown,
+              journal_word_count,
+              journal_first_used_at,
+              scripture_markdown,
+              scripture_word_count,
+              scripture_first_used_at,
+              scripture_book,
+              scripture_chapter,
+              scripture_verse_start,
+              scripture_verse_end,
+              journal_search_text,
+              scripture_search_text,
+              scripture_reference_search_text,
+              search_token_text,
+              search_projection_revision
+            from candidate
+            where base_revision = 0
+            on conflict (entry_date) do nothing
+            returning entry.*
+          )
+          select * from updated
+          union all
+          select * from inserted
           `.pipe(
             Effect.flatMap(decodeEntries),
-            Effect.flatMap((entries) =>
-              entries[0] === undefined
-                ? Effect.fail(new Error('The saved entry did not come back.'))
-                : Effect.succeed(entries[0]),
-            ),
             Effect.mapError(journalWriteError),
           );
+          return saved[0] === undefined
+            ? yield* Effect.fail(journalWriteConflictError())
+            : saved[0];
         });
 
       /**
@@ -205,10 +260,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
 
       /**
        * The same day of the month in earlier years, newest first. Only days
-       * with evening prose come back: "on this day" exists to hand the writer
-       * something to read, and a day holding a passage reference and nothing
-       * else has nothing to say here. The upper bound is exclusive, so today is
-       * never its own memory.
+       * with prose in either section come back: "on this day" exists to hand
+       * the writer something to read, and a day holding a passage reference and
+       * nothing else has nothing to say here. The upper bound is exclusive, so
+       * today is never its own memory.
        */
       const readAnniversaries = (
         monthDay: string,
@@ -220,17 +275,21 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           from entry
           where to_char(entry_date, 'MM-DD') = ${monthDay}
             and entry_date < ${before}
-            and journal_word_count > 0
+            and (
+              journal_word_count > 0
+              or scripture_word_count > 0
+            )
           order by entry_date desc
           limit ${limit}
         `.pipe(Effect.flatMap(decodeEntries));
 
       /** The oldest day that still has something for the archive to show. */
-      const earliestDate = () =>
+      const earliestDate = (today: JournalDate) =>
         sql`
           select min(entry_date) as entry_date
           from entry
           where ${hasCurrentMeaningfulContent}
+            and entry_date <= ${today}
         `.pipe(
           Effect.flatMap(decodeEarliestDates),
           Effect.map((rows) => rows[0]?.date ?? undefined),
@@ -247,7 +306,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         inRepeatableReadSnapshot(
           sql,
           Effect.gen(function* () {
-            const earliest = yield* earliestDate();
+            const earliest = yield* earliestDate(today);
             const summaries =
               earliest === undefined ? [] : yield* listBetween(earliest, today);
             const anniversaries = yield* readAnniversaries(

@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test';
 
 import {
   changeSearchOutcome,
-  mountNativeSearch,
   mountSearchPage,
   scanSearch,
 } from './search-page-test-support.ts';
@@ -58,11 +57,43 @@ for (const colorScheme of colorSchemes) {
     const field = await searchFor(page, 'rain');
     await expect(page.getByRole('link', { name: resultLink })).toBeVisible();
     await expect(field).toHaveValue('rain');
+    await expect(field).toBeFocused();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= globalThis.innerWidth,
       ),
     ).toBe(true);
+    await scanSearch(page);
+  });
+
+  test(`a cross-source result explains every matched term in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountSearchPage(page, 'multi-source');
+    await searchFor(page, 'rain mercy sprüche');
+    const result = page.getByRole('link', { name: resultLink });
+    await expect(result.getByText('Evening')).toBeVisible();
+    await expect(result.getByText('Morning notes')).toBeVisible();
+    await expect(result.getByText('Passage reference')).toBeVisible();
+    await expect(result.locator('mark')).toHaveText([
+      'Rain',
+      'Mercy',
+      'Sprüche',
+    ]);
+    await scanSearch(page);
+  });
+
+  test(`canonical Unicode matches keep their original prose in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await mountSearchPage(page, 'unicode');
+    await searchFor(page, 'istanbul τελικόσ');
+    const result = page.getByRole('link', { name: resultLink });
+    await expect(result.locator('mark')).toHaveText(['İstanbul', 'τελικός']);
+    await expect(result.getByText('Evening')).toBeVisible();
+    await expect(result.getByText('Morning notes')).toBeVisible();
     await scanSearch(page);
   });
 
@@ -81,10 +112,13 @@ for (const colorScheme of colorSchemes) {
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountSearchPage(page, 'loading');
-    const field = await searchFor(page, 'rain');
+    const field = page.getByRole('searchbox', { name: 'Words to find' });
+    await field.fill('rain');
+    await page.getByRole('button', { name: 'Search' }).click();
     await expect(page.getByText('Searching.')).toBeVisible();
     await expect(page.locator('[aria-busy="true"]')).toBeVisible();
     await expect(field).toHaveAttribute('readonly', '');
+    await expect(field).toBeFocused();
     await expect(
       page.getByText('Every evening you have written is searchable'),
     ).toHaveCount(0);
@@ -95,20 +129,42 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountSearchPage(page, 'error');
+    const fixture = await mountSearchPage(page, 'error');
     const field = await searchFor(page, 'rain');
     await expect(
       page.getByText('Search is unavailable right now'),
     ).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible();
     await expect(field).toHaveValue('rain');
+    await expect(field).toBeFocused();
     await expect(page.getByText('private fixture detail')).toHaveCount(0);
+    expect(fixture.pageErrors()).toEqual([]);
     await scanSearch(page);
 
     await changeSearchOutcome(page, 'populated');
     await page.getByRole('button', { name: 'Try again' }).click();
+    await expect(field).toBeFocused();
     await expect(page.getByRole('link', { name: resultLink })).toBeVisible();
     await expect(field).toHaveValue('rain');
+    await expect(field).toBeFocused();
+    expect(fixture.pageErrors()).toEqual([]);
+  });
+
+  test(`an expired session focuses an explicit recovery action in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    const fixture = await mountSearchPage(page, 'authentication');
+    await searchFor(page, 'rain');
+    await expect(
+      page.getByText('Your sign-in ended before the search finished'),
+    ).toBeVisible();
+    const signIn = page.getByRole('link', { name: 'Sign in again' });
+    await expect(signIn).toHaveAttribute('href', '/login');
+    await expect(signIn).toBeFocused();
+    await expect(page.getByText('Not authorized.')).toHaveCount(0);
+    expect(fixture.pageErrors()).toEqual([]);
+    await scanSearch(page);
   });
 
   test(`an overlong search keeps its field error accessible in ${colorScheme} mode`, async ({
@@ -137,30 +193,5 @@ for (const colorScheme of colorSchemes) {
     await field.press('Enter');
     await expect(field).toBeFocused();
     await scanSearch(page);
-  });
-}
-
-for (const outcome of ['populated', 'error'] as const) {
-  test(`a no-JavaScript ${outcome} POST keeps the query out of the response URL`, async ({
-    page,
-  }) => {
-    const query = outcome === 'error' ? 'private failure' : 'private rain';
-    const submission = await mountNativeSearch(page, outcome, query);
-    const field = page.getByRole('searchbox', { name: 'Words to find' });
-    await field.fill(query);
-    await page.getByRole('button', { name: 'Search' }).click();
-
-    await expect(page).toHaveURL('https://fixture.invalid/search');
-    expect(new URLSearchParams(submission.submittedBody()).get('q')).toBe(
-      query,
-    );
-    expect(page.url()).not.toContain(query);
-    await expect(field).toHaveValue(query);
-    await expect(page.getByRole('heading', { name: 'Search' })).toBeVisible();
-    const responseControl =
-      outcome === 'error'
-        ? page.getByRole('button', { name: 'Try again' })
-        : page.getByRole('link', { name: resultLink });
-    await expect(responseControl).toBeVisible();
   });
 }

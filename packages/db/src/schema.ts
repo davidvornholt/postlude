@@ -43,6 +43,8 @@ const tsvector = customType<{ data: string; driverData: string }>({
  * column default, `updated_at` from the `now()` that Drizzle writes into every
  * update it issues. Neither reads an app process's clock, so the pair cannot
  * invert because a process disagrees with the database about the time.
+ * `revision` starts at one and the journal upsert increments it with the row,
+ * so browser ordering does not depend on those timestamps' JavaScript precision.
  */
 export const entry = pgTable(
   'entry',
@@ -62,11 +64,14 @@ export const entry = pgTable(
     scriptureChapter: integer('scripture_chapter'),
     scriptureVerseStart: integer('scripture_verse_start'),
     scriptureVerseEnd: integer('scripture_verse_end'),
+    revision: integer('revision').notNull().default(1),
     journalSearchText: text('journal_search_text').notNull(),
     scriptureSearchText: text('scripture_search_text').notNull(),
     scriptureReferenceSearchText: text(
       'scripture_reference_search_text',
     ).notNull(),
+    searchTokenText: text('search_token_text').notNull(),
+    searchProjectionRevision: integer('search_projection_revision').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -75,19 +80,22 @@ export const entry = pgTable(
       .defaultNow()
       .$onUpdate(() => sql`now()`),
     /**
-     * What the search reads, kept by the database so it can never fall behind
-     * the row it describes. The `simple` configuration neither stems nor drops
-     * stopwords, because the journal is written in more than one language and a
-     * stemmer told the wrong one mangles the words it is given; the app matches
-     * every term as a prefix instead. Only the visible-text projections are
-     * indexed. They also carry every accepted passage-book spelling, so every
-     * database match has a source the result row can show and highlight.
+     * What the search reads, kept by the database from the application-owned
+     * token stream. `array_to_tsvector` accepts those tokens as lexemes instead
+     * of parsing or case-folding them again. The application matches each query
+     * token as a prefix. The separate visible-text projections give every match
+     * a source the result row can show and highlight.
      */
     searchVector: tsvector('search_vector').generatedAlwaysAs(
-      sql`to_tsvector('simple', journal_search_text || ' ' || scripture_search_text || ' ' || scripture_reference_search_text)`,
+      sql`case when search_token_text = '' then ''::tsvector else array_to_tsvector(string_to_array(search_token_text, ' ')) end`,
     ),
   },
   (table) => [
+    check('entry_revision_positive', sql`${table.revision} >= 1`),
+    check(
+      'entry_search_projection_current',
+      sql`${table.searchProjectionRevision} = ${table.revision}`,
+    ),
     index('entry_search_vector_index').using('gin', table.searchVector),
     check(
       'entry_journal_word_count_non_negative',

@@ -19,6 +19,7 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
+import { loadAfterConfirmedRevision } from '../confirmed-revisions.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
@@ -72,6 +73,18 @@ export const readJournalDayFn = createServerFn({ method: 'GET' })
   });
 
 /**
+ * The route-facing read repeats a snapshot that started before this browser's
+ * last confirmed save. Each repeat reaches the same primary database after the
+ * save response arrived, so it must include that revision.
+ */
+export const readJournalDay = (input?: {
+  readonly data: { readonly date: JournalDate };
+}): Promise<JournalDayView> =>
+  loadAfterConfirmedRevision(() =>
+    input === undefined ? readJournalDayFn() : readJournalDayFn(input),
+  );
+
+/**
  * Saves a day and returns the database-issued revision of that write. The
  * client uses it to reject a stale loader snapshot after navigating away and
  * back while a save completes.
@@ -85,7 +98,7 @@ export const saveEntryFn = createServerFn({ method: 'POST' })
         Effect.gen(function* () {
           const entries = yield* EntryRepository;
           const entry = yield* entries.save(data);
-          return { revision: entry.updatedAt.getTime() };
+          return { revision: entry.revision };
         }),
       ),
   );

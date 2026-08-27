@@ -2,7 +2,7 @@ import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 import { journalDateLabel } from '#/features/journal/day-label.ts';
 import { isJournalDate } from '#/features/journal/journal-day.ts';
 import {
-  readJournalDayFn,
+  readJournalDay,
   saveDraft,
 } from '#/features/journal/services/journal-fns.ts';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
@@ -36,7 +36,7 @@ export const Route = createFileRoute('/_app/day/$date')({
     stringify: ({ date }) => ({ date }),
   },
   loader: async ({ params }) => {
-    const day = await readJournalDayFn({ data: { date: params.date } });
+    const day = await readJournalDay({ data: { date: params.date } });
     if (day.entry.date === day.today) {
       throw redirect({ to: '/' });
     }

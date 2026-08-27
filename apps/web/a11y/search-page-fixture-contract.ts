@@ -1,11 +1,14 @@
 import type { SearchPageView } from '../src/features/journal/ui/search-page.tsx';
 
 export type SearchFixtureOutcome =
+  | 'authentication'
   | 'empty'
   | 'error'
   | 'limited'
   | 'loading'
-  | 'populated';
+  | 'multi-source'
+  | 'populated'
+  | 'unicode';
 
 export type SearchPageFixtureConfig = {
   readonly outcome: SearchFixtureOutcome;

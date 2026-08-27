@@ -1,4 +1,6 @@
+import { searchFailureKind } from '#/features/journal/errors/search-errors.ts';
 import { searchQueryLengthLimit } from '#/features/journal/search-contract.ts';
+import { searchResponseOf } from '#/features/journal/services/search-response.ts';
 import type {
   SearchCall,
   SearchPageView,
@@ -26,12 +28,22 @@ const searchView = async (
     return { state: 'invalid', query };
   }
   try {
-    const results = await search({
-      data: query === '' ? {} : { q: query },
-    });
-    return { state: 'answered', results };
-  } catch {
-    return { state: 'failed', query };
+    const response = searchResponseOf(
+      await search({
+        data: query === '' ? {} : { q: query },
+      }),
+    );
+    return response.state === 'answered'
+      ? response
+      : { state: response.state, query };
+  } catch (error) {
+    return {
+      state:
+        searchFailureKind(error) === 'authentication'
+          ? 'authentication-required'
+          : 'failed',
+      query,
+    };
   }
 };
 

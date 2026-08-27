@@ -1,11 +1,10 @@
 import {
-  searchExcerpt,
-  searchTerms,
-} from '../src/features/journal/search-query.ts';
-import type {
-  SearchHit,
-  SearchResults,
-} from '../src/features/journal/services/search-fns.ts';
+  type SearchHit,
+  type SearchResults,
+  searchHitOf,
+} from '../src/features/journal/search-contract.ts';
+import { searchExcerpt } from '../src/features/journal/search-excerpt.ts';
+import { searchTerms } from '../src/features/journal/search-query.ts';
 import type { SearchPageView } from '../src/features/journal/ui/search-page.tsx';
 import type {
   SearchFixtureOutcome,
@@ -21,21 +20,56 @@ const longToken = `rain${'water'.repeat(longTokenRepeat)}`;
 const hit = (query: string): SearchHit => ({
   date: '2026-03-01',
   words,
-  fromScripture: false,
-  excerpt: searchExcerpt(
-    `The private ${longToken} returned after dusk.`,
-    searchTerms(query),
-  ),
+  sources: [
+    {
+      kind: 'evening',
+      excerpts: [
+        searchExcerpt(
+          `The private ${longToken} returned after dusk.`,
+          searchTerms(query),
+        ),
+      ],
+    },
+  ],
 });
+
+const multiSourceHit = (): SearchHit => ({
+  date: '2026-03-01',
+  words,
+  sources: [
+    {
+      kind: 'evening',
+      excerpts: [searchExcerpt('Rain returned after dusk.', ['rain'])],
+    },
+    {
+      kind: 'scripture-notes',
+      excerpts: [searchExcerpt('Mercy met the morning.', ['mercy'])],
+    },
+    {
+      kind: 'passage-reference',
+      excerpts: [searchExcerpt('Sprüche 12:5', ['sprüche'])],
+    },
+  ],
+});
+
+const unicodeHit = (query: string): SearchHit =>
+  searchHitOf(searchTerms(query))({
+    date: '2026-03-01',
+    journalText: 'İstanbul after dusk.',
+    scriptureText: 'Μια σκέψη τελικός.',
+    scriptureReferenceText: '',
+    words,
+  });
 
 export const searchFixtureAnswer = (
   query: string,
   limited: boolean,
+  multiSource = false,
 ): SearchResults => ({
   query,
   today,
   terms: searchTerms(query),
-  hits: [hit(query)],
+  hits: [multiSource ? multiSourceHit() : hit(query)],
   limited,
 });
 
@@ -43,6 +77,9 @@ export const searchFixtureView = (
   outcome: Exclude<SearchFixtureOutcome, 'loading'>,
   query: string,
 ): SearchPageView => {
+  if (outcome === 'authentication') {
+    return { state: 'authentication-required', query };
+  }
   if (outcome === 'error') {
     return { state: 'failed', query };
   }
@@ -68,7 +105,7 @@ export const searchJournalFn = async ({
   data,
 }: {
   readonly data: { readonly q?: string };
-}): Promise<SearchResults> => {
+}): Promise<unknown> => {
   const config = (globalThis as unknown as SearchPageFixtureWindow)
     .postludeSearchPageFixture;
   const query = data.q ?? '';
@@ -77,11 +114,20 @@ export const searchJournalFn = async ({
   }
   await new Promise((resolve) => setTimeout(resolve, fixtureDelayMs));
   if (config.outcome === 'error') {
-    throw new Error('private fixture detail');
+    return new Response('private fixture detail', { status: 500 });
+  }
+  if (config.outcome === 'authentication') {
+    return new Response('Not authorized.', { status: 401 });
   }
   const view = searchFixtureView(config.outcome, query);
   if (view.state !== 'answered') {
     throw new Error('A failed fixture must reject before producing a view.');
+  }
+  if (config.outcome === 'multi-source') {
+    return searchFixtureAnswer(query, false, true);
+  }
+  if (config.outcome === 'unicode') {
+    return { ...searchFixtureAnswer(query, false), hits: [unicodeHit(query)] };
   }
   return view.results;
 };

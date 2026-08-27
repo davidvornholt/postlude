@@ -1,16 +1,18 @@
+import { journalMarkdownText } from './journal-markdown.ts';
 import {
   formatScriptureReference,
   type ScriptureReference,
   scriptureBookSearchNames,
 } from './scripture-reference.ts';
-import { normalizeSearchText } from './search-query.ts';
-import { journalPlainText } from './word-count.ts';
+import { searchTokenText as tokenTextOf } from './search-query.ts';
 
 export type SearchDocument = {
   readonly journalText: string;
   readonly scriptureText: string;
   /** One rendered reference per accepted book spelling, separated by lines. */
   readonly scriptureReferenceText: string;
+  /** Canonical tokens consumed by the database index. */
+  readonly searchTokenText: string;
 };
 
 const referenceLabels = (reference: ScriptureReference | undefined): string => {
@@ -23,18 +25,20 @@ const referenceLabels = (reference: ScriptureReference | undefined): string => {
 };
 
 /** The exact visible representation persisted for indexing and result excerpts. */
-export const searchDocumentOf = ({
-  journalMarkdown,
-  scriptureMarkdown,
-  scriptureReference,
-}: {
+export const searchDocumentOf = (input: {
   readonly journalMarkdown: string;
   readonly scriptureMarkdown: string;
   readonly scriptureReference: ScriptureReference | undefined;
-}): SearchDocument => ({
-  journalText: normalizeSearchText(journalPlainText(journalMarkdown)),
-  scriptureText: normalizeSearchText(journalPlainText(scriptureMarkdown)),
-  scriptureReferenceText: normalizeSearchText(
-    referenceLabels(scriptureReference),
-  ),
-});
+}): SearchDocument => {
+  const journalText = journalMarkdownText(input.journalMarkdown);
+  const scriptureText = journalMarkdownText(input.scriptureMarkdown);
+  const scriptureReferenceText = referenceLabels(input.scriptureReference);
+  return {
+    journalText,
+    scriptureText,
+    scriptureReferenceText,
+    searchTokenText: tokenTextOf(
+      [journalText, scriptureText, scriptureReferenceText].join('\n'),
+    ),
+  };
+};

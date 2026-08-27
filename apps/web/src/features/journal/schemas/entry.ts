@@ -30,6 +30,10 @@ const WordCount = Schema.Number.pipe(
   Schema.int(),
   Schema.greaterThanOrEqualTo(0),
 );
+const Revision = Schema.Number.pipe(
+  Schema.int(),
+  Schema.greaterThanOrEqualTo(0),
+);
 const VerseNumber = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
 const containsLetter = /\p{L}/u;
 
@@ -68,6 +72,7 @@ const EntryRow = Schema.Struct({
   scriptureVerseEnd: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
     Schema.fromKey('scripture_verse_end'),
   ),
+  revision: Schema.propertySignature(Revision).pipe(Schema.fromKey('revision')),
   createdAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
     Schema.fromKey('created_at'),
   ),
@@ -101,6 +106,8 @@ export type JournalEntry = {
   readonly scriptureWordCount: number;
   readonly scriptureFirstUsedAt: Date | null;
   readonly scriptureReference?: ScriptureReference;
+  /** Monotonic for this day, incremented by the same upsert that stores it. */
+  readonly revision: number;
   /**
    * When the row was first stored, which is not necessarily when either
    * section first held meaningful content.
@@ -148,6 +155,7 @@ const entryOf = (row: Schema.Schema.Type<typeof EntryRow>): JournalEntry => {
     scriptureWordCount: row.scriptureWordCount,
     scriptureFirstUsedAt: row.scriptureFirstUsedAt,
     ...(reference === undefined ? {} : { scriptureReference: reference }),
+    revision: row.revision,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -178,6 +186,7 @@ export const emptyJournalEntry = (date: string): JournalEntry => ({
   journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  revision: 0,
   scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
@@ -192,19 +201,23 @@ export const emptyJournalEntry = (date: string): JournalEntry => ({
  * The reference arrives as the line the writer typed rather than as parsed
  * parts, so one parser decides what a reference is, on the server, for every
  * way an entry can reach the table.
+ *
+ * `baseRevision` is the row version the editor opened or last confirmed. The
+ * write succeeds only while PostgreSQL still holds that version.
  */
 export const EntryDraftSchema = Schema.Struct({
   date: JournalDateSchema,
   journalMarkdown: Schema.String,
   scriptureMarkdown: Schema.String,
   scriptureReference: Schema.String,
+  baseRevision: Revision,
 });
 
 export type EntryDraft = Schema.Schema.Type<typeof EntryDraftSchema>;
 
 /** The database-issued revision returned after a write is committed. */
 export const SaveConfirmationSchema = Schema.Struct({
-  revision: Schema.Number.pipe(Schema.greaterThanOrEqualTo(0)),
+  revision: Revision,
 });
 
 export type SaveConfirmation = Schema.Schema.Type<

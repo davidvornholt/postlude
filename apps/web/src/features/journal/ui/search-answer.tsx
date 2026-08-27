@@ -1,5 +1,5 @@
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
-import type { SearchResults as Results } from '../services/search-fns.ts';
+import type { SearchResults as Results } from '../search-contract.ts';
 import { SearchResults } from './search-results.tsx';
 
 const one = 1;

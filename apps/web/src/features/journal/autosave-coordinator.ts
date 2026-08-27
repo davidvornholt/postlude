@@ -43,6 +43,26 @@ export type AutosaveCoordinator = {
 
 const defaultQuietPeriodMs = 1200;
 
+const reconcileServerState = (
+  state: AutosaveState,
+  nextStored: ConfirmedDraft,
+): AutosaveState | undefined => {
+  if (
+    nextStored.revision <= state.stored.revision ||
+    state.inFlight !== undefined
+  ) {
+    return undefined;
+  }
+  if (state.failure?.kind === 'conflict') {
+    return sameDraft(state.draft, nextStored.draft)
+      ? openAutosave(nextStored)
+      : { ...state, stored: nextStored };
+  }
+  return sameDraft(state.draft, state.stored.draft)
+    ? openAutosave(nextStored)
+    : undefined;
+};
+
 export const createAutosaveCoordinator = ({
   stored,
   save,
@@ -69,6 +89,7 @@ export const createAutosaveCoordinator = ({
   const keepRecoveryInStep = (): void => {
     if (
       state.inFlight === undefined &&
+      state.failure === undefined &&
       sameDraft(state.draft, state.stored.draft)
     ) {
       recovery.clear(state.draft.date);
@@ -164,12 +185,9 @@ export const createAutosaveCoordinator = ({
     visibilityChanged: () => dispatch({ _tag: 'flush' }),
     update: (nextStored, nextSave) => {
       saving = nextSave;
-      if (
-        nextStored.revision > state.stored.revision &&
-        state.inFlight === undefined &&
-        sameDraft(state.draft, state.stored.draft)
-      ) {
-        state = openAutosave(nextStored);
+      const reconciled = reconcileServerState(state, nextStored);
+      if (reconciled !== undefined) {
+        state = reconciled;
         keepRecoveryInStep();
         publish();
       }

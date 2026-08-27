@@ -140,6 +140,7 @@ export class EntryExport extends Effect.Service<EntryExport>()(
             scripture_chapter,
             scripture_verse_start,
             scripture_verse_end,
+            revision,
             created_at,
             to_char(
               created_at at time zone 'UTC',

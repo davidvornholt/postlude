@@ -28,8 +28,12 @@ import {
   navLinkClass,
   navLinkInactiveClass,
 } from '#/shared/ui/form-classes.ts';
-import { activityCells } from '../activity.ts';
-import { groupDigits, monthYearLabel } from '../activity-labels.ts';
+import { activityCells } from '../activity-cells.ts';
+import {
+  dayCountLabel,
+  monthYearLabel,
+  wordCountLabel,
+} from '../activity-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
 import { ExportControl, type SettleAutosaves } from './export-control.tsx';
@@ -38,6 +42,9 @@ import { StreakPanel } from './streak-panel.tsx';
 
 const headingClass = 'font-display text-4xl text-ink sm:text-5xl';
 const sectionHeadingClass = [eyebrowClass, 'text-ink-muted'].join(' ');
+const archiveYearDigits = 4;
+const archiveYearLabel = (year: number): string =>
+  String(year).padStart(archiveYearDigits, '0');
 
 const Section = ({
   title,
@@ -86,7 +93,7 @@ const YearNav = ({
                 search={year === undefined ? {} : { year }}
                 to="/archive"
               >
-                {year === undefined ? 'Past year' : String(year)}
+                {year === undefined ? 'Past year' : archiveYearLabel(year)}
               </Link>
             </li>
           );
@@ -108,7 +115,7 @@ export const ArchivePage = ({
   selectedYear,
   settleAutosaves,
 }: ArchivePageProps) => {
-  const cells = activityCells(view.days, view.window);
+  const cells = activityCells(view.days, view.window, view.today);
   const written = view.totals.daysWritten;
   const journalIsEmpty = view.years.length === 0;
 
@@ -123,7 +130,7 @@ export const ArchivePage = ({
       ) : (
         <>
           <p className="mt-4 max-w-prose text-ink-muted text-lg">
-            {`${groupDigits(written)} days written, ${groupDigits(view.totals.words)} words in all.`}
+            {`${dayCountLabel(written)} written, ${wordCountLabel(view.totals.words)} in all.`}
           </p>
 
           <Section title="Streaks">

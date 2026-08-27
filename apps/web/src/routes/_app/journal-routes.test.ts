@@ -17,6 +17,7 @@ const entryOn = (date: JournalEntry['date']): JournalEntry => ({
   journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  revision: 0,
   scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),
@@ -26,8 +27,7 @@ let loadedDay: JournalDay = { entry: entryOn(today), today };
 let readInputs: ReadonlyArray<unknown> = [];
 
 mock.module('#/features/journal/services/journal-fns.ts', () => ({
-  currentJournalDate: () => today,
-  readJournalDayFn: (input?: unknown) => {
+  readJournalDay: (input?: unknown) => {
     readInputs = [...readInputs, input];
     return Promise.resolve(loadedDay);
   },
