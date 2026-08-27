@@ -41,3 +41,29 @@ it('uses the same canonical tokens for punctuation and difficult case folds', as
   ]);
   expect(observed.raw).toBe(prose);
 });
+
+it('finds Song of Songs through every accepted joined and natural German spelling', async () => {
+  const observed = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save(
+        draft('2026-03-01', 'A quiet evening.', 'Hohes Lied 2:10'),
+      );
+      const queries = ['Hohes Lied', 'Hoheslied', 'Hohe Lied', 'Hohelied'];
+      const answers = yield* Effect.all(
+        queries.map((query) => search.search(asked(query), plenty)),
+        { concurrency: 1 },
+      );
+      return answers;
+    }),
+  );
+  expect(observed.map((answers) => answers[0]?.date)).toEqual([
+    '2026-03-01',
+    '2026-03-01',
+    '2026-03-01',
+    '2026-03-01',
+  ]);
+  for (const answers of observed) {
+    expect(answers).toHaveLength(1);
+    expect(answers[0]?.scriptureReferenceText).toContain('Hohes Lied 2:10');
+  }
+});

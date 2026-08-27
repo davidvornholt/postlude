@@ -74,7 +74,15 @@ export const scriptureBooks: ReadonlyArray<ScriptureBook> = [
   {
     english: 'Song of Songs',
     german: 'Hoheslied',
-    aliases: ['Song', 'Sos', 'Canticles', 'Hld', 'Hohelied'],
+    aliases: [
+      'Song',
+      'Sos',
+      'Canticles',
+      'Hld',
+      'Hohelied',
+      'Hohes Lied',
+      'Hohe Lied',
+    ],
   },
   { english: 'Isaiah', german: 'Jesaja', aliases: ['Isa', 'Is', 'Jes'] },
   { english: 'Jeremiah', german: 'Jeremia', aliases: ['Jer', 'Jr'] },

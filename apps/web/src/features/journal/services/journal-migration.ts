@@ -46,7 +46,7 @@ const backfillSearchDocumentBatch = async (
          or scripture_search_text is null
          or scripture_reference_search_text is null
          or search_token_text is null
-         or search_projection_revision is null
+         or search_projection_revision is distinct from revision
       order by entry_date
       limit $1
       for update

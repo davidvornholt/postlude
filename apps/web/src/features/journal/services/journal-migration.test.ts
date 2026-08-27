@@ -40,6 +40,34 @@ const withTemporaryDatabase = async (
   }
 };
 
+const readOldWriterProjection = async (
+  pool: MigrationPool,
+): Promise<
+  | {
+      readonly journalMarkdown: string;
+      readonly journalText: string;
+      readonly revision: number;
+      readonly searchProjectionRevision: number;
+    }
+  | undefined
+> => {
+  const rewritten = await pool.query<{
+    readonly journalMarkdown: string;
+    readonly journalText: string;
+    readonly revision: number;
+    readonly searchProjectionRevision: number;
+  }>(`
+    select
+      journal_markdown as "journalMarkdown",
+      journal_search_text as "journalText",
+      revision,
+      search_projection_revision as "searchProjectionRevision"
+    from entry
+    where entry_date = date '1900-01-01'
+  `);
+  return rewritten.rows[0];
+};
+
 it('backfills existing visible search documents before hardening the schema', async () => {
   // This upgrade cannot roll back across migration commits. It gets its own
   // disposable database and removes it, so the shared test database stays clean.
@@ -86,6 +114,23 @@ it('backfills existing visible search documents before hardening the schema', as
       begin
         insert into search_backfill_audit (entry_date, transaction_id)
         values (new.entry_date, txid_current());
+        if new.entry_date = date '1900-04-10' then
+          update entry
+          set journal_markdown = 'Changed by the old writer.',
+              journal_word_count = 5,
+              journal_first_used_at = coalesce(journal_first_used_at, now()),
+              scripture_markdown = '',
+              scripture_word_count = 0,
+              scripture_first_used_at = scripture_first_used_at,
+              scripture_book = null,
+              scripture_chapter = null,
+              scripture_verse_start = null,
+              scripture_verse_end = null,
+              revision = revision + 1,
+              updated_at = now()
+          where entry_date = date '1900-01-01'
+            and revision = 1;
+        end if;
         return new;
       end
       $$;
@@ -152,6 +197,12 @@ it('backfills existing visible search documents before hardening the schema', as
     expect(completeness.rows[0]).toEqual({
       incomplete: 0,
       projected: searchBackfillBatchSize + 1,
+    });
+    expect(await readOldWriterProjection(upgrade)).toEqual({
+      journalMarkdown: 'Changed by the old writer.',
+      journalText: 'Changed by the old writer.',
+      revision: 2,
+      searchProjectionRevision: 2,
     });
     const batches = await upgrade.query<{
       readonly largest: number;
