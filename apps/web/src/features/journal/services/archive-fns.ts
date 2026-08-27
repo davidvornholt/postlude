@@ -54,7 +54,7 @@ export type Anniversary = {
 
 export type ArchiveView = {
   readonly today: JournalDate;
-  /** The stretch the map draws, always whole weeks. */
+  /** The stretch the map draws, clipped only at the first journal day. */
   readonly window: ActivityWindow;
   /** Every day in the window that has a row; the gaps are the days without. */
   readonly days: ReadonlyArray<ActivityDay>;

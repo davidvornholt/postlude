@@ -2,7 +2,11 @@
 
 import type { ConfirmedDraft } from './autosave.ts';
 import type { AutosaveCoordinator, SaveDraft } from './autosave-coordinator.ts';
-import { createAutosaveRegistry } from './autosave-registry.ts';
+import {
+  AutosaveSettlementError,
+  createAutosaveRegistry,
+} from './autosave-registry.ts';
+import type { JournalDate } from './journal-day.ts';
 import { browserDraftRecovery } from './recoverable-draft.ts';
 
 const registry = createAutosaveRegistry(browserDraftRecovery);
@@ -14,18 +18,31 @@ export const acquireBrowserAutosave = (
 
 export const settleBrowserAutosaves = (): Promise<void> => registry.settle();
 
-/** Leaves the current page in place when its forced save cannot be confirmed. */
-export const navigateAfterSettlingBrowserAutosaves = async (
+export type SettledNavigationResult =
+  | { readonly _tag: 'navigated' }
+  | { readonly _tag: 'blocked'; readonly date: JournalDate };
+
+export const navigateAfterAutosavesSettle = async (
+  settle: () => Promise<void>,
   navigate: () => Promise<void>,
-): Promise<boolean> => {
+): Promise<SettledNavigationResult> => {
   try {
-    await settleBrowserAutosaves();
-  } catch {
-    return false;
+    await settle();
+  } catch (error) {
+    if (error instanceof AutosaveSettlementError) {
+      return { _tag: 'blocked', date: error.date };
+    }
+    throw error;
   }
   await navigate();
-  return true;
+  return { _tag: 'navigated' };
 };
+
+/** Leaves the current page in place when its forced save cannot be confirmed. */
+export const navigateAfterSettlingBrowserAutosaves = (
+  navigate: () => Promise<void>,
+): Promise<SettledNavigationResult> =>
+  navigateAfterAutosavesSettle(settleBrowserAutosaves, navigate);
 
 export const readAfterSettlingBrowserAutosaves = async <A>(
   read: () => Promise<A>,

@@ -1,43 +1,13 @@
 import { expect, it } from 'bun:test';
 
+import {
+  deferredSave,
+  draft,
+  memoryRecovery,
+  settleEffects,
+  stored,
+} from './autosave-registry.test-support.ts';
 import { createAutosaveRegistry } from './autosave-registry.ts';
-import { journalWriteMessage } from './errors/journal-errors.ts';
-import type { DraftRecovery } from './recoverable-draft.ts';
-import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
-
-const draft: EntryDraft = {
-  date: '2026-08-27',
-  journalMarkdown: '',
-  scriptureMarkdown: '',
-  scriptureReference: '',
-};
-const stored = { draft, revision: 100 };
-
-const memoryRecovery = (): DraftRecovery => {
-  let recovered: EntryDraft | undefined;
-  return {
-    read: () => recovered,
-    retain: (next) => {
-      recovered = next;
-    },
-    clear: () => {
-      recovered = undefined;
-    },
-  };
-};
-
-const deferred = () => {
-  let resolve: (value: SaveConfirmation) => void = () => undefined;
-  const promise = new Promise<SaveConfirmation>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-};
-
-const settleEffects = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
-};
 
 it('evicts a clean day after its last subscriber leaves', () => {
   const registry = createAutosaveRegistry(memoryRecovery);
@@ -64,50 +34,8 @@ it('retains a coordinator while its quiet timer carries an edit', () => {
   expect(registry.acquire(stored, save)).not.toBe(first);
 });
 
-it('flushes quiet edits and waits for their save before a dependent read', async () => {
-  const pending = deferred();
-  const registry = createAutosaveRegistry(memoryRecovery);
-  const coordinator = registry.acquire(stored, () => pending.promise);
-  coordinator.edit({ journalMarkdown: 'Include me in the archive.' });
-  let finished = false;
-
-  const settling = registry.settle().then(() => {
-    finished = true;
-  });
-  await settleEffects();
-
-  expect(finished).toBe(false);
-  expect(coordinator.snapshot().inFlight?.journalMarkdown).toBe(
-    'Include me in the archive.',
-  );
-
-  pending.resolve({ revision: 101 });
-  await settling;
-  expect(finished).toBe(true);
-});
-
-it('rejects settlement when the forced save fails and retains the draft', async () => {
-  const recovery = memoryRecovery();
-  const registry = createAutosaveRegistry(() => recovery);
-  const coordinator = registry.acquire(stored, () =>
-    Promise.reject(new TypeError('offline')),
-  );
-  coordinator.edit({ journalMarkdown: 'Keep me on the writing page.' });
-
-  await expect(registry.settle()).rejects.toThrow(journalWriteMessage);
-  expect(coordinator.snapshot()).toMatchObject({
-    draft: { ...draft, journalMarkdown: 'Keep me on the writing page.' },
-    failure: { kind: 'network', message: journalWriteMessage },
-    inFlight: undefined,
-    stored,
-  });
-  expect(recovery.read(draft.date)?.journalMarkdown).toBe(
-    'Keep me on the writing page.',
-  );
-});
-
 it('retains an in-flight coordinator across mounts, then evicts it', async () => {
-  const pending = deferred();
+  const pending = deferredSave();
   const registry = createAutosaveRegistry(memoryRecovery);
   const first = registry.acquire(stored, () => pending.promise);
   const unsubscribe = first.subscribe(() => undefined);

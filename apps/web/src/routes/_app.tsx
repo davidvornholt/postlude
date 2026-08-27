@@ -6,9 +6,17 @@ import {
   redirect,
   useRouter,
 } from '@tanstack/react-router';
-import { type MouseEvent, type RefObject, useId, useRef } from 'react';
+import {
+  type MouseEvent,
+  type RefObject,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 
 import { navigateAfterSettlingBrowserAutosaves } from '#/features/journal/browser-autosaves.ts';
+import type { JournalDate } from '#/features/journal/journal-day.ts';
+import { ArchiveNavigationFailure } from '#/features/journal/ui/archive-navigation-failure.tsx';
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
@@ -37,6 +45,9 @@ const skipLinkClass =
 const AppShell = () => {
   const mainId = useId();
   const router = useRouter();
+  const [blockedArchiveDay, setBlockedArchiveDay] = useState<
+    JournalDate | undefined
+  >();
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
   // fire the request twice. Flipping a ref before the call closes that window.
@@ -68,9 +79,10 @@ const AppShell = () => {
       return;
     }
     event.preventDefault();
-    await navigateAfterSettlingBrowserAutosaves(() =>
+    const result = await navigateAfterSettlingBrowserAutosaves(() =>
       router.navigate({ to: '/archive' }),
     );
+    setBlockedArchiveDay(result._tag === 'blocked' ? result.date : undefined);
   };
 
   return (
@@ -109,6 +121,14 @@ const AppShell = () => {
           </nav>
         </div>
       </header>
+      {blockedArchiveDay === undefined ? null : (
+        <div className={[columnClass, 'pt-6'].join(' ')}>
+          <ArchiveNavigationFailure
+            date={blockedArchiveDay}
+            onOpen={() => setBlockedArchiveDay(undefined)}
+          />
+        </div>
+      )}
       {/* No column here. The page sets its own measure — the text column for
           writing, the wider one for the archive — because the deep register
           has to run edge to edge, and it cannot escape a column the shell has

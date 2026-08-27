@@ -26,7 +26,7 @@ import {
   monthColumnLabels,
   weekdayRows,
 } from '../activity-labels.ts';
-import type { JournalDate } from '../journal-day.ts';
+import { type JournalDate, journalDateWeekday } from '../journal-day.ts';
 import { ActivityTable } from './activity-table.tsx';
 
 const cellClass: Record<HeatLevel, string> = {
@@ -88,6 +88,15 @@ export const ActivityMap = ({ cells, today }: ActivityMapProps) => {
                 <span aria-hidden="true" className={monthLabelClass}>
                   {labels[index] ?? ''}
                 </span>
+                {weekdayRows
+                  .slice(0, journalDateWeekday(week[0]?.date ?? today))
+                  .map((row) => (
+                    <span
+                      aria-hidden="true"
+                      className="block size-3"
+                      key={row.name}
+                    />
+                  ))}
                 {week.map((cell) => (
                   <div
                     aria-hidden="true"

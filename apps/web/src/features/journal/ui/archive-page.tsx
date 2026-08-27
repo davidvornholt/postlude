@@ -34,6 +34,9 @@ import { StreakPanel } from './streak-panel.tsx';
 
 const headingClass = 'font-display text-4xl text-ink sm:text-5xl';
 const sectionHeadingClass = [eyebrowClass, 'text-ink-muted'].join(' ');
+const archiveYearDigits = 4;
+const archiveYearLabel = (year: number): string =>
+  String(year).padStart(archiveYearDigits, '0');
 
 const Section = ({
   title,
@@ -82,7 +85,7 @@ const YearNav = ({
                 search={year === undefined ? {} : { year }}
                 to="/archive"
               >
-                {year === undefined ? 'Past year' : String(year)}
+                {year === undefined ? 'Past year' : archiveYearLabel(year)}
               </Link>
             </li>
           );

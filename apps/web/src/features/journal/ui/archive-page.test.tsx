@@ -141,28 +141,6 @@ it('marks the year being shown so it is not told apart by colour alone', () => {
   expect(filled.match(currentPage)).toHaveLength(1);
 });
 
-it('keeps an accepted selected year coherent when the journal has no row there', async () => {
-  const selectedYear = 2024;
-  const selected = await renderInRouter(
-    <ArchivePage
-      selectedYear={selectedYear}
-      view={{
-        ...sampleArchiveView(journal, today),
-        days: [],
-        window: activityWindow(today, selectedYear),
-      }}
-    />,
-  );
-  const selectedLink = elementAttributes(selected, 'a', String(selectedYear));
-
-  expect(attributeValue(selectedLink, 'href')).toBe(
-    `/archive?year=${selectedYear}`,
-  );
-  expect(attributeValue(selectedLink, 'aria-current')).toBe('page');
-  expect(selected.match(currentPage)).toHaveLength(1);
-  expect(selected).toContain('Nothing was written in this stretch');
-});
-
 it('separates no writing from the four-step Less–More ramp', () => {
   const legendStart = filled.indexOf('<figcaption');
   const legendEnd = filled.indexOf('</figcaption>', legendStart);

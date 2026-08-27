@@ -24,6 +24,7 @@ const day = (date: string, journalWords: number): ActivityDay => ({
 const sunday = 0;
 const saturday = 6;
 const daysPerWeek = 7;
+const firstClippedWeekDays = 6;
 const rollingWeeksShown = 53;
 const today = '2026-08-26';
 const namedYear = 2025;
@@ -56,6 +57,18 @@ it('wraps a named year in the weeks that hold it', () => {
   const window = activityWindow(today, namedYear);
   expect(window.from).toBe('2024-12-29');
   expect(window.to).toBe('2026-01-03');
+});
+
+it('keeps the first supported year inside the journal date range', () => {
+  const window = activityWindow(today, 1);
+  const weeks = activityWeeks(activityCells([], window));
+
+  expect(window).toEqual({ from: '0001-01-01', to: '0002-01-05' });
+  expect(weeks[0]?.[0]?.date).toBe('0001-01-01');
+  expect(weeks[0]).toHaveLength(firstClippedWeekDays);
+  expect(weeks.slice(1).every((week) => week.length === daysPerWeek)).toBe(
+    true,
+  );
 });
 
 it('draws the maximum named year as 53 complete four-digit weeks', () => {
