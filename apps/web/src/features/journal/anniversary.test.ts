@@ -8,16 +8,14 @@
 import { expect, it } from 'bun:test';
 
 import { anniversaryOf } from './anniversary.ts';
-import type { JournalEntry } from './schemas/entry.ts';
+import type { AnniversaryEntry } from './schemas/anniversary-entry.ts';
 
-const entry = (date: string, markdown: string): JournalEntry => ({
+const entry = (date: string, markdown: string): AnniversaryEntry => ({
   date,
   journalMarkdown: markdown,
   journalWordCount: markdown.split(' ').length,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
-  createdAt: new Date(0),
-  updatedAt: new Date(0),
 });
 
 const threeYears = 3;

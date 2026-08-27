@@ -26,7 +26,7 @@ export const JournalDateSchema = Schema.String.pipe(
   }),
 );
 
-const WordCount = Schema.Number.pipe(
+export const WordCountSchema = Schema.Number.pipe(
   Schema.int(),
   Schema.greaterThanOrEqualTo(0),
 );
@@ -45,7 +45,7 @@ const EntryRow = Schema.Struct({
   journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
     Schema.fromKey('journal_markdown'),
   ),
-  journalWordCount: Schema.propertySignature(WordCount).pipe(
+  journalWordCount: Schema.propertySignature(WordCountSchema).pipe(
     Schema.fromKey('journal_word_count'),
   ),
   journalFirstUsedAt: Schema.propertySignature(
@@ -54,7 +54,7 @@ const EntryRow = Schema.Struct({
   scriptureMarkdown: Schema.propertySignature(
     Schema.NullOr(Schema.String),
   ).pipe(Schema.fromKey('scripture_markdown')),
-  scriptureWordCount: Schema.propertySignature(WordCount).pipe(
+  scriptureWordCount: Schema.propertySignature(WordCountSchema).pipe(
     Schema.fromKey('scripture_word_count'),
   ),
   scriptureFirstUsedAt: Schema.propertySignature(

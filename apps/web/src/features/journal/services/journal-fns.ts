@@ -20,24 +20,17 @@ import { Effect, Schema } from 'effect';
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
 import { loadAfterConfirmedRevision } from '../confirmed-revisions.ts';
-import {
-  type Anniversary,
-  anniversaryLimit,
-  anniversaryOf,
-  isoMonthStart,
-} from '../anniversary.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
   type EntryDraft,
   EntryDraftSchema,
-  emptyJournalEntry,
-  type JournalEntry,
   type SaveConfirmation,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
+import { makeJournalDayReader } from './journal-day-reader.ts';
 import { runJournalEffect } from './journal-runtime.ts';
-import { decodeReadEntryInput } from './read-entry-input.ts';
+import { decodeReadDatedEntryInput } from './read-entry-input.ts';
 
 /** Today as the configured zone reads it, with the 04:00 rule applied. */
 export const currentJournalDate = (): JournalDate =>
@@ -58,39 +51,14 @@ const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
  * counts do: they are part of what the page is, and a second request for them
  * would let the page render once without them and shift under the reader.
  */
-export type JournalDayView = {
-  readonly entry: JournalEntry;
-  readonly today: JournalDate;
-  readonly anniversaries: ReadonlyArray<Anniversary>;
-};
+const journalDayReader = makeJournalDayReader(runJournalEffect);
 
-/**
- * One day, blank when it has never been written. The date is optional: with
- * none, the server decides today from its own clock rather than believing a
- * client's, which is what keeps "today" the same page on every device.
- */
-export const readJournalDayFn = createServerFn({ method: 'GET' })
+/** Today is selected only from the configured server clock. */
+export const readTodayJournalDayFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .validator((input: unknown) => decodeReadEntryInput(input ?? {}))
-  .handler(({ data }): Promise<JournalDayView> => {
+  .handler(() => {
     const today = currentJournalDate();
-    const date = data.date ?? today;
-    return runJournalEffect(
-      Effect.gen(function* () {
-        const entries = yield* EntryRepository;
-        const entry = yield* entries.read(date);
-        const earlier = yield* entries.readAnniversaries(
-          date.slice(isoMonthStart),
-          date,
-          anniversaryLimit,
-        );
-        return {
-          entry: entry ?? emptyJournalEntry(date),
-          today,
-          anniversaries: earlier.map(anniversaryOf(date)),
-        };
-      }),
-    );
+    return journalDayReader.readToday(today);
   });
 
 /**
@@ -98,12 +66,20 @@ export const readJournalDayFn = createServerFn({ method: 'GET' })
  * last confirmed save. Each repeat reaches the same primary database after the
  * save response arrived, so it must include that revision.
  */
-export const readJournalDay = (input?: {
+export const readDatedJournalDayFn = createServerFn({ method: 'GET' })
+  .middleware([sessionRequired])
+  .validator((input: unknown) => decodeReadDatedEntryInput(input))
+  .handler(({ data }) => {
+    const today = currentJournalDate();
+    return journalDayReader.readDated(data.date, today);
+  });
+
+export const readTodayJournalDay = () =>
+  loadAfterConfirmedRevision(() => readTodayJournalDayFn());
+
+export const readDatedJournalDay = (input: {
   readonly data: { readonly date: JournalDate };
-}): Promise<JournalDayView> =>
-  loadAfterConfirmedRevision(() =>
-    input === undefined ? readJournalDayFn() : readJournalDayFn(input),
-  );
+}) => loadAfterConfirmedRevision(() => readDatedJournalDayFn(input));
 
 /**
  * Saves a day and returns the database-issued revision of that write. The

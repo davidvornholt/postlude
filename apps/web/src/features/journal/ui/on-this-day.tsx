@@ -46,9 +46,10 @@ export const OnThisDay = ({ anniversaries, today }: OnThisDayProps) => (
           className={[eyebrowClass, 'block text-ink-faint'].join(' ')}
         >{`${journalCountLabel(anniversary.yearsAgo, 'year')} ago · ${journalDateLabel(anniversary.date)}`}</span>
         <span
-          className={[readingMeasureClass, 'mt-3 block text-ink text-lg'].join(
-            ' ',
-          )}
+          className={[
+            readingMeasureClass,
+            'mt-3 block min-w-0 break-words text-ink text-lg',
+          ].join(' ')}
         >
           {anniversary.snippet}
         </span>

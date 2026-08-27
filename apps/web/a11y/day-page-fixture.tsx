@@ -48,7 +48,12 @@ const save = (): Promise<unknown> => {
 };
 
 const router = createRenderingRouter(
-  <DayPage entry={entry} save={save} today={config.today} />,
+  <DayPage
+    anniversaries={config.anniversaries}
+    entry={entry}
+    save={save}
+    today={config.today}
+  />,
 );
 await router.load();
 

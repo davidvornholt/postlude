@@ -6,16 +6,15 @@ import {
   withCommittedRepository,
   withRepository,
 } from './entry-repository-test-support.ts';
+import {
+  anniversaryLimit,
+  anniversaryOf,
+  isoMonthStart,
+} from '../anniversary.ts';
+import { countJournalWords } from '../word-count.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
-/** As many earlier years as the archive asks for; the page shows four. */
-const anniversaryLimit = 4;
-const isoMonthStart = 5;
-const archiveRequest = (today: string) => ({
-  today,
-  anniversaryMonthDay: today.slice(isoMonthStart),
-  anniversaryLimit,
-});
+const archiveRequest = (today: string) => ({ today });
 it('reads nothing for a day that was never written', async () => {
   const entry = await withRepository((entries) => entries.read('2019-04-02'));
   expect(entry).toBeUndefined();
@@ -229,13 +228,91 @@ it('finds the same day of the month in earlier years, newest first', async () =>
       yield* entries.save(draft('2025-08-26', 'One year back.'));
       yield* entries.save(draft('2025-08-25', 'The day before, once.'));
       yield* entries.save(draft('2026-08-26', 'Today itself.'));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readAnniversaries(
+        '08-26',
+        '2026-08-26',
+        anniversaryLimit,
+      );
     }),
   );
-  expect(anniversaries.anniversaries.map((entry) => entry.date)).toEqual([
+  expect(anniversaries.map((entry) => entry.date)).toEqual([
     '2025-08-26',
     '2024-08-26',
   ]);
+});
+it('limits leap-day anniversaries with the shared page limit', async () => {
+  const anniversaries = await withRepository((entries) =>
+    Effect.gen(function* () {
+      for (const year of ['2004', '2008', '2012', '2016', '2020']) {
+        yield* entries.save(draft(`${year}-02-29`, `Leap day ${year}.`));
+      }
+      yield* entries.save(draft('2020-02-28', 'The day before.'));
+      const before = '2024-02-29';
+      return yield* entries.readAnniversaries(
+        before.slice(isoMonthStart),
+        before,
+        anniversaryLimit,
+      );
+    }),
+  );
+
+  expect(anniversaries.map((entry) => entry.date)).toEqual([
+    '2020-02-29',
+    '2016-02-29',
+    '2012-02-29',
+    '2008-02-29',
+  ]);
+});
+
+it('reads only the bounded memory projection from rows with large search data', async () => {
+  const hugeSearchWordCount = 2048;
+  const largeSearchByteFloor = 10_000;
+  const isoYearEnd = 4;
+  const hugeScripture = 'searchable '.repeat(hugeSearchWordCount).trim();
+  const before = '2026-08-26';
+  const result = await withRepository((entries) =>
+    Effect.gen(function* () {
+      for (const year of ['2021', '2022', '2023', '2024', '2025']) {
+        yield* entries.save({
+          date: `${year}-08-26`,
+          journalMarkdown: `## ${year} opening\n\nRecognisable words.`,
+          scriptureMarkdown: hugeScripture,
+          scriptureReference: '',
+          baseRevision: 0,
+        });
+      }
+      const sql = yield* SqlClient.SqlClient;
+      const stored = yield* sql<{ readonly bytes: number }>`
+        select max(octet_length(scripture_search_text))::integer as bytes
+        from entry
+      `;
+      const rows = yield* entries.readAnniversaries(
+        before.slice(isoMonthStart),
+        before,
+        anniversaryLimit,
+      );
+      return { rows, storedBytes: stored[0]?.bytes ?? 0 };
+    }),
+  );
+
+  expect(result.storedBytes).toBeGreaterThan(largeSearchByteFloor);
+  expect(Object.keys(result.rows[0] ?? {}).sort()).toEqual([
+    'date',
+    'journalMarkdown',
+    'journalWordCount',
+    'scriptureMarkdown',
+    'scriptureWordCount',
+  ]);
+  expect(result.rows.map(anniversaryOf(before))).toEqual(
+    ['2025', '2024', '2023', '2022'].map((year) => ({
+      date: `${year}-08-26`,
+      yearsAgo: Number(before.slice(0, isoYearEnd)) - Number(year),
+      words:
+        countJournalWords(`## ${year} opening\n\nRecognisable words.`) +
+        countJournalWords(hugeScripture),
+      snippet: `${year} opening Recognisable words.`,
+    })),
+  );
 });
 /*
  * Scripture prose can carry a memory without evening prose. A reference alone
@@ -258,11 +335,15 @@ it('includes scripture prose and leaves out a reference-only anniversary', async
         scriptureReference: 'Psalms 23',
         baseRevision: 0,
       });
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readAnniversaries(
+        '08-26',
+        '2026-08-26',
+        anniversaryLimit,
+      );
     }),
   );
   expect(
-    anniversaries.anniversaries.map((entry) => ({
+    anniversaries.map((entry) => ({
       date: entry.date,
       scriptureMarkdown: entry.scriptureMarkdown,
     })),
@@ -302,7 +383,6 @@ it('reports recoverable stored source separately from archive activity', async (
   expect(archive.exportAvailable).toBe(true);
   expect(archive.earliest).toBeUndefined();
   expect(archive.summaries).toEqual([]);
-  expect(archive.anniversaries).toEqual([]);
 });
 
 it('does not let future rows open the archive', async () => {
@@ -317,7 +397,6 @@ it('does not let future rows open the archive', async () => {
   expect(archive.earliest).toBeUndefined();
   expect(archive.exportAvailable).toBe(true);
   expect(archive.summaries).toEqual([]);
-  expect(archive.anniversaries).toEqual([]);
 });
 
 it('reports the oldest written day as where the archive starts', async () => {
@@ -401,7 +480,6 @@ it('reports a truly empty archive after every meaningful section is cleared', as
   expect(archive.earliest).toBeUndefined();
   expect(archive.exportAvailable).toBe(false);
   expect(archive.summaries).toEqual([]);
-  expect(archive.anniversaries).toEqual([]);
 });
 
 it('holds one snapshot while a concurrent archive-visible row commits', async () => {

@@ -2,7 +2,7 @@ import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 import { journalDateLabel } from '#/features/journal/day-label.ts';
 import { isJournalDate } from '#/features/journal/journal-day.ts';
 import {
-  readJournalDay,
+  readDatedJournalDay,
   saveDraft,
 } from '#/features/journal/services/journal-fns.ts';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
@@ -43,8 +43,8 @@ export const Route = createFileRoute('/_app/day/$date')({
     stringify: ({ date }) => ({ date }),
   },
   loader: async ({ params }) => {
-    const day = await readJournalDay({ data: { date: params.date } });
-    if (day.entry.date === day.today) {
+    const result = await readDatedJournalDay({ data: { date: params.date } });
+    if (result.disposition === 'today') {
       throw redirect({ to: '/' });
     }
     /*
@@ -53,21 +53,21 @@ export const Route = createFileRoute('/_app/day/$date')({
      * server's day rather than the browser's, so a device with a wrong clock or
      * in another zone cannot talk its way into one.
      */
-    if (day.entry.date > day.today) {
+    if (result.disposition === 'future') {
       throw notFound();
     }
-    return day;
+    return result.view;
   },
   component: DayRoute,
-  head: ({ loaderData }) => ({
-    meta: [
-      {
-        title: pageTitle(
-          loaderData === undefined
-            ? 'Day'
-            : journalDateLabel(loaderData.entry.date),
-        ),
-      },
-    ],
-  }),
+  head: ({ loaderData, match }) => {
+    let title = 'Journal day';
+    if (loaderData !== undefined) {
+      title = journalDateLabel(loaderData.entry.date);
+    } else if (match.status === 'notFound') {
+      title = 'Page not found';
+    } else if (match.status === 'error') {
+      title = 'Journal unavailable';
+    }
+    return { meta: [{ title: pageTitle(title) }] };
+  },
 });

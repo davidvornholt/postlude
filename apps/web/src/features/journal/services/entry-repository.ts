@@ -20,6 +20,7 @@ import {
   journalWriteError,
 } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
+import { AnniversaryEntryFromRow } from '../schemas/anniversary-entry.ts';
 import {
   EarliestDateFromRow,
   type EntryDraft,
@@ -40,6 +41,11 @@ import {
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
+const exactParseOptions = { onExcessProperty: 'error' } as const;
+const decodeAnniversaryEntries = Schema.decodeUnknown(
+  Schema.Array(AnniversaryEntryFromRow),
+  exactParseOptions,
+);
 const decodeEarliestDates = Schema.decodeUnknown(
   Schema.Array(EarliestDateFromRow),
 );
@@ -69,14 +75,11 @@ const readExportAvailability = (sql: SqlClient.SqlClient) =>
 export type ArchiveRead = {
   readonly earliest: JournalDate | undefined;
   readonly summaries: ReadonlyArray<EntrySummary>;
-  readonly anniversaries: ReadonlyArray<JournalEntry>;
   readonly exportAvailable: boolean;
 };
 
 export type ArchiveReadRequest = {
   readonly today: JournalDate;
-  readonly anniversaryMonthDay: string;
-  readonly anniversaryLimit: number;
 };
 
 export class EntryRepository extends Effect.Service<EntryRepository>()(
@@ -296,7 +299,12 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         limit: number,
       ) =>
         sql`
-          select *
+          select
+            entry_date,
+            journal_markdown,
+            journal_word_count,
+            scripture_markdown,
+            scripture_word_count
           from entry
           where to_char(entry_date, 'MM-DD') = ${monthDay}
             and entry_date < ${before}
@@ -306,7 +314,10 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             )
           order by entry_date desc
           limit ${limit}
-        `.pipe(Effect.flatMap(decodeEntries));
+        `.pipe(
+          Effect.flatMap(decodeAnniversaryEntries),
+          Effect.mapError(journalReadError),
+        );
 
       /** The oldest day that still has something for the archive to show. */
       const earliestDate = (today: JournalDate) =>
@@ -333,15 +344,9 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             const earliest = yield* earliestDate(today);
             const summaries =
               earliest === undefined ? [] : yield* listBetween(earliest, today);
-            const anniversaries = yield* readAnniversaries(
-              anniversaryMonthDay,
-              today,
-              anniversaryLimit,
-            );
             return {
               earliest,
               summaries,
-              anniversaries,
               exportAvailable: canExport,
             };
           }),
@@ -349,6 +354,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
 
       return {
         read,
+        readAnniversaries,
         save,
         readArchive,
       } as const;

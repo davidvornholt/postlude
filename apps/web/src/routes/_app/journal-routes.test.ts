@@ -6,6 +6,7 @@ import type { JournalEntry } from '#/features/journal/schemas/entry.ts';
 type JournalDay = {
   readonly entry: JournalEntry;
   readonly today: JournalEntry['date'];
+  readonly anniversaries: ReadonlyArray<never>;
 };
 
 const today = '2026-08-26';
@@ -23,20 +24,32 @@ const entryOn = (date: JournalEntry['date']): JournalEntry => ({
   updatedAt: new Date(0),
 });
 
-let loadedDay: JournalDay = { entry: entryOn(today), today };
-let readInputs: ReadonlyArray<unknown> = [];
+let loadedDay: JournalDay = { entry: entryOn(today), today, anniversaries: [] };
+let datedDisposition: 'readable' | 'today' | 'future' = 'readable';
+let datedReadInputs: ReadonlyArray<unknown> = [];
+let todayReadCount = 0;
 
 mock.module('#/features/journal/services/journal-fns.ts', () => ({
-  readJournalDay: (input?: unknown) => {
-    readInputs = [...readInputs, input];
+  readDatedJournalDay: (input: unknown) => {
+    datedReadInputs = [...datedReadInputs, input];
+    return Promise.resolve(
+      datedDisposition === 'readable'
+        ? { disposition: 'readable', view: loadedDay }
+        : { disposition: datedDisposition },
+    );
+  },
+  readTodayJournalDay: () => {
+    todayReadCount += 1;
     return Promise.resolve(loadedDay);
   },
   saveDraft: () => Promise.reject(new Error('A route test does not save.')),
 }));
 
 beforeEach(() => {
-  loadedDay = { entry: entryOn(today), today };
-  readInputs = [];
+  loadedDay = { entry: entryOn(today), today, anniversaries: [] };
+  datedDisposition = 'readable';
+  datedReadInputs = [];
+  todayReadCount = 0;
 });
 
 afterAll(() => {
@@ -94,7 +107,7 @@ describe('dated journal route', () => {
     );
 
     expect(errors.map(isNotFound)).toEqual([true, true, true]);
-    expect(readInputs).toEqual([]);
+    expect(datedReadInputs).toEqual([]);
   });
 
   it('preserves every supported low year at the address boundary', () => {
@@ -111,11 +124,11 @@ describe('dated journal route', () => {
 
   it('loads a valid past date and names it in metadata', async () => {
     const past = '2026-08-25';
-    loadedDay = { entry: entryOn(past), today };
+    loadedDay = { entry: entryOn(past), today, anniversaries: [] };
 
     expect(parseDay({ date: past })).toEqual({ date: past });
     await expect(loadDay(past)).resolves.toEqual(loadedDay);
-    expect(readInputs).toEqual([{ data: { date: past } }]);
+    expect(datedReadInputs).toEqual([{ data: { date: past } }]);
     type HeadInput = Parameters<typeof dayHead>[0];
     const metadata = await dayHead({ loaderData: loadedDay } as HeadInput);
     expect(metadata.meta).toContainEqual({
@@ -124,18 +137,30 @@ describe('dated journal route', () => {
   });
 
   it('redirects the canonical address for today to the index', async () => {
+    datedDisposition = 'today';
     const error = await captureRejected(() => loadDay(today));
 
     expect(isRedirect(error)).toBe(true);
     expect(error).toMatchObject({ options: { to: '/' } });
   });
 
-  it('rejects a future day selected by the server response', async () => {
+  it('rejects a future day before a view is returned', async () => {
     const future = '2026-08-27';
-    loadedDay = { entry: entryOn(future), today };
+    datedDisposition = 'future';
 
     const error = await captureRejected(() => loadDay(future));
     expect(isNotFound(error)).toBe(true);
+  });
+
+  it('does not describe an operational loader failure as a missing day', async () => {
+    type HeadInput = Parameters<typeof dayHead>[0];
+    const metadata = await dayHead({
+      loaderData: undefined,
+      match: { status: 'error' },
+    } as HeadInput);
+    expect(metadata.meta).toContainEqual({
+      title: 'Journal unavailable · Postlude',
+    });
   });
 });
 
@@ -144,7 +169,8 @@ describe('journal index route', () => {
     type LoaderInput = NonNullable<Parameters<typeof indexLoader>[0]>;
 
     await expect(indexLoader({} as LoaderInput)).resolves.toEqual(loadedDay);
-    expect(readInputs).toEqual([undefined]);
+    expect(todayReadCount).toBe(1);
+    expect(datedReadInputs).toEqual([]);
     type HeadInput = Parameters<typeof indexHead>[0];
     const metadata = await indexHead({ loaderData: loadedDay } as HeadInput);
     expect(metadata.meta).toContainEqual({ title: 'Today · Postlude' });

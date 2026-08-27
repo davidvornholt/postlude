@@ -12,8 +12,8 @@
  */
 
 import { type JournalDate, parseJournalDate } from './journal-day.ts';
-import type { JournalEntry } from './schemas/entry.ts';
-import { journalSnippet } from './snippet.ts';
+import type { AnniversaryEntry } from './schemas/anniversary-entry.ts';
+import { archiveSnippet } from './snippet.ts';
 
 /** One earlier year's entry for the same day of the month. */
 export type Anniversary = {
@@ -40,9 +40,9 @@ export const isoMonthStart = 5;
  */
 export const anniversaryOf =
   (on: JournalDate) =>
-  (entry: JournalEntry): Anniversary => ({
+  (entry: AnniversaryEntry): Anniversary => ({
     date: entry.date,
     yearsAgo: parseJournalDate(on).year - parseJournalDate(entry.date).year,
     words: entry.journalWordCount + entry.scriptureWordCount,
-    snippet: journalSnippet(entry.journalMarkdown),
+    snippet: archiveSnippet(entry),
   });
