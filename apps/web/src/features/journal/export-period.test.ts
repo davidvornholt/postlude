@@ -16,11 +16,7 @@ import {
   periodKeyOf,
   periodLabel,
   periodPath,
-  periodsOf,
 } from './export-period.ts';
-
-const days = (...dates: ReadonlyArray<string>) =>
-  dates.map((date) => ({ date }));
 
 describe('isoWeekKey', () => {
   it('numbers a week by the year its Thursday falls in', () => {
@@ -112,34 +108,5 @@ describe('periodLabel', () => {
   it('names early years without dropping their leading zeroes', () => {
     expect(periodLabel('week', '0099-W01')).toBe('Week 1, 0099');
     expect(periodLabel('month', '0100-08')).toBe('August 0100');
-  });
-});
-
-describe('periodsOf', () => {
-  it('gathers the days of one period and starts a new one at its edge', () => {
-    const periods = periodsOf(
-      days('2026-01-30', '2026-01-31', '2026-02-01'),
-      'month',
-    );
-
-    expect(periods.map((period) => period.key)).toEqual(['2026-01', '2026-02']);
-    expect(periods[0]?.days.map((day) => day.date)).toEqual([
-      '2026-01-30',
-      '2026-01-31',
-    ]);
-  });
-
-  /*
-   * The week that straddles New Year is one period, not two, which is the whole
-   * reason the key is not simply the year the date is written in.
-   */
-  it('keeps a week that crosses a year in one file', () => {
-    const periods = periodsOf(days('2025-12-31', '2026-01-01'), 'week');
-
-    expect(periods.map((period) => period.key)).toEqual(['2026-W01']);
-  });
-
-  it('leaves an empty journal with nothing to write', () => {
-    expect(periodsOf([], 'month')).toEqual([]);
   });
 });

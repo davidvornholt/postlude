@@ -175,31 +175,3 @@ const periodLabels: Record<ExportGrouping, (key: string) => string> = {
 /** What that file calls itself in its opening heading. */
 export const periodLabel = (grouping: ExportGrouping, key: string): string =>
   periodLabels[grouping](key);
-
-export type ExportPeriod<Day> = {
-  readonly key: string;
-  readonly days: ReadonlyArray<Day>;
-};
-
-/**
- * The days cut into periods, each in the order it arrived. Days are grouped as
- * they come rather than sorted here: the read that produced them already
- * decided the order the export is written in, and a second opinion about it
- * here would only be a place for the two to disagree.
- */
-export const periodsOf = <Day extends { readonly date: JournalDate }>(
-  days: ReadonlyArray<Day>,
-  grouping: ExportGrouping,
-): ReadonlyArray<ExportPeriod<Day>> => {
-  const periods: Array<{ key: string; days: Array<Day> }> = [];
-  for (const day of days) {
-    const key = periodKeyOf(grouping, day.date);
-    const open = periods.at(-1);
-    if (open?.key === key) {
-      open.days.push(day);
-    } else {
-      periods.push({ key, days: [day] });
-    }
-  }
-  return periods;
-};

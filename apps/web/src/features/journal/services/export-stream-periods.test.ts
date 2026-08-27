@@ -4,12 +4,15 @@ import { unzipSync } from 'fflate';
 
 import { parseEntriesDocument } from '../export-format.ts';
 import type { ExportGrouping } from '../export-period.ts';
+import { shiftJournalDate } from '../journal-day.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
+import { exportPageSize } from './entry-export.ts';
 import { exportArchiveStream } from './export-stream.ts';
 
 const { withJournal } = journalDatabase();
 const decoder = new TextDecoder();
 const authoritativePaths = ['manifest.json', 'entries.ndjson', 'README.md'];
+const pageBoundaryOverflow = 2;
 const dates = [
   '0001-01-01',
   '2025-12-28',
@@ -116,5 +119,35 @@ describe('production projection streams', () => {
     expect(december).toContain('from: "2025-12-28"');
     expect(december).toContain('to: "2025-12-31"');
     expect(december).toContain('days: 2');
+  });
+
+  it('crosses metadata and entry page boundaries without losing order', async () => {
+    const pagedDates = Array.from(
+      { length: exportPageSize + pageBoundaryOverflow },
+      (_, index) => shiftJournalDate('2024-01-01', index),
+    );
+    const files = await withJournal(({ entries, exports }) =>
+      Effect.gen(function* () {
+        for (const date of pagedDates) {
+          yield* entries.save(draft(date, `Evening ${date}.`, ''));
+        }
+        const chunks = yield* exportArchiveStream(
+          exports,
+          'Europe/Berlin',
+          () => undefined,
+          'year',
+        ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+        return unzipSync(bytesOf(chunks));
+      }),
+    );
+    const document = decoder.decode(files['2024.md']);
+
+    expect(document).toContain(`days: ${pagedDates.length}`);
+    expect(
+      parseEntriesDocument(decoder.decode(files['entries.ndjson'])),
+    ).toHaveLength(pagedDates.length);
+    expect(document.indexOf('## 2024-01-01')).toBeLessThan(
+      document.indexOf(`## ${pagedDates.at(-1)}`),
+    );
   });
 });
