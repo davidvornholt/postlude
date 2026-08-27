@@ -54,10 +54,9 @@ const reconcileServerState = (
     return undefined;
   }
   if (state.failure?.kind === 'conflict') {
-    const draft = { ...state.draft, baseRevision: nextStored.revision };
-    return sameDraft(draft, nextStored.draft)
+    return sameDraft(state.draft, nextStored.draft)
       ? openAutosave(nextStored)
-      : { ...state, draft, stored: nextStored, failure: undefined };
+      : { ...state, stored: nextStored };
   }
   return sameDraft(state.draft, state.stored.draft)
     ? openAutosave(nextStored)

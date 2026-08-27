@@ -28,16 +28,18 @@ type Checkpoint = {
 
 const maximumTrackedDays = 32;
 const maximumLoaderReads = 3;
-
 export const createConfirmedRevisionTracker = (
   maximum = maximumTrackedDays,
 ): ConfirmedRevisionTracker => {
+  // Checkpoints survive until a current mount and every older loader clear them.
   const checkpoints = new Map<JournalDate, Checkpoint>();
+  // Bounded admissions prove a cached mount followed an accepted load.
   const admissions = new Map<JournalDate, number>();
   const outstanding = new Map<number, number>();
   const capacity = Math.max(1, maximum);
   let generation = 0;
   let nextLoaderId = 0;
+  // An evicted checkpoint still makes every older loader reacquire its data.
   let freshnessFloor = 0;
   let guarded = false;
 
@@ -162,7 +164,6 @@ type RevisionedJournalDay = {
   };
 };
 
-/** Repeat bounded reads without dropping the generation of the first read. */
 export const loadAfterConfirmedRevision = async <
   Day extends RevisionedJournalDay,
 >(

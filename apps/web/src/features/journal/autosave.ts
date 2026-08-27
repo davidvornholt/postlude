@@ -21,7 +21,7 @@ export type AutosaveState = {
   readonly stored: ConfirmedDraft;
   /** The snapshot currently being written, or nothing when none is. */
   readonly inFlight: EntryDraft | undefined;
-  /** The last actionable failure, cleared by recovery or a confirmed save. */
+  /** Conflicts stay actionable and block writes until current prose matches. */
   readonly failure: AutosaveFailure | undefined;
 };
 

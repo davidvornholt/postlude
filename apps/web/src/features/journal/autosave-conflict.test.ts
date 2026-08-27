@@ -23,11 +23,20 @@ const draft: EntryDraft = {
 };
 const writeConflictStatus = 409;
 const currentRevision = 101;
-const savedRevision = 102;
 const conflictFailure = {
   kind: 'conflict',
   message: journalWriteConflictMessage,
 } as const;
+
+const settleEffects = async (): Promise<void> => {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+const rejectConflict = (): Promise<unknown> =>
+  decodeSaveConfirmation(
+    new Response(journalWriteConflictMessage, { status: writeConflictStatus }),
+  );
 
 const run = (
   events: ReadonlyArray<AutosaveEvent>,
@@ -82,7 +91,7 @@ it('does not resubmit newer prose against the same conflicted revision', () => {
   expect(saveStatus(state)).toBe('failed');
 });
 
-it('keeps stale-tab prose recoverable when its base revision conflicts', async () => {
+it('does not overwrite newer server prose after a stale-base conflict', async () => {
   let recovered: EntryDraft | undefined;
   const recovery: DraftRecovery = {
     read: () => recovered,
@@ -96,20 +105,14 @@ it('keeps stale-tab prose recoverable when its base revision conflicts', async (
   const stored = { draft, revision: draft.baseRevision };
   const coordinator = createAutosaveCoordinator({
     stored,
-    save: () =>
-      decodeSaveConfirmation(
-        new Response(journalWriteConflictMessage, {
-          status: writeConflictStatus,
-        }),
-      ),
+    save: rejectConflict,
     recovery,
   });
 
   coordinator.edit({ journalMarkdown: 'Stale tab prose.' });
   coordinator.flush();
   coordinator.edit({ journalMarkdown: '' });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await settleEffects();
 
   expect(coordinator.snapshot().failure).toEqual({
     kind: 'conflict',
@@ -128,24 +131,70 @@ it('keeps stale-tab prose recoverable when its base revision conflicts', async (
     revision: currentRevision,
   };
   const sent: Array<EntryDraft> = [];
+  let server = current;
   coordinator.update(current, (next) => {
     sent.push(next);
-    return Promise.resolve({ revision: savedRevision });
+    server = { draft: next, revision: currentRevision + 1 };
+    return Promise.resolve({ revision: server.revision });
   });
-  expect(coordinator.snapshot().failure).toBeUndefined();
+  expect(coordinator.snapshot().failure).toEqual({
+    kind: 'conflict',
+    message: journalWriteConflictMessage,
+  });
   expect(coordinator.snapshot().stored).toEqual(current);
-  expect(coordinator.snapshot().draft).toMatchObject({
+  expect(coordinator.snapshot().draft).toEqual({
+    ...draft,
     journalMarkdown: 'Stale tab prose.',
-    baseRevision: currentRevision,
   });
+  expect(recovered).toEqual(coordinator.snapshot().draft);
 
   coordinator.flush();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await settleEffects();
 
-  expect(sent).toHaveLength(1);
-  expect(sent[0]?.baseRevision).toBe(currentRevision);
-  expect(coordinator.snapshot().stored.revision).toBe(savedRevision);
-  expect(saveStatus(coordinator.snapshot())).toBe('saved');
+  expect(sent).toHaveLength(0);
+  expect(server).toEqual(current);
+  expect(coordinator.snapshot().stored).toEqual(current);
+  expect(saveStatus(coordinator.snapshot())).toBe('failed');
+  expect(recovered?.journalMarkdown).toBe('Stale tab prose.');
+});
+
+it('settles a conflict when current server prose matches the recovery', async () => {
+  let recovered: EntryDraft | undefined;
+  const recovery: DraftRecovery = {
+    read: () => recovered,
+    retain: (next) => {
+      recovered = next;
+    },
+    clear: () => {
+      recovered = undefined;
+    },
+  };
+  const coordinator = createAutosaveCoordinator({
+    stored: { draft, revision: draft.baseRevision },
+    save: rejectConflict,
+    recovery,
+  });
+
+  coordinator.edit({ journalMarkdown: 'Shared prose.' });
+  coordinator.flush();
+  await settleEffects();
+  const current = {
+    draft: {
+      ...draft,
+      journalMarkdown: 'Shared prose.',
+      baseRevision: currentRevision,
+    },
+    revision: currentRevision,
+  };
+  let followUpSaves = 0;
+  coordinator.update(current, () => {
+    followUpSaves += 1;
+    return Promise.resolve({ revision: currentRevision + 1 });
+  });
+  coordinator.flush();
+  await settleEffects();
+
+  expect(coordinator.snapshot()).toEqual(openAutosave(current));
+  expect(followUpSaves).toBe(0);
   expect(recovered).toBeUndefined();
 });
