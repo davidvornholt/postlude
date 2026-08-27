@@ -1,7 +1,7 @@
 /** Prepares the journal archive response for the authenticated route POST. */
 
-import { privateResponseHeaders } from '#/shared/auth/private-response.ts';
 import type { ApplicationStyleSheetHrefs } from '#/shared/ui/application-style-sheets.ts';
+import { JournalValidationError } from '../errors/journal-errors.ts';
 import { exportFileName } from '../export-archive.ts';
 import type { ExportGrouping } from '../export-period.ts';
 import { decodeExportFormData } from '../schemas/export-input.ts';
@@ -9,15 +9,6 @@ import { exportDownloadResponse } from './download-response.ts';
 
 export const invalidExportRequestMessage =
   'The export request was not valid. Return to the archive and try again.';
-
-const invalidRequestResponse = (): Response =>
-  new Response(invalidExportRequestMessage, {
-    status: 400,
-    headers: {
-      ...privateResponseHeaders,
-      'content-type': 'text/plain; charset=utf-8',
-    },
-  });
 
 type PrepareExportResponse = (
   request: Request,
@@ -32,8 +23,12 @@ export const exportJournalResponseWith = async (
   let grouping: ExportGrouping;
   try {
     ({ grouping } = decodeExportFormData(await request.formData()));
-  } catch {
-    return invalidRequestResponse();
+  } catch (cause) {
+    // biome-ignore lint/style/useErrorCause: Effect tagged errors carry causes in their typed payload.
+    throw new JournalValidationError({
+      message: invalidExportRequestMessage,
+      cause,
+    });
   }
   return prepare(request, grouping);
 };
