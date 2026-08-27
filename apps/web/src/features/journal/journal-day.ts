@@ -49,6 +49,13 @@ export const formatJournalDate = ({
   return `${pad(year, yearDigits)}-${pad(month, monthAndDayDigits)}-${pad(day, monthAndDayDigits)}`;
 };
 
+/** The first day representable by the journal and its PostgreSQL DATE key. */
+export const earliestJournalDate = formatJournalDate({
+  year: firstJournalYear,
+  month: 1,
+  day: 1,
+});
+
 /** `setUTCFullYear` preserves years below 0100 instead of adding 1900. */
 const daysInMonth = (year: number, month: number): number => {
   const lastDay = new Date(0);

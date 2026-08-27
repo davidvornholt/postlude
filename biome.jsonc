@@ -186,6 +186,35 @@
       }
     },
     {
+      // TanStack Router spells a dynamic path segment as `$name` in the file
+      // name, so the route serving `/day/2026-08-25` can only be called
+      // `day.$date.tsx`. The `$` is the framework's routing syntax.
+      "includes": ["apps/web/src/routes/**/*.$*.tsx"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useFilenamingConvention": "off"
+          }
+        }
+      }
+    },
+    {
+      // The written page's classes dress elements no source file writes: the
+      // markdown editor creates the heading, the list and the quote at run
+      // time, and the class reaches them through a `proseClass` prop and
+      // Tiptap's `editorProps.attributes.class` object rather than as a JSX
+      // `className` literal. noUnusedClasses only sees literals, so it reports
+      // every selector in this file as dead.
+      "includes": ["apps/web/src/styles.css"],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noUnusedClasses": "off"
+          }
+        }
+      }
+    },
+    {
       // The theme contract test runs under `bun test` and loads the CSS
       // fixture through the runtime's `Bun.file` API.
       "includes": ["packages/ui/src/*.test.ts"],

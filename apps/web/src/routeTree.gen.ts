@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppArchiveRouteImport } from './routes/_app/archive'
 import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
+import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const AppRoute = AppRouteImport.update({
@@ -40,6 +41,11 @@ const ApiHealthzRoute = ApiHealthzRouteImport.update({
   path: '/api/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppDayDateRoute = AppDayDateRouteImport.update({
+  id: '/day/$date',
+  path: '/day/$date',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
+  '/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
@@ -58,6 +65,7 @@ export interface FileRoutesByTo {
   '/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/': typeof AppIndexRoute
+  '/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
@@ -67,13 +75,16 @@ export interface FileRoutesById {
   '/_app/archive': typeof AppArchiveRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/_app/': typeof AppIndexRoute
+  '/_app/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/archive' | '/api/healthz' | '/api/auth/$'
+  fullPaths:
+    '/' | '/login' | '/archive' | '/api/healthz' | '/day/$date' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/archive' | '/api/healthz' | '/' | '/api/auth/$'
+  to:
+    '/login' | '/archive' | '/api/healthz' | '/' | '/day/$date' | '/api/auth/$'
   id:
     | '__root__'
     | '/_app'
@@ -81,6 +92,7 @@ export interface FileRouteTypes {
     | '/_app/archive'
     | '/api/healthz'
     | '/_app/'
+    | '/_app/day/$date'
     | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
@@ -128,6 +140,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/day/$date': {
+      id: '/_app/day/$date'
+      path: '/day/$date'
+      fullPath: '/day/$date'
+      preLoaderRoute: typeof AppDayDateRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -141,11 +160,13 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppArchiveRoute: typeof AppArchiveRoute
   AppIndexRoute: typeof AppIndexRoute
+  AppDayDateRoute: typeof AppDayDateRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppArchiveRoute: AppArchiveRoute,
   AppIndexRoute: AppIndexRoute,
+  AppDayDateRoute: AppDayDateRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

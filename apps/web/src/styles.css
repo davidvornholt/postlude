@@ -6,3 +6,163 @@ body {
   color: var(--pl-ink);
   font-family: var(--font-sans);
 }
+
+/*
+ * The written page.
+ *
+ * Markdown is typed and rendered in place, so what the writer sees is the
+ * finished setting rather than a preview of one. That means these rules dress
+ * elements nothing in the source names: the editor produces the heading, the
+ * list, the quote, and there is no component to hang a utility on.
+ *
+ * Structure here is rules and type, as everywhere else in Postlude — a quote
+ * and a code block are a hairline down the left, not a filled box. The two
+ * colors that vary between the page and the deep register are the only ones
+ * these rules name, and they are named as custom properties so the register
+ * re-points them for its whole subtree rather than restating the block.
+ */
+@layer components {
+  .journal-prose {
+    --journal-rule: var(--pl-border);
+    --journal-quiet: var(--pl-ink-muted);
+    --journal-prompt: var(--pl-ink-faint);
+
+    hyphens: auto;
+  }
+
+  .journal-prose-deep {
+    --journal-rule: var(--pl-deep-rule);
+    --journal-quiet: var(--pl-deep-ink-muted);
+    --journal-prompt: var(--pl-deep-ink-muted);
+  }
+
+  /*
+   * The area a day is written in.
+   *
+   * Everything else on this page is type on a ground, so an empty writing area
+   * is indistinguishable from the space around it and there is nothing to say
+   * that clicking it does anything. It gets the rule a paper form puts under
+   * the line you are meant to write on, and the rule follows the words down as
+   * the entry grows, so it is always the foot of the writing rather than a box
+   * drawn around it. Under a pointer the rule strengthens, which is the same
+   * move both controls make.
+   */
+  .journal-writing {
+    border-bottom: 1px solid var(--journal-rule);
+    padding-bottom: 1.5rem;
+    cursor: text;
+    transition: border-color 150ms var(--ease-standard);
+  }
+
+  .journal-writing:hover {
+    border-bottom-color: var(--journal-quiet);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .journal-writing {
+      transition: none;
+    }
+  }
+
+  .journal-prose > * + * {
+    margin-top: 1em;
+  }
+
+  .journal-prose :is(h3, h4, h5, h6) {
+    font-family: var(--pl-font-display);
+    line-height: 1.2;
+  }
+
+  .journal-prose :is(h3, h4, h5, h6):not(:first-child) {
+    margin-top: 1.6em;
+  }
+
+  .journal-prose h3 {
+    font-size: 1.6em;
+  }
+
+  .journal-prose h4 {
+    font-size: 1.35em;
+  }
+
+  .journal-prose h5 {
+    font-size: 1.15em;
+  }
+
+  .journal-prose h6 {
+    font-size: 1em;
+    font-weight: 600;
+  }
+
+  .journal-prose :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+
+  .journal-prose ul {
+    list-style: disc;
+  }
+
+  .journal-prose ol {
+    list-style: decimal;
+  }
+
+  /* The bullet takes the ink color rather than the quiet one: `::marker` is not
+     Baseline-listed at any level, and a shade on a bullet is not worth a lint
+     exception. */
+  .journal-prose li + li {
+    margin-top: 0.35em;
+  }
+
+  .journal-prose blockquote {
+    border-left: 1px solid var(--journal-rule);
+    padding-left: 1.1em;
+    font-style: italic;
+  }
+
+  .journal-prose hr {
+    margin-block: 2em;
+    border: 0;
+    border-top: 1px solid var(--journal-rule);
+  }
+
+  .journal-prose :is(code, pre) {
+    font-family: var(--pl-font-mono);
+    font-size: 0.9em;
+  }
+
+  .journal-prose pre {
+    overflow-x: auto;
+    border-left: 1px solid var(--journal-rule);
+    padding-left: 1.1em;
+  }
+
+  /* A link is underlined rather than colored: color is the welcome here, never
+     the structure, and an underline works on the parchment and on the deep
+     ground without a second token. */
+  .journal-prose a {
+    padding-block: 0.25em;
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+
+  .journal-prose strong {
+    font-weight: 600;
+  }
+
+  .journal-prose em {
+    font-style: italic;
+  }
+
+  /* The prompt on an untouched page. It floats out of the flow so the caret
+     sits where the first word will, rather than after the prompt. It is set in
+     italic and a step fainter than the writing, because the one thing it must
+     never be mistaken for is a line the writer already put there. */
+  .journal-prose p.is-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    color: var(--journal-prompt);
+    font-style: italic;
+    pointer-events: none;
+  }
+}

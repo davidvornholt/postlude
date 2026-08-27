@@ -19,11 +19,15 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
+import { loadAfterConfirmedRevision } from '../confirmed-revisions.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
+import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
+  type EntryDraft,
   EntryDraftSchema,
   emptyJournalEntry,
   type JournalEntry,
+  type SaveConfirmation,
 } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { runJournalEffect } from './journal-runtime.ts';
@@ -36,38 +40,77 @@ export const currentJournalDate = (): JournalDate =>
 const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
 
 /**
+ * A day's page: the entry, and what the server's clock calls today.
+ *
+ * Today comes back with the entry rather than being asked for separately,
+ * because every page needs both and the two have to agree. A page that read
+ * the day from the browser could offer to write a day the server would refuse,
+ * or call yesterday "today" for a reader who has travelled.
+ */
+export type JournalDayView = {
+  readonly entry: JournalEntry;
+  readonly today: JournalDate;
+};
+
+/**
  * One day, blank when it has never been written. The date is optional: with
  * none, the server decides today from its own clock rather than believing a
  * client's, which is what keeps "today" the same page on every device.
  */
-export const readEntryFn = createServerFn({ method: 'GET' })
+export const readJournalDayFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
-  .inputValidator((input: unknown) => decodeReadEntryInput(input))
-  .handler(({ data }): Promise<JournalEntry> => {
-    const date = data.date ?? currentJournalDate();
+  .validator((input: unknown) => decodeReadEntryInput(input ?? {}))
+  .handler(({ data }): Promise<JournalDayView> => {
+    const today = currentJournalDate();
+    const date = data.date ?? today;
     return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const entry = yield* entries.read(date);
-        return entry ?? emptyJournalEntry(date);
+        return { entry: entry ?? emptyJournalEntry(date), today };
       }),
     );
   });
 
 /**
- * Saves a day and hands back what the table now holds, counts included. The
- * counts come back rather than being computed twice, so what the writer is
- * shown is what the archive will bucket the day by.
+ * The route-facing read repeats a snapshot that started before this browser's
+ * last confirmed save. Each repeat reaches the same primary database after the
+ * save response arrived, so it must include that revision.
+ */
+export const readJournalDay = (input?: {
+  readonly data: { readonly date: JournalDate };
+}): Promise<JournalDayView> =>
+  loadAfterConfirmedRevision(() =>
+    input === undefined ? readJournalDayFn() : readJournalDayFn(input),
+  );
+
+/**
+ * Saves a day and returns the database-issued revision of that write. The
+ * client uses it to reject a stale loader snapshot after navigating away and
+ * back while a save completes.
  */
 export const saveEntryFn = createServerFn({ method: 'POST' })
   .middleware([sessionRequired])
-  .inputValidator((input: unknown) => decodeDraft(input))
+  .validator((input: unknown) => decodeDraft(input))
   .handler(
-    ({ data }): Promise<JournalEntry> =>
+    ({ data }): Promise<SaveConfirmation> =>
       runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntryRepository;
-          return yield* entries.save(data);
+          const entry = yield* entries.save(data);
+          return { revision: entry.revision };
         }),
       ),
   );
+
+/**
+ * The same save, as the plain call the writing page takes. A server function is
+ * invoked as `fn({ data })` rather than as `fn(draft)`, and the page should not
+ * have to know that — it holds a draft and wants it written.
+ */
+export const saveDraft = async (
+  draft: EntryDraft,
+): Promise<SaveConfirmation> => {
+  const result: unknown = await saveEntryFn({ data: draft });
+  return decodeSaveConfirmation(result);
+};
