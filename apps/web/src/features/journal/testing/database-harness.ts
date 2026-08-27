@@ -1,11 +1,10 @@
 /**
  * One database, one pool, one Effect runtime, for whichever test file asks.
  *
- * The journal has two services over the same table — the repository that reads
- * and writes a day, and the search that reads the index — and each has its own
- * test file next to it. Both need the same setup: create and migrate the test
- * database, open a pool, build a runtime over it, and roll every test body back
- * so the journal is left exactly as it was found.
+ * The journal's database-backed services have their own colocated tests. They
+ * share the same setup: create and migrate the test database, open a pool,
+ * build a runtime over it, and roll every test body back so the journal is left
+ * exactly as it was found.
  *
  * That setup is a function a test file calls rather than a module that installs
  * itself on import. Bun caches a module across the files that import it, so

@@ -65,7 +65,7 @@ Both editors render safe semantic Markdown on the server and hand over to Tiptap
 
 The repository's own tests run against a real Postgres, since whether an upsert replaces a row and whether a DATE column survives the round trip are properties of the database rather than of the code. `src/shared/testing/test-database.ts` creates the configured database with `_test` appended, applies the same generated and application migrations the app deploys, and rolls every ordinary test body back, so the journal you write in is never touched. The migration upgrade test uses and removes its own isolated database because migration commits cannot live inside that rollback. `DATABASE_URL` must be present: a database test that silently skips is a gate that silently does not hold.
 
-`src/features/journal/testing/database-harness.ts` is what a test file calls to get that: one pool, one migrated database and one Effect runtime holding both journal services. It is a function rather than a module that installs itself on import, because Bun caches a module across the files that import it, so hooks registered at import time would attach to whichever file loaded it first and to no other.
+`src/features/journal/testing/database-harness.ts` is what a test file calls to get that: one pool, one migrated database and one Effect runtime holding the journal's database-backed services. It is a function rather than a module that installs itself on import, because Bun caches a module across the files that import it, so hooks registered at import time would attach to whichever file loaded it first and to no other.
 
 ## The archive
 
