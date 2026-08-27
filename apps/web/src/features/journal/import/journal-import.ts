@@ -101,12 +101,12 @@ export const importJournalRecords = (
         const pending = records.filter(
           (record) => !existingByDate.has(record.date),
         );
-        await Promise.all(
-          pending.map((record) => {
-            const { document, journalWordCount, scriptureWordCount } =
-              derivedImportFieldsOf(record);
-            return client.query(
-              `insert into entry (
+        for (const record of pending) {
+          const { document, journalWordCount, scriptureWordCount } =
+            derivedImportFieldsOf(record);
+          // biome-ignore lint/performance/noAwaitInLoops: A checked-out pg client accepts only one active query.
+          await client.query(
+            `insert into entry (
                entry_date,
                journal_markdown,
                journal_word_count,
@@ -132,24 +132,23 @@ export const importJournalRecords = (
                $6::text, $7::integer, $8::integer, $9::integer,
                1, $10::text, $11::text, $12::text, $13::text, 1
              )`,
-              [
-                record.date,
-                record.journalMarkdown,
-                journalWordCount,
-                record.scriptureMarkdown,
-                scriptureWordCount,
-                record.scriptureReference?.book ?? null,
-                record.scriptureReference?.chapter ?? null,
-                record.scriptureReference?.verseStart ?? null,
-                record.scriptureReference?.verseEnd ?? null,
-                document.journalText,
-                document.scriptureText,
-                document.scriptureReferenceText,
-                document.searchTokenText,
-              ],
-            );
-          }),
-        );
+            [
+              record.date,
+              record.journalMarkdown,
+              journalWordCount,
+              record.scriptureMarkdown,
+              scriptureWordCount,
+              record.scriptureReference?.book ?? null,
+              record.scriptureReference?.chapter ?? null,
+              record.scriptureReference?.verseStart ?? null,
+              record.scriptureReference?.verseEnd ?? null,
+              document.journalText,
+              document.scriptureText,
+              document.scriptureReferenceText,
+              document.searchTokenText,
+            ],
+          );
+        }
         await client.query('commit');
         return { inserted: pending.length, unchanged: existing.rows.length };
       } catch (error) {
