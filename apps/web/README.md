@@ -133,6 +133,10 @@ Everything except `PORT` is validated by `src/shared/env.ts`, which parses the w
 
 `scripts/serve.ts` then proves the process can serve a page. Before it listens, it sends two in-process requests through the same handler the network would reach: first `/api/healthz`, the liveness route, which touches neither database nor OAuth, and then `/login`, a real page, which exercises the router, the React render, and the document shell that the liveness route never reaches. The sign-in page needs no database of its own — a session lookup that fails counts as signed out — so a healthy process answers 200 to both. Anything else exits non-zero with a message naming the route and what it did, including a handler that has not answered within 10 seconds. A process that stays up while it cannot render a page would otherwise report itself healthy to a container healthcheck; a hung one would neither listen nor exit.
 
+### Legacy journal import
+
+`bun run import:journals --obsidian-dir <dir> --anytype-dir <dir>` is an operator-only, one-time import for the original Obsidian and Anytype journals. Add `--dry-run` to parse and validate without opening Postgres. It requires the known 676-entry source inventory, gathers every source error before refusing the run, inserts new dates in one transaction, treats an exact rerun as unchanged, and refuses any date whose existing content differs. Attachment references remain literal Markdown because Postlude has no attachment storage or serving contract.
+
 `PORT` is read only by `scripts/serve.ts`; the dev server takes its port from the `dev` script. It must be plain digits with no leading zero, between 1 and 65535. An empty or whitespace-only value counts as unset and means 3000; anything else — `0x1f5`, `1e3`, `0080`, `65536`, `abc` — fails the boot before the server loads anything else. `.env.a11y` sets 3100 so the accessibility scan stays clear of local listeners on 3000.
 
 ## Accessibility
