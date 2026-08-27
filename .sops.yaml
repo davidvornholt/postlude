@@ -13,7 +13,7 @@ keys:
 
   # Dedicated PR preview environment recipient. Its private identity can
   # decrypt only the restricted preview deploy key.
-  - &github_actions_pr_preview age1glzqvx34ad2hey6eym0clxx9a3ha0jkyln6j2qfm7eawt9sj995qqgeqxp
+  - &github_actions_pr_preview age1vd3q5a9sftvhzpjppnvrl66n5n8da0s7wq8z7nfvrez7lgujy90s2sekut
 
 creation_rules:
   - path_regex: secrets/dev\.yaml$
