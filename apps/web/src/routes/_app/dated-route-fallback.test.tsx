@@ -11,30 +11,44 @@ import {
 import { renderToString } from 'react-dom/server';
 
 import { elementContent } from '#/shared/testing/rendered-html.ts';
+import {
+  isIsolatedBunTestProcess,
+  runIsolatedBunTest,
+} from '#/shared/testing/isolated-bun-test.ts';
 import { RouterError, RouterNotFound } from '#/shared/ui/router-fallbacks.tsx';
+
+const isFallbackProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 
 type ReadOutcome = 'future' | 'failure';
 
 let outcome: ReadOutcome = 'future';
 let reads = 0;
 
-mock.module('#/features/journal/services/journal-fns.ts', () => ({
-  readDatedJournalDay: () => {
-    reads += 1;
-    return outcome === 'future'
-      ? Promise.resolve({ disposition: 'future' as const })
-      : Promise.reject(new Error('The database is unavailable.'));
-  },
-  saveDraft: () => Promise.reject(new Error('This route test does not save.')),
-}));
+if (isFallbackProbeProcess) {
+  mock.module('#/features/journal/services/journal-fns.ts', () => ({
+    readDatedJournalDay: () => {
+      reads += 1;
+      return outcome === 'future'
+        ? Promise.resolve({ disposition: 'future' as const })
+        : Promise.reject(new Error('The database is unavailable.'));
+    },
+    saveDraft: () =>
+      Promise.reject(new Error('This route test does not save.')),
+  }));
+}
 
 beforeEach(() => {
+  if (!isFallbackProbeProcess) {
+    return;
+  }
   outcome = 'future';
   reads = 0;
 });
 
 afterAll(() => {
-  mock.restore();
+  if (isFallbackProbeProcess) {
+    mock.restore();
+  }
 });
 
 const { Route: sourceRoute } = await import('./day.$date.tsx');
@@ -88,27 +102,37 @@ const renderAt = async (path: string): Promise<string> => {
   return renderToString(<RouterProvider router={router} />);
 };
 
-it('server-renders missing-page heading and metadata for a malformed date', async () => {
+const fallbackTests = () => {
+  it('server-renders missing-page heading and metadata for a malformed date', async () => {
   const html = await renderAt('/day/not-a-date');
 
   expect(elementContent(html, 'h1')).toContain('Page not found');
   expect(elementContent(html, 'title')).toBe('Page not found · Postlude');
   expect(reads).toBe(0);
-});
+  });
 
-it('server-renders missing-page heading and metadata for a future date', async () => {
+  it('server-renders missing-page heading and metadata for a future date', async () => {
   const html = await renderAt('/day/2026-08-27');
 
   expect(elementContent(html, 'h1')).toContain('Page not found');
   expect(elementContent(html, 'title')).toBe('Page not found · Postlude');
   expect(reads).toBe(1);
-});
+  });
 
-it('keeps an operational failure out of missing-page metadata', async () => {
+  it('keeps an operational failure out of missing-page metadata', async () => {
   outcome = 'failure';
   const html = await renderAt('/day/2026-08-25');
 
   expect(elementContent(html, 'h1')).toContain('Something went wrong');
   expect(elementContent(html, 'title')).toBe('Journal unavailable · Postlude');
   expect(reads).toBe(1);
-});
+  });
+};
+
+if (isFallbackProbeProcess) {
+  fallbackTests();
+} else {
+  it('runs dated fallback module mocks in an isolated process', () => {
+    runIsolatedBunTest(import.meta.path, import.meta.dir);
+  });
+}

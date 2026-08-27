@@ -15,6 +15,7 @@ const authenticationMessage =
   'Your sign-in ended before this entry could be saved. Your words are kept in this tab.';
 
 const colorSchemes = ['light', 'dark'] as const;
+const dayFieldName = 'Wednesday, August 26, 2026. Go to another day.';
 for (const colorScheme of colorSchemes) {
   test(`the hydrated writing page works by keyboard in ${colorScheme} mode`, async ({
     page,

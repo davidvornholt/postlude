@@ -79,7 +79,22 @@ export const readTodayJournalDay = () =>
 
 export const readDatedJournalDay = (input: {
   readonly data: { readonly date: JournalDate };
-}) => loadAfterConfirmedRevision(() => readDatedJournalDayFn(input));
+}) =>
+  readDatedJournalDayFn(input).then(async (initial) => {
+    if (initial.disposition !== 'readable') {
+      return initial;
+    }
+    let first: typeof initial | undefined = initial;
+    const view = await loadAfterConfirmedRevision(async () => {
+      const result = first ?? (await readDatedJournalDayFn(input));
+      first = undefined;
+      if (result.disposition !== 'readable') {
+        throw new Error('The requested journal day changed classification.');
+      }
+      return result.view;
+    });
+    return { disposition: 'readable' as const, view };
+  });
 
 /**
  * Saves a day and returns the database-issued revision of that write. The

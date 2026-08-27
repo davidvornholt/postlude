@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 
-import { decodeReadEntryInput } from './read-entry-input.ts';
+import { decodeReadDatedEntryInput } from './read-entry-input.ts';
 
-describe('readEntryFn input', () => {
-  it('accepts an omitted or valid journal date', () => {
-    expect(decodeReadEntryInput({})).toEqual({});
-    expect(decodeReadEntryInput({ date: '2026-08-26' })).toEqual({
+describe('dated journal read input', () => {
+  it('accepts a valid named journal date', () => {
+    expect(decodeReadDatedEntryInput({ date: '2026-08-26' })).toEqual({
       date: '2026-08-26',
     });
   });
@@ -19,7 +18,8 @@ describe('readEntryFn input', () => {
     ];
 
     for (const date of invalidDates) {
-      expect(() => decodeReadEntryInput({ date })).toThrow();
+      expect(() => decodeReadDatedEntryInput({ date })).toThrow();
     }
+    expect(() => decodeReadDatedEntryInput({})).toThrow();
   });
 });

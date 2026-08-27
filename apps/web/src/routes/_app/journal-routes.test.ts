@@ -2,6 +2,12 @@ import { afterAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { isNotFound, isRedirect } from '@tanstack/react-router';
 
 import type { JournalEntry } from '#/features/journal/schemas/entry.ts';
+import {
+  isIsolatedBunTestProcess,
+  runIsolatedBunTest,
+} from '#/shared/testing/isolated-bun-test.ts';
+
+const isRouteProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 
 type JournalDay = {
   readonly entry: JournalEntry;
@@ -29,23 +35,28 @@ let datedDisposition: 'readable' | 'today' | 'future' = 'readable';
 let datedReadInputs: ReadonlyArray<unknown> = [];
 let todayReadCount = 0;
 
-mock.module('#/features/journal/services/journal-fns.ts', () => ({
-  readDatedJournalDay: (input: unknown) => {
-    datedReadInputs = [...datedReadInputs, input];
-    return Promise.resolve(
-      datedDisposition === 'readable'
-        ? { disposition: 'readable', view: loadedDay }
-        : { disposition: datedDisposition },
-    );
-  },
-  readTodayJournalDay: () => {
-    todayReadCount += 1;
-    return Promise.resolve(loadedDay);
-  },
-  saveDraft: () => Promise.reject(new Error('A route test does not save.')),
-}));
+if (isRouteProbeProcess) {
+  mock.module('#/features/journal/services/journal-fns.ts', () => ({
+    readDatedJournalDay: (input: unknown) => {
+      datedReadInputs = [...datedReadInputs, input];
+      return Promise.resolve(
+        datedDisposition === 'readable'
+          ? { disposition: 'readable', view: loadedDay }
+          : { disposition: datedDisposition },
+      );
+    },
+    readTodayJournalDay: () => {
+      todayReadCount += 1;
+      return Promise.resolve(loadedDay);
+    },
+    saveDraft: () => Promise.reject(new Error('A route test does not save.')),
+  }));
+}
 
 beforeEach(() => {
+  if (!isRouteProbeProcess) {
+    return;
+  }
   loadedDay = { entry: entryOn(today), today, anniversaries: [] };
   datedDisposition = 'readable';
   datedReadInputs = [];
@@ -53,7 +64,9 @@ beforeEach(() => {
 });
 
 afterAll(() => {
-  mock.restore();
+  if (isRouteProbeProcess) {
+    mock.restore();
+  }
 });
 
 const { Route: dayRoute } = await import('./day.$date.tsx');
@@ -100,7 +113,8 @@ const captureRejected = async (run: () => Promise<unknown>): Promise<unknown> =>
     (error: unknown) => error,
   );
 
-describe('dated journal route', () => {
+const datedRouteTests = () =>
+  describe('dated journal route', () => {
   it('rejects malformed and impossible dates before loading', () => {
     const errors = ['not-a-date', '0000-01-01', '2026-02-30'].map((date) =>
       captureThrown(() => parseDay({ date })),
@@ -130,7 +144,9 @@ describe('dated journal route', () => {
     await expect(loadDay(past)).resolves.toEqual(loadedDay);
     expect(datedReadInputs).toEqual([{ data: { date: past } }]);
     type HeadInput = Parameters<typeof dayHead>[0];
-    const metadata = await dayHead({ loaderData: loadedDay } as HeadInput);
+    const metadata = await dayHead({
+      loaderData: loadedDay,
+    } as unknown as HeadInput);
     expect(metadata.meta).toContainEqual({
       title: 'Tuesday, August 25, 2026 · Postlude',
     });
@@ -162,9 +178,10 @@ describe('dated journal route', () => {
       title: 'Journal unavailable · Postlude',
     });
   });
-});
+  });
 
-describe('journal index route', () => {
+const indexRouteTests = () =>
+  describe('journal index route', () => {
   it('loads the day selected by the server and keeps Today metadata', async () => {
     type LoaderInput = NonNullable<Parameters<typeof indexLoader>[0]>;
 
@@ -172,7 +189,18 @@ describe('journal index route', () => {
     expect(todayReadCount).toBe(1);
     expect(datedReadInputs).toEqual([]);
     type HeadInput = Parameters<typeof indexHead>[0];
-    const metadata = await indexHead({ loaderData: loadedDay } as HeadInput);
+    const metadata = await indexHead({
+      loaderData: loadedDay,
+    } as unknown as HeadInput);
     expect(metadata.meta).toContainEqual({ title: 'Today · Postlude' });
   });
-});
+  });
+
+if (isRouteProbeProcess) {
+  datedRouteTests();
+  indexRouteTests();
+} else {
+  it('runs journal route module mocks in an isolated process', () => {
+    runIsolatedBunTest(import.meta.path, import.meta.dir);
+  });
+}
