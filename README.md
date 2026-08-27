@@ -18,11 +18,16 @@ A calm, single-user journaling app for closing out the day. Each journal day run
 
 ## Configuration and secrets
 
-Non-secret dev config lives in `config/dev.yaml`; secrets in SOPS-encrypted
-`secrets/dev.yaml` / `secrets/ci.yaml` (shapes mirrored in
-`secrets/*.example.yaml`, edited via `just secrets edit dev`). Generate local
-env files with `just dev-env-generate`.
+Non-secret dev config lives in `config/dev.yaml`; secrets in SOPS-encrypted `secrets/dev.yaml` and `secrets/ci.yaml` (shapes mirrored in `secrets/*.example.yaml`, edited via `just secrets edit dev`). Generate local env files with `just dev-env-generate`.
+
+`secrets/pr-preview.yaml` contains only the forced-command SSH key used by the protected `pr-preview` GitHub environment. Its dedicated age identity cannot decrypt development, CI, or production credentials.
 
 ## Container release
 
 Every push to `main` is published as `ghcr.io/davidvornholt/postlude:main` only after the Standards gate succeeds for that exact commit and the commit is still current `main`. A completed-run follow-up announces the immutable image digest to personal-infra, which owns promotion and deployment. The deploy host runs `bun run db:migrate:deploy` from `/app/apps/web` before starting the server.
+
+## Pull request previews
+
+A same-repository, non-draft pull request to `main` gets a preview after it receives the `pr-preview` label and passes the full gate, two migration runs, container boot, and `/api/healthz`. The untrusted pull request job has `contents: read` only and uploads a bounded image artifact. A trusted completed-run workflow rechecks the exact head, current pull request state, current main-owned workflow files, and an independent Standards run before it publishes an immutable preview digest.
+
+personal-infra owns the isolated runtime at `https://<number>.pr.postlude.vornholt.online`. The source workflow can send only `deploy` or `destroy` through a dedicated forced SSH key. Closing the pull request, converting it to draft, removing the label, retargeting it away from `main`, or failing its current build removes the preview. Publication, deployment, and public health failures also request idempotent teardown.
