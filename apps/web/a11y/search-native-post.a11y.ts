@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { mountNativeSearch } from './search-page-test-support.ts';
 
-const resultLink = /Sunday,? 1 March 2026/u;
+const resultLink = /Sunday, March 1, 2026/u;
 
 for (const outcome of ['populated', 'error'] as const) {
   test(`a no-JavaScript ${outcome} POST keeps the query out of the response URL`, async ({

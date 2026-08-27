@@ -24,6 +24,7 @@ const currentNamedYear = 2026;
 const maximumWindowWeeks = 53;
 const longDay = 400;
 const shortDay = 100;
+const groupedWords = 1000;
 
 const window2025 = activityWindow(today, namedYear);
 const cells2025 = activityCells(
@@ -143,7 +144,7 @@ it('uses singular counts in the activity image description', () => {
 
 it('groups counts in the activity image description', () => {
   const cells = activityCells(
-    [day(today, 1000)],
+    [day(today, groupedWords)],
     { from: today, to: today },
     today,
   );

@@ -38,19 +38,19 @@ test('Previous and Next move focus with the real client page', async ({
   await expectDay(
     page,
     '/day/2026-08-24',
-    'Monday, 24 August 2026 · Postlude',
-    'Monday, 24 August 2026',
+    'Monday, August 24, 2026 · Postlude',
+    'Monday, August 24, 2026',
   );
 
   await followDayLink(page, 'Next day');
   await expectDay(
     page,
     '/day/2026-08-25',
-    'Tuesday, 25 August 2026 · Postlude',
-    'Tuesday, 25 August 2026',
+    'Tuesday, August 25, 2026 · Postlude',
+    'Tuesday, August 25, 2026',
   );
 
   await followDayLink(page, 'Next day');
-  await expectDay(page, '/', 'Today · Postlude', 'Wednesday, 26 August 2026');
+  await expectDay(page, '/', 'Today · Postlude', 'Wednesday, August 26, 2026');
   await scan(page);
 });
