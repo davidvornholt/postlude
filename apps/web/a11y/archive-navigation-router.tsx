@@ -38,6 +38,7 @@ export const emptyArchiveView = (
   config: ArchiveNavigationFixtureConfig,
 ): ArchiveView => ({
   today: config.today,
+  exportAvailable: false,
   window: activityWindow(config.today),
   days: [],
   years: [],

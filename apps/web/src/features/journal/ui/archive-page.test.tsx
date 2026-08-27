@@ -31,6 +31,7 @@ const dayLinks = /href="\/day\/\d{4}-\d{2}-\d{2}"/gu;
 const currentPage = /aria-current="page"/gu;
 
 const journal = sampleJournal(today, sampleDays, seed);
+
 const filled = await renderInRouter(
   <ArchivePage
     selectedYear={undefined}
@@ -40,6 +41,7 @@ const filled = await renderInRouter(
 
 const emptyView: ArchiveView = {
   today,
+  exportAvailable: false,
   window: activityWindow(today),
   days: [],
   years: [],
@@ -54,10 +56,10 @@ const empty = await renderInRouter(
 
 /*
  * A grid of 371 outlines under two zeroes says nothing except that the writer
- * has not started, so a journal with nothing in it gets a sentence instead.
+ * has not started, so a journal with no activity gets a sentence instead.
  */
 it('says the journal is empty rather than drawing an empty one', () => {
-  expect(empty).toContain('Nothing has been written yet');
+  expect(empty).toContain('No writing activity yet');
   expect(empty).not.toContain('Streaks');
   expect(empty).not.toContain('role="img"');
 });
@@ -68,6 +70,7 @@ it('shows reference-only scripture activity instead of the empty journal', async
       selectedYear={undefined}
       view={{
         ...emptyView,
+        exportAvailable: true,
         days: [
           {
             date: today,
@@ -83,9 +86,10 @@ it('shows reference-only scripture activity instead of the empty journal', async
     />,
   );
 
-  expect(scriptureOnly).not.toContain('Nothing has been written yet');
+  expect(scriptureOnly).not.toContain('No writing activity yet');
   expect(scriptureOnly).toContain('Activity');
   expect(scriptureOnly).toContain('role="img"');
+  expect(scriptureOnly).toContain('Download the journal');
 });
 
 it('uses singular counts in the archive summary', async () => {
@@ -94,6 +98,7 @@ it('uses singular counts in the archive summary', async () => {
       selectedYear={undefined}
       view={{
         ...emptyView,
+        exportAvailable: true,
         days: [
           {
             date: today,
@@ -202,9 +207,6 @@ it('reads back an earlier year and opens the day it came from', async () => {
   expect(withMemory).toContain('Moved the desk under the window.');
   expect(plainText(withMemory)).toContain('1 year ago');
   expect(withMemory).toContain('href="/day/2025-08-26"');
-});
-
-it('leaves out on this day in a journal with no earlier years', () => {
   expect(filled).not.toContain('On this day');
 });
 

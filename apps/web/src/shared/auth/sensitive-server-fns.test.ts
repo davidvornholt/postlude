@@ -91,7 +91,10 @@ const publicRouteHandlers = [
   { path: 'routes/api/healthz.ts', name: 'GET' },
 ];
 
-const privateRouteHandlers = [{ path: 'routes/_app/search.tsx', name: 'POST' }];
+const privateRouteHandlers = [
+  { path: 'routes/_app/archive_.export.ts', name: 'POST' },
+  { path: 'routes/_app/search.tsx', name: 'POST' },
+];
 
 const app = scanModules(
   await Promise.all(

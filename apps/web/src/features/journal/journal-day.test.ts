@@ -5,6 +5,7 @@ import {
   isJournalDate,
   journalDateAt,
   journalDateWeekday,
+  journalDayBoundary,
   shiftJournalDate,
 } from './journal-day.ts';
 
@@ -17,6 +18,14 @@ const friday = 5;
 const utc = (text: string): Date => new Date(`${text}Z`);
 
 describe('journalDateAt', () => {
+  it('owns one structured boundary and its durable clock spelling', () => {
+    expect(journalDayBoundary).toEqual({
+      hour: 4,
+      minute: 0,
+      clockTime: '04:00',
+    });
+  });
+
   it('keeps the small hours with the evening they close out', () => {
     // 01:30 and 03:59 Berlin on the 27th are still the 26th's journal day; the
     // writer has not been to bed.

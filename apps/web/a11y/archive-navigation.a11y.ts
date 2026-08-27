@@ -4,8 +4,8 @@ import { journalWriteMessage } from '../src/features/journal/errors/journal-erro
 import {
   mountArchiveNavigation,
   releaseArchiveRead,
-  scanArchive,
-} from './archive-page-test-support.ts';
+} from './archive-navigation-test-support.ts';
+import { scanArchive } from './archive-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
 

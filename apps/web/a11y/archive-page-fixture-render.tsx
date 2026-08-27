@@ -6,5 +6,9 @@ export const renderArchivePageFixture = (
   config: ArchivePageFixtureConfig,
 ): Promise<string> =>
   renderInRouter(
-    <ArchivePage selectedYear={config.selectedYear} view={config.view} />,
+    <ArchivePage
+      selectedYear={config.selectedYear}
+      settleAutosaves={() => Promise.resolve()}
+      view={config.view}
+    />,
   );

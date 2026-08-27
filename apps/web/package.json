@@ -41,9 +41,11 @@
     "better-auth": "^1.7.1",
     "drizzle-orm": "^0.45.2",
     "effect": "^3.22.1",
+    "fflate": "^0.8.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "tailwindcss": "^4.3.3",
+    "yaml": "^2.9.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

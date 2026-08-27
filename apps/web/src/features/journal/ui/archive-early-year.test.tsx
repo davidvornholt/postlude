@@ -13,6 +13,7 @@ const today = '2026-08-26';
 
 const viewFor = (year: number): ArchiveView => ({
   today,
+  exportAvailable: true,
   window: activityWindow(today, year),
   days: [],
   years: [year],

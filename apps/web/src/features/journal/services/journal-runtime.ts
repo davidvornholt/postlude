@@ -16,14 +16,19 @@
 
 import type { SqlError } from '@effect/sql/SqlError';
 import { pgClientLayer } from '@postlude/db/effect-client';
-import { Cause, Effect, Layer, ManagedRuntime } from 'effect';
+import { Cause, Effect, Layer, ManagedRuntime, Stream } from 'effect';
 
 import { pool } from '#/shared/db/pool.ts';
+import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { EntrySearch } from './entry-search.ts';
 
 const journalLayer = Layer.provide(
-  Layer.mergeAll(EntryRepository.Default, EntrySearch.Default),
+  Layer.mergeAll(
+    EntryRepository.Default,
+    EntrySearch.Default,
+    EntryExport.Default,
+  ),
   Layer.suspend(() => pgClientLayer(pool)),
 );
 
@@ -35,9 +40,11 @@ const journalLayer = Layer.provide(
  * mentioned it.
  */
 type JournalRuntime = ManagedRuntime.ManagedRuntime<
-  EntryRepository | EntrySearch,
+  EntryRepository | EntrySearch | EntryExport,
   SqlError
 >;
+
+type JournalServices = EntryRepository | EntrySearch | EntryExport;
 
 let runtime: JournalRuntime | undefined;
 
@@ -61,7 +68,7 @@ const journalRuntime = (): JournalRuntime => {
  * on success or failure, so that browser contract is sufficient.
  */
 export const runJournalEffect = <A, E>(
-  effect: Effect.Effect<A, E, EntryRepository | EntrySearch>,
+  effect: Effect.Effect<A, E, JournalServices>,
 ): Promise<A> =>
   journalRuntime().runPromise(
     effect.pipe(
@@ -73,3 +80,22 @@ export const runJournalEffect = <A, E>(
       ),
     ),
   );
+
+/**
+ * Gives an Effect stream the journal runtime without ending its scope when the
+ * response is created. The runtime adapter drives one chunk per browser pull
+ * and interrupts the stream fiber when the response body is cancelled.
+ */
+export const journalReadableStream = async <E>(
+  stream: Stream.Stream<Uint8Array, E, JournalServices>,
+): Promise<ReadableStream<Uint8Array>> => {
+  const logged = stream.pipe(
+    Stream.tapErrorCause((cause) =>
+      Effect.logError('A journal stream failed.', cause),
+    ),
+  );
+  return Stream.toReadableStreamRuntime(
+    logged,
+    await journalRuntime().runtime(),
+  );
+};

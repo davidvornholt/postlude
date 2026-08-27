@@ -41,6 +41,7 @@ const save = async (
   revision += 1;
   view = {
     ...view,
+    exportAvailable: true,
     days: [...view.days.filter(({ date }) => date !== day.date), day],
     years: [Number(draft.date.slice(0, isoYearEnd))],
     journalStreak: { current: 1, longest: 1 },

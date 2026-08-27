@@ -2,11 +2,7 @@
 
 > Built on [davidvornholt/standards](https://github.com/davidvornholt/standards).
 
-A calm, single-user journaling app for closing out the day. Journal entries are
-markdown; each journal day (04:00–04:00 local) holds an optional morning
-scripture section and the evening journal prose. Streaks and an activity
-heatmap live on a separate archive page; exports produce one markdown file per
-day, week, month, or year.
+A calm, single-user journaling app for closing out the day. Each journal day runs from 04:00 to 04:00 in the configured time zone and can hold an optional morning scripture section plus evening journal prose. Entries are Markdown. Streaks and an activity heatmap live on a separate archive page. Export downloads a ZIP whose manifest and NDJSON records preserve the journal for re-import, with one Markdown reading copy per day that has recoverable stored content.
 
 - Runtime: TanStack Start + Vite on Bun, deployed as a Podman container on
   personal-infra (`postlude.vornholt.online`).

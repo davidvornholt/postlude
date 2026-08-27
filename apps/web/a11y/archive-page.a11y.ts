@@ -17,7 +17,12 @@ for (const colorScheme of colorSchemes) {
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountArchivePage(page, archiveFixtureConfigs.empty);
-    await expect(page.getByText('Nothing has been written yet')).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Journal activity grid' }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Download the journal' }),
+    ).toHaveCount(0);
     await scanArchive(page);
   });
 

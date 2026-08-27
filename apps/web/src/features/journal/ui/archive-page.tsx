@@ -1,19 +1,21 @@
 /**
  * The archive: how the journal has actually been going.
  *
- * It reads top to bottom as three answers to three different questions. The
- * streaks say how it is going now. The map says how the year went. "On this
- * day" says what the writer was thinking about a year ago, which is the only
- * part of the page that is there to be read rather than measured.
+ * It reads top to bottom as answers to different questions. The streaks say how
+ * it is going now. The map says how the year went. "On this day" says what the
+ * writer was thinking about a year ago, which is the only part of the page that
+ * is there to be read rather than measured. The download at the foot is the one
+ * thing here that is not a reading of the journal at all: it is the way out,
+ * and it sits under the measurements because it belongs to the same question —
+ * what is in here — rather than to the writing.
  *
  * This is the one page that takes the wider measure: a year of days is 53
  * columns and does not fit the text column. The prose inside it still keeps to
  * a readable width of its own rather than running the full 53 columns.
  *
- * A journal with nothing in it gets one sentence instead of four empty
- * sections. Everything on this page is a reading of days that exist, and a
- * grid of 371 outlines under two zeroes says nothing except that the writer has
- * not started.
+ * A journal with no activity gets one sentence instead of three empty reading
+ * sections. Export availability is separate: Markdown structure and whitespace
+ * can still be recoverable source even when they produce no activity year.
  */
 
 import { Link } from '@tanstack/react-router';
@@ -33,6 +35,7 @@ import {
 } from '../activity-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
+import { ExportControl, type SettleAutosaves } from './export-control.tsx';
 import { OnThisDay } from './on-this-day.tsx';
 import { StreakPanel } from './streak-panel.tsx';
 
@@ -103,9 +106,14 @@ type ArchivePageProps = {
   readonly view: ArchiveView;
   /** The year in the address, absent when the map shows the rolling year. */
   readonly selectedYear: number | undefined;
+  readonly settleAutosaves?: SettleAutosaves;
 };
 
-export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
+export const ArchivePage = ({
+  view,
+  selectedYear,
+  settleAutosaves,
+}: ArchivePageProps) => {
   const cells = activityCells(view.days, view.window, view.today);
   const written = view.totals.daysWritten;
   const journalIsEmpty = view.years.length === 0;
@@ -115,8 +123,9 @@ export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
       <h1 className={headingClass}>Archive</h1>
       {journalIsEmpty ? (
         <p className="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">
-          Nothing has been written yet. The streaks, the year of days, and the
-          entries from earlier years all appear here as the journal fills up.
+          No writing activity yet. The streaks, the year of days, and entries
+          from earlier years appear once a day contains prose or a scripture
+          reference.
         </p>
       ) : (
         <>
@@ -151,6 +160,11 @@ export const ArchivePage = ({ view, selectedYear }: ArchivePageProps) => {
           )}
         </>
       )}
+      {view.exportAvailable ? (
+        <Section title="Your own copy">
+          <ExportControl settleAutosaves={settleAutosaves} />
+        </Section>
+      ) : null}
     </div>
   );
 };

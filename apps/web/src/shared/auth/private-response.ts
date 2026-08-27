@@ -1,10 +1,70 @@
 import { Cause, Option, ParseResult, Runtime } from 'effect';
 
+import type { ApplicationStyleSheetHrefs } from '#/shared/ui/application-style-sheets.ts';
+import { columnClass, eyebrowClass } from '#/shared/ui/design-classes.ts';
+import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
+
 export const privateResponseHeaders = {
   'cache-control': 'private, no-store, max-age=0',
   pragma: 'no-cache',
   'x-content-type-options': 'nosniff',
 } as const;
+
+const approvedPrivateResponses = new WeakSet<Response>();
+
+type PrivateHtmlRecovery = {
+  readonly actionHref: string;
+  readonly actionLabel: string;
+  readonly heading: string;
+  readonly message: string;
+  readonly styleSheetHrefs: ApplicationStyleSheetHrefs;
+  readonly title: string;
+};
+
+const escapeHtml = (value: string): string =>
+  value.replaceAll(/[&<>"']/gu, (character) => {
+    switch (character) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      default:
+        return '&#39;';
+    }
+  });
+
+/** Builds the only downstream non-OK response the authenticated boundary trusts. */
+export const privateHtmlRecoveryResponse = ({
+  actionHref,
+  actionLabel,
+  heading,
+  message,
+  styleSheetHrefs,
+  title,
+}: PrivateHtmlRecovery): Response => {
+  const styleSheetLinks = styleSheetHrefs
+    .map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}">`)
+    .join('');
+  const response = new Response(
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(title)}</title>${styleSheetLinks}</head><body><main class="flex min-h-svh flex-col justify-center bg-background py-16"><div class="${columnClass}"><section aria-labelledby="recovery-heading"><p class="${eyebrowClass} text-ink-faint">Postlude</p><h1 class="mt-5 font-display text-4xl text-ink sm:text-5xl" id="recovery-heading">${escapeHtml(heading)}</h1><p class="mt-8 max-w-prose border-border border-t pt-8 text-ink-muted text-lg">${escapeHtml(message)}</p><p class="mt-10"><a autofocus class="${primaryButtonClass}" href="${escapeHtml(actionHref)}">${escapeHtml(actionLabel)}</a></p></section></div></main></body></html>`,
+    {
+      status: 503,
+      headers: {
+        ...privateResponseHeaders,
+        'content-type': 'text/html; charset=utf-8',
+      },
+    },
+  );
+  approvedPrivateResponses.add(response);
+  return response;
+};
+
+export const isApprovedPrivateResponse = (response: Response): boolean =>
+  approvedPrivateResponses.has(response);
 
 export const applyPrivateResponseHeaders = (
   headers: Pick<Headers, 'set'>,
