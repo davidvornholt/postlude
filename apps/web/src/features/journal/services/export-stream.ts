@@ -8,19 +8,46 @@ import {
   manifestFile,
   readmeFile,
 } from '../export-archive.ts';
+import type { ExportMetadata } from '../export-format.ts';
 import { entriesPath, entryRecordLine } from '../export-format.ts';
+import { journalDateAt } from '../journal-day.ts';
+import type { ExportSnapshot } from './entry-export.ts';
 import { EntryExport } from './entry-export.ts';
 import { type StreamingZip, streamingZip } from './streaming-zip.ts';
+
+type ObserveExportContext = (context: ExportContext) => void;
+
+export const exportContextAt = (
+  snapshot: ExportSnapshot,
+  timeZone: string,
+): ExportContext => ({
+  exportedAt: snapshot.exportedAt,
+  journalDate: journalDateAt(new Date(snapshot.exportedAt), timeZone),
+  timeZone,
+});
 
 const writeArchive = (
   zip: StreamingZip,
   exports: EntryExport,
-  context: ExportContext,
+  timeZone: string,
+  observeContext: ObserveExportContext,
 ) => {
-  let metadata = { ...context, entryCount: 0 };
+  let context: ExportContext | undefined;
+  let metadata: ExportMetadata | undefined;
   return exports.visit({
+    onSnapshot: (snapshot) =>
+      Effect.sync(() => {
+        context = exportContextAt(snapshot, timeZone);
+        observeContext(context);
+      }),
     onCount: (entryCount) => {
-      metadata = { ...context, entryCount };
+      const observed = context;
+      if (observed === undefined) {
+        return Effect.dieMessage(
+          'The export snapshot context was not observed.',
+        );
+      }
+      metadata = { ...observed, entryCount };
       return zip.addFile(manifestFile(metadata));
     },
     passes: [
@@ -30,7 +57,11 @@ const writeArchive = (
         after: zip.endFile,
       },
       {
-        before: Effect.suspend(() => zip.addFile(readmeFile(metadata))),
+        before: Effect.suspend(() =>
+          metadata === undefined
+            ? Effect.dieMessage('The export snapshot context was not observed.')
+            : zip.addFile(readmeFile(metadata)),
+        ),
         onEntry: (entry) => zip.addFile(entryFile(entry)),
         after: Effect.void,
       },
@@ -40,13 +71,18 @@ const writeArchive = (
 
 export const exportArchiveStream = (
   exports: EntryExport,
-  context: ExportContext,
-) => streamingZip((zip) => writeArchive(zip, exports, context));
+  timeZone: string,
+  observeContext: ObserveExportContext,
+) =>
+  streamingZip((zip) => writeArchive(zip, exports, timeZone, observeContext));
 
-export const journalExportStream = (context: ExportContext) =>
+export const journalExportStream = (
+  timeZone: string,
+  observeContext: ObserveExportContext,
+) =>
   streamingZip((zip) =>
     Effect.gen(function* () {
       const exports = yield* EntryExport;
-      yield* writeArchive(zip, exports, context);
+      yield* writeArchive(zip, exports, timeZone, observeContext);
     }),
   );

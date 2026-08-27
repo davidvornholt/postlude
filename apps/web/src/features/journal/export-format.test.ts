@@ -10,7 +10,6 @@ import {
   manifestDocument,
   parseEntriesDocument,
   parseManifestDocument,
-  utcTimestamp,
 } from './export-format.ts';
 
 const createdAt = '2026-03-29T00:59:59.123456Z';
@@ -33,7 +32,7 @@ describe('manifestDocument', () => {
   it('pins media, version, IANA zone, 04:00 rule, and six-digit UTC time', () => {
     const manifest = parseManifestDocument(
       manifestDocument({
-        exportedAt: new Date('2026-08-26T20:21:22.123Z'),
+        exportedAt: '2026-08-26T20:21:22.123456Z',
         journalDate: '2026-08-26',
         timeZone: 'Europe/Berlin',
         entryCount: 2,
@@ -43,7 +42,7 @@ describe('manifestDocument', () => {
     expect(manifest).toEqual({
       mediaType: exportManifestMediaType,
       version: exportFormatVersion,
-      exportedAt: '2026-08-26T20:21:22.123000Z',
+      exportedAt: '2026-08-26T20:21:22.123456Z',
       journalDate: '2026-08-26',
       journalDay: { timeZone: 'Europe/Berlin', startsAt: '04:00' },
       entries: {
@@ -57,7 +56,7 @@ describe('manifestDocument', () => {
   it('refuses a zone that cannot define journal days', () => {
     expect(() =>
       manifestDocument({
-        exportedAt: new Date(0),
+        exportedAt: '1970-01-01T00:00:00.000000Z',
         journalDate: '2026-08-26',
         timeZone: 'Not/A_Zone',
         entryCount: 0,
@@ -110,10 +109,4 @@ describe('entriesDocument', () => {
     const invalid = entry({ createdAt: '2026-02-30T12:00:00.000000Z' });
     expect(() => entriesDocument([invalid])).toThrow();
   });
-});
-
-it('spells a JavaScript instant with six fractional UTC digits', () => {
-  expect(utcTimestamp(new Date('2026-01-02T03:04:05.006Z'))).toBe(
-    '2026-01-02T03:04:05.006000Z',
-  );
 });

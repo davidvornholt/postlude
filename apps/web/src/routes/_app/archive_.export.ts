@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { exportJournalResponse } from '#/features/journal/services/export-fns.ts';
+import { exportJournalResponse } from '#/features/journal/services/export-response.ts';
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 
 /** A native POST keeps the private archive out of URLs and browser memory. */

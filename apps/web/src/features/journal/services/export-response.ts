@@ -1,101 +1,33 @@
-export const exportUnavailableMessage =
-  'The journal export could not be prepared. Return to the archive and try again.';
+/** Prepares the journal archive response for the authenticated route POST. */
 
-type ExportResponseOptions = {
-  readonly body: ReadableStream<Uint8Array>;
-  readonly fileName: string;
-  readonly signal: AbortSignal;
-};
-
-const privateHeaders = (): HeadersInit => ({
-  'cache-control': 'private, no-store, max-age=0',
-  pragma: 'no-cache',
-  'x-content-type-options': 'nosniff',
-});
-
-const unavailableResponse = (): Response =>
-  new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Export unavailable</title></head><body><main><h1>Export unavailable</h1><p>${exportUnavailableMessage}</p><p><a href="/archive">Return to the archive</a></p></main></body></html>`,
-    {
-      status: 503,
-      headers: {
-        ...privateHeaders(),
-        'content-type': 'text/html; charset=utf-8',
-      },
-    },
-  );
+import { env } from '#/shared/env.ts';
+import { exportFileName } from '../export-archive.ts';
+import { exportDownloadResponse } from './download-response.ts';
+import { journalExportStream } from './export-stream.ts';
+import { journalReadableStream } from './journal-runtime.ts';
 
 /**
- * Preflights the first ZIP chunk before committing attachment headers. Once
- * they are sent, a later producer failure can only interrupt the browser's
- * download, so its stream error is replaced with the same safe public message.
+ * Prepares a private response only after the first ZIP bytes exist. The route
+ * passes its abort signal through to the Effect stream so closing the request
+ * releases the snapshot transaction and database connection.
  */
-export const exportDownloadResponse = async ({
-  body,
-  fileName,
-  signal,
-}: ExportResponseOptions): Promise<Response> => {
-  const reader = body.getReader();
-  let settled = false;
-  const finish = () => {
-    if (settled) {
-      return;
-    }
-    settled = true;
-    signal.removeEventListener('abort', cancel);
-  };
-  const cancel = () => {
-    if (settled) {
-      return;
-    }
-    finish();
-    reader.cancel(signal.reason).catch(() => undefined);
-  };
-  signal.addEventListener('abort', cancel, { once: true });
-  if (signal.aborted) {
-    cancel();
-  }
-
-  try {
-    const first = await reader.read();
-    if (first.done || settled) {
-      finish();
-      await reader.cancel();
-      return unavailableResponse();
-    }
-
-    const download = new ReadableStream<Uint8Array>({
-      start: (controller) => controller.enqueue(first.value),
-      pull: async (controller) => {
-        try {
-          const next = await reader.read();
-          if (next.done) {
-            finish();
-            controller.close();
-            return;
-          }
-          controller.enqueue(next.value);
-        } catch {
-          finish();
-          controller.error(new Error(exportUnavailableMessage));
-        }
-      },
-      cancel: async (reason) => {
-        finish();
-        await reader.cancel(reason).catch(() => undefined);
-      },
-    });
-
-    return new Response(download, {
-      headers: {
-        ...privateHeaders(),
-        'content-disposition': `attachment; filename="${fileName}"`,
-        'content-type': 'application/zip',
-      },
-    });
-  } catch {
-    finish();
-    await reader.cancel().catch(() => undefined);
-    return unavailableResponse();
-  }
+export const exportJournalResponse = async (
+  signal: AbortSignal,
+): Promise<Response> => {
+  let journalDate: string | undefined;
+  const body = await journalReadableStream(
+    journalExportStream(env.JOURNAL_TIME_ZONE, (context) => {
+      ({ journalDate } = context);
+    }),
+  );
+  return exportDownloadResponse({
+    body,
+    fileName: () => {
+      if (journalDate === undefined) {
+        throw new TypeError('The export journal day was not prepared.');
+      }
+      return exportFileName(journalDate);
+    },
+    signal,
+  });
 };

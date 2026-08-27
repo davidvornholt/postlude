@@ -12,7 +12,7 @@ import type { ExportEntry } from './export-format.ts';
 const timestamp = '2026-03-01T20:00:00.000000Z';
 const frontMatterMarkerLength = 4;
 const context = {
-  exportedAt: new Date('2026-08-26T20:00:00.000Z'),
+  exportedAt: '2026-08-26T20:00:00.000001Z',
   journalDate: '2026-08-26',
   timeZone: 'Europe/Berlin',
 } as const;

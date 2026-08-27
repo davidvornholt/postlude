@@ -92,7 +92,7 @@ export type ExportManifest = Schema.Schema.Type<typeof ExportManifestSchema>;
 export type ExportEntry = Schema.Schema.Type<typeof ExportEntrySchema>;
 
 export type ExportMetadata = {
-  readonly exportedAt: Date;
+  readonly exportedAt: string;
   readonly journalDate: string;
   readonly timeZone: string;
   readonly entryCount: number;
@@ -111,15 +111,11 @@ const decodeExactEntry = Schema.decodeUnknownSync(
 
 const parseJson = (text: string): unknown => JSON.parse(text);
 
-/** A JavaScript instant in the export's fixed microsecond-width UTC spelling. */
-export const utcTimestamp = (instant: Date): string =>
-  `${instant.toISOString().slice(0, -1)}000Z`;
-
 export const manifestDocument = (metadata: ExportMetadata): string => {
   const manifest = decodeManifest({
     mediaType: exportManifestMediaType,
     version: exportFormatVersion,
-    exportedAt: utcTimestamp(metadata.exportedAt),
+    exportedAt: metadata.exportedAt,
     journalDate: metadata.journalDate,
     journalDay: {
       timeZone: metadata.timeZone,

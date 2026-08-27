@@ -10,8 +10,10 @@ import {
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import type { EntryExport, ExportEntry } from './entry-export.ts';
 import { exportArchiveStream } from './export-stream.ts';
+import { ZipStreamError } from './streaming-zip.ts';
 
 const { withJournal } = journalDatabase();
+const microsecondTimestampEnd = /\.\d{6}Z$/u;
 
 const bytesOf = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
   const size = chunks.reduce((total, chunk) => total + chunk.byteLength, 0);
@@ -31,6 +33,7 @@ const collect = (exports: EntryExport, pageSize = 2) =>
     const second: Array<ExportEntry> = [];
     yield* exports.visit(
       {
+        onSnapshot: () => Effect.void,
         onCount: (total) =>
           Effect.sync(() => {
             count = total;
@@ -75,6 +78,27 @@ it('visits meaningful days in ascending keyset pages on every pass', async () =>
   expect(result.count).toBe(expected.length);
   expect(result.first.map(({ date }) => date)).toEqual(expected);
   expect(result.second.map(({ date }) => date)).toEqual(expected);
+});
+
+it('keeps a visitor compression failure tagged in the error channel', async () => {
+  const failure = new ZipStreamError({
+    message: 'The journal export could not be compressed.',
+    cause: new Error('compression failed'),
+  });
+  const observed = await withJournal(({ exports }) =>
+    exports
+      .visit({
+        onSnapshot: () => Effect.void,
+        onCount: () => Effect.fail(failure),
+        passes: [],
+      })
+      .pipe(Effect.flip),
+  );
+
+  expect(observed).toMatchObject({
+    _tag: 'ZipStreamError',
+    message: failure.message,
+  });
 });
 
 it('leaves cleared and never-written rows out but keeps a reference-only day', async () => {
@@ -124,19 +148,29 @@ it('projects stored timestamp provenance as exact UTC microsecond text', async (
   });
 });
 
-it('streams a database snapshot into authoritative and readable ZIP members', async () => {
-  const chunks = await withJournal(({ entries, exports }) =>
+it('streams one exact snapshot instant into every ZIP document', async () => {
+  const result = await withJournal(({ entries, exports }) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-02', 'Second day.'));
       yield* entries.save(draft('2026-03-01', 'First day.'));
-      return yield* exportArchiveStream(exports, {
-        exportedAt: new Date('2026-08-26T20:00:00.000Z'),
-        journalDate: '2026-08-26',
-        timeZone: 'Europe/Berlin',
-      }).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+      let context:
+        | {
+            readonly exportedAt: string;
+            readonly journalDate: string;
+            readonly timeZone: string;
+          }
+        | undefined;
+      const chunks = yield* exportArchiveStream(
+        exports,
+        'Europe/Berlin',
+        (observed) => {
+          context = observed;
+        },
+      ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+      return { chunks, context };
     }),
   );
-  const files = unzipSync(bytesOf(chunks));
+  const files = unzipSync(bytesOf(result.chunks));
   const decoder = new TextDecoder();
   const manifest = parseManifestDocument(
     decoder.decode(files['manifest.json']),
@@ -144,7 +178,16 @@ it('streams a database snapshot into authoritative and readable ZIP members', as
   const exportedEntries = parseEntriesDocument(
     decoder.decode(files['entries.ndjson']),
   );
+  const readme = decoder.decode(files['README.md']);
 
+  const { context } = result;
+  if (context === undefined) {
+    throw new TypeError('The export did not publish its snapshot context.');
+  }
+  expect(manifest.exportedAt).toMatch(microsecondTimestampEnd);
+  expect(manifest.exportedAt).toBe(context.exportedAt);
+  expect(manifest.journalDate).toBe(context.journalDate);
+  expect(readme).toContain(manifest.exportedAt);
   expect(manifest.entries.count).toBe(2);
   expect(exportedEntries.map(({ date }) => date)).toEqual([
     '2026-03-01',

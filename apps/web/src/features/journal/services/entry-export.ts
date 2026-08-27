@@ -1,10 +1,14 @@
 /** A bounded, ordered read of every currently meaningful journal day. */
 
 import { SqlClient } from '@effect/sql';
-import { Effect, Schema } from 'effect';
+import { Effect, Either, Schema } from 'effect';
 
 import { journalReadError } from '../errors/journal-errors.ts';
-import { type ExportEntry, ExportEntrySchema } from '../export-format.ts';
+import {
+  type ExportEntry,
+  ExportEntrySchema,
+  UtcTimestampSchema,
+} from '../export-format.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { EntryFromRow } from '../schemas/entry.ts';
 import { currentMeaningfulEntry } from './entry-content-sql.ts';
@@ -29,6 +33,12 @@ const CountRow = Schema.Struct({
   count: Schema.NumberFromString.pipe(Schema.int(), Schema.nonNegative()),
 });
 
+const SnapshotRow = Schema.Struct({
+  exportedAt: Schema.propertySignature(UtcTimestampSchema).pipe(
+    Schema.fromKey('exported_at'),
+  ),
+});
+
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
 const decodeTimestampRows = Schema.decodeUnknown(
   Schema.Array(TimestampTextRow),
@@ -37,6 +47,7 @@ const decodeCounts = Schema.decodeUnknown(Schema.Array(CountRow));
 const decodeExportEntries = Schema.decodeUnknown(
   Schema.Array(ExportEntrySchema),
 );
+const decodeSnapshotRows = Schema.decodeUnknown(Schema.Array(SnapshotRow));
 
 export type { ExportEntry } from '../export-format.ts';
 
@@ -47,8 +58,13 @@ export type ExportPass<E, R> = {
 };
 
 export type ExportVisitor<E, R> = {
+  readonly onSnapshot: (snapshot: ExportSnapshot) => Effect.Effect<void, E, R>;
   readonly onCount: (count: number) => Effect.Effect<void, E, R>;
   readonly passes: ReadonlyArray<ExportPass<E, R>>;
+};
+
+export type ExportSnapshot = {
+  readonly exportedAt: string;
 };
 
 export const exportPageSize = 32;
@@ -72,12 +88,35 @@ export class EntryExport extends Effect.Service<EntryExport>()(
               ? Effect.fail(new Error('The export count did not come back.'))
               : Effect.succeed(rows[0].count),
           ),
+          Effect.mapError(journalReadError),
+        );
+
+      const readSnapshot = (): Effect.Effect<
+        ExportSnapshot,
+        ReturnType<typeof journalReadError>
+      > =>
+        sql`
+          select to_char(
+            transaction_timestamp() at time zone 'UTC',
+            'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
+          ) as exported_at
+        `.pipe(
+          Effect.flatMap(decodeSnapshotRows),
+          Effect.flatMap((rows) =>
+            rows[0] === undefined
+              ? Effect.fail(new Error('The export instant did not come back.'))
+              : Effect.succeed(rows[0]),
+          ),
+          Effect.mapError(journalReadError),
         );
 
       const pageAfter = (
         after: JournalDate | undefined,
         pageSize: number,
-      ): Effect.Effect<ReadonlyArray<ExportEntry>, unknown> => {
+      ): Effect.Effect<
+        ReadonlyArray<ExportEntry>,
+        ReturnType<typeof journalReadError>
+      > => {
         const afterEntry =
           after === undefined ? sql`` : sql`and entry_date > ${after}`;
         return sql`
@@ -148,16 +187,18 @@ export class EntryExport extends Effect.Service<EntryExport>()(
               }),
             ),
           ),
+          Effect.mapError(journalReadError),
         );
       };
 
       const visit = <E, R>(
         visitor: ExportVisitor<E, R>,
         pageSize = exportPageSize,
-      ): Effect.Effect<void, ReturnType<typeof journalReadError>, R> =>
+      ): Effect.Effect<void, E | ReturnType<typeof journalReadError>, R> =>
         inRepeatableReadSnapshot(
           sql,
           Effect.gen(function* () {
+            yield* visitor.onSnapshot(yield* readSnapshot());
             yield* visitor.onCount(yield* countEntries());
             for (const pass of visitor.passes) {
               yield* pass.before;
@@ -175,8 +216,15 @@ export class EntryExport extends Effect.Service<EntryExport>()(
               }
               yield* pass.after;
             }
-          }),
-        ).pipe(Effect.mapError(journalReadError));
+          }).pipe(Effect.either),
+        ).pipe(
+          Effect.mapError(journalReadError),
+          Effect.flatMap((result) =>
+            Either.isLeft(result)
+              ? Effect.fail(result.left)
+              : Effect.succeed(result.right),
+          ),
+        );
 
       return { visit } as const;
     }),

@@ -3,7 +3,7 @@ import { expect, it } from 'bun:test';
 import {
   exportDownloadResponse,
   exportUnavailableMessage,
-} from './export-response.ts';
+} from './download-response.ts';
 
 const okStatus = 200;
 const unavailableStatus = 503;
@@ -23,7 +23,7 @@ const bodyOf = (...chunks: ReadonlyArray<string>) => {
 it('keeps every streamed chunk and sets private native-download headers', async () => {
   const response = await exportDownloadResponse({
     body: bodyOf('first', 'second'),
-    fileName: 'postlude-2026-08-26.zip',
+    fileName: () => 'postlude-2026-08-26.zip',
     signal: new AbortController().signal,
   });
 
@@ -48,7 +48,7 @@ it('turns a failure before the first chunk into a safe retryable response', asyn
 
   const response = await exportDownloadResponse({
     body,
-    fileName: 'postlude.zip',
+    fileName: () => 'postlude.zip',
     signal: new AbortController().signal,
   });
 
@@ -79,7 +79,7 @@ it('sanitizes a stream failure after attachment headers are committed', async ()
   );
   const response = await exportDownloadResponse({
     body,
-    fileName: 'postlude.zip',
+    fileName: () => 'postlude.zip',
     signal: new AbortController().signal,
   });
 
@@ -97,7 +97,7 @@ it('cancels the producer when its request is aborted', async () => {
   const request = new AbortController();
   const response = await exportDownloadResponse({
     body,
-    fileName: 'postlude.zip',
+    fileName: () => 'postlude.zip',
     signal: request.signal,
   });
 
@@ -118,7 +118,7 @@ it('cancels a producer when the request closes during first-chunk preflight', as
   const request = new AbortController();
   const pending = exportDownloadResponse({
     body,
-    fileName: 'postlude.zip',
+    fileName: () => 'postlude.zip',
     signal: request.signal,
   });
 
