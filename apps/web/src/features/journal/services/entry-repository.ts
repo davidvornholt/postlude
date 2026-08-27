@@ -135,6 +135,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             journal_search_text,
             scripture_search_text,
             scripture_reference_search_text,
+            search_token_text,
+            search_projection_revision,
             base_revision
           ) as (values (
             ${draft.date}::date,
@@ -151,6 +153,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             ${searchDocument.journalText}::text,
             ${searchDocument.scriptureText}::text,
             ${searchDocument.scriptureReferenceText}::text,
+            ${searchDocument.searchTokenText}::text,
+            ${draft.baseRevision + 1}::integer,
             ${draft.baseRevision}::integer
           )), updated as (
             update entry set
@@ -173,6 +177,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             journal_search_text = candidate.journal_search_text,
             scripture_search_text = candidate.scripture_search_text,
             scripture_reference_search_text = candidate.scripture_reference_search_text,
+            search_token_text = candidate.search_token_text,
+            search_projection_revision = candidate.search_projection_revision,
             revision = entry.revision + 1,
             updated_at = now()
             from candidate
@@ -194,7 +200,9 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               scripture_verse_end,
               journal_search_text,
               scripture_search_text,
-              scripture_reference_search_text
+              scripture_reference_search_text,
+              search_token_text,
+              search_projection_revision
             ) select
               entry_date,
               journal_markdown,
@@ -209,7 +217,9 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               scripture_verse_end,
               journal_search_text,
               scripture_search_text,
-              scripture_reference_search_text
+              scripture_reference_search_text,
+              search_token_text,
+              search_projection_revision
             from candidate
             where base_revision = 0
             on conflict (entry_date) do nothing

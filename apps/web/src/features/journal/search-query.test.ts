@@ -9,7 +9,12 @@
 
 import { expect, it } from 'bun:test';
 
-import { searchExcerpt, searchTerms, searchTsQuery } from './search-query.ts';
+import {
+  searchExcerpt,
+  searchTerms,
+  searchTokenText,
+  searchTsQuery,
+} from './search-query.ts';
 
 /* Long enough that the excerpt window opens after the start of the day and
  * closes before its end, which is the only way both ellipses appear. */
@@ -63,6 +68,21 @@ it('keeps a word written in another script', () => {
 it('normalizes canonically equivalent Unicode before searching', () => {
   expect(searchTerms('Spru\u0308che')).toEqual(['sprüche']);
   expect(searchTerms('Ｆａｉｔｈ')).toEqual(['faith']);
+});
+
+it('uses one case fold for dotted I and both Greek sigmas', () => {
+  expect(searchTerms('İSTANBUL ΟΣ ος οσ')).toEqual([
+    'istanbul',
+    'οσ',
+    'οσ',
+    'οσ',
+  ]);
+});
+
+it('stores the same punctuation-delimited token stream a query uses', () => {
+  const source = 'Mail.Name@example.com / notes/1.John';
+  expect(searchTokenText(source)).toBe(searchTerms(source).join(' '));
+  expect(searchTokenText(source)).toBe('mail name example com notes 1 john');
 });
 
 it('asks for every term, each as a prefix', () => {

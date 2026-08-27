@@ -1,5 +1,5 @@
 {
-  "id": "e83608e7-b61d-4080-8dd6-858940e6d821",
+  "id": "4f757f81-f83f-4df4-a40f-ba46aafde69b",
   "prevId": "d8ad6dd7-2523-47fc-bb7a-131ca6a61287",
   "version": "7",
   "dialect": "postgresql",
@@ -98,6 +98,18 @@
         "scripture_reference_search_text": {
           "name": "scripture_reference_search_text",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_token_text": {
+          "name": "search_token_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_projection_revision": {
+          "name": "search_projection_revision",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },

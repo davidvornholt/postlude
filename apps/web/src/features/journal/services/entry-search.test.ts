@@ -67,9 +67,8 @@ it('stops at the number of days it was asked for', async () => {
 });
 
 /*
- * The index is built with Postgres's `simple` configuration and every term is
- * matched as a prefix, so a search finds the longer word without the database
- * having to know which language the day was written in.
+ * Every term is matched as a prefix, so a search finds the longer word without
+ * the database having to know which language the day was written in.
  */
 it('reaches a longer word from the start of it', async () => {
   const dates = await withJournal(({ entries, search }) =>
@@ -161,20 +160,24 @@ it('hands back the indexed visible sources and the day, counted', async () => {
   expect(match?.words).toBe(words);
 });
 
-it('does not match hidden markdown syntax or fenced code', async () => {
-  const dates = await withJournal(({ entries, search }) =>
+it('indexes rendered code and image alt text but not their hidden targets', async () => {
+  const matches = await withJournal(({ entries, search }) =>
     Effect.gen(function* () {
       yield* entries.save(
         draft(
           '2026-03-01',
-          '[visible](secret-target)\n```\nsecret-code\n```\n![alt](secret-file)',
+          '[visible](secret-target)\n```\nrendered-code\n```\n![rendered-alt](secret-file)',
         ),
       );
-      const matches = yield* search.search(asked('secret'), plenty);
-      return matches.map((match) => match.date);
+      const hidden = yield* search.search(asked('secret'), plenty);
+      const code = yield* search.search(asked('rendered code'), plenty);
+      const imageAlt = yield* search.search(asked('rendered alt'), plenty);
+      return { hidden, code, imageAlt };
     }),
   );
-  expect(dates).toEqual([]);
+  expect(matches.hidden).toEqual([]);
+  expect(matches.code.map((match) => match.date)).toEqual(['2026-03-01']);
+  expect(matches.imageAlt.map((match) => match.date)).toEqual(['2026-03-01']);
 });
 
 it('matches punctuation-delimited words and canonically normalized text', async () => {

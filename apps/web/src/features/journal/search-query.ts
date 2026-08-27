@@ -1,20 +1,21 @@
 /**
  * What a typed search means, and what a result looks like when it is read back.
  *
- * The journal is written in more than one language, so the index is built with
- * Postgres's `simple` configuration — no stemming, no stopword list — and every
- * term is matched as a prefix instead. "Gebet" finds "Gebete" and "schreib"
- * finds "schreiben" without the index having to be told which language a day
- * was written in, and no word is ever dropped from a day for being common in a
- * language the writer was not using.
+ * The journal is written in more than one language, so the app stores its own
+ * normalized tokens without stemming or a stopword list. Every term is matched
+ * as a prefix. "Gebet" finds "Gebete" and "schreib" finds "schreiben" without
+ * choosing a language, and no word disappears for being common in the wrong
+ * one.
  *
  * Non-word runs become boundaries before a term goes anywhere near the
  * database. That is what makes appending the prefix marker safe: there is
  * nothing left in a term that Postgres's query parser could read as syntax.
  */
 
-const wordBoundaries = /[^\p{L}\p{N}]+/gu;
 const whitespaceRuns = /\s+/gu;
+const searchTokenRuns = /[\p{L}\p{N}]+/gu;
+const dottedLowercaseI = /i\u0307/gu;
+const finalGreekSigma = /\u03c2/gu;
 
 /** How much of the day is shown around the first match. */
 const excerptLength = 240;
@@ -38,16 +39,31 @@ export const normalizeSearchText = (text: string): string =>
   text.normalize('NFKC');
 
 /**
+ * One application-owned case shape for both indexed text and queries. The two
+ * replacements close the case-folding differences that matter to this journal:
+ * JavaScript lowers dotted capital I to two code points, and Greek has a
+ * position-dependent final sigma even though both sigmas name the same letter.
+ */
+const foldSearchText = (text: string): string =>
+  normalizeSearchText(text)
+    .toLowerCase()
+    .replace(dottedLowercaseI, 'i')
+    .replace(finalGreekSigma, '\u03c3')
+    .normalize('NFC');
+
+/** The canonical token stream persisted for indexing and used for queries. */
+export const searchTokens = (text: string): ReadonlyArray<string> =>
+  foldSearchText(text).match(searchTokenRuns) ?? [];
+
+export const searchTokenText = (text: string): string =>
+  searchTokens(text).join(' ');
+
+/**
  * The words to look for. Punctuation is a boundary rather than query syntax,
  * so `rain,fell` asks for two words instead of silently becoming `rainfell`.
  */
 export const searchTerms = (query: string): ReadonlyArray<string> =>
-  normalizeSearchText(query)
-    .toLowerCase()
-    .replace(wordBoundaries, ' ')
-    .trim()
-    .split(whitespaceRuns)
-    .filter((word) => word.length > 0);
+  searchTokens(query);
 
 /**
  * The terms as one `tsquery`: every term has to appear, each as a prefix. A day

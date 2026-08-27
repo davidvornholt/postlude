@@ -1,20 +1,15 @@
 import type { JSONContent } from '@tiptap/core';
-import { MarkdownManager } from '@tiptap/markdown';
 import { createElement, type ReactNode } from 'react';
 
 import {
   journalHeadingTag,
-  journalMarkdownExtensions,
-} from './markdown-extensions.ts';
+  parseJournalMarkdown,
+} from '../journal-markdown.ts';
 
 type ReadOnlyMarkdownProps = {
   readonly className: string;
   readonly markdown: string;
 };
-
-const markdownManager = new MarkdownManager({
-  extensions: journalMarkdownExtensions(),
-});
 
 const uriProtocol = /^[a-z][a-z\d+.-]*:/iu;
 const safeWebProtocol = /^https?:\/\//iu;
@@ -136,6 +131,6 @@ export const ReadOnlyMarkdown = ({
   markdown,
 }: ReadOnlyMarkdownProps) => (
   <div className={className}>
-    {renderNode(markdownManager.parse(markdown), 'doc')}
+    {renderNode(parseJournalMarkdown(markdown), 'doc')}
   </div>
 );

@@ -1,11 +1,17 @@
 import { expect, it } from 'bun:test';
-import { migrateGeneratedThrough } from '@postlude/db/migrate';
+import {
+  migrateGeneratedThrough,
+  searchProjectionColumnsMigrationTag,
+} from '@postlude/db/migrate';
 import { createPool } from '@postlude/db/pool';
 import { Effect } from 'effect';
 import { configuredDatabaseUrl } from '#/shared/testing/test-database.ts';
 import { searchHitOf } from '../search-contract.ts';
 import { searchTerms, searchTsQuery } from '../search-query.ts';
-import { migrateJournalDatabase } from './journal-migration.ts';
+import {
+  migrateJournalDatabase,
+  searchBackfillBatchSize,
+} from './journal-migration.ts';
 
 const beforeSearchMigration = '0003_motionless_gauntlet';
 const expectedMigrationCount = 6;
@@ -61,6 +67,32 @@ it('backfills existing visible search documents before hardening the schema', as
         verseEnd,
       ],
     );
+    await upgrade.query(
+      `insert into entry (entry_date, journal_markdown)
+       select date '1900-01-01' + day_offset, 'Batch row ' || day_offset
+       from generate_series(0, $1::integer - 1) as series(day_offset)`,
+      [searchBackfillBatchSize],
+    );
+    await Effect.runPromise(
+      migrateGeneratedThrough(upgrade, searchProjectionColumnsMigrationTag),
+    );
+    await upgrade.query(`
+      create table search_backfill_audit (
+        entry_date date not null,
+        transaction_id bigint not null
+      );
+      create function audit_search_backfill() returns trigger
+      language plpgsql as $$
+      begin
+        insert into search_backfill_audit (entry_date, transaction_id)
+        values (new.entry_date, txid_current());
+        return new;
+      end
+      $$;
+      create trigger audit_search_backfill
+      after update of search_projection_revision on entry
+      for each row execute function audit_search_backfill();
+    `);
 
     await Effect.runPromise(migrateJournalDatabase(upgrade));
 
@@ -72,21 +104,105 @@ it('backfills existing visible search documents before hardening the schema', as
        scripture_search_text as "scriptureText",
        scripture_reference_search_text as "scriptureReferenceText",
          journal_word_count + scripture_word_count as words,
-         revision
+         revision,
+         search_projection_revision as "searchProjectionRevision"
        from entry
-       where search_vector @@ to_tsquery('simple', $1)`,
+       where search_vector @@ $1::tsquery`,
       [searchTsQuery(terms)],
     );
     const [match] = result.rows;
-    expect(match.journalText).toBe('Visible evening');
-    expect(match.journalText).not.toContain('hidden');
-    expect(match.scriptureText).toBe('Sprüche in visible morning.');
+    expect(match.journalText).toBe('Visible evening\nhidden-code');
+    expect(match.journalText).not.toContain('hidden-target');
+    expect(match.scriptureText).toBe(
+      'Spru\u0308che in visible morning. hidden image',
+    );
     expect(match.scriptureReferenceText).toContain('Sprüche 12:5-13');
     expect(match.scriptureReferenceText).toContain('Sprueche 12:5-13');
     expect(match.revision).toBe(1);
+    expect(match.searchProjectionRevision).toBe(match.revision);
     const hit = searchHitOf(terms)(match);
     expect(hit.fromScripture).toBe(true);
     expect(hit.excerpt.some((segment) => segment.match)).toBe(true);
+
+    const completeness = await upgrade.query<{
+      readonly incomplete: number;
+      readonly projected: number;
+    }>(`
+      select
+        count(*) filter (
+          where journal_search_text is null
+             or scripture_search_text is null
+             or scripture_reference_search_text is null
+             or search_token_text is null
+             or search_projection_revision is null
+             or search_projection_revision <> revision
+        )::integer as incomplete,
+        count(*)::integer as projected
+      from entry
+    `);
+    expect(completeness.rows[0]).toEqual({
+      incomplete: 0,
+      projected: searchBackfillBatchSize + 1,
+    });
+    const batches = await upgrade.query<{
+      readonly largest: number;
+      readonly transactions: number;
+    }>(`
+      select
+        max(rows_in_transaction)::integer as largest,
+        count(*)::integer as transactions
+      from (
+        select transaction_id, count(*) as rows_in_transaction
+        from search_backfill_audit
+        group by transaction_id
+      ) batches
+    `);
+    expect(batches.rows[0]).toEqual({
+      largest: searchBackfillBatchSize,
+      transactions: 2,
+    });
+
+    const auditedBeforeRerun = await upgrade.query<{ readonly count: number }>(
+      'select count(*)::integer as count from search_backfill_audit',
+    );
+    await Effect.runPromise(migrateJournalDatabase(upgrade));
+    const auditedAfterRerun = await upgrade.query<{ readonly count: number }>(
+      'select count(*)::integer as count from search_backfill_audit',
+    );
+    expect(auditedAfterRerun.rows).toEqual(auditedBeforeRerun.rows);
+
+    const oldWriterFailure = await upgrade
+      .query(`
+        update entry
+        set journal_markdown = 'Written by the old app',
+            revision = revision + 1,
+            updated_at = now()
+        where entry_date = '2026-03-01'
+          and revision = 1
+      `)
+      .catch((error: unknown) => error);
+    expect(oldWriterFailure).toMatchObject({
+      code: '23514',
+      constraint: 'entry_search_projection_current',
+    });
+    const retained = await upgrade.query<{
+      readonly journalMarkdown: string;
+      readonly revision: number;
+      readonly searchProjectionRevision: number;
+    }>(`
+      select
+        journal_markdown as "journalMarkdown",
+        revision,
+        search_projection_revision as "searchProjectionRevision"
+      from entry
+      where entry_date = '2026-03-01'
+    `);
+    expect(retained.rows[0]).toEqual({
+      journalMarkdown:
+        '[Visible evening](hidden-target)\n```\nhidden-code\n```',
+      revision: 1,
+      searchProjectionRevision: 1,
+    });
   });
 });
 

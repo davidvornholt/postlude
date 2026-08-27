@@ -1,6 +1,6 @@
 {
-  "id": "79a8bacc-45be-452d-acf0-036de5e3ec36",
-  "prevId": "e83608e7-b61d-4080-8dd6-858940e6d821",
+  "id": "5df3f534-e8e4-4812-82eb-d2453fc1279f",
+  "prevId": "4f757f81-f83f-4df4-a40f-ba46aafde69b",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -101,6 +101,18 @@
           "primaryKey": false,
           "notNull": true
         },
+        "search_token_text": {
+          "name": "search_token_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "search_projection_revision": {
+          "name": "search_projection_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -121,7 +133,7 @@
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "to_tsvector('simple', journal_search_text || ' ' || scripture_search_text || ' ' || scripture_reference_search_text)",
+            "as": "case when search_token_text = '' then ''::tsvector else array_to_tsvector(string_to_array(search_token_text, ' ')) end",
             "type": "stored"
           }
         }
@@ -151,6 +163,10 @@
         "entry_revision_positive": {
           "name": "entry_revision_positive",
           "value": "\"entry\".\"revision\" >= 1"
+        },
+        "entry_search_projection_current": {
+          "name": "entry_search_projection_current",
+          "value": "\"entry\".\"search_projection_revision\" = \"entry\".\"revision\""
         },
         "entry_journal_word_count_non_negative": {
           "name": "entry_journal_word_count_non_negative",

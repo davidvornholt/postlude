@@ -139,10 +139,14 @@ const migrateTestDatabase = (pool: Pool) =>
           update entry
           set journal_search_text = '',
               scripture_search_text = '',
-              scripture_reference_search_text = ''
+              scripture_reference_search_text = '',
+              search_token_text = '',
+              search_projection_revision = revision
           where journal_search_text is null
              or scripture_search_text is null
              or scripture_reference_search_text is null
+             or search_token_text is null
+             or search_projection_revision is null
         `)
         .then(() => undefined),
   });

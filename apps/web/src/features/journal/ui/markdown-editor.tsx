@@ -22,7 +22,7 @@ import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { useEffect, useRef } from 'react';
 
-import { journalMarkdownExtensions } from './markdown-extensions.ts';
+import { journalMarkdownExtensions } from '../journal-markdown.ts';
 import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 
 type MarkdownEditorProps = {
