@@ -81,6 +81,19 @@ describe('periodPath', () => {
     expect(periodPath('month', '0100-08')).toBe('0100/0100-08.md');
   });
 
+  it('accepts week 53 only in ISO years that contain it', () => {
+    expect(periodPath('week', '0001-W52')).toBe('weeks/0001/0001-W52.md');
+    expect(() => periodPath('week', '0001-W53')).toThrow();
+    expect(periodPath('week', '0099-W53')).toBe('weeks/0099/0099-W53.md');
+    expect(periodPath('week', '2026-W53')).toBe('weeks/2026/2026-W53.md');
+    expect(() => periodPath('week', '2025-W53')).toThrow();
+  });
+
+  it('checks the last supported year without Date year coercion', () => {
+    expect(periodPath('week', '9999-W52')).toBe('weeks/9999/9999-W52.md');
+    expect(() => periodPath('week', '9999-W53')).toThrow();
+  });
+
   it('rejects a key from a different grouping before it can collide', () => {
     expect(() => periodPath('day', '2026-W35')).toThrow();
     expect(() => periodPath('week', '2026-08')).toThrow();

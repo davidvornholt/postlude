@@ -98,7 +98,14 @@ const monthKeyPattern = /^(?<year>\d{4})-(?<month>\d{2})$/u;
 const yearKeyPattern = /^\d{4}$/u;
 const firstPeriodNumber = 1;
 const lastMonth = 12;
-const lastIsoWeek = 53;
+
+/** December 28 always belongs to the last ISO week of its calendar year. */
+const lastIsoWeekOf = (year: number): number =>
+  Number(
+    isoWeekKey(formatJournalDate({ year, month: 12, day: 28 })).slice(
+      -weekDigits,
+    ),
+  );
 
 type PeriodKeyParts = {
   readonly year: string;
@@ -132,13 +139,11 @@ const parsePeriodKey = (
   }
   const year = Number(parts.year);
   const number = Number(numberText);
-  const lastNumber = grouping === 'week' ? lastIsoWeek : lastMonth;
-  if (
-    year < firstYear ||
-    year > lastYear ||
-    number < firstPeriodNumber ||
-    number > lastNumber
-  ) {
+  if (year < firstYear || year > lastYear || number < firstPeriodNumber) {
+    throw new TypeError(`Not a ${grouping} export key: ${key}`);
+  }
+  const lastNumber = grouping === 'week' ? lastIsoWeekOf(year) : lastMonth;
+  if (number > lastNumber) {
     throw new TypeError(`Not a ${grouping} export key: ${key}`);
   }
   return { year: parts.year, number };

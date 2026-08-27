@@ -10,7 +10,7 @@ export const Route = createFileRoute('/_app/archive_/export')({
     middleware: [sessionRequired],
     handlers: {
       POST: ({ request }) =>
-        exportJournalResponse(request.signal, applicationStyleSheetHrefs),
+        exportJournalResponse(request, applicationStyleSheetHrefs),
     },
   },
 });
