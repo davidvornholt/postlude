@@ -1,7 +1,14 @@
-import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
-import { zipSync } from 'fflate';
-
+import {
+  answerWithDownload,
+  downloadedBytes,
+  exportButton,
+  exportBytes,
+  exportCases,
+  exportRoute,
+  postedGrouping,
+  submitHydratedForm,
+} from './archive-export-test-support.ts';
 import {
   archiveFixtureConfigs,
   mountArchivePage,
@@ -10,191 +17,164 @@ import {
 } from './archive-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
+
 const colorSchemes = ['light', 'dark'] as const;
-const exportRoute = '**/archive/export';
-const exportFileName = 'postlude-2026-08-26.zip';
-const kibibyte = 1024;
-const exportPayloadKibibytes = 192;
-const byteCycle = 251;
-const exportPayload = Uint8Array.from(
-  { length: exportPayloadKibibytes * kibibyte },
-  (_, index) => index % byteCycle,
-);
-const exportBytes = zipSync({ 'journal.bin': exportPayload }, { level: 0 });
-const answerWithDownload = (route: playwright.Route) =>
-  route.fulfill({
-    body: Buffer.from(exportBytes),
-    headers: {
-      'content-disposition': `attachment; filename="${exportFileName}"`,
-      'content-type': 'application/zip',
-    },
-    status: 200,
-  });
 
-const submitHydratedForm = (button: playwright.Locator): Promise<unknown> =>
-  button.evaluate((element) => {
-    const form = element.closest('form');
-    if (form === null) {
-      throw new Error('The export button has no form.');
-    }
-    return form.dispatchEvent(
-      new Event('submit', { bubbles: true, cancelable: true }),
-    );
-  });
-
-test('a delayed hydrated download settles once, submits once, and stays latched', async ({
-  page,
-}) => {
-  let posts = 0;
-  await page.route(exportRoute, (route) => {
-    posts += 1;
-    return answerWithDownload(route);
-  });
-  await mountArchivePage(page, archiveFixtureConfigs.exportDelayed);
-  const button = page.locator('form[action="/archive/export"] button');
-  await button.focus();
-  const downloadStarted = page.waitForEvent('download');
-  await submitHydratedForm(button);
-  await expect(button).toHaveText('Saving before download …');
-  await expect(button).toHaveAttribute('aria-busy', 'true');
-  await expect(button).toHaveAttribute('aria-disabled', 'true');
-  await submitHydratedForm(button);
-  const download = await downloadStarted;
-  expect(download.suggestedFilename()).toBe(exportFileName);
-  const stream = await download.createReadStream();
-  if (stream === null) {
-    throw new Error('The browser did not expose the downloaded bytes.');
-  }
-  const chunks: Array<Buffer> = [];
-  for await (const chunk of stream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  expect(chunks.length).toBeGreaterThan(0);
-  expect(Buffer.concat(chunks)).toEqual(Buffer.from(exportBytes));
-  expect(posts).toBe(1);
-  await expect(page.locator('html')).toHaveAttribute(
-    'data-export-settle-calls',
-    '1',
-  );
-  await expect(page.locator('html')).toHaveAttribute(
-    'data-export-settle-status',
-    'stored',
-  );
-  await expect(button).toBeFocused();
-  await expect(button).toHaveText('Download started');
-  await expect(button).toHaveAttribute('aria-busy', 'false');
-  await expect(button).toHaveAttribute('aria-disabled', 'true');
-});
-
-test('the server-rendered form downloads without hydrated JavaScript', async ({
-  page,
-}) => {
-  let method = '';
-  await page.route(exportRoute, (route) => {
-    method = route.request().method();
-    return answerWithDownload(route);
-  });
-  await mountArchivePageWithoutJavaScript(page, archiveFixtureConfigs.filled);
-  const downloadStarted = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Download the journal' }).click();
-  const download = await downloadStarted;
-  expect(method).toBe('POST');
-  expect(download.suggestedFilename()).toBe(exportFileName);
-  await expect(page.locator('html')).not.toHaveAttribute(
-    'data-export-settle-calls',
-  );
-});
-
-for (const colorScheme of colorSchemes) {
-  test(`a zero-delay double-click starts one download in ${colorScheme} mode`, async ({
+for (const exportCase of Object.values(exportCases)) {
+  test(`${exportCase.label} is snapped through settlement and recovers after download`, async ({
     page,
   }) => {
     let posts = 0;
-    let downloadCount = 0;
-    page.on('download', () => {
-      downloadCount += 1;
-    });
+    let grouping = '';
     await page.route(exportRoute, (route) => {
       posts += 1;
-      return answerWithDownload(route);
+      grouping = postedGrouping(route);
+      return answerWithDownload(route, exportCase.fileName);
     });
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountArchivePage(page, archiveFixtureConfigs.filled);
-    const button = page.locator('form[action="/archive/export"] button');
+    await mountArchivePage(page, archiveFixtureConfigs.exportDelayed);
+    const button = exportButton(page);
+    const fieldset = page.getByRole('group', {
+      name: 'One reading-copy file per',
+    });
+    const radio = page.getByRole('radio', { name: exportCase.label });
+    await radio.check();
+    await expect(radio).toBeChecked();
     await button.focus();
     const downloadStarted = page.waitForEvent('download');
-    await button.dblclick();
+    await submitHydratedForm(button);
+
+    await expect(button).toHaveText('Saving before download …');
+    await expect(button).toHaveAttribute('aria-disabled', 'true');
+    await expect(fieldset).toHaveAttribute('disabled', '');
+    await expect(radio).toBeDisabled();
+    await expect(radio).toBeChecked();
+    await expect(page.locator('input[type=hidden]')).toHaveValue(
+      exportCase.grouping,
+    );
+    await submitHydratedForm(button);
+
     const download = await downloadStarted;
-    expect(download.suggestedFilename()).toBe(exportFileName);
-    expect(downloadCount).toBe(1);
+    expect(download.suggestedFilename()).toBe(exportCase.fileName);
+    expect(await downloadedBytes(download)).toEqual(Buffer.from(exportBytes));
     expect(posts).toBe(1);
+    expect(grouping).toBe(exportCase.grouping);
     await expect(page.locator('html')).toHaveAttribute(
       'data-export-settle-calls',
       '1',
+    );
+    await expect(button).toBeFocused();
+    await expect(button).toHaveText('Download started');
+    await expect(button).toHaveAttribute('aria-disabled', 'true');
+    await expect(fieldset).toHaveAttribute('disabled', '');
+    await expect(radio).toBeDisabled();
+    await expect(page.locator('input[type=hidden]')).toHaveValue(
+      exportCase.grouping,
     );
     await expect(page.locator('html')).toHaveAttribute(
       'data-export-settle-status',
       'stored',
     );
-    await expect(button).toHaveText('Download started');
-    await expect(button).toHaveAttribute('aria-disabled', 'true');
-    await expect(button).toBeFocused();
-    await scanArchive(page);
+    await page.unroute(exportRoute);
   });
+}
 
-  test(`a pending export stays single and passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
+test('a non-default grouping stays described and posts without JavaScript', async ({
+  page,
+}) => {
+  const { year } = exportCases;
+  let method = '';
+  let grouping = '';
+  await page.route(exportRoute, (route) => {
+    method = route.request().method();
+    grouping = postedGrouping(route);
+    return answerWithDownload(route, year.fileName);
+  });
+  await mountArchivePageWithoutJavaScript(page, archiveFixtureConfigs.filled);
+  const radio = page.getByRole('radio', { name: year.label });
+  await radio.check();
+  await expect(radio).toBeChecked();
+  await expect(radio).toHaveAttribute(
+    'aria-describedby',
+    'export-year-description',
+  );
+  await expect(
+    page.getByText('One Markdown file for each calendar year', {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText('One Markdown file for each journal day', { exact: false }),
+  ).toBeHidden();
+
+  const downloadStarted = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Download the journal' }).click();
+  const download = await downloadStarted;
+  expect(method).toBe('POST');
+  expect(grouping).toBe(year.grouping);
+  expect(download.suggestedFilename()).toBe(year.fileName);
+});
+
+test('a failed settlement keeps the grouping and retries the download', async ({
+  page,
+}) => {
+  const { week } = exportCases;
+  let posts = 0;
+  await page.route(exportRoute, (route) => {
+    posts += 1;
+    expect(postedGrouping(route)).toBe(week.grouping);
+    return answerWithDownload(route, week.fileName);
+  });
+  await mountArchivePage(page, archiveFixtureConfigs.exportFailedOnce);
+  const radio = page.getByRole('radio', { name: week.label });
+  const button = exportButton(page);
+  await radio.check();
+  await submitHydratedForm(button);
+  await expect(page.getByRole('alert')).toContainText(
+    'the download did not start',
+  );
+  expect(posts).toBe(0);
+  await expect(radio).toBeChecked();
+  await expect(radio).toBeEnabled();
+  await expect(button).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(
+    page.getByRole('group', { name: 'One reading-copy file per' }),
+  ).not.toHaveAttribute('disabled', '');
+
+  const downloadStarted = page.waitForEvent('download');
+  await submitHydratedForm(button);
+  await expect(page.locator('input[type=hidden]')).toHaveValue(week.grouping);
+  const download = await downloadStarted;
+  expect(download.suggestedFilename()).toBe(week.fileName);
+  expect(posts).toBe(1);
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(button).not.toHaveAttribute('aria-describedby');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-export-settle-calls',
+    '2',
+  );
+});
+
+for (const colorScheme of colorSchemes) {
+  test(`export focus, checked, pending, and error states pass WCAG 2.2 AA in ${colorScheme} mode`, async ({
     page,
   }) => {
-    let posts = 0;
-    page.on('request', (request) => {
-      if (request.url().endsWith('/archive/export')) {
-        posts += 1;
-      }
-    });
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountArchivePage(page, archiveFixtureConfigs.exportPending);
-    const button = page.locator('form[action="/archive/export"] button');
-    await button.focus();
-    await submitHydratedForm(button);
-    await submitHydratedForm(button);
-
-    await expect(button).toHaveText('Saving before download …');
-    await expect(button).toHaveAttribute('aria-busy', 'true');
-    await expect(button).toHaveAttribute('aria-disabled', 'true');
-    await expect(button).toBeFocused();
-    await expect(page.locator('html')).toHaveAttribute(
-      'data-export-settle-calls',
-      '1',
-    );
-    expect(posts).toBe(0);
+    const month = page.getByRole('radio', { name: 'Month' });
+    const button = exportButton(page);
+    await month.check();
+    await month.focus();
     await scanArchive(page);
-  });
-
-  test(`a failed autosave blocks the export and passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
-    page,
-  }) => {
-    let posts = 0;
-    page.on('request', (request) => {
-      if (request.url().endsWith('/archive/export')) {
-        posts += 1;
-      }
-    });
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountArchivePage(page, archiveFixtureConfigs.exportFailed);
-    const button = page.locator('form[action="/archive/export"] button');
-    await button.focus();
     await submitHydratedForm(button);
+    await expect(button).toHaveText('Saving before download …');
+    await scanArchive(page);
 
-    await expect(page.getByRole('alert')).toContainText(
-      'the download did not start',
-    );
-    await expect(button).toHaveAttribute(
-      'aria-describedby',
-      'journal-export-failure',
-    );
-    await expect(button).not.toHaveAttribute('aria-disabled', 'true');
-    await expect(button).toBeFocused();
-    expect(posts).toBe(0);
+    await mountArchivePage(page, archiveFixtureConfigs.exportFailed);
+    const failedButton = exportButton(page);
+    await page.getByRole('radio', { name: 'Year' }).check();
+    await failedButton.focus();
+    await submitHydratedForm(failedButton);
+    await expect(page.getByRole('alert')).toBeVisible();
     await scanArchive(page);
   });
 }

@@ -75,7 +75,7 @@ export const makeEntryExportPages = (sql: SqlClient.SqlClient) => {
   > =>
     sql`
       select to_char(
-        transaction_timestamp() at time zone 'UTC',
+        statement_timestamp() at time zone 'UTC',
         'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'
       ) as exported_at
     `.pipe(

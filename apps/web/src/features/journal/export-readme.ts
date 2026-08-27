@@ -7,10 +7,29 @@ import {
   journalDayStartsAt,
   manifestPath,
 } from './export-format.ts';
+import type { ExportGrouping } from './export-period.ts';
 import { journalCountLabel } from './journal-labels.ts';
 
+const projectionDescriptions: Record<ExportGrouping, string> = {
+  day: 'The files under `days/YYYY/YYYY-MM-DD.md` contain one journal day each. This is the closest reading-copy layout to Postlude’s day-by-day journal.',
+  week: 'The files under `weeks/YYYY/YYYY-Www.md` gather each ISO 8601 week. ISO weeks run Monday to Sunday and belong to the ISO week-numbering year that contains their Thursday, so a week across New Year stays whole.',
+  month: 'The files under `months/YYYY/YYYY-MM.md` gather each calendar month.',
+  year: 'The `YYYY.md` files at the top of the archive gather each calendar year. There is no redundant folder containing only one year file.',
+};
+
+const projectionFormat: Record<ExportGrouping, string> = {
+  day: 'Each daily file has quoted YAML front matter for its date and optional passage, followed by Morning and Evening sections.',
+  week: 'Each weekly file has quoted YAML front matter for its period key, first day, last day, and day count. Its journal days appear under dated headings with Morning and Evening subsections.',
+  month:
+    'Each monthly file has quoted YAML front matter for its period key, first day, last day, and day count. Its journal days appear under dated headings with Morning and Evening subsections.',
+  year: 'Each yearly file has quoted YAML front matter for its period key, first day, last day, and day count. Its journal days appear under dated headings with Morning and Evening subsections.',
+};
+
 /** Documentation that travels with the archive and does not hard-wrap prose. */
-export const exportReadme = (metadata: ExportMetadata): string =>
+export const exportReadme = (
+  metadata: ExportMetadata,
+  grouping: ExportGrouping = 'day',
+): string =>
   [
     '# Postlude journal export',
     `This archive was created at ${metadata.exportedAt} and contains ${journalCountLabel(metadata.entryCount, 'day')} with recoverable stored content as of journal day ${metadata.journalDate}.`,
@@ -21,7 +40,7 @@ export const exportReadme = (metadata: ExportMetadata): string =>
     '## Journal days',
     `The configured IANA time zone is \`${metadata.timeZone}\`. A journal day starts at ${journalDayStartsAt} in that zone, so an instant before ${journalDayStartsAt} belongs to the calendar day that is ending. The stored journal date, rather than an inferred UTC date, is authoritative across daylight-saving changes and travel.`,
     '## Markdown projections',
-    'The files under `days/YYYY/YYYY-MM-DD.md` are non-authoritative reading copies. Their YAML front matter quotes string values. Morning and Evening Markdown are shown inside separate backtick fences that are longer than any backtick run in the stored source, so an unclosed construct in one section cannot consume the other section. Use `entries.ndjson` for exact recovery or re-import.',
+    `${projectionDescriptions[grouping]} ${projectionFormat[grouping]} These Markdown files are non-authoritative reading copies. Stored source is enclosed in backtick fences longer than any backtick run in that source. Use \`${entriesPath}\` for exact recovery or re-import, regardless of the chosen reading-copy grouping.`,
   ]
     .join('\n\n')
     .concat('\n');

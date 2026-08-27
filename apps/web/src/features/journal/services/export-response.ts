@@ -77,9 +77,5 @@ export const exportJournalResponse = (
   styleSheetHrefs: ApplicationStyleSheetHrefs,
 ): Promise<Response> =>
   exportJournalResponseWith(request, (validatedRequest, grouping) =>
-    prepareExportJournalResponse(
-      validatedRequest,
-      grouping,
-      styleSheetHrefs,
-    ),
+    prepareExportJournalResponse(validatedRequest, grouping, styleSheetHrefs),
   );

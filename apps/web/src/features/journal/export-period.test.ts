@@ -62,9 +62,9 @@ describe('periodKeyOf', () => {
 
 describe('periodPath', () => {
   it('folders every period under its year', () => {
-    expect(periodPath('day', '2026-08-26')).toBe('2026/2026-08-26.md');
-    expect(periodPath('week', '2026-W35')).toBe('2026/2026-W35.md');
-    expect(periodPath('month', '2026-08')).toBe('2026/2026-08.md');
+    expect(periodPath('day', '2026-08-26')).toBe('days/2026/2026-08-26.md');
+    expect(periodPath('week', '2026-W35')).toBe('weeks/2026/2026-W35.md');
+    expect(periodPath('month', '2026-08')).toBe('months/2026/2026-08.md');
   });
 
   it('leaves a year of days at the top rather than alone in a folder', () => {
@@ -72,9 +72,9 @@ describe('periodPath', () => {
   });
 
   it('keeps early years distinct and zero-padded', () => {
-    expect(periodPath('day', '0001-08-26')).toBe('0001/0001-08-26.md');
-    expect(periodPath('week', '0099-W01')).toBe('0099/0099-W01.md');
-    expect(periodPath('month', '0100-08')).toBe('0100/0100-08.md');
+    expect(periodPath('day', '0001-08-26')).toBe('days/0001/0001-08-26.md');
+    expect(periodPath('week', '0099-W01')).toBe('weeks/0099/0099-W01.md');
+    expect(periodPath('month', '0100-08')).toBe('months/0100/0100-08.md');
   });
 
   it('accepts week 53 only in ISO years that contain it', () => {

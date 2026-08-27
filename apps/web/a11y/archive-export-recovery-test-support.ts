@@ -8,7 +8,7 @@ import { exportDownloadResponse } from '../src/features/journal/services/downloa
 import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
 import { runSessionRequired } from '../src/shared/auth/session-required.ts';
 
-const exportFileName = 'postlude-2026-08-26.zip';
+const exportFileName = 'postlude-2026-08-26-daily.zip';
 const styleSheetAssets = [
   /^\/assets\/index-[A-Za-z\d_-]+\.css$/u,
   /^\/assets\/standard-(?!italic-)[A-Za-z\d_-]+\.css$/u,

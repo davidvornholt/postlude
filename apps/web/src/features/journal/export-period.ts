@@ -96,6 +96,7 @@ export const periodKeyOf = (
 const weekKeyPattern = /^(?<year>\d{4})-W(?<week>\d{2})$/u;
 const monthKeyPattern = /^(?<year>\d{4})-(?<month>\d{2})$/u;
 const yearKeyPattern = /^\d{4}$/u;
+const trailingYearPattern = /\d+$/u;
 const firstPeriodNumber = 1;
 const lastMonth = 12;
 
@@ -151,7 +152,11 @@ const parsePeriodKey = (
 
 export const periodPath = (grouping: ExportGrouping, key: string): string => {
   const { year } = parsePeriodKey(grouping, key);
-  return grouping === 'year' ? `${year}.md` : `${year}/${key}.md`;
+  if (grouping === 'year') {
+    return `${year}.md`;
+  }
+  const folder = grouping === 'day' ? 'days' : `${grouping}s`;
+  return `${folder}/${year}/${key}.md`;
 };
 
 const periodLabels: Record<ExportGrouping, (key: string) => string> = {
@@ -165,9 +170,10 @@ const periodLabels: Record<ExportGrouping, (key: string) => string> = {
   },
   month: (key) => {
     const { year, number } = parsePeriodKey('month', key);
-    return monthYearLabel(
+    const label = monthYearLabel(
       formatJournalDate({ year: Number(year), month: number ?? 0, day: 1 }),
     );
+    return label.replace(trailingYearPattern, year);
   },
   year: (key) => parsePeriodKey('year', key).year,
 };

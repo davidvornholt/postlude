@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-import { decodeExportInput } from './export-input.ts';
+import { decodeExportFormData, decodeExportInput } from './export-input.ts';
 
 describe('decodeExportInput', () => {
   it('keeps an explicit supported grouping', () => {
@@ -16,5 +16,12 @@ describe('decodeExportInput', () => {
 
   it('rejects a grouping the server does not implement', () => {
     expect(() => decodeExportInput({ grouping: 'quarter' })).toThrow();
+  });
+
+  it('decodes native form data and defaults an older field-less POST', () => {
+    const explicit = new FormData();
+    explicit.set('grouping', 'week');
+    expect(decodeExportFormData(explicit)).toEqual({ grouping: 'week' });
+    expect(decodeExportFormData(new FormData())).toEqual({ grouping: 'day' });
   });
 });
