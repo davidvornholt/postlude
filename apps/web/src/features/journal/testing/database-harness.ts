@@ -38,11 +38,13 @@ export const draft = (
   date: string,
   journalMarkdown: string,
   scriptureReference = '',
+  baseRevision = 0,
 ): EntryDraft => ({
   date,
   journalMarkdown,
   scriptureMarkdown: '',
   scriptureReference,
+  baseRevision,
 });
 
 export const journalDatabase = () => {

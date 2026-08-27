@@ -9,9 +9,12 @@ const baselineDraft: EntryDraft = {
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 100,
 };
+const storedRevision = 100;
+const firstSavedRevision = 101;
 const savedRevision = 200;
-const stored = { draft: baselineDraft, revision: 100 };
+const stored = { draft: baselineDraft, revision: storedRevision };
 
 const memoryRecovery = (): DraftRecovery & {
   readonly value: () => EntryDraft | undefined;
@@ -74,6 +77,10 @@ describe('autosave coordinator', () => {
     expect(sent.map((entry) => entry.journalMarkdown)).toEqual([
       'first',
       'second',
+    ]);
+    expect(sent.map((entry) => entry.baseRevision)).toEqual([
+      storedRevision,
+      firstSavedRevision,
     ]);
     second.resolve({ revision: 102 });
   });

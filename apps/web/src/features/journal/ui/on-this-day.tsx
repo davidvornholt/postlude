@@ -2,9 +2,10 @@
  * The same day of the month, in the years before this one.
  *
  * This is the one part of the archive that is about reading rather than about
- * measuring, so it leads with the writer's own words: the date, and then the
- * opening of what was written that evening. The whole line is the link, because
- * the reason to open the day is the sentence, not the date above it.
+ * measuring. It renders the date metadata first, then the writer's prose from
+ * the entry. The opening prefers evening prose and falls back to scripture
+ * notes. The whole line is the link, because the reason to open the day is the
+ * sentence, not the date above it.
  *
  * It is absent on a day with no earlier years behind it. An empty "on this day"
  * would take a section's worth of the page every day of a journal's first year

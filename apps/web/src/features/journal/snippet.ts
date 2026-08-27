@@ -38,3 +38,17 @@ export const journalSnippet = (markdown: string): string => {
       : candidate.replace(lastWord, '');
   return `${wordSafe === '' ? candidate : wordSafe}${ellipsis}`;
 };
+
+type ArchiveSnippetSource = {
+  readonly journalMarkdown: string;
+  readonly journalWordCount: number;
+  readonly scriptureMarkdown: string;
+};
+
+/** Prefer the evening opening, then fall back to scripture notes. */
+export const archiveSnippet = (entry: ArchiveSnippetSource): string =>
+  journalSnippet(
+    entry.journalWordCount > 0
+      ? entry.journalMarkdown
+      : entry.scriptureMarkdown,
+  );

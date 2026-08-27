@@ -43,6 +43,8 @@ const tsvector = customType<{ data: string; driverData: string }>({
  * column default, `updated_at` from the `now()` that Drizzle writes into every
  * update it issues. Neither reads an app process's clock, so the pair cannot
  * invert because a process disagrees with the database about the time.
+ * `revision` starts at one and the journal upsert increments it with the row,
+ * so browser ordering does not depend on those timestamps' JavaScript precision.
  */
 export const entry = pgTable(
   'entry',
@@ -62,6 +64,7 @@ export const entry = pgTable(
     scriptureChapter: integer('scripture_chapter'),
     scriptureVerseStart: integer('scripture_verse_start'),
     scriptureVerseEnd: integer('scripture_verse_end'),
+    revision: integer('revision').notNull().default(1),
     journalSearchText: text('journal_search_text').notNull(),
     scriptureSearchText: text('scripture_search_text').notNull(),
     scriptureReferenceSearchText: text(
@@ -88,6 +91,7 @@ export const entry = pgTable(
     ),
   },
   (table) => [
+    check('entry_revision_positive', sql`${table.revision} >= 1`),
     index('entry_search_vector_index').using('gin', table.searchVector),
     check(
       'entry_journal_word_count_non_negative',

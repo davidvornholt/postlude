@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import {
-  readJournalDayFn,
+  readJournalDay,
   saveDraft,
 } from '#/features/journal/services/journal-fns.ts';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
@@ -24,7 +24,7 @@ const TodayRoute = () => {
 };
 
 export const Route = createFileRoute('/_app/')({
-  loader: () => readJournalDayFn(),
+  loader: () => readJournalDay(),
   component: TodayRoute,
   head: () => ({ meta: [{ title: pageTitle('Today') }] }),
 });

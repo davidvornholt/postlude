@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 
-import { journalSnippet, snippetLength } from './snippet.ts';
+import { archiveSnippet, journalSnippet, snippetLength } from './snippet.ts';
 
 const graphemes = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 const visibleLength = (text: string): number =>
@@ -54,4 +54,24 @@ it('hard-cuts prose that has no spaces', () => {
 
   expect(snippet).toBe(`${'日'.repeat(snippetLength - 1)}…`);
   expect(visibleLength(snippet)).toBe(snippetLength);
+});
+
+it('uses scripture notes when an anniversary has no evening prose', () => {
+  expect(
+    archiveSnippet({
+      journalMarkdown: '',
+      journalWordCount: 0,
+      scriptureMarkdown: '**Morning** notes from the passage.',
+    }),
+  ).toBe('Morning notes from the passage.');
+});
+
+it('prefers evening prose when an anniversary has both sections', () => {
+  expect(
+    archiveSnippet({
+      journalMarkdown: 'The evening opening.',
+      journalWordCount: 3,
+      scriptureMarkdown: 'Morning notes.',
+    }),
+  ).toBe('The evening opening.');
 });

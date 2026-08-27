@@ -6,6 +6,7 @@
  * the same ordered queue instead of creating a competing one.
  */
 
+import { Data } from 'effect';
 import {
   type AutosaveFailure,
   type ConfirmedDraft,
@@ -16,6 +17,11 @@ import {
   createAutosaveCoordinator,
   type SaveDraft,
 } from './autosave-coordinator.ts';
+import {
+  type ConfirmedRevisionTracker,
+  confirmedRevisions,
+} from './confirmed-revisions.ts';
+import type { JournalDate } from './journal-day.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 
 export type AutosaveRegistry = {
@@ -25,17 +31,17 @@ export type AutosaveRegistry = {
   ) => AutosaveCoordinator;
   /** Starts every queued save and rejects if any draft remains unconfirmed. */
   readonly settle: () => Promise<void>;
+  /** Repeats a read when a confirmed save lands before that read finishes. */
+  readonly readAfterSettled: <A>(read: () => Promise<A>) => Promise<A>;
 };
 
-class AutosaveSettlementError extends Error {
+export class AutosaveSettlementError extends Data.TaggedError(
+  'AutosaveSettlementError',
+)<{
+  readonly date: JournalDate;
   readonly failure: AutosaveFailure | undefined;
-
-  constructor(failure: AutosaveFailure | undefined) {
-    super(failure?.message ?? 'The journal draft is not stored.');
-    this.name = 'AutosaveSettlementError';
-    this.failure = failure;
-  }
-}
+  readonly message: string;
+}> {}
 
 const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
   new Promise((resolve, reject) => {
@@ -50,7 +56,13 @@ const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
         resolve();
         return;
       }
-      reject(new AutosaveSettlementError(state.failure));
+      reject(
+        new AutosaveSettlementError({
+          date: state.draft.date,
+          failure: state.failure,
+          message: state.failure?.message ?? 'The journal draft is not stored.',
+        }),
+      );
     };
     unsubscribe = coordinator.subscribe(resolveWhenSettled);
     coordinator.flush();
@@ -59,35 +71,60 @@ const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
 
 export const createAutosaveRegistry = (
   recovery: () => DraftRecovery,
+  revisions: ConfirmedRevisionTracker = confirmedRevisions,
 ): AutosaveRegistry => {
   const coordinators = new Map<string, AutosaveCoordinator>();
-  const confirmed = new Map<string, ConfirmedDraft>();
+  let confirmedSaveGeneration = 0;
+
+  const settle = async (): Promise<void> => {
+    await Promise.all(Array.from(coordinators.values(), settleCoordinator));
+    const allSettled = Array.from(coordinators.values()).every(
+      (coordinator) => {
+        const state = coordinator.snapshot();
+        return (
+          state.inFlight === undefined &&
+          sameDraft(state.draft, state.stored.draft)
+        );
+      },
+    );
+    if (!allSettled) {
+      return settle();
+    }
+  };
+
+  const readAfterSettled = async <A>(read: () => Promise<A>): Promise<A> => {
+    await settle();
+    const generationBeforeRead = confirmedSaveGeneration;
+    const result = await read();
+    await settle();
+    if (confirmedSaveGeneration === generationBeforeRead) {
+      return result;
+    }
+    return readAfterSettled(read);
+  };
 
   return {
     acquire: (stored, save) => {
       const {
         draft: { date },
       } = stored;
-      const checkpoint = confirmed.get(date);
-      const loaderIsStale =
-        checkpoint !== undefined && checkpoint.revision > stored.revision;
-      const current =
-        loaderIsStale && checkpoint !== undefined ? checkpoint : stored;
-      if (!loaderIsStale) {
-        confirmed.delete(date);
+      if (!revisions.observe(date, stored.revision)) {
+        throw new Error('A stale journal snapshot reached autosave.');
       }
       const existing = coordinators.get(date);
       if (existing !== undefined) {
-        existing.update(current, save);
+        existing.update(stored, save);
         return existing;
       }
-
       let created: AutosaveCoordinator;
       created = createAutosaveCoordinator({
-        stored: current,
+        stored,
         save,
         recovery: recovery(),
-        onConfirmed: (saved) => confirmed.set(date, saved),
+        onConfirmed: (saved) => {
+          confirmedSaveGeneration += 1;
+          revisions.record(date, saved.revision);
+        },
         onIdle: () => {
           if (coordinators.get(date) === created) {
             coordinators.delete(date);
@@ -97,8 +134,7 @@ export const createAutosaveRegistry = (
       coordinators.set(date, created);
       return created;
     },
-    settle: async () => {
-      await Promise.all(Array.from(coordinators.values(), settleCoordinator));
-    },
+    readAfterSettled,
+    settle,
   };
 };

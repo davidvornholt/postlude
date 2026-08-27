@@ -7,23 +7,37 @@ import { searchHitOf } from '../search-contract.ts';
 import { searchTerms, searchTsQuery } from '../search-query.ts';
 import { migrateJournalDatabase } from './journal-migration.ts';
 
-const beforeSearchMigration = '0002_independent_section_first_use';
+const beforeSearchMigration = '0003_motionless_gauntlet';
+const expectedMigrationCount = 6;
 const chapter = 12;
 const verseStart = 5;
 const verseEnd = 13;
 
-it('backfills existing visible search documents before hardening the schema', async () => {
-  // This upgrade cannot roll back across migration commits. It gets its own
-  // disposable database and removes it, so the shared test database stays clean.
+type MigrationPool = ReturnType<typeof createPool>;
+
+const withTemporaryDatabase = async (
+  body: (pool: MigrationPool) => Promise<void>,
+): Promise<void> => {
   const configured = await Effect.runPromise(configuredDatabaseUrl());
-  const databaseName = 'postlude_search_upgrade_test';
+  const databaseName = `postlude_search_migration_${crypto.randomUUID().replaceAll('-', '')}`;
   const databaseUrl = new URL(configured);
   databaseUrl.pathname = `/${databaseName}`;
   const admin = createPool(configured);
-  const upgrade = createPool(databaseUrl.toString());
-  await admin.query(`drop database if exists "${databaseName}" with (force)`);
+  const migrationPool = createPool(databaseUrl.toString());
   await admin.query(`create database "${databaseName}"`);
   try {
+    await body(migrationPool);
+  } finally {
+    await migrationPool.end();
+    await admin.query(`drop database "${databaseName}" with (force)`);
+    await admin.end();
+  }
+};
+
+it('backfills existing visible search documents before hardening the schema', async () => {
+  // This upgrade cannot roll back across migration commits. It gets its own
+  // disposable database and removes it, so the shared test database stays clean.
+  await withTemporaryDatabase(async (upgrade) => {
     await Effect.runPromise(
       migrateGeneratedThrough(upgrade, beforeSearchMigration),
     );
@@ -54,10 +68,11 @@ it('backfills existing visible search documents before hardening the schema', as
     const result = await upgrade.query(
       `select
          entry_date as date,
-         journal_search_text as "journalText",
-         scripture_search_text as "scriptureText",
-         scripture_reference_search_text as "scriptureReferenceText",
-         journal_word_count + scripture_word_count as words
+       journal_search_text as "journalText",
+       scripture_search_text as "scriptureText",
+       scripture_reference_search_text as "scriptureReferenceText",
+         journal_word_count + scripture_word_count as words,
+         revision
        from entry
        where search_vector @@ to_tsquery('simple', $1)`,
       [searchTsQuery(terms)],
@@ -68,12 +83,20 @@ it('backfills existing visible search documents before hardening the schema', as
     expect(match.scriptureText).toBe('Sprüche in visible morning.');
     expect(match.scriptureReferenceText).toContain('Sprüche 12:5-13');
     expect(match.scriptureReferenceText).toContain('Sprueche 12:5-13');
+    expect(match.revision).toBe(1);
     const hit = searchHitOf(terms)(match);
     expect(hit.fromScripture).toBe(true);
     expect(hit.excerpt.some((segment) => segment.match)).toBe(true);
-  } finally {
-    await upgrade.end();
-    await admin.query(`drop database if exists "${databaseName}" with (force)`);
-    await admin.end();
-  }
+  });
+});
+
+it('migrates a fresh database once and remains idempotent', async () => {
+  await withTemporaryDatabase(async (migrationPool) => {
+    await Effect.runPromise(migrateJournalDatabase(migrationPool));
+    await Effect.runPromise(migrateJournalDatabase(migrationPool));
+    const migrations = await migrationPool.query<{ readonly count: number }>(
+      'select count(*)::integer as count from drizzle.__drizzle_migrations',
+    );
+    expect(migrations.rows[0]?.count).toBe(expectedMigrationCount);
+  });
 });

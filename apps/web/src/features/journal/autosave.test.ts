@@ -25,6 +25,7 @@ const blank: EntryDraft = {
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: '',
+  baseRevision: 1,
 };
 
 const wrote = (text: string): EntryDraft => ({
@@ -107,6 +108,7 @@ it('collapses everything typed during a save into one more save', () => {
 
   expect(saves(commands)).toEqual(['one', 'one two three']);
   expect(state.inFlight?.journalMarkdown).toBe('one two three');
+  expect(state.inFlight?.baseRevision).toBe(2);
 });
 
 it('stops when the reply catches up with the writer', () => {
@@ -119,6 +121,7 @@ it('stops when the reply catches up with the writer', () => {
   expect(saves(commands)).toEqual(['done']);
   expect(saveStatus(state)).toBe('saved');
   expect(state.stored.draft.journalMarkdown).toBe('done');
+  expect(state.stored.draft.baseRevision).toBe(2);
   expect(state.stored.revision).toBe(2);
 });
 

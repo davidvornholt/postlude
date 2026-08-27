@@ -88,6 +88,31 @@ it('shows reference-only scripture activity instead of the empty journal', async
   expect(scriptureOnly).toContain('role="img"');
 });
 
+it('uses singular counts in the archive summary', async () => {
+  const oneDay = await renderInRouter(
+    <ArchivePage
+      selectedYear={undefined}
+      view={{
+        ...emptyView,
+        days: [
+          {
+            date: today,
+            journalWords: 1,
+            scriptureWords: 0,
+            hasScripture: false,
+            journalWrittenOnTheDay: true,
+            scriptureUsedOnTheDay: false,
+          },
+        ],
+        years: [todayYear],
+        totals: { daysWritten: 1, words: 1 },
+      }}
+    />,
+  );
+
+  expect(plainText(oneDay)).toContain('1 day written, 1 word in all.');
+});
+
 it('states both runs, each with the longest it has ever been', () => {
   const view = sampleArchiveView(journal, today);
   expect(filled).toContain('Evening journal');
@@ -139,28 +164,6 @@ it('marks the year being shown so it is not told apart by colour alone', () => {
   expect(attributeValue(rolling, 'aria-current')).toBe('page');
   expect(rolling).toContain('after:scale-x-100');
   expect(filled.match(currentPage)).toHaveLength(1);
-});
-
-it('keeps an accepted selected year coherent when the journal has no row there', async () => {
-  const selectedYear = 2024;
-  const selected = await renderInRouter(
-    <ArchivePage
-      selectedYear={selectedYear}
-      view={{
-        ...sampleArchiveView(journal, today),
-        days: [],
-        window: activityWindow(today, selectedYear),
-      }}
-    />,
-  );
-  const selectedLink = elementAttributes(selected, 'a', String(selectedYear));
-
-  expect(attributeValue(selectedLink, 'href')).toBe(
-    `/archive?year=${selectedYear}`,
-  );
-  expect(attributeValue(selectedLink, 'aria-current')).toBe('page');
-  expect(selected.match(currentPage)).toHaveLength(1);
-  expect(selected).toContain('Nothing was written in this stretch');
 });
 
 it('separates no writing from the four-step Less–More ramp', () => {

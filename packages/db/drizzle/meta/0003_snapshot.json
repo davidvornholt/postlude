@@ -1,6 +1,6 @@
 {
-  "id": "94771132-e04e-433e-b04a-8c78ff166c37",
-  "prevId": "f3b0b0bf-582a-4658-a6d5-cd029d14d412",
+  "id": "d8ad6dd7-2523-47fc-bb7a-131ca6a61287",
+  "prevId": "0608fa22-a125-491f-8b5d-8f685c8560ec",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -76,23 +76,12 @@
           "primaryKey": false,
           "notNull": false
         },
-        "journal_search_text": {
-          "name": "journal_search_text",
-          "type": "text",
+        "revision": {
+          "name": "revision",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
-        },
-        "scripture_search_text": {
-          "name": "scripture_search_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "scripture_reference_search_text": {
-          "name": "scripture_reference_search_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": 1
         },
         "created_at": {
           "name": "created_at",
@@ -115,6 +104,10 @@
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
+        "entry_revision_positive": {
+          "name": "entry_revision_positive",
+          "value": "\"entry\".\"revision\" >= 1"
+        },
         "entry_journal_word_count_non_negative": {
           "name": "entry_journal_word_count_non_negative",
           "value": "\"entry\".\"journal_word_count\" >= 0"

@@ -7,10 +7,11 @@
  * shell no longer sets is one nothing sets unless each page sets its own, and
  * dropping a page's wrapper is a one-line edit that looks like tidying.
  *
- * Nothing else would notice. The browser accessibility suite in
- * `a11y/routes.a11y.ts` stops at the sign-in page, because getting past it
- * needs a real GitHub OAuth round trip, so these pages are rendered by no other
- * check in the repository.
+ * The production-route browser scan stops at the sign-in page because getting
+ * past it needs a real GitHub OAuth round trip. The isolated writing-page
+ * fixture renders the real day component, but it does not own the archive's
+ * measure or count the exact wrappers on either page. Those contracts stay
+ * here.
  *
  * Both pages are rendered as their components rather than through their routes,
  * because a route's whole body is its component and reaching it through the
@@ -36,6 +37,7 @@ const emptyDay: JournalEntry = {
   journalFirstUsedAt: null,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
+  revision: 0,
   scriptureFirstUsedAt: null,
   createdAt: new Date(0),
   updatedAt: new Date(0),

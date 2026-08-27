@@ -247,10 +247,10 @@
       }
     },
     {
-      // One repository boundary's real-Postgres contract: reads, writes,
-      // archive projections and transaction behavior belong together even
-      // though their coverage exceeds the general file limit. See
-      // docs/quality/no-excessive-lines-per-file-exceptions.md.
+      // One repository boundary's query and transaction coverage against a
+      // real Postgres. The shared test support owns resource acquisition and
+      // rollback; this file stays ordered by the service methods it protects.
+      // See docs/quality/no-excessive-lines-per-file-exceptions.md.
       "includes": [
         "apps/web/src/features/journal/services/entry-repository.test.ts"
       ],

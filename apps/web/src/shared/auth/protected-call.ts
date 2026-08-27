@@ -1,6 +1,22 @@
+import {
+  privateFailureResponse,
+  unauthorizedPrivateResponse,
+} from './private-response.ts';
+
 type ProtectedCall<T> = {
   readonly authorize: () => Promise<boolean>;
   readonly next: () => Promise<T>;
+  readonly publishHeaders: () => void;
+};
+
+const returnedResponse = (value: unknown): Response | undefined => {
+  if (value instanceof Response) {
+    return value;
+  }
+  if (typeof value !== 'object' || value === null || !('result' in value)) {
+    return undefined;
+  }
+  return value.result instanceof Response ? value.result : undefined;
 };
 
 /**
@@ -11,9 +27,29 @@ type ProtectedCall<T> = {
 export const runProtectedCall = async <T>({
   authorize,
   next,
+  publishHeaders,
 }: ProtectedCall<T>): Promise<T> => {
-  if (!(await authorize())) {
-    throw new Response('Not authorized.', { status: 401 });
+  publishHeaders();
+
+  let authorized: boolean;
+  try {
+    authorized = await authorize();
+  } catch (error) {
+    throw privateFailureResponse(error);
   }
-  return next();
+
+  if (!authorized) {
+    throw unauthorizedPrivateResponse();
+  }
+
+  try {
+    const result = await next();
+    const response = returnedResponse(result);
+    if (response !== undefined && !response.ok) {
+      throw response;
+    }
+    return result;
+  } catch (error) {
+    throw privateFailureResponse(error);
+  }
 };

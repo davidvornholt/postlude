@@ -1,63 +1,38 @@
 import {
-  createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
-  Link,
+  HeadContent,
   Outlet,
-  useRouter,
-  useRouterState,
+  type RouterHistory,
 } from '@tanstack/react-router';
-import type { MouseEvent } from 'react';
 
 import { activityWindow } from '../src/features/journal/activity.ts';
-import {
-  navigateAfterSettlingBrowserAutosaves,
-  readAfterSettlingBrowserAutosaves,
-} from '../src/features/journal/browser-autosaves.ts';
+import { readArchiveRoute } from '../src/features/journal/browser-archive-navigation.ts';
+import { journalDateLabel } from '../src/features/journal/day-label.ts';
+import type { JournalDate } from '../src/features/journal/journal-day.ts';
+import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
+import { pageTitle } from '../src/shared/ui/page-title.ts';
+import { RouterError } from '../src/shared/ui/router-fallbacks.tsx';
 import { ArchivePage } from './archive-navigation-archive-module.ts';
-import { DayPage } from './archive-navigation-day-module.ts';
+import { AppShell, DayPage } from './archive-navigation-day-module.ts';
 import type { ArchiveNavigationFixtureConfig } from './archive-navigation-fixture-contract.ts';
 import { journalEntryFromFixture } from './day-page-fixture-contract.ts';
 
 type ArchiveNavigationDependencies = {
   readonly config: ArchiveNavigationFixtureConfig;
-  readonly readArchive: () => Promise<ArchiveView>;
+  readonly history: RouterHistory;
   readonly save: SaveDraft;
 };
 
-const navigationClass =
-  'mx-auto flex w-full max-w-[76rem] justify-end px-5 pt-5 sm:px-8';
-
-const FixtureShell = () => {
-  const router = useRouter();
-  const pathname = useRouterState({
-    select: (state) => state.location.pathname,
-  });
-  const openArchive = async (
-    event: MouseEvent<HTMLAnchorElement>,
-  ): Promise<void> => {
-    event.preventDefault();
-    await navigateAfterSettlingBrowserAutosaves(() =>
-      router.navigate({ to: '/archive' }),
-    );
-  };
-
-  return (
-    <>
-      <nav aria-label="Journal sections" className={navigationClass}>
-        <Link onClick={openArchive} preload={false} to="/archive">
-          Open archive
-        </Link>
-      </nav>
-      <main data-fixture-route={pathname}>
-        <Outlet />
-      </main>
-    </>
-  );
-};
+const NavigationRoot = () => (
+  <>
+    <HeadContent />
+    <Outlet />
+  </>
+);
 
 export const emptyArchiveView = (
   config: ArchiveNavigationFixtureConfig,
@@ -74,20 +49,43 @@ export const emptyArchiveView = (
 
 export const createArchiveNavigationRouter = ({
   config,
-  readArchive,
+  history,
   save,
 }: ArchiveNavigationDependencies) => {
-  const rootRoute = createRootRoute({ component: FixtureShell });
-  const dayRoute = createRoute({
-    component: () => (
-      <DayPage
-        entry={journalEntryFromFixture(config.entry)}
-        save={save}
-        today={config.today}
-      />
-    ),
+  const storedEntry = journalEntryFromFixture(config.entry);
+  const entryOn = (date: JournalDate): JournalEntry =>
+    date === storedEntry.date
+      ? storedEntry
+      : { ...storedEntry, date, journalMarkdown: '', journalWordCount: 0 };
+  const rootRoute = createRootRoute({ component: NavigationRoot });
+  const appRoute = createRoute({
+    component: AppShell,
     getParentRoute: () => rootRoute,
+    id: 'app',
+  });
+  const todayRoute = createRoute({
+    component: () => (
+      <DayPage entry={entryOn(config.today)} save={save} today={config.today} />
+    ),
+    getParentRoute: () => appRoute,
+    head: () => ({ meta: [{ title: pageTitle('Today') }] }),
     path: '/',
+  });
+  const datedRoute = createRoute({
+    component: () => {
+      const { entry } = datedRoute.useLoaderData();
+      return <DayPage entry={entry} save={save} today={config.today} />;
+    },
+    getParentRoute: () => appRoute,
+    head: ({ params }) => ({
+      meta: [
+        {
+          title: pageTitle(journalDateLabel(params.date as JournalDate)),
+        },
+      ],
+    }),
+    loader: ({ params }) => ({ entry: entryOn(params.date as JournalDate) }),
+    path: '/day/$date',
   });
   const archiveRoute = createRoute({
     component: () => (
@@ -96,13 +94,17 @@ export const createArchiveNavigationRouter = ({
         view={archiveRoute.useLoaderData()}
       />
     ),
-    getParentRoute: () => rootRoute,
-    loader: () => readAfterSettlingBrowserAutosaves(readArchive),
+    getParentRoute: () => appRoute,
+    head: () => ({ meta: [{ title: pageTitle('Archive') }] }),
+    loader: () => readArchiveRoute({}),
     path: '/archive',
   });
 
   return createRouter({
-    history: createMemoryHistory({ initialEntries: ['/'] }),
-    routeTree: rootRoute.addChildren([dayRoute, archiveRoute]),
+    defaultErrorComponent: RouterError,
+    history,
+    routeTree: rootRoute.addChildren([
+      appRoute.addChildren([todayRoute, datedRoute, archiveRoute]),
+    ]),
   });
 };

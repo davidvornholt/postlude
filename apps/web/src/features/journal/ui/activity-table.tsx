@@ -15,7 +15,7 @@
  */
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
-import type { ActivityCell } from '../activity.ts';
+import type { ActivityCell } from '../activity-cells.ts';
 import { groupDigits, heatLevelLabels } from '../activity-labels.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
@@ -39,7 +39,16 @@ type ActivityTableProps = {
 export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
   // Newest first: the archive is read backwards from now, not forwards from
   // whenever the window happens to open.
-  const written = [...cells].reverse().filter((cell) => cell.words > 0);
+  const days = cells.filter((cell) => cell.kind === 'day');
+  const written = [...days].reverse().filter((cell) => cell.words > 0);
+
+  if (days.length === 0) {
+    return (
+      <p className="mt-6 border-border border-t pt-4 text-ink-muted">
+        This stretch of the journal has not happened yet.
+      </p>
+    );
+  }
 
   if (written.length === 0) {
     return (

@@ -101,6 +101,7 @@ it('searches the morning passage as well as the evening', async () => {
         journalMarkdown: 'A quiet evening.',
         scriptureMarkdown: 'Der Herr ist mein Hirte.',
         scriptureReference: 'Psalms 23',
+        baseRevision: 0,
       });
       const matches = yield* search.search(asked('hirte'), plenty);
       return matches.map((match) => match.date);
@@ -130,7 +131,7 @@ it('forgets a word the writer took back out', async () => {
   const dates = await withJournal(({ entries, search }) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-01', 'The rain fell all night.'));
-      yield* entries.save(draft('2026-03-01', 'Clear, in the end.'));
+      yield* entries.save(draft('2026-03-01', 'Clear, in the end.', '', 1));
       const matches = yield* search.search(asked('rain'), plenty);
       return matches.map((match) => match.date);
     }),
@@ -147,6 +148,7 @@ it('hands back the indexed visible sources and the day, counted', async () => {
         journalMarkdown: 'The rain fell all night.',
         scriptureMarkdown: '',
         scriptureReference: 'Psalms 23',
+        baseRevision: 0,
       });
       const matches = yield* search.search(asked('rain'), plenty);
       return matches.at(0);

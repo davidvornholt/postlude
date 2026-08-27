@@ -19,22 +19,29 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1787785145351,
-      "tag": "0002_independent_section_first_use",
+      "when": 1787810165556,
+      "tag": "0002_glorious_stick",
       "breakpoints": true
     },
     {
       "idx": 3,
       "version": "7",
-      "when": 1787790559949,
-      "tag": "0003_white_black_crow",
+      "when": 1787814267777,
+      "tag": "0003_motionless_gauntlet",
       "breakpoints": true
     },
     {
       "idx": 4,
       "version": "7",
-      "when": 1787790578886,
-      "tag": "0004_whole_iron_patriot",
+      "when": 1787819134718,
+      "tag": "0004_worthless_hairball",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787819149793,
+      "tag": "0005_spotty_leech",
       "breakpoints": true
     }
   ]

@@ -1,5 +1,5 @@
 import { expect, it, mock, spyOn } from 'bun:test';
-import { resolveSync } from 'bun';
+import { resolveSync, spawnSync } from 'bun';
 
 import { searchTransportBoundary } from './search-errors.ts';
 
@@ -9,31 +9,54 @@ const privateSource = '/srv/private/journal-search.ts';
 const privateLine = 817;
 const privateColumn = 29;
 const internalServerError = 500;
+const bunGlobal: unknown = Reflect.get(globalThis, 'Bun');
+const currentWorkingDirectory =
+  typeof bunGlobal === 'object' && bunGlobal !== null && 'cwd' in bunGlobal
+    ? bunGlobal.cwd
+    : undefined;
+const isTransportProbeProcess = currentWorkingDirectory === import.meta.dir;
 
 const directoryOf = (path: string): string =>
   path.slice(0, path.lastIndexOf('/'));
 
-mock.module('#tanstack-start-server-fn-resolver', () => ({
-  getServerFnById: async () =>
-    Object.assign(
-      () => {
-        const failure = new Error(privateDetails, {
-          cause: { connectionString: 'postgres://cause-credential' },
-        });
-        failure.stack = `PrivateDatabaseError: ${privateDetails}\n    at search (${privateSource}:${privateLine}:${privateColumn})`;
-        Object.assign(failure, {
-          column: privateColumn,
-          line: privateLine,
-          path: privateSource,
-          sourceURL: privateSource,
-        });
-        return searchTransportBoundary(Promise.reject(failure));
-      },
-      { method: 'POST' },
-    ),
-}));
+if (isTransportProbeProcess) {
+  mock.module('#tanstack-start-server-fn-resolver', () => ({
+    getServerFnById: async () =>
+      Object.assign(
+        () => {
+          const failure = new Error(privateDetails, {
+            cause: { connectionString: 'postgres://cause-credential' },
+          });
+          failure.stack = `PrivateDatabaseError: ${privateDetails}\n    at search (${privateSource}:${privateLine}:${privateColumn})`;
+          Object.assign(failure, {
+            column: privateColumn,
+            line: privateLine,
+            path: privateSource,
+            sourceURL: privateSource,
+          });
+          return searchTransportBoundary(Promise.reject(failure));
+        },
+        { method: 'POST' },
+      ),
+  }));
+}
 
 it('keeps internal database details out of TanStack Start transport', async () => {
+  if (!isTransportProbeProcess) {
+    const probe = spawnSync({
+      cmd: ['bun', 'test', import.meta.path],
+      cwd: import.meta.dir,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    if (probe.exitCode !== 0) {
+      throw new Error(
+        `The isolated search transport probe failed.\n${probe.stdout.toString()}\n${probe.stderr.toString()}`,
+      );
+    }
+    return;
+  }
+
   // The public server entry does not export the RPC handler at runtime. Resolve
   // the handler shipped inside the direct React Start dependency so this probe
   // exercises the serializer the deployed server actually uses.

@@ -6,6 +6,6 @@ A few files are longer because they are one boundary and splitting them would ma
 
 ## `apps/web/src/features/journal/services/entry-repository.test.ts`
 
-The repository tests one service against a real Postgres. Its cases cover the complete repository contract: day reads and writes, migration compatibility, archive projections, rollback behavior and concurrent writes.
+The repository's tests run against a real Postgres. `entry-repository-test-support.ts` owns the migrated pool, Effect layer, transaction isolation, and rollback. The test file holds the repository's read, save, archive, and snapshot contracts in the order the service declares them.
 
-Database setup shared with the search service lives in `features/journal/testing/database-harness.ts`, but splitting these cases again would scatter one service contract across files without creating a smaller production boundary. The file stays cohesive because it contains only behavior tests for `EntryRepository`, in the order the service methods are declared.
+Splitting the file by query would make the service's database contract harder to audit without removing setup or production complexity. The concurrency cases already live separately because they need simultaneous writes rather than the ordinary rolled-back harness. This file stays as the broad test boundary for the remaining methods.
