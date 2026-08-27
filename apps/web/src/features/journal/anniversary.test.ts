@@ -13,7 +13,7 @@ import type { AnniversaryEntry } from './schemas/anniversary-entry.ts';
 const entry = (date: string, markdown: string): AnniversaryEntry => ({
   date,
   journalMarkdown: markdown,
-  journalWordCount: markdown.split(' ').length,
+  journalWordCount: markdown === '' ? 0 : markdown.split(' ').length,
   scriptureMarkdown: '',
   scriptureWordCount: 0,
 });
@@ -38,6 +38,18 @@ it('opens with the words, not with the markdown around them', () => {
 
   expect(anniversaryOf('2026-08-24')(written).snippet).toBe(
     'Late The rain fell all night.',
+  );
+});
+
+it('falls back to scripture prose when the evening is empty', () => {
+  const written = {
+    ...entry('2022-08-24', ''),
+    scriptureMarkdown: '## Morning\n\nMercy arrived early.',
+    scriptureWordCount: 4,
+  };
+
+  expect(anniversaryOf('2026-08-24')(written).snippet).toBe(
+    'Morning Mercy arrived early.',
   );
 });
 

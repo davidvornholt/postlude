@@ -65,7 +65,11 @@ const privateServerFunctions = [
   },
   {
     path: 'features/journal/services/journal-fns.ts',
-    name: 'readJournalDayFn',
+    name: 'readDatedJournalDayFn',
+  },
+  {
+    path: 'features/journal/services/journal-fns.ts',
+    name: 'readTodayJournalDayFn',
   },
   {
     path: 'features/journal/services/journal-fns.ts',
