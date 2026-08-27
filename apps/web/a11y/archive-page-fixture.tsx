@@ -19,7 +19,10 @@ const settleAutosaves = async (): Promise<void> => {
   await new Promise((resolve) =>
     setTimeout(resolve, config.exportSettlement.delayMs),
   );
-  if (config.exportSettlement.outcome === 'failed') {
+  if (
+    config.exportSettlement.outcome === 'failed' ||
+    (config.exportSettlement.outcome === 'failed-once' && calls === 0)
+  ) {
     documentElement.dataset.exportSettleStatus = 'failed';
     throw new TypeError('The fixture autosave failed.');
   }

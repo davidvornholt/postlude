@@ -21,6 +21,10 @@
  * would step from. It carries its name in `aria-label`, and it is sized past
  * the 24px a pointer target has to clear rather than being an arrow the width
  * of an arrow.
+ *
+ * A small group of choices stays a native radio group at its call site. The
+ * browser owns its grouping and arrow-key behavior, while `accent-primary`
+ * connects it to the rest of the control language.
  */
 
 import {

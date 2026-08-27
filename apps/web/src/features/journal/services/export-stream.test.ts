@@ -3,10 +3,18 @@ import { Chunk, Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
 
 import { parseEntriesDocument } from '../export-format.ts';
+import { shiftJournalDate } from '../journal-day.ts';
 import { EntryExport, type ExportEntry } from './entry-export.ts';
 import { exportArchiveStream, exportContextAt } from './export-stream.ts';
 
 const separatedBacktickRunCount = 1_000_000;
+const leapYearDayCount = 366;
+const largeDayTextRepetitions = 8192;
+const largeDayText = 'journal '.repeat(largeDayTextRepetitions);
+const leapYearIndexes = Array.from(
+  { length: leapYearDayCount },
+  (_, index) => index,
+);
 const timestamp = '2026-03-01T20:00:00.000000Z';
 
 const bytesOf = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
@@ -20,21 +28,44 @@ const bytesOf = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
   return bytes;
 };
 
-const exportsOf = (entry: ExportEntry): EntryExport =>
+const exportsOf = (entries: ReadonlyArray<ExportEntry>): EntryExport =>
   EntryExport.make({
     visit: (visitor) =>
       Effect.gen(function* () {
         yield* visitor.onSnapshot({
           exportedAt: '2026-08-26T20:00:00.123456Z',
         });
-        yield* visitor.onCount(1);
+        yield* visitor.onCount(entries.length);
         for (const pass of visitor.passes) {
           yield* pass.before;
-          yield* pass.onEntry(entry);
+          yield* Effect.forEach(entries, pass.onEntry, { discard: true });
           yield* pass.after;
         }
       }),
   });
+
+const visitLeapYearEntries = <E, R>(
+  onEntry: (entry: ExportEntry) => Effect.Effect<void, E, R>,
+  entryAt: (index: number) => ExportEntry,
+  onVisit: () => void = () => undefined,
+) =>
+  Effect.forEach(
+    leapYearIndexes,
+    (index) =>
+      Effect.sync(onVisit).pipe(Effect.zipRight(onEntry(entryAt(index)))),
+    { discard: true },
+  );
+
+const readUntil = async (
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  predicate: () => boolean,
+): Promise<boolean> => {
+  const result = await reader.read();
+  if (result.done || predicate()) {
+    return result.done;
+  }
+  return readUntil(reader, predicate);
+};
 
 it('streams a million separated backtick runs without losing source or joining sections', async () => {
   const morning = '`x'.repeat(separatedBacktickRunCount);
@@ -51,7 +82,7 @@ it('streams a million separated backtick runs without losing source or joining s
   };
   const chunks = await Effect.runPromise(
     exportArchiveStream(
-      exportsOf(entry),
+      exportsOf([entry]),
       'Europe/Berlin',
       () => undefined,
     ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray)),
@@ -65,6 +96,69 @@ it('streams a million separated backtick runs without losing source or joining s
   expect(decoder.decode(files['days/2026/2026-03-01.md'])).toBe(
     `---\ndate: "2026-03-01"\n---\n\n## Morning\n\n\`\`\`markdown\n${morning}\n\`\`\`\n\n## Evening\n\n\`\`\`\`markdown\n${evening}\n\`\`\`\`\n`,
   );
+});
+
+it('backpressures a large leap-year period and releases its snapshot on cancellation', async () => {
+  let projectedDays = 0;
+  let snapshotReleased = false;
+  const entryAt = (index: number): ExportEntry => ({
+    date: shiftJournalDate('2024-01-01', index),
+    journalMarkdown: largeDayText,
+    scriptureMarkdown: '',
+    scriptureReference: null,
+    journalFirstUsedAt: timestamp,
+    scriptureFirstUsedAt: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+  const exports = EntryExport.make({
+    visit: (visitor) =>
+      Effect.acquireUseRelease(
+        Effect.void,
+        () =>
+          Effect.gen(function* () {
+            yield* visitor.onSnapshot({
+              exportedAt: '2026-08-26T20:00:00.123456Z',
+            });
+            yield* visitor.onCount(leapYearDayCount);
+            for (const pass of visitor.passes) {
+              yield* pass.before;
+              yield* visitLeapYearEntries(pass.onEntry, entryAt);
+              yield* pass.after;
+            }
+            const { periodPass } = visitor;
+            if (periodPass !== undefined) {
+              yield* periodPass.before;
+              yield* periodPass.onPeriodStart({
+                key: '2024',
+                from: '2024-01-01',
+                to: '2024-12-31',
+                days: leapYearDayCount,
+              });
+              yield* visitLeapYearEntries(periodPass.onEntry, entryAt, () => {
+                projectedDays += 1;
+              });
+              yield* periodPass.onPeriodEnd;
+              yield* periodPass.after;
+            }
+          }),
+        () =>
+          Effect.sync(() => {
+            snapshotReleased = true;
+          }),
+      ),
+  });
+  const body = Stream.toReadableStream(
+    exportArchiveStream(exports, 'Europe/Berlin', () => undefined, 'year'),
+  );
+  const reader = body.getReader();
+
+  expect(await readUntil(reader, () => projectedDays > 0)).toBeFalse();
+  expect(projectedDays).toBeLessThan(leapYearDayCount);
+  expect(snapshotReleased).toBeFalse();
+
+  await reader.cancel();
+  expect(snapshotReleased).toBeTrue();
 });
 
 const contextAt = (exportedAt: string) =>

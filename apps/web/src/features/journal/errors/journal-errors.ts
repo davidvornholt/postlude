@@ -41,6 +41,7 @@ export class JournalValidationError extends Data.TaggedError(
   'JournalValidationError',
 )<{
   readonly message: string;
+  readonly cause?: unknown;
 }> {}
 
 export const journalReadError = (cause: unknown): JournalReadError =>

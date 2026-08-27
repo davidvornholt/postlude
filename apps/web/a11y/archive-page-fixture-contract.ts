@@ -3,7 +3,7 @@ import type { ArchiveView } from '../src/features/journal/services/archive-fns.t
 export type ArchivePageFixtureConfig = {
   readonly exportSettlement: {
     readonly delayMs: number;
-    readonly outcome: 'failed' | 'pending' | 'stored';
+    readonly outcome: 'failed' | 'failed-once' | 'pending' | 'stored';
   };
   readonly selectedYear: number | undefined;
   readonly view: ArchiveView;
