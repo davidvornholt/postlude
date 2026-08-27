@@ -14,21 +14,29 @@ type RevisionedJournalDay = {
   readonly anniversaryRevisions: ReadonlyArray<RevisionEvidence>;
 };
 
+type RevisionEvidenceOf<Loaded> = (
+  loaded: Loaded,
+) => RevisionedJournalDay | undefined;
+
 const maximumLoaderReads = 3;
 
-export const loadAfterConfirmedRevision = async <
-  Day extends RevisionedJournalDay,
->(
-  load: () => Promise<Day>,
-  tracker: ConfirmedRevisionTracker = confirmedRevisions,
-): Promise<Day> => {
+const loadWithConfirmedRevision = async <Loaded>(
+  load: () => Promise<Loaded>,
+  revisionEvidenceOf: RevisionEvidenceOf<Loaded>,
+  tracker: ConfirmedRevisionTracker,
+): Promise<Loaded> => {
   const loader = tracker.beginLoad();
 
-  const readCurrent = async (remaining: number): Promise<Day> => {
+  const readCurrent = async (remaining: number): Promise<Loaded> => {
     const loaded = await load();
-    const result = tracker.completeLoad(loader, loaded.entry.date, [
-      loaded.entry,
-      ...loaded.anniversaryRevisions,
+    const evidence = revisionEvidenceOf(loaded);
+    if (evidence === undefined) {
+      tracker.abandonLoad(loader);
+      return loaded;
+    }
+    const result = tracker.completeLoad(loader, evidence.entry.date, [
+      evidence.entry,
+      ...evidence.anniversaryRevisions,
     ]);
     if (result === 'accept') {
       return loaded;
@@ -48,3 +56,15 @@ export const loadAfterConfirmedRevision = async <
     throw error;
   }
 };
+
+export const loadAfterConfirmedRevision = <Day extends RevisionedJournalDay>(
+  load: () => Promise<Day>,
+  tracker: ConfirmedRevisionTracker = confirmedRevisions,
+): Promise<Day> => loadWithConfirmedRevision(load, (loaded) => loaded, tracker);
+
+export const loadClassifiedAfterConfirmedRevision = <Loaded>(
+  load: () => Promise<Loaded>,
+  revisionEvidenceOf: RevisionEvidenceOf<Loaded>,
+  tracker: ConfirmedRevisionTracker = confirmedRevisions,
+): Promise<Loaded> =>
+  loadWithConfirmedRevision(load, revisionEvidenceOf, tracker);

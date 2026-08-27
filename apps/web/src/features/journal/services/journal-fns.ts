@@ -19,7 +19,10 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import { loadAfterConfirmedRevision } from '../confirmed-revision-loader.ts';
+import {
+  loadAfterConfirmedRevision,
+  loadClassifiedAfterConfirmedRevision,
+} from '../confirmed-revision-loader.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { decodeSaveConfirmation } from '../save-confirmation.ts';
 import {
@@ -79,22 +82,22 @@ export const readTodayJournalDay = () =>
 
 export const readDatedJournalDay = (input: {
   readonly data: { readonly date: JournalDate };
-}) =>
-  readDatedJournalDayFn(input).then(async (initial) => {
-    if (initial.disposition !== 'readable') {
-      return initial;
-    }
-    let first: typeof initial | undefined = initial;
-    const view = await loadAfterConfirmedRevision(async () => {
-      const result = first ?? (await readDatedJournalDayFn(input));
-      first = undefined;
+}) => {
+  let startedReadable = false;
+  return loadClassifiedAfterConfirmedRevision(
+    () => readDatedJournalDayFn(input),
+    (result) => {
       if (result.disposition !== 'readable') {
-        throw new Error('The requested journal day changed classification.');
+        if (startedReadable) {
+          throw new Error('The requested journal day changed classification.');
+        }
+        return;
       }
+      startedReadable = true;
       return result.view;
-    });
-    return { disposition: 'readable' as const, view };
-  });
+    },
+  );
+};
 
 /**
  * Saves a day and returns the database-issued revision of that write. The
