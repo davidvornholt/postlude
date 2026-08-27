@@ -131,6 +131,7 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
             Go to a day
           </label>
           <input
+            aria-label={`${label}. Go to another day.`}
             className={[fieldClass, 'mt-2'].join(' ')}
             defaultValue={date}
             id={fieldId}

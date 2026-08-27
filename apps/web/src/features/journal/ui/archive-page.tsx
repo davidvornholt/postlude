@@ -159,7 +159,6 @@ export const ArchivePage = ({
               <ActivityMap cells={cells} today={view.today} />
             </div>
           </Section>
-
         </>
       )}
       {view.exportAvailable ? (

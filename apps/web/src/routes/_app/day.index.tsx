@@ -1,6 +1,7 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 
 import { isJournalDate } from '#/features/journal/journal-day.ts';
+import { pageTitle } from '#/shared/ui/page-title.ts';
 
 /**
  * `/day?date=2026-08-20`, which is not a page but the way to one.
@@ -30,4 +31,5 @@ export const Route = createFileRoute('/_app/day/')({
     }
     throw redirect({ params: { date: search.date }, to: '/day/$date' });
   },
+  head: () => ({ meta: [{ title: pageTitle('Day not found') }] }),
 });

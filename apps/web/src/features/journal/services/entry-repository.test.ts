@@ -2,16 +2,16 @@ import { expect, it } from 'bun:test';
 import { SqlClient } from '@effect/sql';
 import { Deferred, Effect, Fiber } from 'effect';
 import {
-  draft,
-  withCommittedRepository,
-  withRepository,
-} from './entry-repository-test-support.ts';
-import {
   anniversaryLimit,
   anniversaryOf,
   isoMonthStart,
 } from '../anniversary.ts';
 import { countJournalWords } from '../word-count.ts';
+import {
+  draft,
+  withCommittedRepository,
+  withRepository,
+} from './entry-repository-test-support.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const archiveRequest = (today: string) => ({ today });

@@ -11,8 +11,8 @@ export const renderDayPageFixture = (
   config: DayPageFixtureConfig,
 ): Promise<string> =>
   renderInRouter(
-      <DayPage
-        anniversaries={config.anniversaries}
+    <DayPage
+      anniversaries={config.anniversaries}
       entry={journalEntryFromFixture(config.entry)}
       save={neverSaves}
       today={config.today}

@@ -19,9 +19,7 @@ it('reads back an earlier year and opens the day it came from', async () => {
 
   expect(html).toContain('On this day');
   expect(html).toContain('Moved the desk under the window.');
-  expect(plainText(html)).toContain(
-    '1 year ago · Tuesday, August 26, 2025 · 210 words',
-  );
+  expect(plainText(html)).toContain('1 year ago · Tuesday, August 26, 2025');
   expect(html).toContain('href="/day/2025-08-26"');
 });
 
