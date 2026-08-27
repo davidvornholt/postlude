@@ -33,12 +33,23 @@ export const exportGroupings = ['day', 'week', 'month', 'year'] as const;
 
 export type ExportGrouping = (typeof exportGroupings)[number];
 
-const isoYearEnd = 4;
-const isoMonthEnd = 7;
-const weekNumberStart = 6;
 const daysPerWeek = 7;
 const thursday = 4;
 const weekDigits = 2;
+const monthDigits = 2;
+const yearDigits = 4;
+const firstYear = 1;
+const lastYear = 9999;
+
+const pad = (value: number, width: number): string =>
+  String(value).padStart(width, '0');
+
+const yearKey = (year: number): string => {
+  if (year < firstYear || year > lastYear) {
+    throw new RangeError(`Export year is outside 0001 through 9999: ${year}`);
+  }
+  return pad(year, yearDigits);
+};
 
 /** Monday 1 through Sunday 7, which is how ISO 8601 counts a week. */
 const isoWeekday = (date: JournalDate): number =>
@@ -57,14 +68,17 @@ export const isoWeekKey = (date: JournalDate): string => {
   const yearStart = formatJournalDate({ year, month: 1, day: 1 });
   const week =
     Math.floor(daysBetweenJournalDates(yearStart, midweek) / daysPerWeek) + 1;
-  return `${midweek.slice(0, isoYearEnd)}-W${String(week).padStart(weekDigits, '0')}`;
+  return `${yearKey(year)}-W${pad(week, weekDigits)}`;
 };
 
 const periodKeys: Record<ExportGrouping, (date: JournalDate) => string> = {
   day: (date) => date,
   week: isoWeekKey,
-  month: (date) => date.slice(0, isoMonthEnd),
-  year: (date) => date.slice(0, isoYearEnd),
+  month: (date) => {
+    const { year, month } = parseJournalDate(date);
+    return `${yearKey(year)}-${pad(month, monthDigits)}`;
+  },
+  year: (date) => yearKey(parseJournalDate(date).year),
 };
 
 /** Which file of the export a day is written into. */
@@ -79,15 +93,78 @@ export const periodKeyOf = (
  * year to a file, where a folder would hold one document and be a click that
  * leads nowhere.
  */
-export const periodPath = (grouping: ExportGrouping, key: string): string =>
-  grouping === 'year' ? `${key}.md` : `${key.slice(0, isoYearEnd)}/${key}.md`;
+const weekKeyPattern = /^(?<year>\d{4})-W(?<week>\d{2})$/u;
+const monthKeyPattern = /^(?<year>\d{4})-(?<month>\d{2})$/u;
+const yearKeyPattern = /^\d{4}$/u;
+const firstPeriodNumber = 1;
+const lastMonth = 12;
+const lastIsoWeek = 53;
+
+type PeriodKeyParts = {
+  readonly year: string;
+  readonly number?: number;
+};
+
+const parsePeriodKey = (
+  grouping: ExportGrouping,
+  key: string,
+): PeriodKeyParts => {
+  if (grouping === 'day') {
+    const { year } = parseJournalDate(key);
+    return { year: yearKey(year) };
+  }
+  if (grouping === 'year') {
+    const year = Number(key);
+    if (!yearKeyPattern.test(key) || year < firstYear || year > lastYear) {
+      throw new TypeError(`Not a year export key: ${key}`);
+    }
+    return { year: key };
+  }
+  const parts = (grouping === 'week' ? weekKeyPattern : monthKeyPattern).exec(
+    key,
+  )?.groups;
+  if (parts?.year === undefined) {
+    throw new TypeError(`Not a ${grouping} export key: ${key}`);
+  }
+  const numberText = grouping === 'week' ? parts.week : parts.month;
+  if (numberText === undefined) {
+    throw new TypeError(`Not a ${grouping} export key: ${key}`);
+  }
+  const year = Number(parts.year);
+  const number = Number(numberText);
+  const lastNumber = grouping === 'week' ? lastIsoWeek : lastMonth;
+  if (
+    year < firstYear ||
+    year > lastYear ||
+    number < firstPeriodNumber ||
+    number > lastNumber
+  ) {
+    throw new TypeError(`Not a ${grouping} export key: ${key}`);
+  }
+  return { year: parts.year, number };
+};
+
+export const periodPath = (grouping: ExportGrouping, key: string): string => {
+  const { year } = parsePeriodKey(grouping, key);
+  return grouping === 'year' ? `${year}.md` : `${year}/${key}.md`;
+};
 
 const periodLabels: Record<ExportGrouping, (key: string) => string> = {
-  day: (key) => key,
-  week: (key) =>
-    `Week ${key.slice(weekNumberStart)}, ${key.slice(0, isoYearEnd)}`,
-  month: monthYearLabel,
-  year: (key) => key,
+  day: (key) => {
+    parsePeriodKey('day', key);
+    return key;
+  },
+  week: (key) => {
+    const { year, number } = parsePeriodKey('week', key);
+    return `Week ${number}, ${year}`;
+  },
+  month: (key) => {
+    const { year, number } = parsePeriodKey('month', key);
+    return monthYearLabel(
+      formatJournalDate({ year: Number(year), month: number ?? 0, day: 1 }),
+    );
+  },
+  year: (key) => parsePeriodKey('year', key).year,
 };
 
 /** What that file calls itself in its opening heading. */
