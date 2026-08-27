@@ -155,9 +155,8 @@ describe('trusted preview consumer boundary', () => {
 describe('preview host authorization and secret boundary', () => {
   it('uses only the dedicated main-only environment secret contract', () => {
     expect(hostCommand).toContain('      name: pr-preview');
-    expect(hostCommand).toContain(
-      `SOPS_AGE_KEY: ${githubExpression('secrets.sops_age_key')}`,
-    );
+    const sopsAgeKey = githubExpression('secrets.sops_age_key');
+    expect(hostCommand).toContain(`SOPS_AGE_KEY: ${sopsAgeKey}`);
     expect(hostCommand).toContain('      sops_age_key:');
     expect(hostCommand).toContain('        required: true');
     const hostCommandCalls = consumer.match(
@@ -166,10 +165,11 @@ describe('preview host authorization and secret boundary', () => {
     const explicitSecretPasses = consumer.match(
       /sops_age_key: \$\{\{ secrets\.SOPS_AGE_KEY \}\}/gu,
     );
-    expect(hostCommandCalls).not.toBeNull();
-    expect(explicitSecretPasses).toHaveLength(hostCommandCalls?.length ?? 0);
+    expect(explicitSecretPasses).toHaveLength(hostCommandCalls?.length ?? -1);
     expect(hostCommand).toContain('secrets/pr-preview.yaml?ref=$main_sha');
     expect(hostCommand).toContain(`printf '\\n' >>"$key"`);
+    expect(hostCommand).toContain('ssh-keygen -y -f "$key" >/dev/null');
+    expect(hostCommand).not.toContain('public_key=$(ssh-keygen -y');
     expect(hostCommand).not.toContain('secrets: inherit');
     expect(hostCommand).not.toContain('secrets/ci.yaml');
   });
