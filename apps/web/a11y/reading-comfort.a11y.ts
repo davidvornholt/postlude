@@ -7,65 +7,17 @@ import {
   scanArchive,
 } from './archive-page-test-support.ts';
 import { mountDayPage, scan } from './day-page-test-support.ts';
+import {
+  expectContainedGeometry,
+  expectPageFrameGeometry,
+  expectReadingMeasureGeometry,
+  expectViewportBandGeometry,
+} from './reading-comfort-test-support.ts';
 import { mountSearchPage, scanSearch } from './search-page-test-support.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
-const pageFrameMaximumRem = 56;
-const readingMeasureCharacters = 65;
-const geometryTolerance = 1;
 const deepGround = /^oklch\(0\.[0-4]/u;
 const writtenSummary = /days written, .* words in all/u;
-
-const expectPageGeometry = async (
-  page: playwright.Page,
-  frame: playwright.Locator,
-  readingMeasure: playwright.Locator,
-) => {
-  const frameGeometry = await frame.evaluate((element, maximumRem) => {
-    const rectangle = element.getBoundingClientRect();
-    const rootSize = Number.parseFloat(
-      getComputedStyle(document.documentElement).fontSize,
-    );
-    return {
-      expectedWidth: Math.min(globalThis.innerWidth, maximumRem * rootSize),
-      left: rectangle.left,
-      right: globalThis.innerWidth - rectangle.right,
-      width: rectangle.width,
-    };
-  }, pageFrameMaximumRem);
-  expect(frameGeometry.width).toBeCloseTo(frameGeometry.expectedWidth, 0);
-  expect(
-    Math.abs(frameGeometry.left - frameGeometry.right),
-  ).toBeLessThanOrEqual(geometryTolerance);
-
-  const measure = await readingMeasure.evaluate((element, characters) => {
-    const style = getComputedStyle(element);
-    const probe = document.createElement('span');
-    probe.style.cssText = [
-      'position:fixed',
-      'visibility:hidden',
-      `font-family:${style.fontFamily}`,
-      `font-size:${style.fontSize}`,
-      `font-stretch:${style.fontStretch}`,
-      `font-style:${style.fontStyle}`,
-      `font-weight:${style.fontWeight}`,
-      `width:${characters}ch`,
-    ].join(';');
-    document.body.append(probe);
-    const expectedMaxWidth = probe.getBoundingClientRect().width;
-    probe.remove();
-    return {
-      expectedMaxWidth,
-      maxWidth: Number.parseFloat(style.maxWidth),
-    };
-  }, readingMeasureCharacters);
-  expect(measure.maxWidth).toBeCloseTo(measure.expectedMaxWidth, 0);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= globalThis.innerWidth,
-    ),
-  ).toBe(true);
-};
 
 const expectKeyboardFocus = async (
   page: playwright.Page,
@@ -93,11 +45,8 @@ for (const colorScheme of colorSchemes) {
 
     const date = page.getByRole('heading', { level: 1 });
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
-    await expectPageGeometry(
-      page,
-      date.locator('..'),
-      evening.locator('xpath=../..'),
-    );
+    await expectPageFrameGeometry(date.locator('..'));
+    await expectReadingMeasureGeometry(page, evening.locator('xpath=../..'));
     await expectKeyboardFocus(
       page,
       page.getByRole('link', { name: 'Previous day' }),
@@ -127,6 +76,10 @@ for (const colorScheme of colorSchemes) {
         name: 'Morning scripture',
       })
       .locator('xpath=../..');
+    await expectViewportBandGeometry(register);
+    await expectPageFrameGeometry(
+      page.getByRole('heading', { name: 'Morning scripture' }).locator('..'),
+    );
     const registerColors = await register.evaluate((element) => ({
       ground: getComputedStyle(element).backgroundColor,
       page: getComputedStyle(document.body).backgroundColor,
@@ -143,11 +96,8 @@ for (const colorScheme of colorSchemes) {
     await mountArchivePage(page, archiveFixtureConfigs.filled);
     const heading = page.getByRole('heading', { name: 'Archive' });
     await expect(heading).toBeVisible();
-    await expectPageGeometry(
-      page,
-      heading.locator('..'),
-      page.getByText(writtenSummary),
-    );
+    await expectPageFrameGeometry(heading.locator('..'));
+    await expectReadingMeasureGeometry(page, page.getByText(writtenSummary));
     await expectKeyboardFocus(
       page,
       page.getByRole('link', { name: 'Past year' }),
@@ -161,16 +111,17 @@ for (const colorScheme of colorSchemes) {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountSearchPage(page, 'populated');
     const heading = page.getByRole('heading', { name: 'Search' });
+    const searchbox = page.getByRole('searchbox', { name: 'Words to find' });
+    const form = searchbox.locator('xpath=ancestor::form');
     await expect(heading).toBeVisible();
-    await expectPageGeometry(
+    await expectPageFrameGeometry(heading.locator('..'));
+    await expectReadingMeasureGeometry(
       page,
-      heading.locator('..'),
       page.getByText('Every evening you have written is searchable'),
     );
-    await expectKeyboardFocus(
-      page,
-      page.getByRole('searchbox', { name: 'Words to find' }),
-    );
+    await expectReadingMeasureGeometry(page, form);
+    await expectContainedGeometry(searchbox, form);
+    await expectKeyboardFocus(page, searchbox);
     await scanSearch(page);
   });
 }
