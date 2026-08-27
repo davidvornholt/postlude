@@ -169,6 +169,7 @@ describe('preview host authorization and secret boundary', () => {
     expect(hostCommandCalls).not.toBeNull();
     expect(explicitSecretPasses).toHaveLength(hostCommandCalls?.length ?? 0);
     expect(hostCommand).toContain('secrets/pr-preview.yaml?ref=$main_sha');
+    expect(hostCommand).toContain(`printf '\\n' >>"$key"`);
     expect(hostCommand).not.toContain('secrets: inherit');
     expect(hostCommand).not.toContain('secrets/ci.yaml');
   });

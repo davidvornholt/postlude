@@ -145,6 +145,7 @@ jobs:
             --extract '["ci"]["ssh_private_key"]' \
             --output-type binary \
             "$RUNNER_TEMP/postlude-pr-preview.yaml" >"$key"
+          printf '\n' >>"$key"
           chmod 0600 "$key"
           test -s "$key"
           public_key=$(ssh-keygen -y -f "$key")
