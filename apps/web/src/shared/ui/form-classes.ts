@@ -15,6 +15,12 @@
  * Square corners and no shadow are the design rather than an omission: nothing
  * in Postlude floats, so both shadow tokens are off and there is no raised edge
  * for a radius to soften.
+ *
+ * The one control that is a glyph rather than words is the step to the day
+ * before or after, which sits under a heading that already names the day it
+ * would step from. It carries its name in `aria-label`, and it is sized past
+ * the 24px a pointer target has to clear rather than being an arrow the width
+ * of an arrow.
  */
 
 import {
@@ -114,4 +120,19 @@ export const deepFieldClass = [
   'transition-colors duration-150 ease-standard',
   'hover:border-deep-ink-muted focus:border-deep-ink',
   deepFocusRingClass,
+].join(' ');
+
+/*
+ * A step to the next thing along, drawn as the arrow it is. There is no rule
+ * under it: a rule under a lone arrow reads as a line through the page rather
+ * than as a control, and the arrow is already a shape the eye takes as one. The
+ * ink deepens under a pointer and on a press, which is the same thing the quiet
+ * control's type does.
+ */
+export const iconButtonClass = [
+  'inline-flex h-11 w-11 items-center justify-center',
+  'text-2xl text-ink-muted leading-none',
+  'transition-colors duration-150 ease-standard',
+  'hover:text-ink active:text-ink',
+  focusRingClass,
 ].join(' ');

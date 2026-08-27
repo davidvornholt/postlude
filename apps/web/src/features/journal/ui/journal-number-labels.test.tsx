@@ -31,7 +31,6 @@ const view: ArchiveView = {
   journalStreak: { current: 1, longest: 1 },
   scriptureStreak: { current: 0, longest: 0 },
   totals: { daysWritten: thousand, words: million },
-  anniversaries: [],
 };
 
 it('groups archive totals in the journal convention', async () => {

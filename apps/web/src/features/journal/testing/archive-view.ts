@@ -86,6 +86,5 @@ export const sampleArchiveView = (
     journalStreak: journalStreak(days, today),
     scriptureStreak: scriptureStreak(days, today),
     totals: activityTotals(days),
-    anniversaries: [],
   };
 };

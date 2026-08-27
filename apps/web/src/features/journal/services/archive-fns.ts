@@ -3,9 +3,9 @@
  * round trip.
  *
  * It carries `sessionRequired` like every other function here. The archive is a
- * map of the whole journal — when it was written, how much, and the opening
- * lines of days from earlier years — so an unguarded one would leak the shape
- * of a private journal to anyone who found the address.
+ * map of the whole journal — when it was written and how much — so an unguarded
+ * one would leak the shape of a private journal to anyone who found the
+ * address.
  *
  * The streaks are counted over the whole history rather than over the year the
  * map shows, because a run that started before the window is still the run the
@@ -36,21 +36,11 @@ import {
   parseJournalDate,
 } from '../journal-day.ts';
 import { decodeArchiveQuery } from '../schemas/archive-query.ts';
-import type { JournalEntry } from '../schemas/entry.ts';
 import type { EntrySummary } from '../schemas/entry-summary.ts';
-import { archiveSnippet } from '../snippet.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
 import { runJournalEffect } from './journal-runtime.ts';
-
-/** One earlier year's entry for the same day of the month. */
-export type Anniversary = {
-  readonly date: JournalDate;
-  readonly yearsAgo: number;
-  readonly words: number;
-  readonly snippet: string;
-};
 
 export type ArchiveView = {
   readonly today: JournalDate;
@@ -66,11 +56,7 @@ export type ArchiveView = {
   readonly scriptureStreak: Streak;
   /** The whole journal, which is what the streaks are counted against. */
   readonly totals: ActivityTotals;
-  readonly anniversaries: ReadonlyArray<Anniversary>;
 };
-
-const anniversaryLimit = 4;
-const isoMonthStart = 5;
 
 const activityDayOf =
   (timeZone: string) =>
@@ -107,15 +93,6 @@ const yearsCovered = (
   );
 };
 
-const anniversaryOf =
-  (today: JournalDate) =>
-  (entry: JournalEntry): Anniversary => ({
-    date: entry.date,
-    yearsAgo: parseJournalDate(today).year - parseJournalDate(entry.date).year,
-    words: entry.journalWordCount + entry.scriptureWordCount,
-    snippet: archiveSnippet(entry),
-  });
-
 export const readArchiveFn = createServerFn({ method: 'GET' })
   .middleware([sessionRequired])
   .validator((input: unknown) => decodeArchiveQuery(input ?? {}))
@@ -127,11 +104,8 @@ export const readArchiveFn = createServerFn({ method: 'GET' })
         const entries = yield* EntryRepository;
         const snapshot = yield* entries.readArchive({
           today,
-          anniversaryMonthDay: today.slice(isoMonthStart),
-          anniversaryLimit,
         });
-        const { earliest, summaries, anniversaries, exportAvailable } =
-          snapshot;
+        const { earliest, summaries, exportAvailable } = snapshot;
         const history = summaries.map(activityDayOf(env.JOURNAL_TIME_ZONE));
 
         return {
@@ -145,7 +119,6 @@ export const readArchiveFn = createServerFn({ method: 'GET' })
           journalStreak: journalStreak(history, today),
           scriptureStreak: scriptureStreak(history, today),
           totals: activityTotals(history),
-          anniversaries: anniversaries.map(anniversaryOf(today)),
         };
       }),
     );

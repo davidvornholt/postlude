@@ -45,7 +45,6 @@ export const emptyArchiveView = (
   journalStreak: { current: 0, longest: 0 },
   scriptureStreak: { current: 0, longest: 0 },
   totals: { daysWritten: 0, words: 0 },
-  anniversaries: [],
 });
 
 export const createArchiveNavigationRouter = ({
@@ -66,7 +65,12 @@ export const createArchiveNavigationRouter = ({
   });
   const todayRoute = createRoute({
     component: () => (
-      <DayPage entry={entryOn(config.today)} save={save} today={config.today} />
+      <DayPage
+        anniversaries={[]}
+        entry={entryOn(config.today)}
+        save={save}
+        today={config.today}
+      />
     ),
     getParentRoute: () => appRoute,
     head: () => ({ meta: [{ title: pageTitle('Today') }] }),
@@ -75,7 +79,14 @@ export const createArchiveNavigationRouter = ({
   const datedRoute = createRoute({
     component: () => {
       const { entry } = datedRoute.useLoaderData();
-      return <DayPage entry={entry} save={save} today={config.today} />;
+      return (
+        <DayPage
+          anniversaries={[]}
+          entry={entry}
+          save={save}
+          today={config.today}
+        />
+      );
     },
     getParentRoute: () => appRoute,
     head: ({ params }) => ({

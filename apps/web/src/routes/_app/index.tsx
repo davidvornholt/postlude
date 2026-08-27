@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import {
-  readJournalDay,
+  readTodayJournalDay,
   saveDraft,
 } from '#/features/journal/services/journal-fns.ts';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
@@ -19,12 +19,19 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * cannot escape a frame the shell has already closed around it.
  */
 const TodayRoute = () => {
-  const { entry, today } = Route.useLoaderData();
-  return <DayPage entry={entry} save={saveDraft} today={today} />;
+  const { entry, today, anniversaries } = Route.useLoaderData();
+  return (
+    <DayPage
+      anniversaries={anniversaries}
+      entry={entry}
+      save={saveDraft}
+      today={today}
+    />
+  );
 };
 
 export const Route = createFileRoute('/_app/')({
-  loader: () => readJournalDay(),
+  loader: () => readTodayJournalDay(),
   component: TodayRoute,
   head: () => ({ meta: [{ title: pageTitle('Today') }] }),
 });

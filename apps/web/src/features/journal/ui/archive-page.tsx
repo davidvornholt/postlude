@@ -2,12 +2,13 @@
  * The archive: how the journal has actually been going.
  *
  * It reads top to bottom as answers to different questions. The streaks say how
- * it is going now. The map says how the year went. "On this day" says what the
- * writer was thinking about a year ago, which is the only part of the page that
- * is there to be read rather than measured. The download at the foot is the one
- * thing here that is not a reading of the journal at all: it is the way out,
- * and it sits under the measurements because it belongs to the same question —
- * what is in here — rather than to the writing.
+ * it is going now. The map says how the year went. Nothing here is an entry:
+ * reading what was written belongs to the day it was written on, which is why
+ * the years behind a date are shown on that date's own page rather than here.
+ * The download at the foot is the one thing that is not a reading of the
+ * journal at all — it is the way out, and it sits under the measurements
+ * because it belongs to the same question, what is in here, rather than to the
+ * writing.
  *
  * A year of days is 53 columns wide, and it is what set the page frame every
  * page now shares. The prose inside it still keeps to a reading measure of its
@@ -37,7 +38,6 @@ import { journalCountLabel } from '../journal-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
 import { ExportControl, type SettleAutosaves } from './export-control.tsx';
-import { OnThisDay } from './on-this-day.tsx';
 import { StreakPanel } from './streak-panel.tsx';
 
 const headingClass = 'font-display text-4xl text-ink sm:text-5xl';
@@ -130,8 +130,7 @@ export const ArchivePage = ({
           ].join(' ')}
         >
           No writing activity yet. The streaks, the year of days, and entries
-          from earlier years appear once a day contains prose or a scripture
-          reference.
+          appear once a day contains prose or a scripture reference.
         </p>
       ) : (
         <>
@@ -160,15 +159,6 @@ export const ArchivePage = ({
               <ActivityMap cells={cells} today={view.today} />
             </div>
           </Section>
-
-          {view.anniversaries.length === 0 ? null : (
-            <Section title="On this day">
-              <OnThisDay
-                anniversaries={view.anniversaries}
-                today={view.today}
-              />
-            </Section>
-          )}
         </>
       )}
       {view.exportAvailable ? (

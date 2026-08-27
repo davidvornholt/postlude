@@ -26,11 +26,11 @@ export const JournalDateSchema = Schema.String.pipe(
   }),
 );
 
-const WordCount = Schema.Number.pipe(
+export const WordCountSchema = Schema.Number.pipe(
   Schema.int(),
   Schema.greaterThanOrEqualTo(0),
 );
-const Revision = Schema.Number.pipe(
+export const RevisionSchema = Schema.Number.pipe(
   Schema.int(),
   Schema.greaterThanOrEqualTo(0),
 );
@@ -45,7 +45,7 @@ const EntryRow = Schema.Struct({
   journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
     Schema.fromKey('journal_markdown'),
   ),
-  journalWordCount: Schema.propertySignature(WordCount).pipe(
+  journalWordCount: Schema.propertySignature(WordCountSchema).pipe(
     Schema.fromKey('journal_word_count'),
   ),
   journalFirstUsedAt: Schema.propertySignature(
@@ -54,7 +54,7 @@ const EntryRow = Schema.Struct({
   scriptureMarkdown: Schema.propertySignature(
     Schema.NullOr(Schema.String),
   ).pipe(Schema.fromKey('scripture_markdown')),
-  scriptureWordCount: Schema.propertySignature(WordCount).pipe(
+  scriptureWordCount: Schema.propertySignature(WordCountSchema).pipe(
     Schema.fromKey('scripture_word_count'),
   ),
   scriptureFirstUsedAt: Schema.propertySignature(
@@ -72,7 +72,9 @@ const EntryRow = Schema.Struct({
   scriptureVerseEnd: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
     Schema.fromKey('scripture_verse_end'),
   ),
-  revision: Schema.propertySignature(Revision).pipe(Schema.fromKey('revision')),
+  revision: Schema.propertySignature(RevisionSchema).pipe(
+    Schema.fromKey('revision'),
+  ),
   createdAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
     Schema.fromKey('created_at'),
   ),
@@ -210,14 +212,14 @@ export const EntryDraftSchema = Schema.Struct({
   journalMarkdown: Schema.String,
   scriptureMarkdown: Schema.String,
   scriptureReference: Schema.String,
-  baseRevision: Revision,
+  baseRevision: RevisionSchema,
 });
 
 export type EntryDraft = Schema.Schema.Type<typeof EntryDraftSchema>;
 
 /** The database-issued revision returned after a write is committed. */
 export const SaveConfirmationSchema = Schema.Struct({
-  revision: Revision,
+  revision: RevisionSchema,
 });
 
 export type SaveConfirmation = Schema.Schema.Type<

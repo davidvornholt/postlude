@@ -7,8 +7,18 @@
  * already editable, because a journal that asks to be unlocked before it can be
  * written in is one more thing to do before writing.
  *
+ * Under the writing come the years behind this same date. They sit last on
+ * purpose: this is the page for writing an evening, and old entries stacked in
+ * front of the editor would put reading ahead of it. Below the words they are
+ * what they should be — something to find after the day is closed out, or a
+ * prompt on a date that is still empty.
+ *
  * A day is written on the page it is read on, so this same component serves
  * today and any day in the archive. Only the route differs.
+ *
+ * The date at the top is the way to another day as well as the name of this
+ * one: `day-heading.tsx` makes it the field, and the two arrows under it step
+ * to the day before and the day after.
  */
 
 import { useId } from 'react';
@@ -19,8 +29,9 @@ import {
   pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
-import { journalDateLabel, journalDayRelation } from '../day-label.ts';
+import { iconButtonClass } from '#/shared/ui/form-classes.ts';
+import type { Anniversary } from '../anniversary.ts';
+import { journalDayRelation } from '../day-label.ts';
 import {
   daysBetweenJournalDates,
   earliestJournalDate,
@@ -29,9 +40,11 @@ import {
 } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
+import { DayHeading } from './day-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
+import { OnThisDay } from './on-this-day.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
 import { type SaveDraft, useAutosave } from './use-autosave.ts';
@@ -40,6 +53,8 @@ type DayPageProps = {
   readonly entry: JournalEntry;
   /** The server's own journal day, which is what "today" means everywhere. */
   readonly today: JournalDate;
+  /** The same date in the years behind it, newest first. */
+  readonly anniversaries: ReadonlyArray<Anniversary>;
   /**
    * Where the writing goes. Passed in rather than imported so that rendering a
    * day needs nothing the database needs; the routes hand over the real one.
@@ -64,7 +79,7 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
   baseRevision: entry.revision,
 });
 
-const DayBody = ({ entry, today, save }: DayPageProps) => {
+const DayBody = ({ entry, today, save, anniversaries }: DayPageProps) => {
   const autosave = useAutosave(
     { draft: draftOf(entry), revision: entry.revision },
     save,
@@ -74,6 +89,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
       ? autosave.failure.message
       : undefined;
   const eveningId = useId();
+  const memoryId = useId();
   const previous =
     entry.date === earliestJournalDate
       ? undefined
@@ -89,21 +105,32 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           {journalDayRelation(entry.date, today)}
         </p>
-        {/* Balanced, because a date is one thing and breaking it after the
-            month leaves a year alone on a line. The browser evens the lines
-            out instead of filling the first one and dropping what is left. */}
-        <h1 className="mt-3 text-balance font-display text-4xl text-ink sm:text-5xl">
-          {journalDateLabel(entry.date)}
-        </h1>
-        <nav aria-label="Nearby days" className="mt-8 flex gap-8">
+        <DayHeading date={entry.date} today={today} />
+        {/* Two arrows rather than two labels. The heading above them already
+            names the day they step from, so spelling out "previous day" beside
+            it is the page saying the same thing a third time — and the pair
+            reads as one stepper at a glance, which two lines of small capitals
+            never did. Each one still says where it goes in `aria-label`, and
+            the arrow sits in a target wider than the arrow. */}
+        <nav aria-label="Nearby days" className="mt-6 -ml-3 flex gap-1">
           {previous === undefined ? null : (
-            <DayLink className={quietButtonClass} date={previous} today={today}>
-              <span aria-hidden="true">←</span> Previous day
+            <DayLink
+              className={iconButtonClass}
+              date={previous}
+              label="Previous day"
+              today={today}
+            >
+              ←
             </DayLink>
           )}
           {next === undefined ? null : (
-            <DayLink className={quietButtonClass} date={next} today={today}>
-              Next day <span aria-hidden="true">→</span>
+            <DayLink
+              className={iconButtonClass}
+              date={next}
+              label="Next day"
+              today={today}
+            >
+              →
             </DayLink>
           )}
         </nav>
@@ -167,6 +194,29 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           />
         </div>
       </section>
+
+      {/* Absent on a date with no years behind it, rather than present and
+          empty. A heading over nothing would take a section of the page every
+          day of a journal's first year to say that there is nothing yet. */}
+      {anniversaries.length === 0 ? null : (
+        <section
+          aria-labelledby={memoryId}
+          className={[pageFrameClass, 'mt-12 sm:mt-16'].join(' ')}
+        >
+          <h2
+            className={[
+              eyebrowClass,
+              'border-border border-t pt-8 text-ink-muted',
+            ].join(' ')}
+            id={memoryId}
+          >
+            On this day
+          </h2>
+          <div className="mt-8">
+            <OnThisDay anniversaries={anniversaries} today={today} />
+          </div>
+        </section>
+      )}
     </>
   );
 };
@@ -178,6 +228,17 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
  * the editor and post them to today. The key is set here rather than at the
  * call sites, so no route can forget it.
  */
-export const DayPage = ({ entry, today, save }: DayPageProps) => (
-  <DayBody entry={entry} key={entry.date} save={save} today={today} />
+export const DayPage = ({
+  entry,
+  today,
+  save,
+  anniversaries,
+}: DayPageProps) => (
+  <DayBody
+    anniversaries={anniversaries}
+    entry={entry}
+    key={entry.date}
+    save={save}
+    today={today}
+  />
 );

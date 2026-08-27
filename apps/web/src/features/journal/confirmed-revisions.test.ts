@@ -1,12 +1,11 @@
 import { expect, it } from 'bun:test';
-import {
-  createConfirmedRevisionTracker,
-  loadAfterConfirmedRevision,
-} from './confirmed-revisions.ts';
+import { loadAfterConfirmedRevision } from './confirmed-revision-loader.ts';
+import { createConfirmedRevisionTracker } from './confirmed-revisions.ts';
 import { type JournalDate, shiftJournalDate } from './journal-day.ts';
 
 const day = (date: JournalDate, revision: number) => ({
   entry: { date, revision },
+  anniversaryRevisions: [],
 });
 
 const deferred = <Value>() => {

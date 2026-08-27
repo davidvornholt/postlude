@@ -23,6 +23,8 @@ const expectKeyboardFocus = async (
   page: playwright.Page,
   control: playwright.Locator,
 ) => {
+  await control.focus();
+  await page.keyboard.press('Shift+Tab');
   await page.keyboard.press('Tab');
   await expect(control).toBeFocused();
   const focus = await control.evaluate((element) => {
@@ -45,7 +47,7 @@ for (const colorScheme of colorSchemes) {
 
     const date = page.getByRole('heading', { level: 1 });
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
-    await expectPageFrameGeometry(date.locator('..'));
+    await expectPageFrameGeometry(date.locator('xpath=ancestor::header'));
     await expectReadingMeasureGeometry(page, evening.locator('xpath=../..'));
     await expectKeyboardFocus(
       page,
@@ -53,13 +55,17 @@ for (const colorScheme of colorSchemes) {
     );
 
     const dateLayout = await date.evaluate((element) => {
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      const lines = new Set(
-        Array.from(range.getClientRects(), (rectangle) =>
-          Math.round(rectangle.top),
-        ),
-      );
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const lines = new Set<number>();
+      let text = walker.nextNode();
+      while (text !== null) {
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        for (const rectangle of range.getClientRects()) {
+          lines.add(Math.round(rectangle.top));
+        }
+        text = walker.nextNode();
+      }
       const style = getComputedStyle(element);
       return {
         lines: lines.size,

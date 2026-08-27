@@ -48,9 +48,21 @@ const save = (): Promise<unknown> => {
 };
 
 const router = createRenderingRouter(
-  <DayPage entry={entry} save={save} today={config.today} />,
+  <DayPage
+    anniversaries={config.anniversaries}
+    entry={entry}
+    save={save}
+    today={config.today}
+  />,
 );
 await router.load();
+const recordRoute = (pathname: string) => {
+  document.documentElement.dataset.route = pathname;
+};
+recordRoute(router.state.location.pathname);
+router.subscribe('onResolved', ({ toLocation }) => {
+  recordRoute(toLocation.pathname);
+});
 
 const root = document.querySelector('#day-page-fixture');
 if (root === null) {

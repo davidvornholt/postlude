@@ -22,7 +22,6 @@ const emptyView: ArchiveView = {
   journalStreak: { current: 0, longest: 0 },
   scriptureStreak: { current: 0, longest: 0 },
   totals: { daysWritten: 0, words: 0 },
-  anniversaries: [],
 };
 
 const renderArchive = (view: ArchiveView) =>

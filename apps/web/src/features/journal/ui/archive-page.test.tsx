@@ -48,7 +48,6 @@ const emptyView: ArchiveView = {
   journalStreak: { current: 0, longest: 0 },
   scriptureStreak: { current: 0, longest: 0 },
   totals: { daysWritten: 0, words: 0 },
-  anniversaries: [],
 };
 const empty = await renderInRouter(
   <ArchivePage selectedYear={undefined} view={emptyView} />,
@@ -182,32 +181,13 @@ it('separates no writing from the four-step Less–More ramp', () => {
 });
 
 /*
- * "On this day" is the one part of the archive that is there to be read. It
- * leads with the writer's own words, and the whole line opens the day, because
- * the reason to go back is the sentence and not the date above it.
+ * The years behind a date belong on that date's own page, where they are the
+ * same day being read again. Here they could only ever mean today, which is the
+ * one day the writer did not come to the archive to find.
  */
-it('reads back an earlier year and opens the day it came from', async () => {
-  const withMemory = await renderInRouter(
-    <ArchivePage
-      selectedYear={undefined}
-      view={{
-        ...sampleArchiveView(journal, today),
-        anniversaries: [
-          {
-            date: '2025-08-26',
-            yearsAgo: 1,
-            words: 210,
-            snippet: 'Moved the desk under the window.',
-          },
-        ],
-      }}
-    />,
-  );
-  expect(withMemory).toContain('On this day');
-  expect(withMemory).toContain('Moved the desk under the window.');
-  expect(plainText(withMemory)).toContain('1 year ago');
-  expect(withMemory).toContain('href="/day/2025-08-26"');
+it('leaves the years behind a date to the page for that date', () => {
   expect(filled).not.toContain('On this day');
+  expect(empty).not.toContain('On this day');
 });
 
 /* One page, one first-level heading, with every section a level below it. */

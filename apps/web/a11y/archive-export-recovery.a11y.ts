@@ -50,7 +50,6 @@ const referenceOnly: ArchivePageFixtureConfig = {
     journalStreak: { current: 0, longest: 0 },
     scriptureStreak: { current: 1, longest: 1 },
     totals: { daysWritten: 1, words: 0 },
-    anniversaries: [],
   },
 };
 
