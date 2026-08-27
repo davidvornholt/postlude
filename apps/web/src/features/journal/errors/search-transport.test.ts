@@ -5,6 +5,9 @@ import { searchTransportBoundary } from './search-errors.ts';
 
 const privateDetails =
   'password=database-secret select * from private_entry postgres://credential';
+const privateSource = '/srv/private/journal-search.ts';
+const privateLine = 817;
+const privateColumn = 29;
 const internalServerError = 500;
 
 const directoryOf = (path: string): string =>
@@ -13,8 +16,19 @@ const directoryOf = (path: string): string =>
 mock.module('#tanstack-start-server-fn-resolver', () => ({
   getServerFnById: async () =>
     Object.assign(
-      async () =>
-        searchTransportBoundary(Promise.reject(new Error(privateDetails))),
+      () => {
+        const failure = new Error(privateDetails, {
+          cause: { connectionString: 'postgres://cause-credential' },
+        });
+        failure.stack = `PrivateDatabaseError: ${privateDetails}\n    at search (${privateSource}:${privateLine}:${privateColumn})`;
+        Object.assign(failure, {
+          column: privateColumn,
+          line: privateLine,
+          path: privateSource,
+          sourceURL: privateSource,
+        });
+        return searchTransportBoundary(Promise.reject(failure));
+      },
       { method: 'POST' },
     ),
 }));
@@ -74,8 +88,22 @@ it('keeps internal database details out of TanStack Start transport', async () =
   error.mockRestore();
 
   expect(response.status).toBe(internalServerError);
+  expect(transported).toContain('SearchUnavailableError');
   expect(transported).toContain('Search is unavailable right now.');
-  expect(transported).not.toContain('database-secret');
-  expect(transported).not.toContain('private_entry');
-  expect(transported).not.toContain('postgres://credential');
+  for (const diagnostic of [
+    'database-secret',
+    'private_entry',
+    'postgres://credential',
+    'cause-credential',
+    privateSource,
+    `:${privateLine}:${privateColumn}`,
+    '"stack"',
+    '"sourceURL"',
+    '"path"',
+    '"line"',
+    '"column"',
+    '"cause"',
+  ]) {
+    expect(transported).not.toContain(diagnostic);
+  }
 });

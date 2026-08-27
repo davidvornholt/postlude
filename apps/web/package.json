@@ -46,6 +46,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@babel/parser": "^7.29.8",
     "@davidvornholt/a11y-testing": "workspace:*",
     "@davidvornholt/typescript-config": "workspace:*",
     "@playwright/test": "^1.61.1",

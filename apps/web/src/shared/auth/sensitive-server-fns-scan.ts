@@ -5,6 +5,7 @@
  * for each, whether the session guard is attached to it.
  */
 
+import { routeServerMiddlewareArguments } from './sensitive-route-middleware-source.ts';
 import {
   type Chain,
   chainsOf,
@@ -136,12 +137,9 @@ const scanModule = ({ path, code }: Module) => {
     middlewareArguments.some((list) =>
       guards.some((guard) => mentions(list, guard)),
     );
-  const isRouteGuarded = ({
-    middlewareArguments,
-    routeMiddlewareArguments,
-  }: Chain) =>
-    [...middlewareArguments, ...routeMiddlewareArguments].some((list) =>
-      guards.some((guard) => mentions(list, guard)),
+  const isRouteGuarded = ({ middlewareArguments, text }: Chain) =>
+    [...middlewareArguments, ...routeServerMiddlewareArguments(text)].some(
+      (list) => guards.some((guard) => mentions(list, guard)),
     );
   return {
     serverFunctions: chainsOf(code, serverFunctionNames, boundaryNames).map(

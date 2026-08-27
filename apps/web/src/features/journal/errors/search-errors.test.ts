@@ -17,6 +17,8 @@ it('removes internal causes before a search failure reaches transport', async ()
     _tag: 'SearchUnavailableError',
     message: searchUnavailableMessage,
   });
+  expect(failure).not.toBeInstanceOf(Error);
+  expect(Object.keys(failure as object).sort()).toEqual(['_tag', 'message']);
   expect(transported).not.toContain('database-secret');
   expect(transported).not.toContain('private-credential');
   expect(transported).not.toContain('private_entry');
