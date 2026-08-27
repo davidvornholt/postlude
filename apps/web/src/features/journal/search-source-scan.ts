@@ -1,11 +1,16 @@
+import {
+  indexSearchEvidence,
+  type SearchEvidence,
+  type SearchEvidenceBounds,
+  type SearchSpan,
+  searchEvidenceIndexOf,
+} from './search-evidence-index.ts';
 import { foldSearchText } from './search-query.ts';
 
 const searchTokenRuns = /[\p{L}\p{N}]+/gu;
 const graphemeSegmenter = new Intl.Segmenter(undefined, {
   granularity: 'grapheme',
 });
-
-export type SearchSpan = { readonly start: number; readonly end: number };
 
 type FoldedSpan = SearchSpan & {
   readonly visibleStart: number;
@@ -103,16 +108,18 @@ const matchingTerms = (
 export const scanSearchSource = (
   text: string,
   terms: ReadonlyArray<string>,
+  evidenceBounds: SearchEvidenceBounds,
 ): {
-  readonly anchors: ReadonlyMap<string, number>;
-  readonly matches: ReadonlyArray<SearchSpan>;
+  readonly evidenceByTerm: ReadonlyMap<string, SearchEvidence>;
+  readonly evidenceRangeVisits: number;
+  readonly evidenceRangeWrites: number;
+  readonly evidenceWindowCount: number;
   readonly prefixCharactersVisited: number;
   readonly sourceTokenCount: number;
 } => {
   const source = foldedSource(text);
   const trie = trieOf(terms);
-  const anchors = new Map<string, number>();
-  const matches: Array<SearchSpan> = [];
+  const evidence = searchEvidenceIndexOf(evidenceBounds);
   let prefixCharactersVisited = 0;
   let sourceTokenCount = 0;
   for (const token of source.folded.matchAll(searchTokenRuns)) {
@@ -124,17 +131,14 @@ export const scanSearchSource = (
         start: token.index,
         end: token.index + token[0].length,
       });
-      matches.push(visible);
-      for (const term of found.terms) {
-        if (!anchors.has(term)) {
-          anchors.set(term, visible.start);
-        }
-      }
+      indexSearchEvidence(evidence, visible, found.terms);
     }
   }
   return {
-    anchors,
-    matches,
+    evidenceByTerm: evidence.evidenceByTerm,
+    evidenceRangeVisits: evidence.rangeVisits,
+    evidenceRangeWrites: evidence.rangeWrites,
+    evidenceWindowCount: evidence.evidenceByBounds.size,
     prefixCharactersVisited,
     sourceTokenCount,
   };

@@ -1,5 +1,6 @@
 import { expect, it } from 'bun:test';
 
+import { searchQueryLengthLimit } from './search-contract.ts';
 import { searchExcerpt, searchExcerpts } from './search-excerpt.ts';
 
 const wordsBeforeMatch = 40;
@@ -9,6 +10,9 @@ const after = ' later'.repeat(wordsAfterMatch);
 const kibibyte = 1024;
 const mebibyte = kibibyte * kibibyte;
 const duplicateTermCount = 100;
+const maxDistinctTermCount = 66;
+const maxSearchHitCount = 50;
+const unifiedIdeographStart = 0x4e_00;
 
 const marked = (segments: ReadonlyArray<{ text: string; match: boolean }>) =>
   segments.filter((segment) => segment.match).map((segment) => segment.text);
@@ -115,4 +119,48 @@ it('scans a one-mebibyte source once for duplicated query terms', () => {
     expectedTokenCount + 'needle'.length - 1,
   );
   expect(result.excerpts.map(marked)).toEqual([['needle']]);
+});
+
+it('indexes max-shape attribution without rereading every match per term', () => {
+  const terms = Array.from({ length: maxDistinctTermCount }, (_, at) =>
+    String.fromCodePoint(unifiedIdeographStart + at),
+  );
+  const query = terms.join(' ');
+  const sourceRepetitions = 50;
+  const source = Array.from({ length: sourceRepetitions }, () => query).join(
+    ' ',
+  );
+  const sourceTokenCount = maxDistinctTermCount * sourceRepetitions;
+  let totalRangeEmits = 0;
+  let totalRangeVisits = 0;
+  let totalRangeWrites = 0;
+  let totalSourceTokens = 0;
+  let totalTermLookups = 0;
+  let totalWindows = 0;
+
+  expect(query.length).toBeLessThanOrEqual(searchQueryLengthLimit);
+  for (let hit = 0; hit < maxSearchHitCount; hit += 1) {
+    const result = searchExcerpts(source, terms);
+    expect(result.work.canonicalTermCount).toBe(maxDistinctTermCount);
+    expect(result.work.sourceTokenScans).toBe(1);
+    expect(result.work.sourceTokenCount).toBe(sourceTokenCount);
+    expect(result.work.evidenceTermLookups).toBe(maxDistinctTermCount);
+    expect(result.work.evidenceRangeEmits).toBe(
+      result.work.evidenceRangeWrites,
+    );
+    expect(result.work.evidenceRangeVisits).toBeLessThanOrEqual(
+      result.work.evidenceRangeWrites + result.work.evidenceWindowCount,
+    );
+    expect(result.excerpts).toHaveLength(result.work.evidenceWindowCount);
+    totalRangeEmits += result.work.evidenceRangeEmits;
+    totalRangeVisits += result.work.evidenceRangeVisits;
+    totalRangeWrites += result.work.evidenceRangeWrites;
+    totalSourceTokens += result.work.sourceTokenCount;
+    totalTermLookups += result.work.evidenceTermLookups;
+    totalWindows += result.work.evidenceWindowCount;
+  }
+  expect(totalSourceTokens).toBe(sourceTokenCount * maxSearchHitCount);
+  expect(totalTermLookups).toBe(maxDistinctTermCount * maxSearchHitCount);
+  expect(totalRangeEmits).toBe(totalRangeWrites);
+  expect(totalRangeVisits).toBeLessThanOrEqual(totalRangeWrites + totalWindows);
 });

@@ -1,12 +1,19 @@
+import type { SearchEvidence, SearchSpan } from './search-evidence-index.ts';
 import { normalizeSearchText, searchTerms } from './search-query.ts';
-import { type SearchSpan, scanSearchSource } from './search-source-scan.ts';
+import { scanSearchSource } from './search-source-scan.ts';
 
 const whitespaceRuns = /\s+/gu;
 const horizontalWhitespaceRuns = /[^\S\n]+/gu;
 const lineBreakRuns = /\n+/gu;
 const excerptLength = 240;
 const leadingContext = 60;
-
+const emptyEvidenceWork = {
+  evidenceRangeEmits: 0,
+  evidenceRangeVisits: 0,
+  evidenceRangeWrites: 0,
+  evidenceTermLookups: 0,
+  evidenceWindowCount: 0,
+} as const;
 export type ExcerptSegment = {
   readonly text: string;
   readonly match: boolean;
@@ -15,6 +22,11 @@ export type ExcerptSegment = {
 
 export type SearchExcerptWork = {
   readonly canonicalTermCount: number;
+  readonly evidenceRangeEmits: number;
+  readonly evidenceRangeVisits: number;
+  readonly evidenceRangeWrites: number;
+  readonly evidenceTermLookups: number;
+  readonly evidenceWindowCount: number;
   readonly prefixCharactersVisited: number;
   readonly sourceTokenScans: number;
   readonly sourceTokenCount: number;
@@ -37,12 +49,11 @@ const wordEndAt = (text: string, at: number): number => {
   return space === -1 ? text.length : space;
 };
 
-const excerptOf = (
+const excerptBoundsAt = (
   text: string,
   anchor: number,
-  matches: ReadonlyArray<SearchSpan>,
   hardLineBoundaries: boolean,
-): ReadonlyArray<ExcerptSegment> => {
+): SearchSpan => {
   const lineStart = hardLineBoundaries
     ? text.lastIndexOf('\n', Math.max(0, anchor - 1)) + 1
     : 0;
@@ -53,15 +64,27 @@ const excerptOf = (
     wordStartAt(text, Math.max(lineStart, anchor - leadingContext)),
   );
   const end = Math.min(lineEnd, wordEndAt(text, start + excerptLength));
+  return { start, end };
+};
+
+const excerptOf = (
+  text: string,
+  evidence: SearchEvidence,
+  hardLineBoundaries: boolean,
+): ReadonlyArray<ExcerptSegment> => {
+  const { start, end, matches } = evidence;
+  const lineStart = hardLineBoundaries
+    ? text.lastIndexOf('\n', Math.max(0, start - 1)) + 1
+    : 0;
+  const nextLine = hardLineBoundaries ? text.indexOf('\n', start) : -1;
+  const lineEnd = nextLine === -1 ? text.length : nextLine;
   const prefix = start > lineStart ? '… ' : '';
   const suffix = end < lineEnd ? ' …' : '';
   const excerpt = `${prefix}${text.slice(start, end)}${suffix}`;
-  const ranges = matches
-    .filter((match) => match.start >= start && match.end <= end)
-    .map((match) => ({
-      start: prefix.length + match.start - start,
-      end: prefix.length + match.end - start,
-    }));
+  const ranges = matches.map((match) => ({
+    start: prefix.length + match.start - start,
+    end: prefix.length + match.end - start,
+  }));
   const segments: Array<ExcerptSegment> = [];
   let cursor = 0;
   for (const range of ranges) {
@@ -106,6 +129,7 @@ export const searchExcerpts = (
       excerpts: [],
       work: {
         canonicalTermCount: terms.length,
+        ...emptyEvidenceWork,
         prefixCharactersVisited: 0,
         sourceTokenScans: 1,
         sourceTokenCount: 0,
@@ -118,6 +142,7 @@ export const searchExcerpts = (
       excerpts: [[{ text, match: false, at: 0 }]],
       work: {
         canonicalTermCount: 0,
+        ...emptyEvidenceWork,
         prefixCharactersVisited: 0,
         sourceTokenScans: 1,
         sourceTokenCount: 0,
@@ -125,27 +150,32 @@ export const searchExcerpts = (
       },
     };
   }
-  const scan = scanSearchSource(text, terms);
+  const scan = scanSearchSource(text, terms, (anchor) =>
+    excerptBoundsAt(text, anchor, hardLineBoundaries),
+  );
+  const excerpts: Array<ReadonlyArray<ExcerptSegment>> = [];
+  const emittedEvidence = new Set<SearchEvidence>();
+  let evidenceRangeEmits = 0;
+  for (const term of terms) {
+    const evidence = scan.evidenceByTerm.get(term);
+    if (evidence !== undefined && !emittedEvidence.has(evidence)) {
+      emittedEvidence.add(evidence);
+      evidenceRangeEmits += evidence.matches.length;
+      excerpts.push(excerptOf(text, evidence, hardLineBoundaries));
+    }
+  }
   const work = {
     canonicalTermCount: terms.length,
+    evidenceRangeEmits,
+    evidenceRangeVisits: scan.evidenceRangeVisits,
+    evidenceRangeWrites: scan.evidenceRangeWrites,
+    evidenceTermLookups: terms.length,
+    evidenceWindowCount: scan.evidenceWindowCount,
     prefixCharactersVisited: scan.prefixCharactersVisited,
     sourceTokenScans: 1,
     sourceTokenCount: scan.sourceTokenCount,
     visibleCodeUnits: text.length,
   };
-  const excerpts = terms
-    .flatMap((term) => {
-      const anchor = scan.anchors.get(term);
-      return anchor === undefined
-        ? []
-        : [excerptOf(text, anchor, scan.matches, hardLineBoundaries)];
-    })
-    .filter(
-      (excerpt, at, all) =>
-        all.findIndex(
-          (candidate) => JSON.stringify(candidate) === JSON.stringify(excerpt),
-        ) === at,
-    );
   return { excerpts, work };
 };
 
@@ -160,5 +190,11 @@ export const searchExcerpt = (
   const text = normalizeSearchText(plainText)
     .replace(whitespaceRuns, ' ')
     .trim();
-  return text === '' ? [] : excerptOf(text, 0, [], false);
+  return text === ''
+    ? []
+    : excerptOf(
+        text,
+        { ...excerptBoundsAt(text, 0, false), matches: [] },
+        false,
+      );
 };
