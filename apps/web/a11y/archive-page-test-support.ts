@@ -58,6 +58,11 @@ export const archiveFixtureConfigs = {
     selectedYear: undefined,
     view: filledView,
   },
+  exportFailedOnce: {
+    exportSettlement: { delayMs: 150, outcome: 'failed-once' },
+    selectedYear: undefined,
+    view: filledView,
+  },
   exportDelayed: {
     exportSettlement: {
       delayMs: exportSettlementDelayMs,

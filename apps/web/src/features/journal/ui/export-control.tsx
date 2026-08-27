@@ -30,12 +30,22 @@ const groupingLabels: Record<ExportGrouping, string> = {
   month: 'Month',
   year: 'Year',
 };
+const groupingDescriptions: Record<ExportGrouping, string> = {
+  day: 'One Markdown file for each journal day, under days and its calendar year. This is the closest reading-copy layout to the journal’s day-by-day backup.',
+  week: 'One Markdown file for each ISO 8601 week, under weeks and its ISO week-numbering year. ISO weeks run Monday to Sunday, and a week across New Year stays whole.',
+  month:
+    'One Markdown file for each calendar month, under months and its year.',
+  year: 'One Markdown file for each calendar year at the top of the zip, without redundant year folders.',
+};
 const exportLabel: Record<ExportState, string> = {
   failed: 'Download the journal',
   idle: 'Download the journal',
   settling: 'Saving before download …',
   submitted: 'Download started',
 };
+
+const groupingDescriptionId = (grouping: ExportGrouping): string =>
+  `export-${grouping}-description`;
 
 type ExportControlProps = {
   readonly settleAutosaves?: SettleAutosaves;
@@ -96,20 +106,29 @@ export const ExportControl = ({
         </legend>
         <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
           {exportGroupings.map((option) => (
-            <label
-              className="flex items-center gap-2 text-ink-muted has-checked:text-ink"
-              key={option}
-            >
-              <input
-                checked={grouping === option}
-                className={['accent-primary', focusRingClass].join(' ')}
-                name="grouping"
-                onChange={() => setGrouping(option)}
-                type="radio"
-                value={option}
-              />
-              {groupingLabels[option]}
-            </label>
+            <div className="group contents" key={option}>
+              <label className="flex items-center gap-2 text-ink-muted has-checked:text-ink">
+                <input
+                  aria-describedby={groupingDescriptionId(option)}
+                  checked={grouping === option}
+                  className={['accent-primary', focusRingClass].join(' ')}
+                  name="grouping"
+                  onChange={() => setGrouping(option)}
+                  type="radio"
+                  value={option}
+                />
+                {groupingLabels[option]}
+              </label>
+              <p
+                className={[
+                  readingMeasureClass,
+                  'order-last hidden basis-full text-ink-faint group-has-[:checked]:block',
+                ].join(' ')}
+                id={groupingDescriptionId(option)}
+              >
+                {groupingDescriptions[option]}
+              </p>
+            </div>
           ))}
         </div>
       </fieldset>
