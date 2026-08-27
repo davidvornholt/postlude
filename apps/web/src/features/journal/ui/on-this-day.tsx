@@ -2,8 +2,8 @@
  * The same day of the month, in the years before this one.
  *
  * This is the one part of the archive that is about reading rather than about
- * measuring. It leads with the writer's own words, the date, and then prose
- * from the entry. The opening prefers evening prose and falls back to scripture
+ * measuring. It renders the date metadata first, then the writer's prose from
+ * the entry. The opening prefers evening prose and falls back to scripture
  * notes. The whole line is the link, because the reason to open the day is the
  * sentence, not the date above it.
  *
