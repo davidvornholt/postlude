@@ -33,4 +33,11 @@ describe('journal calendar months', () => {
     expect(calendarWeekdayIndex('2026-08-24')).toBe(0);
     expect(calendarWeekdayIndex('2026-08-30')).toBe(sundayColumn);
   });
+
+  it('lists the final supported month without stepping past its last day', () => {
+    const dates = datesInMonth('9999-12');
+
+    expect(dates).toHaveLength(31);
+    expect(dates.at(-1)).toBe('9999-12-31');
+  });
 });

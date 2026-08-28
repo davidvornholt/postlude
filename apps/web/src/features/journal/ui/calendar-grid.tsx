@@ -58,22 +58,13 @@ const CalendarCell = ({
   readonly today: JournalDate;
 }) => {
   const hasEntry = entry !== undefined;
-  const future = date > today;
-  if (future) {
-    return (
-      <td className="border-border border-x align-top">
-        <span className="flex min-h-16 px-2 py-2 text-ink-faint sm:min-h-24 sm:px-3">
-          {Number(date.slice(-2))}
-        </span>
-      </td>
-    );
-  }
+  const dateStatus = date > today ? ', future day' : '';
 
   return (
     <td className="border-border border-x align-top">
       <Link
         aria-current={date === selected ? 'date' : undefined}
-        aria-label={`${date}${date === today ? ', today' : ''}${hasEntry ? ', entry available' : ', no entry'}`}
+        aria-label={`${date}${date === today ? ', today' : dateStatus}${hasEntry ? ', entry available' : ', no entry'}`}
         className={dayLinkClass}
         search={{ day: date, month }}
         to="/calendar"

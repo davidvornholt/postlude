@@ -30,6 +30,13 @@ const view: CalendarView = {
       snippet: '',
       words: 0,
     },
+    {
+      date: '2026-08-27',
+      hasScriptureReference: false,
+      revision: 1,
+      snippet: 'A day I am looking forward to.',
+      words: 42,
+    },
   ],
   earliest: '2025-03-02',
   month: '2026-08',
@@ -48,13 +55,25 @@ it('selects a day in the URL-backed month and previews its writing', async () =>
   expect(html).toContain('href="/day/2026-08-19"');
 });
 
-it('keeps future dates inert and gives reference-only days a readable preview', async () => {
+it('previews a stored future day and keeps it linked to its writing page', async () => {
   const html = await renderInRouter(
-    <CalendarPage requestedDay="2026-08-25" view={view} />,
+    <CalendarPage requestedDay="2026-08-27" view={view} />,
   );
 
-  expect(plainText(html)).toContain('A scripture passage was noted.');
-  expect(html).not.toContain('day=2026-08-27');
+  expect(plainText(html)).toContain('A day I am looking forward to.');
+  expect(plainText(html)).toContain('Thursday, August 27, 2026');
+  expect(html).toContain('href="/day/2026-08-27"');
+  expect(html).toContain('2026-08-27, future day, entry available');
+});
+
+it('lets a blank future day open as a draft', async () => {
+  const html = await renderInRouter(
+    <CalendarPage requestedDay="2026-08-28" view={view} />,
+  );
+
+  expect(plainText(html)).toContain('Nothing was written on this day.');
+  expect(html).toContain('href="/day/2026-08-28"');
+  expect(html).toContain('2026-08-28, future day, no entry');
 });
 
 it('distinguishes stored Markdown from an unwritten day', async () => {

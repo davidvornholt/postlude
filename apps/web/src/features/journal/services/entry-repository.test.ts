@@ -229,10 +229,11 @@ it('reads a calendar month with its earliest available day', async () => {
       yield* entries.save(draft('2026-08-19', 'A quiet kind of progress.'));
       yield* entries.save(draft('2026-08-20', '```text\nkept source\n```'));
       yield* entries.save(draft('2026-08-25', '', 'Psalms 23'));
+      yield* entries.save(draft('2026-08-27', 'A planned entry.'));
       yield* entries.save(draft('2026-09-01', 'Outside the month.'));
       return yield* entries.readCalendar({
         from: '2026-08-01',
-        to: '2026-08-26',
+        to: '2026-08-31',
         today: '2026-08-26',
       });
     }),
@@ -260,6 +261,11 @@ it('reads a calendar month with its earliest available day', async () => {
       date: '2026-08-25',
       hasScriptureReference: true,
       journalMarkdown: '',
+    },
+    {
+      date: '2026-08-27',
+      hasScriptureReference: false,
+      journalMarkdown: 'A planned entry.',
     },
   ]);
 });
@@ -430,7 +436,7 @@ it('reports recoverable stored source separately from archive activity', async (
   expect(archive.summaries).toEqual([]);
 });
 
-it('does not let future rows open the archive', async () => {
+it('keeps planned future rows out of the historical archive', async () => {
   const archive = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-12-01', 'Later this year.'));

@@ -4,11 +4,14 @@ import { pageFrameClass } from '#/shared/ui/design-classes.ts';
 import { iconButtonClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
 import {
   datesInMonth,
-  journalMonthLabel,
   journalMonthOf,
+  journalMonthLabel,
   shiftJournalMonth,
 } from '../calendar.ts';
-import type { JournalDate } from '../journal-day.ts';
+import {
+  latestJournalDate,
+  type JournalDate,
+} from '../journal-day.ts';
 import type { CalendarView } from '../services/calendar-fns.ts';
 import { CalendarGrid } from './calendar-grid.tsx';
 import { CalendarPreview } from './calendar-preview.tsx';
@@ -19,8 +22,7 @@ const selectedDate = (
 ): JournalDate => {
   if (
     requested !== undefined &&
-    journalMonthOf(requested) === view.month &&
-    requested <= view.today
+    journalMonthOf(requested) === view.month
   ) {
     return requested;
   }
@@ -42,7 +44,9 @@ export const CalendarPage = ({
   const selected = selectedDate(view, requestedDay);
   const day = view.days.find((entry) => entry.date === selected);
   const earliestMonth =
-    view.earliest === undefined ? view.month : journalMonthOf(view.earliest);
+    view.earliest === undefined
+      ? journalMonthOf(view.today)
+      : journalMonthOf(view.earliest);
   const previousCandidate = shiftJournalMonth(view.month, -1);
   const previous =
     previousCandidate !== undefined && previousCandidate >= earliestMonth
@@ -50,7 +54,8 @@ export const CalendarPage = ({
       : undefined;
   const nextCandidate = shiftJournalMonth(view.month, 1);
   const next =
-    nextCandidate !== undefined && nextCandidate <= journalMonthOf(view.today)
+    nextCandidate !== undefined &&
+    nextCandidate <= journalMonthOf(latestJournalDate)
       ? nextCandidate
       : undefined;
 

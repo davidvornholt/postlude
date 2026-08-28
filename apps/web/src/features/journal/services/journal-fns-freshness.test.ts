@@ -37,7 +37,6 @@ if (isServiceProbeProcess) {
     resolveFirst = resolve;
   });
   let reads = 0;
-  let disposition: 'future' | 'readable' = 'readable';
 
   mock.module('@tanstack/react-start', () => ({
     createServerFn: () => {
@@ -66,9 +65,6 @@ if (isServiceProbeProcess) {
     makeJournalDayReader: () => ({
       readDated: () => {
         reads += 1;
-        if (disposition === 'future') {
-          return Promise.resolve({ disposition });
-        }
         return reads === 1
           ? firstRequest
           : Promise.resolve({
@@ -100,12 +96,13 @@ if (isServiceProbeProcess) {
     });
     expect(reads).toBe(2);
 
-    disposition = 'future';
-    const readsAfterClassification = 3;
     await expect(
       readDatedJournalDay({ data: { date: requestedDate } }),
-    ).resolves.toEqual({ disposition: 'future' });
-    expect(reads).toBe(readsAfterClassification);
+    ).resolves.toEqual({
+      disposition: 'readable',
+      view: fresh,
+    });
+    expect(reads).toBe(3);
   });
 } else {
   it('runs the dated freshness probe in an isolated process', () => {

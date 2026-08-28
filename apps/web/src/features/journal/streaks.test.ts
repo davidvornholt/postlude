@@ -65,9 +65,8 @@ it('counts across a month boundary and a leap day', () => {
 });
 
 /*
- * The writing pages refuse to open a day that has not happened, but an importer
- * reaches the table by another road, and a day in the future must not be able
- * to report a run the writer is not on.
+ * A planned future day is readable, but it must not report a run the writer is
+ * not on yet.
  */
 it('ignores a day after today', () => {
   const streak = streakOf(['2026-08-20', '2027-01-01'], '2026-08-26');

@@ -21,22 +21,24 @@ const entryOn = (date: string): JournalEntry => ({
 });
 
 describe('dated journal day service boundary', () => {
-  it('classifies today and future dates without acquiring the repository', async () => {
-    let acquisitions = 0;
-    const reader = makeJournalDayReader(<A>() => {
-      acquisitions += 1;
-      return Promise.reject(
-        new Error('The repository was acquired.'),
-      ) as Promise<A>;
-    });
+  it('keeps today canonical while reading a future date like any other day', async () => {
+    const reader = makeJournalDayReader(<A>() =>
+      Promise.resolve({
+        entry: entryOn('2026-08-27'),
+        today,
+      }) as Promise<A>,
+    );
 
     await expect(reader.readDated(today, today)).resolves.toEqual({
       disposition: 'today',
     });
     await expect(reader.readDated('2026-08-27', today)).resolves.toEqual({
-      disposition: 'future',
+      disposition: 'readable',
+      view: {
+        entry: entryOn('2026-08-27'),
+        today,
+      },
     });
-    expect(acquisitions).toBe(0);
   });
 
   it('reads only the requested past day', async () => {

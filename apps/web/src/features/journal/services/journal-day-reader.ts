@@ -11,7 +11,6 @@ export type JournalDayView = {
 
 export type DatedJournalDay =
   | { readonly disposition: 'today' }
-  | { readonly disposition: 'future' }
   | { readonly disposition: 'readable'; readonly view: JournalDayView };
 
 type RunJournalReadEffect = <A, E>(
@@ -43,9 +42,6 @@ export const makeJournalDayReader = (run: RunJournalReadEffect) => {
   ): Promise<DatedJournalDay> => {
     if (date === today) {
       return Promise.resolve({ disposition: 'today' });
-    }
-    if (date > today) {
-      return Promise.resolve({ disposition: 'future' });
     }
     return readJournalDay(date, today).then((view) => ({
       disposition: 'readable',

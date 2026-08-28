@@ -2,6 +2,7 @@ import {
   formatJournalDate,
   type JournalDate,
   journalDateWeekday,
+  latestJournalDate,
   parseJournalDate,
   shiftJournalDate,
 } from './journal-day.ts';
@@ -79,12 +80,13 @@ export const datesInMonth = (
 ): ReadonlyArray<JournalDate> => {
   const first = firstDateOfMonth(month);
   const dates: Array<JournalDate> = [];
-  for (
-    let date = first;
-    journalMonthOf(date) === month;
-    date = shiftJournalDate(date, 1)
-  ) {
+  let date = first;
+  while (journalMonthOf(date) === month) {
     dates.push(date);
+    if (date === latestJournalDate) {
+      break;
+    }
+    date = shiftJournalDate(date, 1);
   }
   return dates;
 };

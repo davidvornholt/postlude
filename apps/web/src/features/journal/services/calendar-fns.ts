@@ -47,25 +47,22 @@ export const readCalendarFn = createServerFn({ method: 'GET' })
     const requested =
       data.month ??
       (data.day === undefined ? currentMonth : journalMonthOf(data.day));
-    let month = requested;
-    if (month > currentMonth) {
-      month = currentMonth;
-    }
+    const month = requested;
     const dates = datesInMonth(month);
     const [from] = dates;
     const last = dates.at(-1);
     if (from === undefined || last === undefined) {
       throw new Error('The calendar month has no days.');
     }
-    let to = last;
-    if (to > today) {
-      to = today;
-    }
 
     return runJournalEffect(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
-        const calendar = yield* entries.readCalendar({ from, to, today });
+        const calendar = yield* entries.readCalendar({
+          from,
+          to: last,
+          today,
+        });
         return {
           today,
           month,

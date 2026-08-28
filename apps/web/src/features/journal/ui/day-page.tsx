@@ -8,7 +8,8 @@
  * written in is one more thing to do before writing.
  *
  * A day is written on the page it is read on, so this same component serves
- * today and any day in the archive. Only the route differs.
+ * today, a planned future day, and any day in the archive. Only the route
+ * differs.
  *
  * The date at the top is the way to another day as well as the name of this
  * one: `day-heading.tsx` makes it the field, and the two arrows under it step
@@ -26,8 +27,8 @@ import {
 import { iconButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDayRelation } from '../day-label.ts';
 import {
-  daysBetweenJournalDates,
   earliestJournalDate,
+  latestJournalDate,
   type JournalDate,
   shiftJournalDate,
 } from '../journal-day.ts';
@@ -83,10 +84,10 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
     entry.date === earliestJournalDate
       ? undefined
       : shiftJournalDate(entry.date, -1);
-  const elapsed = daysBetweenJournalDates(entry.date, today);
-  // No link forward from today: the next day has not been lived, and offering
-  // it would invite writing an evening that has not happened.
-  const next = elapsed > 0 ? shiftJournalDate(entry.date, 1) : undefined;
+  const next =
+    entry.date === latestJournalDate
+      ? undefined
+      : shiftJournalDate(entry.date, 1);
 
   return (
     <>

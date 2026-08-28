@@ -26,7 +26,7 @@ const entryOn = (date: JournalEntry['date']): JournalEntry => ({
   updatedAt: new Date(0),
 });
 let loadedDay: JournalDay = { entry: entryOn(today), today };
-let datedDisposition: 'readable' | 'today' | 'future' = 'readable';
+let datedDisposition: 'readable' | 'today' = 'readable';
 let datedReadInputs: ReadonlyArray<unknown> = [];
 let todayReadCount = 0;
 if (isRouteProbeProcess) {
@@ -147,12 +147,12 @@ if (isRouteProbeProcess) {
         expect(error).toMatchObject({ options: { to: '/' } });
       });
 
-      it('rejects a future day before a view is returned', async () => {
+      it('loads a future day so an existing or planned entry is reachable', async () => {
         const future = '2026-08-27';
-        datedDisposition = 'future';
+        loadedDay = { entry: entryOn(future), today };
 
-        const error = await captureRejected(() => loadDay(future));
-        expect(isNotFound(error)).toBe(true);
+        await expect(loadDay(future)).resolves.toEqual(loadedDay);
+        expect(datedReadInputs).toEqual([{ data: { date: future } }]);
       });
 
       it('does not describe an operational loader failure as a missing day', async () => {

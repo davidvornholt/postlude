@@ -31,12 +31,18 @@ it('does not let JavaScript rewrite years below 0100', () => {
 it('names today and yesterday rather than counting them', () => {
   expect(journalDayRelation('2026-08-26', '2026-08-26')).toBe('Today');
   expect(journalDayRelation('2026-08-25', '2026-08-26')).toBe('Yesterday');
+  expect(journalDayRelation('2026-08-27', '2026-08-26')).toBe('Tomorrow');
 });
 
 it('counts the days back for everything older', () => {
   expect(journalDayRelation('2026-08-24', '2026-08-26')).toBe('2 days ago');
   expect(journalDayRelation('2025-08-26', '2026-08-26')).toBe('365 days ago');
   expect(journalDayRelation('2023-01-01', '2026-01-01')).toBe('1,096 days ago');
+});
+
+it('counts the days ahead for planned future dates', () => {
+  expect(journalDayRelation('2026-08-28', '2026-08-26')).toBe('In 2 days');
+  expect(journalDayRelation('2027-08-26', '2026-08-26')).toBe('In 365 days');
 });
 
 /*
