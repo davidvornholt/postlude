@@ -22,11 +22,12 @@ const entryOn = (date: string): JournalEntry => ({
 
 describe('dated journal day service boundary', () => {
   it('keeps today canonical while reading a future date like any other day', async () => {
-    const reader = makeJournalDayReader(<A>() =>
-      Promise.resolve({
-        entry: entryOn('2026-08-27'),
-        today,
-      }) as Promise<A>,
+    const reader = makeJournalDayReader(
+      <A>() =>
+        Promise.resolve({
+          entry: entryOn('2026-08-27'),
+          today,
+        }) as Promise<A>,
     );
 
     await expect(reader.readDated(today, today)).resolves.toEqual({

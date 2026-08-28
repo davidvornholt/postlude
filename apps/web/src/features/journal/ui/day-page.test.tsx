@@ -43,9 +43,7 @@ it('offers the next dated day from today', async () => {
   const html = await renderDay(entryOn());
 
   expect(html).toContain('aria-label="Previous day"');
-  expect(elementAttributes(html, 'a', '→')).toContain(
-    'href="/day/2026-08-27"',
-  );
+  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/2026-08-27"');
   expect(html).toContain('aria-label="Next day"');
 });
 
@@ -71,12 +69,8 @@ it('labels and links a future day without changing its dated address', async () 
   );
 
   expect(html).toContain('Tomorrow');
-  expect(elementAttributes(html, 'a', '←')).toContain(
-    'href="/"',
-  );
-  expect(elementAttributes(html, 'a', '→')).toContain(
-    'href="/day/2026-08-28"',
-  );
+  expect(elementAttributes(html, 'a', '←')).toContain('href="/"');
+  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/2026-08-28"');
 });
 
 it('omits the previous-day link at the start of the journal calendar', async () => {

@@ -29,8 +29,8 @@ import { fieldClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import {
   isJournalDate,
-  latestJournalDate,
   type JournalDate,
+  latestJournalDate,
 } from '../journal-day.ts';
 
 type DayHeadingProps = {

@@ -4,14 +4,11 @@ import { pageFrameClass } from '#/shared/ui/design-classes.ts';
 import { iconButtonClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
 import {
   datesInMonth,
-  journalMonthOf,
   journalMonthLabel,
+  journalMonthOf,
   shiftJournalMonth,
 } from '../calendar.ts';
-import {
-  latestJournalDate,
-  type JournalDate,
-} from '../journal-day.ts';
+import { type JournalDate, latestJournalDate } from '../journal-day.ts';
 import type { CalendarView } from '../services/calendar-fns.ts';
 import { CalendarGrid } from './calendar-grid.tsx';
 import { CalendarPreview } from './calendar-preview.tsx';
@@ -20,10 +17,7 @@ const selectedDate = (
   view: CalendarView,
   requested: JournalDate | undefined,
 ): JournalDate => {
-  if (
-    requested !== undefined &&
-    journalMonthOf(requested) === view.month
-  ) {
+  if (requested !== undefined && journalMonthOf(requested) === view.month) {
     return requested;
   }
   if (journalMonthOf(view.today) === view.month) {

@@ -28,8 +28,8 @@ import { iconButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDayRelation } from '../day-label.ts';
 import {
   earliestJournalDate,
-  latestJournalDate,
   type JournalDate,
+  latestJournalDate,
   shiftJournalDate,
 } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
