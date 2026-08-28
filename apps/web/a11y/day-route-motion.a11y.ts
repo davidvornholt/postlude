@@ -14,6 +14,17 @@ const markWritingSurface = async (
   );
 };
 
+const expectMainFocusInViewport = async (
+  page: Parameters<typeof mountDayNavigation>[0],
+): Promise<void> => {
+  const bounds = await page.locator('main').evaluate((element) => {
+    const { bottom, top } = element.getBoundingClientRect();
+    return { bottom, top, viewportHeight: window.innerHeight };
+  });
+  expect(bounds.bottom).toBeGreaterThan(0);
+  expect(bounds.top).toBeLessThan(bounds.viewportHeight);
+};
+
 const expectDay = async (
   page: Parameters<typeof mountDayNavigation>[0],
   path: string,
@@ -101,4 +112,47 @@ test('browser Back and Forward preserve the settled writing surface', async ({
     'data-writing-surface',
     'same',
   );
+});
+
+test('client navigation restores visible main focus from a scrolled page', async ({
+  page,
+}) => {
+  await mountDayNavigation(page);
+  await markWritingSurface(page);
+  await page.evaluate(() => {
+    document.body.style.minHeight = '240vh';
+    window.scrollTo({
+      behavior: 'auto',
+      left: 0,
+      top: document.body.scrollHeight,
+    });
+  });
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+  await followDayLink(page, 'Previous day');
+  await expectDay(
+    page,
+    '/day/2026-08-24',
+    'Monday, August 24, 2026 · Postlude',
+    'Monday, August 24, 2026',
+  );
+  await expectMainFocusInViewport(page);
+
+  await page.goBack();
+  await expectDay(
+    page,
+    '/day/2026-08-25',
+    'Tuesday, August 25, 2026 · Postlude',
+    'Tuesday, August 25, 2026',
+  );
+  await expectMainFocusInViewport(page);
+
+  await page.goForward();
+  await expectDay(
+    page,
+    '/day/2026-08-24',
+    'Monday, August 24, 2026 · Postlude',
+    'Monday, August 24, 2026',
+  );
+  await expectMainFocusInViewport(page);
 });

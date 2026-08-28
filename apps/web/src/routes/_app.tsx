@@ -39,6 +39,14 @@ import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 const skipLinkClass =
   'sr-only text-ink text-sm focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:border focus:border-ink focus:bg-background focus:px-4 focus:py-2 focus:outline-2 focus:outline-offset-2 focus:outline-primary';
 
+const focusMainAfterNavigation = (target: HTMLElement): void => {
+  target.focus({ preventScroll: true });
+  const { bottom, top } = target.getBoundingClientRect();
+  if (bottom <= 0 || top >= window.innerHeight || top < 0) {
+    window.scrollTo({ behavior: 'auto', left: 0, top: 0 });
+  }
+};
+
 const AppShell = () => {
   const mainId = useId();
   const router = useRouter();
@@ -64,7 +72,10 @@ const AppShell = () => {
       return;
     }
     previousLocationPath.current = locationPath;
-    main.current?.focus({ preventScroll: true });
+    const target = main.current;
+    if (target !== null) {
+      focusMainAfterNavigation(target);
+    }
   }, [locationPath]);
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
