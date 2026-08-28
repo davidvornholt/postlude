@@ -20,6 +20,7 @@ import { RouterError } from '../src/shared/ui/router-fallbacks.tsx';
 import { ArchivePage } from './archive-navigation-archive-module.ts';
 import { AppShell, DayPage } from './archive-navigation-day-module.ts';
 import type { ArchiveNavigationFixtureConfig } from './archive-navigation-fixture-contract.ts';
+import { createReadingNavigationRoutes } from './archive-navigation-reading-routes.tsx';
 import { journalEntryFromFixture } from './day-page-fixture-contract.ts';
 
 type ArchiveNavigationDependencies = {
@@ -115,12 +116,16 @@ export const createArchiveNavigationRouter = ({
     loader: () => readArchiveRoute({}),
     path: '/archive',
   });
-
   return createRouter({
     defaultErrorComponent: RouterError,
     history,
     routeTree: rootRoute.addChildren([
-      appRoute.addChildren([todayRoute, datedRoute, archiveRoute]),
+      appRoute.addChildren([
+        todayRoute,
+        datedRoute,
+        archiveRoute,
+        ...createReadingNavigationRoutes({ appRoute, config }),
+      ]),
     ]),
   });
 };
