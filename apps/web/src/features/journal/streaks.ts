@@ -53,9 +53,8 @@ const runsOf = (dates: ReadonlyArray<JournalDate>): ReadonlyArray<Run> => {
 
 /**
  * The current and longest runs among these dates. A date after today is ignored
- * rather than trusted: the writing pages refuse to open one, but an importer
- * reaches the table by another road, and a day that has not happened must not be
- * able to report a run the writer is not on.
+ * rather than trusted: planned future writing has a page of its own, but it
+ * must not report a streak the writer is not on yet.
  */
 export const streakOf = (
   dates: ReadonlyArray<JournalDate>,

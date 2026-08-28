@@ -47,12 +47,7 @@ const emptyDay: JournalEntry = {
 const neverSaves = () => new Promise<never>(() => undefined);
 
 const today = await renderInRouter(
-  <DayPage
-    anniversaries={[]}
-    entry={emptyDay}
-    save={neverSaves}
-    today={emptyDay.date}
-  />,
+  <DayPage entry={emptyDay} save={neverSaves} today={emptyDay.date} />,
 );
 const archiveSeed = 20_260_826;
 const sampleDays = 400;

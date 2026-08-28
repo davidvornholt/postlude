@@ -37,6 +37,7 @@ import { monthYearLabel } from '../activity-labels.ts';
 import { journalCountLabel } from '../journal-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
+import { EntrySizeChart } from './entry-size-chart.tsx';
 import { ExportControl, type SettleAutosaves } from './export-control.tsx';
 import { StreakPanel } from './streak-panel.tsx';
 
@@ -157,6 +158,16 @@ export const ArchivePage = ({
             </p>
             <div className="mt-4">
               <ActivityMap cells={cells} today={view.today} />
+            </div>
+          </Section>
+
+          <Section title="Entry length">
+            <p className={[readingMeasureClass, 'text-ink-muted'].join(' ')}>
+              Each vertical mark is one day. The green line shows the trailing
+              seven-day average, including days without writing.
+            </p>
+            <div className="mt-8">
+              <EntrySizeChart cells={cells} />
             </div>
           </Section>
         </>

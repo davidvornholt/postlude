@@ -1,5 +1,4 @@
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
-import type { Anniversary } from '../anniversary.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import { DayPage } from './day-page.tsx';
 
@@ -23,15 +22,5 @@ export const entryOn = (
 
 const neverSaves = () => new Promise<never>(() => undefined);
 
-export const renderDay = (
-  entry: JournalEntry,
-  anniversaries: ReadonlyArray<Anniversary> = [],
-): Promise<string> =>
-  renderInRouter(
-    <DayPage
-      anniversaries={anniversaries}
-      entry={entry}
-      save={neverSaves}
-      today={today}
-    />,
-  );
+export const renderDay = (entry: JournalEntry): Promise<string> =>
+  renderInRouter(<DayPage entry={entry} save={neverSaves} today={today} />);

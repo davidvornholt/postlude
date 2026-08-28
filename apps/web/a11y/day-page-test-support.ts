@@ -1,7 +1,6 @@
 import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
-import type { Anniversary } from '../src/features/journal/anniversary.ts';
 import { markdownSemanticsFixture } from '../src/features/journal/ui/markdown-semantics.fixture.ts';
 import { viewportContent } from '../src/shared/ui/viewport.ts';
 import {
@@ -17,15 +16,12 @@ import type {
 const today = '2026-08-26';
 const timestamp = '2026-08-26T20:00:00.000Z';
 const textboxCount = 4;
-const longMemoryWordRepeats = 160;
 
 const fixtureConfig = (
   saveOutcomes: ReadonlyArray<SaveOutcome>,
   journalMarkdown: string,
-  anniversaries: ReadonlyArray<Anniversary>,
   date = today,
 ): DayPageFixtureConfig => ({
-  anniversaries,
   entry: {
     date,
     journalMarkdown,
@@ -42,28 +38,13 @@ const fixtureConfig = (
   saveOutcomes,
 });
 
-const emptyConfig = fixtureConfig(['stored'], '', []);
-const datedConfig = fixtureConfig(['stored'], '', [], '2026-08-25');
-const memoryConfig = fixtureConfig(['stored'], '', [
-  {
-    date: '2025-08-26',
-    yearsAgo: 1,
-    words: 210,
-    snippet: 'Moved the desk under the window.',
-  },
-  {
-    date: '2024-08-26',
-    yearsAgo: 2,
-    words: 89,
-    snippet: `A-long-unbroken-memory-${'word'.repeat(longMemoryWordRepeats)}`,
-  },
-]);
+const emptyConfig = fixtureConfig(['stored'], '');
+const datedConfig = fixtureConfig(['stored'], '', '2026-08-25');
 
 const emptyAssets = await buildDayPageFixture(emptyConfig);
 const datedAssets = await buildDayPageFixture(datedConfig);
-const memoryAssets = await buildDayPageFixture(memoryConfig);
 const semanticAssets = await buildDayPageFixture(
-  fixtureConfig(['stored'], markdownSemanticsFixture, []),
+  fixtureConfig(['stored'], markdownSemanticsFixture),
 );
 
 const mountFixture = async (
@@ -97,18 +78,15 @@ export const mountDayPage = (
   page: playwright.Page,
   saveOutcomes: ReadonlyArray<SaveOutcome>,
 ): Promise<void> =>
-  mountFixture(page, fixtureConfig(saveOutcomes, '', []), emptyAssets);
+  mountFixture(page, fixtureConfig(saveOutcomes, ''), emptyAssets);
 
 export const mountDatedDayPage = (page: playwright.Page): Promise<void> =>
   mountFixture(page, datedConfig, datedAssets);
 
-export const mountMemoryDayPage = (page: playwright.Page): Promise<void> =>
-  mountFixture(page, memoryConfig, memoryAssets);
-
 export const mountSemanticDayPage = (page: playwright.Page): Promise<void> =>
   mountFixture(
     page,
-    fixtureConfig(['stored'], markdownSemanticsFixture, []),
+    fixtureConfig(['stored'], markdownSemanticsFixture),
     semanticAssets,
   );
 
@@ -123,7 +101,7 @@ export const mountUnhydratedDayPage = async (
 };
 
 export const scan = async (page: playwright.Page): Promise<void> => {
-  await expect(page.locator('[aria-live="polite"]')).toHaveCount(1);
+  await expect(page.locator('[data-save-status]')).toHaveCount(1);
   expect(await scanWcag22AaViolations(page)).toEqual([]);
 };
 

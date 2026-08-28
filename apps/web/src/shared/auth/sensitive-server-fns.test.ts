@@ -59,27 +59,14 @@ const publicServerFunctions = [
  * prevents a journal function from returning cacheable private data.
  */
 const privateServerFunctions = [
-  {
-    path: 'features/journal/services/archive-fns.ts',
-    name: 'readArchiveFn',
-  },
-  {
-    path: 'features/journal/services/journal-fns.ts',
-    name: 'readDatedJournalDayFn',
-  },
-  {
-    path: 'features/journal/services/journal-fns.ts',
-    name: 'readTodayJournalDayFn',
-  },
-  {
-    path: 'features/journal/services/journal-fns.ts',
-    name: 'saveEntryFn',
-  },
-  {
-    path: 'features/journal/services/search-fns.ts',
-    name: 'searchJournalFn',
-  },
-];
+  ['archive-fns.ts', 'readArchiveFn'],
+  ['calendar-fns.ts', 'readCalendarFn'],
+  ['journal-fns.ts', 'readDatedJournalDayFn'],
+  ['journal-fns.ts', 'readTodayJournalDayFn'],
+  ['journal-fns.ts', 'saveEntryFn'],
+  ['on-this-day-fns.ts', 'readOnThisDayFn'],
+  ['search-fns.ts', 'searchJournalFn'],
+].map(([path, name]) => ({ path: `features/journal/services/${path}`, name }));
 
 /**
  * Request handlers that answer without a session, each because it owns that

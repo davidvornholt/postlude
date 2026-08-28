@@ -35,17 +35,16 @@ it('names the day in full, and how long ago it was', async () => {
 });
 
 /*
- * A day the writer has not lived has nothing in it to write honestly, so today
- * offers no way forward. Yesterday does, and its forward link goes to `/` rather
- * than to today's dated address: the route there redirects, and a redirect
- * between the writer and the page they open every evening is a page load spent
- * on nothing.
+ * Today keeps the canonical root address, while its forward link opens the next
+ * dated day. A future day is a legitimate draft surface, so the stepper never
+ * strands the writer at today's boundary.
  */
-it('offers no way forward from today', async () => {
+it('offers the next dated day from today', async () => {
   const html = await renderDay(entryOn());
 
   expect(html).toContain('aria-label="Previous day"');
-  expect(html).not.toContain('aria-label="Next day"');
+  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/2026-08-27"');
+  expect(html).toContain('aria-label="Next day"');
 });
 
 /*
@@ -62,6 +61,16 @@ it('leads back to today from the day before it', async () => {
   expect(next).toContain('aria-label="Next day"');
   expect(previous).toContain('href="/day/2026-08-24"');
   expect(previous).toContain('aria-label="Previous day"');
+});
+
+it('labels and links a future day without changing its dated address', async () => {
+  const html = await renderDay(
+    entryOn({ date: '2026-08-27', journalMarkdown: 'Already planned.' }),
+  );
+
+  expect(html).toContain('Tomorrow');
+  expect(elementAttributes(html, 'a', '←')).toContain('href="/"');
+  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/2026-08-28"');
 });
 
 it('omits the previous-day link at the start of the journal calendar', async () => {
@@ -170,6 +179,9 @@ it('counts the prose rather than the markup', async () => {
   expect(html).toContain('3 words');
 });
 
-it('says a day is saved before anything has been typed', async () => {
-  expect(await renderDay(entryOn())).toContain('Saved');
+it('keeps routine autosave feedback visually stable', async () => {
+  const html = await renderDay(entryOn());
+
+  expect(html).toContain('Autosave on');
+  expect(html).toContain('All changes saved');
 });

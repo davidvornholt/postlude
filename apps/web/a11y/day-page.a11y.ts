@@ -36,6 +36,8 @@ for (const colorScheme of colorSchemes) {
       page.getByRole('link', { name: 'Previous day' }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Next day' })).toBeFocused();
+    await page.keyboard.press('Tab');
     const passage = page.getByRole('textbox', { name: 'Passage' });
     await expect(passage).toBeFocused();
     await page.keyboard.type('Proverbs 12:5-13');
@@ -59,7 +61,7 @@ for (const colorScheme of colorSchemes) {
 
     await expect(morning).toContainText('Mercy arrived this morning.');
     await expect(evening).toContainText('A quiet evening ended well.');
-    await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+    await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
     await scan(page);
   });
 
@@ -69,7 +71,7 @@ for (const colorScheme of colorSchemes) {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountDayPage(page, ['pending']);
     await editAndLeave(page, 'Evening journal', 'Still being saved.');
-    await expect(page.getByText('Saving …', { exact: true })).toBeVisible();
+    await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
     await scan(page);
   });
 
@@ -91,7 +93,7 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('a');
     await page.keyboard.up('Control');
     await page.keyboard.press('Backspace');
-    await expect(page.getByText('Saved', { exact: true })).toBeVisible();
+    await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
       0,
     );
@@ -185,7 +187,7 @@ for (const colorScheme of colorSchemes) {
     await expect(retry).toBeVisible();
     await retry.focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByText('Saving …', { exact: true })).toBeVisible();
+    await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
     await expect(page.locator('html')).toHaveAttribute(
       'data-save-attempts',
       '2',

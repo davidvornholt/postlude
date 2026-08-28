@@ -13,6 +13,8 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppArchiveRouteImport } from './routes/_app/archive'
+import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppOnThisDayRouteImport } from './routes/_app/on-this-day'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
 import { Route as AppArchiveExportRouteImport } from './routes/_app/archive_.export'
@@ -37,6 +39,16 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppArchiveRoute = AppArchiveRouteImport.update({
   id: '/archive',
   path: '/archive',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCalendarRoute = AppCalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOnThisDayRoute = AppOnThisDayRouteImport.update({
+  id: '/on-this-day',
+  path: '/on-this-day',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSearchRoute = AppSearchRouteImport.update({
@@ -74,6 +86,8 @@ export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
+  '/calendar': typeof AppCalendarRoute
+  '/on-this-day': typeof AppOnThisDayRoute
   '/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/archive/export': typeof AppArchiveExportRoute
@@ -84,6 +98,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/archive': typeof AppArchiveRoute
+  '/calendar': typeof AppCalendarRoute
+  '/on-this-day': typeof AppOnThisDayRoute
   '/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/': typeof AppIndexRoute
@@ -97,6 +113,8 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/archive': typeof AppArchiveRoute
+  '/_app/calendar': typeof AppCalendarRoute
+  '/_app/on-this-day': typeof AppOnThisDayRoute
   '/_app/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/_app/': typeof AppIndexRoute
@@ -111,6 +129,8 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/archive'
+    | '/calendar'
+    | '/on-this-day'
     | '/search'
     | '/api/healthz'
     | '/archive/export'
@@ -121,6 +141,8 @@ export interface FileRouteTypes {
   to:
     | '/login'
     | '/archive'
+    | '/calendar'
+    | '/on-this-day'
     | '/search'
     | '/api/healthz'
     | '/'
@@ -133,6 +155,8 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/_app/archive'
+    | '/_app/calendar'
+    | '/_app/on-this-day'
     | '/_app/search'
     | '/api/healthz'
     | '/_app/'
@@ -177,6 +201,20 @@ declare module '@tanstack/react-router' {
       path: '/archive'
       fullPath: '/archive'
       preLoaderRoute: typeof AppArchiveRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/calendar': {
+      id: '/_app/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/on-this-day': {
+      id: '/_app/on-this-day'
+      path: '/on-this-day'
+      fullPath: '/on-this-day'
+      preLoaderRoute: typeof AppOnThisDayRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/search': {
@@ -226,6 +264,8 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppArchiveRoute: typeof AppArchiveRoute
+  AppCalendarRoute: typeof AppCalendarRoute
+  AppOnThisDayRoute: typeof AppOnThisDayRoute
   AppSearchRoute: typeof AppSearchRoute
   AppIndexRoute: typeof AppIndexRoute
   AppArchiveExportRoute: typeof AppArchiveExportRoute
@@ -235,6 +275,8 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppArchiveRoute: AppArchiveRoute,
+  AppCalendarRoute: AppCalendarRoute,
+  AppOnThisDayRoute: AppOnThisDayRoute,
   AppSearchRoute: AppSearchRoute,
   AppIndexRoute: AppIndexRoute,
   AppArchiveExportRoute: AppArchiveExportRoute,

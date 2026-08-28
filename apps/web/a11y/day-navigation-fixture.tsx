@@ -51,26 +51,12 @@ export const NavigationRoot = () => (
 
 export const TodayPage = () => {
   const loaded = useFixtureDay();
-  return (
-    <DayPage
-      anniversaries={[]}
-      entry={loaded.entry}
-      save={save}
-      today={loaded.today}
-    />
-  );
+  return <DayPage entry={loaded.entry} save={save} today={loaded.today} />;
 };
 
 export const DatedPage = () => {
   const loaded = useFixtureDay();
-  return (
-    <DayPage
-      anniversaries={[]}
-      entry={loaded.entry}
-      save={save}
-      today={loaded.today}
-    />
-  );
+  return <DayPage entry={loaded.entry} save={save} today={loaded.today} />;
 };
 
 const rootRoute = createRootRoute({ component: NavigationRoot });

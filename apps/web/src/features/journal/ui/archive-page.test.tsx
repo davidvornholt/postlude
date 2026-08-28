@@ -135,16 +135,24 @@ it('gives the grid a summary and a described breakdown', () => {
   expect(filled).toContain('Monthly breakdown.');
 });
 
+it('shows daily entry size and explains its seven-day trend', () => {
+  expect(elementAttributes(filled, 'h2', 'Entry length')).not.toBe('');
+  expect(filled).toContain('aria-label="Entry size chart"');
+  expect(plainText(filled)).toContain('Seven-day average');
+});
+
 it('points the grid at the description that stands in for it', () => {
   const described = describedBy.exec(filled)?.groups?.id;
   expect(described).toBeDefined();
-  expect(filled).toContain(`id="${described}"`);
+  for (const id of described?.split(' ') ?? []) {
+    expect(filled).toContain(`id="${id}"`);
+  }
 });
 
 /*
- * The squares are not links — 371 of them in the tab order would put the whole
- * year between the writer and the next thing on the page — so the way into a
- * day is the table, and every day written has to be a link in it.
+ * The chart stays one keyboard stop rather than exposing 371 links. Pointer
+ * clicks and Enter can open its active square, while the prose route into every
+ * day written remains the table below it.
  */
 it('opens every day written from the list below the grid', () => {
   const written = journal.filter(

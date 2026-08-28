@@ -11,7 +11,6 @@ const isRouteProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 type JournalDay = {
   readonly entry: JournalEntry;
   readonly today: JournalEntry['date'];
-  readonly anniversaries: ReadonlyArray<never>;
 };
 const today = '2026-08-26';
 const entryOn = (date: JournalEntry['date']): JournalEntry => ({
@@ -26,8 +25,8 @@ const entryOn = (date: JournalEntry['date']): JournalEntry => ({
   createdAt: new Date(0),
   updatedAt: new Date(0),
 });
-let loadedDay: JournalDay = { entry: entryOn(today), today, anniversaries: [] };
-let datedDisposition: 'readable' | 'today' | 'future' = 'readable';
+let loadedDay: JournalDay = { entry: entryOn(today), today };
+let datedDisposition: 'readable' | 'today' = 'readable';
 let datedReadInputs: ReadonlyArray<unknown> = [];
 let todayReadCount = 0;
 if (isRouteProbeProcess) {
@@ -49,7 +48,7 @@ if (isRouteProbeProcess) {
 }
 if (isRouteProbeProcess) {
   beforeEach(() => {
-    loadedDay = { entry: entryOn(today), today, anniversaries: [] };
+    loadedDay = { entry: entryOn(today), today };
     datedDisposition = 'readable';
     datedReadInputs = [];
     todayReadCount = 0;
@@ -126,7 +125,7 @@ if (isRouteProbeProcess) {
 
       it('loads a valid past date and names it in metadata', async () => {
         const past = '2026-08-25';
-        loadedDay = { entry: entryOn(past), today, anniversaries: [] };
+        loadedDay = { entry: entryOn(past), today };
 
         expect(parseDay({ date: past })).toEqual({ date: past });
         await expect(loadDay(past)).resolves.toEqual(loadedDay);
@@ -148,12 +147,12 @@ if (isRouteProbeProcess) {
         expect(error).toMatchObject({ options: { to: '/' } });
       });
 
-      it('rejects a future day before a view is returned', async () => {
+      it('loads a future day so an existing or planned entry is reachable', async () => {
         const future = '2026-08-27';
-        datedDisposition = 'future';
+        loadedDay = { entry: entryOn(future), today };
 
-        const error = await captureRejected(() => loadDay(future));
-        expect(isNotFound(error)).toBe(true);
+        await expect(loadDay(future)).resolves.toEqual(loadedDay);
+        expect(datedReadInputs).toEqual([{ data: { date: future } }]);
       });
 
       it('does not describe an operational loader failure as a missing day', async () => {

@@ -103,6 +103,8 @@ for (const colorScheme of colorSchemes) {
     await page
       .locator('html[data-archive-read-started="true"]')
       .waitFor({ timeout: 5000 });
+    await expect(archive).toHaveAttribute('aria-busy', 'true');
+    await expect(archive.locator('..')).toContainText('…');
     await page
       .getByRole('textbox', { name: 'Evening journal' })
       .fill('Late archive edit.');
@@ -119,6 +121,7 @@ for (const colorScheme of colorSchemes) {
       'data-archive-reads',
       '2',
     );
+    await expect(archive).not.toHaveAttribute('aria-busy');
     await expectNoPageOverflow(page);
     await scanArchive(page);
   });

@@ -34,52 +34,53 @@ export const SearchForm = ({
 }: SearchFormProps) => (
   <form
     action="/search"
-    className={[
-      readingMeasureClass,
-      'mt-8 flex flex-wrap items-end gap-x-6 gap-y-4',
-    ].join(' ')}
+    className={[readingMeasureClass, 'mt-8'].join(' ')}
     id={formId}
     method="post"
     onSubmit={onSubmit}
   >
-    <div className="min-w-64 flex-1">
-      <label
-        className={[eyebrowClass, 'block text-ink-muted'].join(' ')}
-        htmlFor={fieldId}
+    <div className="flex flex-wrap items-end gap-x-6 gap-y-4">
+      {/* The field reserves the four pixels its focus outline occupies. Its
+          visible focus edge and the button therefore finish on one baseline. */}
+      <div className="min-w-64 flex-1 pb-1">
+        <label
+          className={[eyebrowClass, 'block text-ink-muted'].join(' ')}
+          htmlFor={fieldId}
+        >
+          Words to find
+        </label>
+        <input
+          aria-describedby={invalid ? errorId : undefined}
+          aria-invalid={invalid ? true : undefined}
+          autoComplete="off"
+          className={[fieldClass, 'mt-3 text-lg'].join(' ')}
+          id={fieldId}
+          maxLength={searchQueryLengthLimit}
+          name="q"
+          onChange={onChange}
+          placeholder="A word you remember writing"
+          readOnly={pending}
+          ref={fieldRef}
+          type="search"
+          value={query}
+        />
+      </div>
+      <button
+        aria-disabled={pending}
+        className={[
+          primaryButtonClass,
+          'disabled:cursor-wait disabled:opacity-60',
+        ].join(' ')}
+        disabled={pending}
+        type="submit"
       >
-        Words to find
-      </label>
-      <input
-        aria-describedby={invalid ? errorId : undefined}
-        aria-invalid={invalid ? true : undefined}
-        autoComplete="off"
-        className={[fieldClass, 'mt-3 text-lg'].join(' ')}
-        id={fieldId}
-        maxLength={searchQueryLengthLimit}
-        name="q"
-        onChange={onChange}
-        placeholder="A word you remember writing"
-        readOnly={pending}
-        ref={fieldRef}
-        type="search"
-        value={query}
-      />
-      {invalid ? (
-        <p className="mt-3 text-critical" id={errorId}>
-          {invalidQueryMessage}
-        </p>
-      ) : null}
+        {pending ? 'Searching' : 'Search'}
+      </button>
     </div>
-    <button
-      aria-disabled={pending}
-      className={[
-        primaryButtonClass,
-        'disabled:cursor-wait disabled:opacity-60',
-      ].join(' ')}
-      disabled={pending}
-      type="submit"
-    >
-      {pending ? 'Searching' : 'Search'}
-    </button>
+    {invalid ? (
+      <p className="mt-3 text-critical" id={errorId}>
+        {invalidQueryMessage}
+      </p>
+    ) : null}
   </form>
 );

@@ -18,18 +18,13 @@ import { RouterError, RouterNotFound } from '#/shared/ui/router-fallbacks.tsx';
 
 const isFallbackProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 
-type ReadOutcome = 'future' | 'failure';
-
-let outcome: ReadOutcome = 'future';
 let reads = 0;
 
 if (isFallbackProbeProcess) {
   mock.module('#/features/journal/services/journal-fns.ts', () => ({
     readDatedJournalDay: () => {
       reads += 1;
-      return outcome === 'future'
-        ? Promise.resolve({ disposition: 'future' as const })
-        : Promise.reject(new Error('The database is unavailable.'));
+      return Promise.reject(new Error('The database is unavailable.'));
     },
     saveDraft: () =>
       Promise.reject(new Error('This route test does not save.')),
@@ -37,7 +32,6 @@ if (isFallbackProbeProcess) {
 }
 if (isFallbackProbeProcess) {
   beforeEach(() => {
-    outcome = 'future';
     reads = 0;
   });
 
@@ -105,16 +99,7 @@ if (isFallbackProbeProcess) {
       expect(reads).toBe(0);
     });
 
-    it('server-renders missing-page heading and metadata for a future date', async () => {
-      const html = await renderAt('/day/2026-08-27');
-
-      expect(elementContent(html, 'h1')).toContain('Page not found');
-      expect(elementContent(html, 'title')).toBe('Page not found · Postlude');
-      expect(reads).toBe(1);
-    });
-
     it('keeps an operational failure out of missing-page metadata', async () => {
-      outcome = 'failure';
       const html = await renderAt('/day/2026-08-25');
 
       expect(elementContent(html, 'h1')).toContain('Something went wrong');

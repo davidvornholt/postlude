@@ -38,18 +38,24 @@ const yesterday = 1;
  * and in a journal the count is the useful part: "412 days ago" says something
  * "August 2025" does not.
  *
- * A day after today has no page to be the eyebrow of — the routes refuse one —
- * so the count is only ever backwards.
+ * Future dates use the same count in the other direction, which makes a dated
+ * page clear without pretending that its entry is part of today's history.
  */
 export const journalDayRelation = (
   date: JournalDate,
   today: JournalDate,
 ): string => {
   const elapsed = daysBetweenJournalDates(date, today);
-  if (elapsed <= 0) {
+  if (elapsed === 0) {
     return 'Today';
   }
-  return elapsed === yesterday
-    ? 'Yesterday'
-    : `${journalCountLabel(elapsed, 'day')} ago`;
+  if (elapsed > 0) {
+    return elapsed === yesterday
+      ? 'Yesterday'
+      : `${journalCountLabel(elapsed, 'day')} ago`;
+  }
+  const ahead = Math.abs(elapsed);
+  return ahead === yesterday
+    ? 'Tomorrow'
+    : `In ${journalCountLabel(ahead, 'day')}`;
 };

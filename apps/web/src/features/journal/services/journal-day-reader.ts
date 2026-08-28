@@ -1,11 +1,5 @@
 import { Effect } from 'effect';
 
-import {
-  type Anniversary,
-  anniversaryLimit,
-  anniversaryOf,
-  isoMonthStart,
-} from '../anniversary.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { emptyJournalEntry, type JournalEntry } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
@@ -13,16 +7,10 @@ import { EntryRepository } from './entry-repository.ts';
 export type JournalDayView = {
   readonly entry: JournalEntry;
   readonly today: JournalDate;
-  readonly anniversaries: ReadonlyArray<Anniversary>;
-  readonly anniversaryRevisions: ReadonlyArray<{
-    readonly date: JournalDate;
-    readonly revision: number;
-  }>;
 };
 
 export type DatedJournalDay =
   | { readonly disposition: 'today' }
-  | { readonly disposition: 'future' }
   | { readonly disposition: 'readable'; readonly view: JournalDayView };
 
 type RunJournalReadEffect = <A, E>(
@@ -38,19 +26,9 @@ export const makeJournalDayReader = (run: RunJournalReadEffect) => {
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const entry = yield* entries.read(date);
-        const earlier = yield* entries.readAnniversaries(
-          date.slice(isoMonthStart),
-          date,
-          anniversaryLimit,
-        );
         return {
           entry: entry ?? emptyJournalEntry(date),
           today,
-          anniversaries: earlier.map(anniversaryOf(date)),
-          anniversaryRevisions: earlier.map((earlierEntry) => ({
-            date: earlierEntry.date,
-            revision: earlierEntry.revision,
-          })),
         };
       }),
     );
@@ -64,9 +42,6 @@ export const makeJournalDayReader = (run: RunJournalReadEffect) => {
   ): Promise<DatedJournalDay> => {
     if (date === today) {
       return Promise.resolve({ disposition: 'today' });
-    }
-    if (date > today) {
-      return Promise.resolve({ disposition: 'future' });
     }
     return readJournalDay(date, today).then((view) => ({
       disposition: 'readable',

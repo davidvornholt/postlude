@@ -61,6 +61,13 @@ export const earliestJournalDate = formatJournalDate({
   day: 1,
 });
 
+/** The last day representable by the journal and its PostgreSQL DATE key. */
+export const latestJournalDate = formatJournalDate({
+  year: lastJournalYear,
+  month: monthsPerYear,
+  day: 31,
+});
+
 /** `setUTCFullYear` preserves years below 0100 instead of adding 1900. */
 const daysInMonth = (year: number, month: number): number => {
   const lastDay = new Date(0);

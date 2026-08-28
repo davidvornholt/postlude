@@ -16,9 +16,9 @@
  * uses, for the same reason: the page should not need script to do the one thing
  * it is for.
  *
- * Today is as far forward as it goes. A day that has not been lived has nothing
- * to hold, and the route refuses one anyway — saying so in the field means the
- * picker never offers it.
+ * Every valid journal date is a day the writer can read or prepare. The server
+ * still decides which one is today; dates ahead of it stay dated pages rather
+ * than taking the canonical root address.
  */
 
 import { useNavigate } from '@tanstack/react-router';
@@ -27,12 +27,16 @@ import { type FocusEvent, type SubmitEvent, useId, useState } from 'react';
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
 import { fieldClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
-import { isJournalDate, type JournalDate } from '../journal-day.ts';
+import {
+  isJournalDate,
+  type JournalDate,
+  latestJournalDate,
+} from '../journal-day.ts';
 
 type DayHeadingProps = {
   /** The day being read, which the heading names and the field opens on. */
   readonly date: JournalDate;
-  /** The server's own journal day, which is as far forward as it can go. */
+  /** The server's own journal day, used only to keep today's root canonical. */
   readonly today: JournalDate;
 };
 
@@ -89,8 +93,8 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
       input.reportValidity();
       return;
     }
-    if (!isJournalDate(input.value) || input.value > today) {
-      input.setCustomValidity('Choose a date from 0001 through today.');
+    if (!isJournalDate(input.value)) {
+      input.setCustomValidity('Choose a valid journal date.');
       input.reportValidity();
       return;
     }
@@ -138,7 +142,7 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
             // Re-keying on the day lets the field follow a navigation rather
             // than keeping whatever the last page put in it.
             key={date}
-            max={today}
+            max={latestJournalDate}
             name="date"
             onBlur={leaveControls}
             onFocus={() => setActive(true)}

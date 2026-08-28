@@ -221,6 +221,55 @@ it('lists a range inclusively and in calendar order', async () => {
   ).toEqual([false, true, false]);
 });
 
+it('reads a calendar month with its earliest available day', async () => {
+  const calendar = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2024-11-01', '```text\nkept source\n```'));
+      yield* entries.save(draft('2025-03-02', 'The prose began here.'));
+      yield* entries.save(draft('2026-08-19', 'A quiet kind of progress.'));
+      yield* entries.save(draft('2026-08-20', '```text\nkept source\n```'));
+      yield* entries.save(draft('2026-08-25', '', 'Psalms 23'));
+      yield* entries.save(draft('2026-08-27', 'A planned entry.'));
+      yield* entries.save(draft('2026-09-01', 'Outside the month.'));
+      return yield* entries.readCalendar({
+        from: '2026-08-01',
+        to: '2026-08-31',
+        today: '2026-08-26',
+      });
+    }),
+  );
+
+  expect(calendar.earliest).toBe('2024-11-01');
+  expect(
+    calendar.entries.map((entry) => ({
+      date: entry.date,
+      hasScriptureReference: entry.hasScriptureReference,
+      journalMarkdown: entry.journalMarkdown,
+    })),
+  ).toEqual([
+    {
+      date: '2026-08-19',
+      hasScriptureReference: false,
+      journalMarkdown: 'A quiet kind of progress.',
+    },
+    {
+      date: '2026-08-20',
+      hasScriptureReference: false,
+      journalMarkdown: '```text\nkept source\n```',
+    },
+    {
+      date: '2026-08-25',
+      hasScriptureReference: true,
+      journalMarkdown: '',
+    },
+    {
+      date: '2026-08-27',
+      hasScriptureReference: false,
+      journalMarkdown: 'A planned entry.',
+    },
+  ]);
+});
+
 it('finds the same day of the month in earlier years, newest first', async () => {
   const anniversaries = await withRepository((entries) =>
     Effect.gen(function* () {
@@ -298,6 +347,7 @@ it('reads only the bounded memory projection from rows with large search data', 
   expect(result.storedBytes).toBeGreaterThan(largeSearchByteFloor);
   expect(Object.keys(result.rows[0] ?? {}).sort()).toEqual([
     'date',
+    'hasScriptureReference',
     'journalMarkdown',
     'journalWordCount',
     'revision',
@@ -386,7 +436,7 @@ it('reports recoverable stored source separately from archive activity', async (
   expect(archive.summaries).toEqual([]);
 });
 
-it('does not let future rows open the archive', async () => {
+it('keeps planned future rows out of the historical archive', async () => {
   const archive = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-12-01', 'Later this year.'));

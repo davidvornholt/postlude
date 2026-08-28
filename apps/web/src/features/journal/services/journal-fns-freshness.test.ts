@@ -7,11 +7,12 @@ import {
 import { emptyJournalEntry } from '../schemas/entry.ts';
 import type { JournalDayView } from './journal-day-reader.ts';
 
+const finalReadCount = 3;
+
 const isServiceProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 
 if (isServiceProbeProcess) {
   const requestedDate = '2026-08-25';
-  const anniversaryDate = '2025-08-25';
   type DatedReply = {
     readonly disposition: 'readable';
     readonly view: JournalDayView;
@@ -27,12 +28,10 @@ if (isServiceProbeProcess) {
   const stale: JournalDayView = {
     entry: emptyJournalEntry(requestedDate),
     today: '2026-08-26',
-    anniversaries: [],
-    anniversaryRevisions: [],
   };
   const fresh: JournalDayView = {
     ...stale,
-    anniversaryRevisions: [{ date: anniversaryDate, revision: 1 }],
+    entry: { ...stale.entry, revision: 1 },
   };
 
   let resolveFirst: (value: DatedReply) => void = () => undefined;
@@ -40,7 +39,6 @@ if (isServiceProbeProcess) {
     resolveFirst = resolve;
   });
   let reads = 0;
-  let disposition: 'future' | 'readable' = 'readable';
 
   mock.module('@tanstack/react-start', () => ({
     createServerFn: () => {
@@ -69,9 +67,6 @@ if (isServiceProbeProcess) {
     makeJournalDayReader: () => ({
       readDated: () => {
         reads += 1;
-        if (disposition === 'future') {
-          return Promise.resolve({ disposition });
-        }
         return reads === 1
           ? firstRequest
           : Promise.resolve({
@@ -90,11 +85,11 @@ if (isServiceProbeProcess) {
     mock.restore();
   });
 
-  it('tracks the first dated server request before an anniversary save', async () => {
+  it('tracks the first dated server request before that day is saved', async () => {
     const loading = readDatedJournalDay({ data: { date: requestedDate } });
     expect(reads).toBe(1);
 
-    confirmedRevisions.record(anniversaryDate, 1);
+    confirmedRevisions.record(requestedDate, 1);
     resolveFirst({ disposition: 'readable', view: stale });
 
     await expect(loading).resolves.toEqual({
@@ -103,12 +98,13 @@ if (isServiceProbeProcess) {
     });
     expect(reads).toBe(2);
 
-    disposition = 'future';
-    const readsAfterClassification = 3;
     await expect(
       readDatedJournalDay({ data: { date: requestedDate } }),
-    ).resolves.toEqual({ disposition: 'future' });
-    expect(reads).toBe(readsAfterClassification);
+    ).resolves.toEqual({
+      disposition: 'readable',
+      view: fresh,
+    });
+    expect(reads).toBe(finalReadCount);
   });
 } else {
   it('runs the dated freshness probe in an isolated process', () => {

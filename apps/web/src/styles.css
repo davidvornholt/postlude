@@ -7,6 +7,27 @@ body {
   font-family: var(--font-sans);
 }
 
+/* Route changes should feel like turning to the next leaf, not replacing an
+ * application panel. The shell stays still while the new page settles into
+ * the same reading plane. Search-only changes, such as selecting a calendar
+ * day, do not remount this wrapper and therefore do not replay the motion. */
+.route-entry {
+  animation: route-entry 180ms var(--ease-standard) both;
+}
+
+@keyframes route-entry {
+  from {
+    opacity: 0;
+    transform: translateY(0.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-entry {
+    animation: none;
+  }
+}
+
 /*
  * The written page.
  *

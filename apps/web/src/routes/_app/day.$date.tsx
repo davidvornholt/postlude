@@ -14,22 +14,18 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * A date in the address is untrusted text, so it is checked before it reaches a
  * loader. Anything that is not a calendar date is not a day of this journal and
  * gets the not-found page — the same answer as a misspelt path, because that is
- * what it is.
+ * what it is. Valid dates are readable even when they are ahead of the server's
+ * current journal day: a row may have been written from another clock, or the
+ * writer may be planning tomorrow. A missing date still opens as a blank draft,
+ * so the same rule applies to reading, editing, and saving every valid day.
  *
  * Today is served at `/`, and reaching it through this route redirects there,
  * so the page the writer opens every evening has one address rather than two
  * that drift apart in a bookmark or a browser's history.
  */
 const DayRoute = () => {
-  const { entry, today, anniversaries } = Route.useLoaderData();
-  return (
-    <DayPage
-      anniversaries={anniversaries}
-      entry={entry}
-      save={saveDraft}
-      today={today}
-    />
-  );
+  const { entry, today } = Route.useLoaderData();
+  return <DayPage entry={entry} save={saveDraft} today={today} />;
 };
 
 export const Route = createFileRoute('/_app/day/$date')({
@@ -46,15 +42,6 @@ export const Route = createFileRoute('/_app/day/$date')({
     const result = await readDatedJournalDay({ data: { date: params.date } });
     if (result.disposition === 'today') {
       throw redirect({ to: '/' });
-    }
-    /*
-     * A day the writer has not lived yet has nothing to hold and no way to be
-     * written honestly, so it is not a page. The comparison is against the
-     * server's day rather than the browser's, so a device with a wrong clock or
-     * in another zone cannot talk its way into one.
-     */
-    if (result.disposition === 'future') {
-      throw notFound();
     }
     return result.view;
   },

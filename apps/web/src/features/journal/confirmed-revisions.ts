@@ -1,4 +1,3 @@
-import { isoMonthStart } from './anniversary.ts';
 import type { JournalDate } from './journal-day.ts';
 
 type LoaderGeneration = {
@@ -19,7 +18,6 @@ export type ConfirmedRevisionTracker = {
   readonly beginLoad: () => LoaderGeneration;
   readonly completeLoad: (
     loader: LoaderGeneration,
-    loadedDate: JournalDate,
     revisions: ReadonlyArray<RevisionEvidence>,
   ) => LoaderResult;
   readonly abandonLoad: (loader: LoaderGeneration) => void;
@@ -29,26 +27,6 @@ type Checkpoint = {
   readonly revision: number;
   readonly generation: number;
   readonly observedRevision: number;
-};
-
-const hasMissingNewAnniversary = (
-  checkpoints: ReadonlyMap<JournalDate, Checkpoint>,
-  started: number,
-  loadedDate: JournalDate,
-  revisions: ReadonlyArray<RevisionEvidence>,
-): boolean => {
-  const returnedDates = new Set(revisions.map(({ date }) => date));
-  for (const [date, checkpoint] of checkpoints) {
-    if (
-      started < checkpoint.generation &&
-      date < loadedDate &&
-      date.slice(isoMonthStart) === loadedDate.slice(isoMonthStart) &&
-      !returnedDates.has(date)
-    ) {
-      return true;
-    }
-  }
-  return false;
 };
 
 const hasStaleRevision = (
@@ -163,18 +141,12 @@ export const createConfirmedRevisionTracker = (
       outstanding.set(loader.id, loader.generation);
       return loader;
     },
-    completeLoad: (loader, loadedDate, revisions) => {
+    completeLoad: (loader, revisions) => {
       const started = outstanding.get(loader.id);
       if (started === undefined) {
         return 'retry';
       }
       if (started < freshnessFloor) {
-        outstanding.set(loader.id, generation);
-        return 'retry';
-      }
-      if (
-        hasMissingNewAnniversary(checkpoints, started, loadedDate, revisions)
-      ) {
         outstanding.set(loader.id, generation);
         return 'retry';
       }

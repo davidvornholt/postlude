@@ -42,17 +42,13 @@ export const currentJournalDate = (): JournalDate =>
 const decodeDraft = Schema.decodeUnknownSync(EntryDraftSchema);
 
 /**
- * A day's page: the entry, what the server's clock calls today, and the same
- * date in the years behind it.
+ * A day's page: the entry and what the server's clock calls today.
  *
  * Today comes back with the entry rather than being asked for separately,
  * because every page needs both and the two have to agree. A page that read
  * the day from the browser could offer to write a day the server would refuse,
  * or call yesterday "today" for a reader who has travelled.
  *
- * The anniversaries come back in the same round trip for the same reason the
- * counts do: they are part of what the page is, and a second request for them
- * would let the page render once without them and shift under the reader.
  */
 const journalDayReader = makeJournalDayReader(runJournalEffect);
 
