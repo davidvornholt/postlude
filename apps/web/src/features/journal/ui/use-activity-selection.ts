@@ -31,6 +31,20 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
   const elements = useRef(new Map<JournalDate, HTMLDivElement>());
   const activeDay = days.find((day) => day.date === activeDate) ?? days.at(-1);
   const activeIndex = days.findIndex((day) => day.date === activeDay?.date);
+  const scrollCellIntoView = (date: JournalDate): void => {
+    elements.current.get(date)?.scrollIntoView({
+      block: 'nearest',
+      inline: 'nearest',
+    });
+  };
+  const focusLastDay = (): void => {
+    const lastDay = days.at(-1);
+    if (lastDay === undefined) {
+      return;
+    }
+    setActiveDate(lastDay.date);
+    scrollCellIntoView(lastDay.date);
+  };
   const moveActiveDay = (event: KeyboardEvent<HTMLElement>): void => {
     const movement = movementFor(event.key);
     if (movement === undefined || activeDay === undefined) {
@@ -46,10 +60,7 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
       return;
     }
     setActiveDate(next.date);
-    elements.current.get(next.date)?.scrollIntoView({
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    scrollCellIntoView(next.date);
   };
   const registerCell =
     (date: JournalDate): RefCallback<HTMLDivElement> =>
@@ -61,5 +72,11 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
       }
     };
 
-  return { activeDay, moveActiveDay, registerCell, setActiveDate } as const;
+  return {
+    activeDay,
+    focusLastDay,
+    moveActiveDay,
+    registerCell,
+    setActiveDate,
+  } as const;
 };

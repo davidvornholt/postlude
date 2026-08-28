@@ -25,7 +25,6 @@ import {
 } from 'react';
 
 import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
-import type { HeatLevel } from '../activity.ts';
 import { type ActivityCell, activityWeeks } from '../activity-cells.ts';
 import {
   activityDayDetails,
@@ -35,21 +34,13 @@ import {
   weekdayRows,
 } from '../activity-labels.ts';
 import { type JournalDate, journalDateWeekday } from '../journal-day.ts';
+import { ActivityCellView } from './activity-cell.tsx';
+import { activityCellClass } from './activity-cell-classes.ts';
 import { ActivityTable } from './activity-table.tsx';
 import {
   type ActivityDayCell,
   useActivitySelection,
 } from './use-activity-selection.ts';
-
-const cellClass: Record<HeatLevel, string> = {
-  // A hairline, not a fill: "nothing written" has to read as a different kind
-  // of thing from "a little written", not as less of it.
-  none: 'size-3 border border-heat-none-mark bg-heat-none',
-  q1: 'size-3 bg-heat-q1',
-  q2: 'size-3 bg-heat-q2',
-  q3: 'size-3 bg-heat-q3',
-  q4: 'size-3 bg-heat-q4',
-};
 
 const legendSteps = ['q1', 'q2', 'q3', 'q4'] as const;
 
@@ -91,24 +82,12 @@ const ActivityWeek = ({
         <span aria-hidden="true" className="block size-3" key={row.name} />
       ))}
     {week.map((cell) => (
-      <div
-        aria-hidden="true"
-        className={[
-          cell.kind === 'future-padding' ? 'size-3' : cellClass[cell.level],
-          cell.date === activeDate
-            ? 'outline outline-1 outline-ink outline-offset-1'
-            : '',
-        ].join(' ')}
-        data-activity-date={cell.kind === 'day' ? cell.date : undefined}
+      <ActivityCellView
+        activeDate={activeDate}
+        cell={cell}
         key={cell.date}
-        onPointerDown={
-          cell.kind === 'day' ? () => setActiveDate(cell.date) : undefined
-        }
-        onPointerEnter={
-          cell.kind === 'day' ? () => setActiveDate(cell.date) : undefined
-        }
-        ref={registerCell(cell.date)}
-        title={cell.kind === 'day' ? activityDayDetails(cell) : undefined}
+        registerCell={registerCell}
+        setActiveDate={setActiveDate}
       />
     ))}
   </div>
@@ -124,8 +103,13 @@ export const ActivityMap = ({ cells, today }: ActivityMapProps) => {
   const days = cells.filter(
     (cell): cell is ActivityDayCell => cell.kind === 'day',
   );
-  const { activeDay, moveActiveDay, registerCell, setActiveDate } =
-    useActivitySelection(days);
+  const {
+    activeDay,
+    focusLastDay,
+    moveActiveDay,
+    registerCell,
+    setActiveDate,
+  } = useActivitySelection(days);
   const openDay = (date: JournalDate): void => {
     const destination = date === today ? '/' : `/day/${date}`;
     const moved =
@@ -163,12 +147,7 @@ export const ActivityMap = ({ cells, today }: ActivityMapProps) => {
         aria-label="Journal activity grid"
         className={['overflow-x-auto pb-1', focusRingClass].join(' ')}
         onClick={handleClick}
-        onFocus={() => {
-          const lastDay = days.at(-1);
-          if (lastDay !== undefined) {
-            setActiveDate(lastDay.date);
-          }
-        }}
+        onFocus={focusLastDay}
         onKeyDown={handleKeyDown}
         // biome-ignore lint/a11y/noNoninteractiveTabindex: the grid is wider than a phone, so it scrolls, and a scrolling region has to be a tab stop or there is no way to reach the far end of the year without a mouse (WCAG 2.1.1).
         tabIndex={0}
@@ -224,13 +203,17 @@ export const ActivityMap = ({ cells, today }: ActivityMapProps) => {
         ].join(' ')}
       >
         <span className="flex items-center gap-2">
-          <span aria-hidden="true" className={cellClass.none} />
+          <span aria-hidden="true" className={activityCellClass.none} />
           No writing
         </span>
         <span className="flex items-center gap-1">
           <span className="mr-1">Less</span>
           {legendSteps.map((step) => (
-            <span aria-hidden="true" className={cellClass[step]} key={step} />
+            <span
+              aria-hidden="true"
+              className={activityCellClass[step]}
+              key={step}
+            />
           ))}
           <span className="ml-1">More</span>
         </span>
