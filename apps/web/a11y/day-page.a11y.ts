@@ -36,6 +36,8 @@ for (const colorScheme of colorSchemes) {
       page.getByRole('link', { name: 'Previous day' }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Next day' })).toBeFocused();
+    await page.keyboard.press('Tab');
     const passage = page.getByRole('textbox', { name: 'Passage' });
     await expect(passage).toBeFocused();
     await page.keyboard.type('Proverbs 12:5-13');

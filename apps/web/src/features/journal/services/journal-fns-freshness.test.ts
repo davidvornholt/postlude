@@ -7,6 +7,8 @@ import {
 import { emptyJournalEntry } from '../schemas/entry.ts';
 import type { JournalDayView } from './journal-day-reader.ts';
 
+const finalReadCount = 3;
+
 const isServiceProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 
 if (isServiceProbeProcess) {
@@ -102,7 +104,7 @@ if (isServiceProbeProcess) {
       disposition: 'readable',
       view: fresh,
     });
-    expect(reads).toBe(3);
+    expect(reads).toBe(finalReadCount);
   });
 } else {
   it('runs the dated freshness probe in an isolated process', () => {

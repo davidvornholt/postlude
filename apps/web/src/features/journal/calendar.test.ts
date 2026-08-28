@@ -10,6 +10,7 @@ import {
 } from './calendar.ts';
 
 const sundayColumn = 6;
+const decemberDayCount = 31;
 
 describe('journal calendar months', () => {
   it('validates and names supported months', () => {
@@ -37,7 +38,7 @@ describe('journal calendar months', () => {
   it('lists the final supported month without stepping past its last day', () => {
     const dates = datesInMonth('9999-12');
 
-    expect(dates).toHaveLength(31);
+    expect(dates).toHaveLength(decemberDayCount);
     expect(dates.at(-1)).toBe('9999-12-31');
   });
 });

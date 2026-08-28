@@ -49,7 +49,10 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('ArrowUp');
     await expect(field).toHaveValue('2026-08-27');
     await page.getByRole('button', { name: 'Open' }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-route', '/');
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-route',
+      '/day/2026-08-27',
+    );
     await field.focus();
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
