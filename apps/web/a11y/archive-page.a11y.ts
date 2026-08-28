@@ -37,10 +37,24 @@ for (const colorScheme of colorSchemes) {
     });
     await activityRegion.focus();
     await expect(activityRegion).toBeFocused();
+    const previousWeek = page.locator('[data-activity-date="2026-08-19"]');
+    const previousWeekDetails = await previousWeek.getAttribute('title');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByText(previousWeekDetails ?? '')).toBeVisible();
+    const hoveredDay = page.locator('[data-activity-date="2026-08-25"]');
+    const hoveredDetails = await hoveredDay.getAttribute('title');
+    await hoveredDay.hover();
+    await expect(page.getByText(hoveredDetails ?? '')).toBeVisible();
     const activityOverflows = await activityRegion.evaluate(
       (element) => element.scrollWidth > element.clientWidth,
     );
     expect(activityOverflows).toBe(testInfo.project.name.includes('mobile'));
+
+    const sizeChart = page.getByRole('region', { name: 'Entry size chart' });
+    await sizeChart.focus();
+    await page.keyboard.press('ArrowLeft');
+    await expect(sizeChart).toBeFocused();
+    await expect(sizeChart).toHaveAttribute('aria-describedby');
 
     const summary = page.getByText(everyDayWritten);
     await summary.focus();

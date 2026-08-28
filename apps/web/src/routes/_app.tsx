@@ -1,7 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import {
   createFileRoute,
-  Link,
   Outlet,
   redirect,
   useRouter,
@@ -18,6 +17,7 @@ import {
 
 import {
   discardPreparedArchiveNavigation,
+  preloadArchiveNavigation,
   prepareRollingArchiveNavigation,
 } from '#/features/journal/browser-archive-navigation.ts';
 import { navigateAfterAutosavesSettle } from '#/features/journal/browser-autosaves.ts';
@@ -28,19 +28,9 @@ import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
 import { BrandLink } from '#/shared/ui/brand-link.tsx';
 import { pageFrameClass } from '#/shared/ui/design-classes.ts';
-import {
-  navLinkActiveClass,
-  navLinkClass,
-  navLinkInactiveClass,
-  quietButtonClass,
-} from '#/shared/ui/form-classes.ts';
+import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { MainNavigation } from '#/shared/ui/main-navigation.tsx';
 import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
-
-const navItems = [
-  { to: '/', label: 'Today' },
-  { to: '/archive', label: 'Archive' },
-  { to: '/search', label: 'Search' },
-] as const;
 
 // `focus`, not `focus-visible`: the link is only reachable by keyboard, so it
 // has to appear the moment it takes focus. It is also the one thing on the page
@@ -55,10 +45,16 @@ const AppShell = () => {
   const [blockedArchiveDay, setBlockedArchiveDay] = useState<
     JournalDate | undefined
   >();
+  const [archiveNavigationPending, setArchiveNavigationPending] =
+    useState(false);
   const locationPath = useRouterState({
     select: (state) => state.location.pathname,
   });
   const previousLocationPath = useRef<string>(locationPath);
+  const routeMotionKey =
+    locationPath === '/' || locationPath.startsWith('/day/')
+      ? 'writing'
+      : locationPath;
   const main = useRef<HTMLElement>(null);
   const archiveNavigationStarted: RefObject<boolean> = useRef(false);
   // Client navigation removes the link that held focus. Move focus to the
@@ -68,7 +64,7 @@ const AppShell = () => {
       return;
     }
     previousLocationPath.current = locationPath;
-    main.current?.focus();
+    main.current?.focus({ preventScroll: true });
   }, [locationPath]);
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
@@ -105,6 +101,7 @@ const AppShell = () => {
       return;
     }
     archiveNavigationStarted.current = true;
+    setArchiveNavigationPending(true);
     try {
       const result = await navigateAfterAutosavesSettle(
         prepareRollingArchiveNavigation,
@@ -114,6 +111,7 @@ const AppShell = () => {
     } finally {
       discardPreparedArchiveNavigation();
       archiveNavigationStarted.current = false;
+      setArchiveNavigationPending(false);
     }
   };
 
@@ -132,25 +130,11 @@ const AppShell = () => {
           <p className="font-display text-ink text-xl">
             <BrandLink>Postlude</BrandLink>
           </p>
-          <nav aria-label="Main">
-            <ul className="flex items-center gap-6">
-              {navItems.map((item) => (
-                <li key={item.to}>
-                  <Link
-                    activeOptions={{ exact: item.to === '/' }}
-                    activeProps={{ className: navLinkActiveClass }}
-                    className={navLinkClass}
-                    inactiveProps={{ className: navLinkInactiveClass }}
-                    onClick={item.to === '/archive' ? openArchive : undefined}
-                    preload={item.to === '/archive' ? false : undefined}
-                    to={item.to}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <MainNavigation
+            archivePending={archiveNavigationPending}
+            onOpenArchive={openArchive}
+            onPrepareArchive={preloadArchiveNavigation}
+          />
         </div>
       </header>
       {blockedArchiveDay === undefined ? null : (
@@ -175,14 +159,16 @@ const AppShell = () => {
             it replaces, so the fallback has to know it is already inside the
             one main landmark this page gets. */}
         <InsideMainLandmark>
-          <Outlet />
+          <div className="route-entry" key={routeMotionKey}>
+            <Outlet />
+          </div>
         </InsideMainLandmark>
       </main>
       {/*
         The way out of the app lives at the foot of the page rather than beside
-        the two links at the top. It is used about once a year, and a control at
-        a link's weight standing in the navigation row reads as a third page —
-        as the one you are on, since the pages are told apart by weight. The
+        the places at the top. It is used about once a year, and a control at a
+        link's weight standing in the navigation row reads as another page — as
+        the one you are on, since the pages are told apart by weight. The
         frame is set here, not by the page, because this belongs to the app
         rather than to whatever is being read above it.
       */}

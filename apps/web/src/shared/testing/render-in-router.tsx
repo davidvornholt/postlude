@@ -31,7 +31,7 @@ import {
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 
-const appPaths = ['/', '/archive', '/day/$date'] as const;
+const appPaths = ['/', '/archive', '/day/$date', '/on-this-day'] as const;
 
 const emptyComponent = () => null;
 

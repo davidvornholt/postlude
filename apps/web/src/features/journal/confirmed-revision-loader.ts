@@ -11,7 +11,6 @@ type RevisionEvidence = {
 
 type RevisionedJournalDay = {
   readonly entry: RevisionEvidence;
-  readonly anniversaryRevisions: ReadonlyArray<RevisionEvidence>;
 };
 
 type RevisionEvidenceOf<Loaded> = (
@@ -34,10 +33,7 @@ const loadWithConfirmedRevision = async <Loaded>(
       tracker.abandonLoad(loader);
       return loaded;
     }
-    const result = tracker.completeLoad(loader, evidence.entry.date, [
-      evidence.entry,
-      ...evidence.anniversaryRevisions,
-    ]);
+    const result = tracker.completeLoad(loader, [evidence.entry]);
     if (result === 'accept') {
       return loaded;
     }

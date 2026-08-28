@@ -11,7 +11,6 @@ const isRouteProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 type JournalDay = {
   readonly entry: JournalEntry;
   readonly today: JournalEntry['date'];
-  readonly anniversaries: ReadonlyArray<never>;
 };
 const today = '2026-08-26';
 const entryOn = (date: JournalEntry['date']): JournalEntry => ({
@@ -26,7 +25,7 @@ const entryOn = (date: JournalEntry['date']): JournalEntry => ({
   createdAt: new Date(0),
   updatedAt: new Date(0),
 });
-let loadedDay: JournalDay = { entry: entryOn(today), today, anniversaries: [] };
+let loadedDay: JournalDay = { entry: entryOn(today), today };
 let datedDisposition: 'readable' | 'today' | 'future' = 'readable';
 let datedReadInputs: ReadonlyArray<unknown> = [];
 let todayReadCount = 0;
@@ -49,7 +48,7 @@ if (isRouteProbeProcess) {
 }
 if (isRouteProbeProcess) {
   beforeEach(() => {
-    loadedDay = { entry: entryOn(today), today, anniversaries: [] };
+    loadedDay = { entry: entryOn(today), today };
     datedDisposition = 'readable';
     datedReadInputs = [];
     todayReadCount = 0;
@@ -126,7 +125,7 @@ if (isRouteProbeProcess) {
 
       it('loads a valid past date and names it in metadata', async () => {
         const past = '2026-08-25';
-        loadedDay = { entry: entryOn(past), today, anniversaries: [] };
+        loadedDay = { entry: entryOn(past), today };
 
         expect(parseDay({ date: past })).toEqual({ date: past });
         await expect(loadDay(past)).resolves.toEqual(loadedDay);

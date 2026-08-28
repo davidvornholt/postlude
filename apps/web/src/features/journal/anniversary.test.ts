@@ -7,11 +7,16 @@
 
 import { expect, it } from 'bun:test';
 
-import { anniversaryOf } from './anniversary.ts';
-import type { AnniversaryEntry } from './schemas/anniversary-entry.ts';
+import {
+  anniversaryOf,
+  onThisDayBounds,
+  onThisDayDate,
+} from './anniversary.ts';
+import type { EntryPreview } from './schemas/entry-preview.ts';
 
-const entry = (date: string, markdown: string): AnniversaryEntry => ({
+const entry = (date: string, markdown: string): EntryPreview => ({
   date,
+  hasScriptureReference: false,
   journalMarkdown: markdown,
   journalWordCount: markdown === '' ? 0 : markdown.split(' ').length,
   revision: 1,
@@ -21,6 +26,21 @@ const entry = (date: string, markdown: string): AnniversaryEntry => ({
 
 const threeYears = 3;
 const fourYears = 4;
+
+it('keeps dates in the current year, including dates after today', () => {
+  expect(onThisDayDate('2026-08-25', '2026-08-26')).toBe('2026-08-25');
+  expect(onThisDayDate(undefined, '2026-08-26')).toBe('2026-08-26');
+  expect(onThisDayDate('2026-08-27', '2026-08-26')).toBe('2026-08-27');
+});
+
+it('bounds retrospective browsing to the current calendar year', () => {
+  expect(onThisDayBounds('2026-08-26')).toEqual({
+    first: '2026-01-01',
+    last: '2026-12-31',
+  });
+  expect(onThisDayDate('2025-12-31', '2026-08-26')).toBe('2026-01-01');
+  expect(onThisDayDate('2027-01-01', '2026-08-26')).toBe('2026-12-31');
+});
 
 it('counts the years back from the day being read, not from today', () => {
   const written = entry('2022-08-24', 'The rain fell all night.');

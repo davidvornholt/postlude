@@ -1,4 +1,3 @@
-import type { Anniversary } from '../src/features/journal/anniversary.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 
 export type SaveOutcome =
@@ -22,7 +21,6 @@ export type FixtureEntry = Omit<
 };
 
 export type DayPageFixtureConfig = {
-  readonly anniversaries: ReadonlyArray<Anniversary>;
   readonly entry: FixtureEntry;
   readonly today: JournalEntry['date'];
   readonly saveOutcomes: ReadonlyArray<SaveOutcome>;

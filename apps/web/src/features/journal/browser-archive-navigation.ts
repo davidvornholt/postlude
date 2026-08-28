@@ -9,10 +9,25 @@ import type { ArchiveQueryParams } from './schemas/archive-query.ts';
 import type { ArchiveView } from './services/archive-fns.ts';
 
 let preparedRollingArchive: ArchiveView | undefined;
+let archiveFunctions:
+  | Promise<typeof import('./services/archive-fns.ts')>
+  | undefined;
+
+const loadArchiveFunctions = () => {
+  archiveFunctions ??= import('./services/archive-fns.ts');
+  return archiveFunctions;
+};
+
+/** Warms the split archive boundary without reading private journal data. */
+export const preloadArchiveNavigation = (): void => {
+  loadArchiveFunctions().catch(() => {
+    archiveFunctions = undefined;
+  });
+};
 
 const readArchive = (year: number | undefined): Promise<ArchiveView> =>
   readAfterSettlingBrowserAutosaves(async () => {
-    const { readArchiveFn } = await import('./services/archive-fns.ts');
+    const { readArchiveFn } = await loadArchiveFunctions();
     return readArchiveFn({ data: { year } });
   });
 

@@ -1,6 +1,10 @@
 import { expect, test } from '@playwright/test';
 
-import { mountMemoryDayPage, scan } from './day-page-test-support.ts';
+import {
+  mountReadingPage,
+  readingPageFixtureConfigs,
+  scanReadingPage,
+} from './reading-page-test-support.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
 const newestMemoryName = /Moved the desk under the window/u;
@@ -11,11 +15,12 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountMemoryDayPage(page);
-
-    const section = page
-      .getByRole('heading', { name: 'On this day' })
-      .locator('..');
+    await mountReadingPage(page, readingPageFixtureConfigs.onThisDay);
+    const nextDate = page.getByRole('link', { name: 'Next date' });
+    await expect(nextDate).toHaveAttribute(
+      'href',
+      '/on-this-day?date=2026-08-27',
+    );
     const newest = page.getByRole('link', {
       name: newestMemoryName,
     });
@@ -24,17 +29,6 @@ for (const colorScheme of colorSchemes) {
     });
     await expect(newest).toHaveAttribute('href', '/day/2025-08-26');
     await expect(older).toHaveAttribute('href', '/day/2024-08-26');
-
-    const eveningBox = await page
-      .getByRole('heading', { name: 'Evening' })
-      .locator('..')
-      .boundingBox();
-    const memoryBox = await section.boundingBox();
-    expect(eveningBox).not.toBeNull();
-    expect(memoryBox).not.toBeNull();
-    expect(memoryBox?.y ?? 0).toBeGreaterThanOrEqual(
-      (eveningBox?.y ?? 0) + (eveningBox?.height ?? 0),
-    );
 
     await newest.focus();
     await page.keyboard.press('Tab');
@@ -53,6 +47,6 @@ for (const colorScheme of colorSchemes) {
         () => document.documentElement.scrollWidth <= globalThis.innerWidth,
       ),
     ).toBe(true);
-    await scan(page);
+    await scanReadingPage(page);
   });
 }

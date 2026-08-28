@@ -11,6 +11,7 @@
 
 import type { HeatLevel } from './activity.ts';
 import type { ActivityCell } from './activity-cells.ts';
+import { journalDateLabel } from './day-label.ts';
 import { type JournalDate, parseJournalDate } from './journal-day.ts';
 import { journalCountLabel, journalMonthLabel } from './journal-labels.ts';
 
@@ -70,6 +71,11 @@ export const activitySummary = (cells: ReadonlyArray<ActivityCell>): string => {
   const written = days.filter((cell) => cell.words > 0).length;
   return `Journal activity from ${monthYearLabel(first.date)} to ${monthYearLabel(last.date)}: ${journalCountLabel(written, 'day')} written`;
 };
+
+export const activityDayDetails = (
+  cell: Extract<ActivityCell, { readonly kind: 'day' }>,
+): string =>
+  `${journalDateLabel(cell.date)} · ${cell.words === 0 ? 'No writing' : journalCountLabel(cell.words, 'word')}`;
 
 /** Monthly distribution and volume, compact enough to replace 371 cells. */
 export const activityDescription = (

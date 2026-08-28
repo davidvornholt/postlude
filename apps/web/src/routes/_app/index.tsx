@@ -19,15 +19,8 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * cannot escape a frame the shell has already closed around it.
  */
 const TodayRoute = () => {
-  const { entry, today, anniversaries } = Route.useLoaderData();
-  return (
-    <DayPage
-      anniversaries={anniversaries}
-      entry={entry}
-      save={saveDraft}
-      today={today}
-    />
-  );
+  const { entry, today } = Route.useLoaderData();
+  return <DayPage entry={entry} save={saveDraft} today={today} />;
 };
 
 export const Route = createFileRoute('/_app/')({

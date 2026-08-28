@@ -3,8 +3,9 @@ import { Schema } from 'effect';
 import type { JournalDate } from '../journal-day.ts';
 import { JournalDateSchema, RevisionSchema, WordCountSchema } from './entry.ts';
 
-export type AnniversaryEntry = {
+export type EntryPreview = {
   readonly date: JournalDate;
+  readonly hasScriptureReference: boolean;
   readonly journalMarkdown: string;
   readonly journalWordCount: number;
   readonly revision: number;
@@ -12,9 +13,12 @@ export type AnniversaryEntry = {
   readonly scriptureWordCount: number;
 };
 
-const AnniversaryEntryRow = Schema.Struct({
+const EntryPreviewRow = Schema.Struct({
   date: Schema.propertySignature(JournalDateSchema).pipe(
     Schema.fromKey('entry_date'),
+  ),
+  hasScriptureReference: Schema.propertySignature(Schema.Boolean).pipe(
+    Schema.fromKey('has_scripture_reference'),
   ),
   journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
     Schema.fromKey('journal_markdown'),
@@ -33,13 +37,14 @@ const AnniversaryEntryRow = Schema.Struct({
   ),
 });
 
-export const AnniversaryEntryFromRow = Schema.transform(
-  AnniversaryEntryRow,
-  Schema.Any as Schema.Schema<AnniversaryEntry>,
+export const EntryPreviewFromRow = Schema.transform(
+  EntryPreviewRow,
+  Schema.Any as Schema.Schema<EntryPreview>,
   {
     strict: false,
     decode: (row) => ({
       date: row.date,
+      hasScriptureReference: row.hasScriptureReference,
       journalMarkdown: row.journalMarkdown ?? '',
       journalWordCount: row.journalWordCount,
       revision: row.revision,

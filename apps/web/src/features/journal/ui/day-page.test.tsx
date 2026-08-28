@@ -170,6 +170,9 @@ it('counts the prose rather than the markup', async () => {
   expect(html).toContain('3 words');
 });
 
-it('says a day is saved before anything has been typed', async () => {
-  expect(await renderDay(entryOn())).toContain('Saved');
+it('keeps routine autosave feedback visually stable', async () => {
+  const html = await renderDay(entryOn());
+
+  expect(html).toContain('Autosave on');
+  expect(html).toContain('All changes saved');
 });

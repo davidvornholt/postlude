@@ -7,12 +7,6 @@
  * already editable, because a journal that asks to be unlocked before it can be
  * written in is one more thing to do before writing.
  *
- * Under the writing come the years behind this same date. They sit last on
- * purpose: this is the page for writing an evening, and old entries stacked in
- * front of the editor would put reading ahead of it. Below the words they are
- * what they should be — something to find after the day is closed out, or a
- * prompt on a date that is still empty.
- *
  * A day is written on the page it is read on, so this same component serves
  * today and any day in the archive. Only the route differs.
  *
@@ -30,7 +24,6 @@ import {
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { iconButtonClass } from '#/shared/ui/form-classes.ts';
-import type { Anniversary } from '../anniversary.ts';
 import { journalDayRelation } from '../day-label.ts';
 import {
   daysBetweenJournalDates,
@@ -44,7 +37,6 @@ import { DayHeading } from './day-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
-import { OnThisDay } from './on-this-day.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
 import { type SaveDraft, useAutosave } from './use-autosave.ts';
@@ -53,8 +45,6 @@ type DayPageProps = {
   readonly entry: JournalEntry;
   /** The server's own journal day, which is what "today" means everywhere. */
   readonly today: JournalDate;
-  /** The same date in the years behind it, newest first. */
-  readonly anniversaries: ReadonlyArray<Anniversary>;
   /**
    * Where the writing goes. Passed in rather than imported so that rendering a
    * day needs nothing the database needs; the routes hand over the real one.
@@ -79,7 +69,7 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
   baseRevision: entry.revision,
 });
 
-const DayBody = ({ entry, today, save, anniversaries }: DayPageProps) => {
+const DayBody = ({ entry, today, save }: DayPageProps) => {
   const autosave = useAutosave(
     { draft: draftOf(entry), revision: entry.revision },
     save,
@@ -89,7 +79,6 @@ const DayBody = ({ entry, today, save, anniversaries }: DayPageProps) => {
       ? autosave.failure.message
       : undefined;
   const eveningId = useId();
-  const memoryId = useId();
   const previous =
     entry.date === earliestJournalDate
       ? undefined
@@ -194,29 +183,6 @@ const DayBody = ({ entry, today, save, anniversaries }: DayPageProps) => {
           />
         </div>
       </section>
-
-      {/* Absent on a date with no years behind it, rather than present and
-          empty. A heading over nothing would take a section of the page every
-          day of a journal's first year to say that there is nothing yet. */}
-      {anniversaries.length === 0 ? null : (
-        <section
-          aria-labelledby={memoryId}
-          className={[pageFrameClass, 'mt-12 sm:mt-16'].join(' ')}
-        >
-          <h2
-            className={[
-              eyebrowClass,
-              'border-border border-t pt-8 text-ink-muted',
-            ].join(' ')}
-            id={memoryId}
-          >
-            On this day
-          </h2>
-          <div className="mt-8">
-            <OnThisDay anniversaries={anniversaries} today={today} />
-          </div>
-        </section>
-      )}
     </>
   );
 };
@@ -228,17 +194,6 @@ const DayBody = ({ entry, today, save, anniversaries }: DayPageProps) => {
  * the editor and post them to today. The key is set here rather than at the
  * call sites, so no route can forget it.
  */
-export const DayPage = ({
-  entry,
-  today,
-  save,
-  anniversaries,
-}: DayPageProps) => (
-  <DayBody
-    anniversaries={anniversaries}
-    entry={entry}
-    key={entry.date}
-    save={save}
-    today={today}
-  />
+export const DayPage = ({ entry, today, save }: DayPageProps) => (
+  <DayBody entry={entry} key={entry.date} save={save} today={today} />
 );

@@ -5,7 +5,6 @@ import { type JournalDate, shiftJournalDate } from './journal-day.ts';
 
 const day = (date: JournalDate, revision: number) => ({
   entry: { date, revision },
-  anniversaryRevisions: [],
 });
 
 const deferred = <Value>() => {
@@ -46,6 +45,21 @@ it('refuses every bounded read that predates a confirmed save', async () => {
     ),
   ).rejects.toThrow('did not include the confirmed save');
   expect(tracker.known('2026-08-27')).toBe(2);
+});
+
+it('does not hold one day behind a confirmed save for another day', async () => {
+  const tracker = createConfirmedRevisionTracker();
+  tracker.record('2025-08-27', 2);
+  let calls = 0;
+
+  const loaded = await loadAfterConfirmedRevision(() => {
+    calls += 1;
+    return Promise.resolve(day('2026-08-27', 1));
+  }, tracker);
+
+  expect(loaded).toEqual(day('2026-08-27', 1));
+  expect(calls).toBe(1);
+  expect(tracker.known('2025-08-27')).toBe(2);
 });
 
 it('keeps parallel pre-confirmation loads ordered independently', async () => {

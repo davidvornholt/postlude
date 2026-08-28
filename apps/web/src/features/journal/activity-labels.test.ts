@@ -2,6 +2,7 @@ import { expect, it } from 'bun:test';
 import { activityWindow } from './activity.ts';
 import { activityCells, activityWeeks } from './activity-cells.ts';
 import {
+  activityDayDetails,
   activityDescription,
   activitySummary,
   monthColumnLabels,
@@ -35,6 +36,25 @@ const cells2025 = activityCells(
 
 it('names a month and its year in full', () => {
   expect(monthYearLabel('2025-06-01')).toBe('June 2025');
+});
+
+it('gives each activity square an exact hover and keyboard reading', () => {
+  expect(
+    activityDayDetails({
+      kind: 'day',
+      date: '2026-08-26',
+      level: 'q2',
+      words: 120,
+    }),
+  ).toBe('Wednesday, August 26, 2026 · 120 words');
+  expect(
+    activityDayDetails({
+      kind: 'day',
+      date: '2026-08-25',
+      level: 'none',
+      words: 0,
+    }),
+  ).toBe('Tuesday, August 25, 2026 · No writing');
 });
 
 it('displays early calendar years without storage padding', () => {

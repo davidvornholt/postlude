@@ -20,13 +20,13 @@ import {
   journalWriteError,
 } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
-import { AnniversaryEntryFromRow } from '../schemas/anniversary-entry.ts';
 import {
   EarliestDateFromRow,
   type EntryDraft,
   EntryFromRow,
   type JournalEntry,
 } from '../schemas/entry.ts';
+import { EntryPreviewFromRow } from '../schemas/entry-preview.ts';
 import {
   type EntrySummary,
   EntrySummaryFromRow,
@@ -34,6 +34,7 @@ import {
 import { parseScriptureReference } from '../scripture-reference.ts';
 import { searchDocumentOf } from '../search-document.ts';
 import { countJournalWords } from '../word-count.ts';
+import { makeCalendarReader } from './calendar-repository-read.ts';
 import {
   archiveActivityEntry,
   exportableStoredEntry,
@@ -42,8 +43,8 @@ import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
 const exactParseOptions = { onExcessProperty: 'error' } as const;
-const decodeAnniversaryEntries = Schema.decodeUnknown(
-  Schema.Array(AnniversaryEntryFromRow),
+const decodeEntryPreviews = Schema.decodeUnknown(
+  Schema.Array(EntryPreviewFromRow),
   exactParseOptions,
 );
 const decodeEarliestDates = Schema.decodeUnknown(
@@ -87,7 +88,6 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
   {
     effect: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      const hasArchiveActivity = archiveActivityEntry(sql);
 
       /**
        * The one day, or nothing. The caller decides what an unwritten day looks
@@ -282,7 +282,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_book is not null as has_scripture_reference
           from entry
           where entry_date between ${from} and ${to}
-            and ${hasArchiveActivity}
+            and ${archiveActivityEntry(sql)}
           order by entry_date
         `.pipe(Effect.flatMap(decodeSummaries));
 
@@ -301,6 +301,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         sql`
           select
             entry_date,
+            scripture_book is not null as has_scripture_reference,
             journal_markdown,
             journal_word_count,
             revision,
@@ -316,7 +317,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           order by entry_date desc
           limit ${limit}
         `.pipe(
-          Effect.flatMap(decodeAnniversaryEntries),
+          Effect.flatMap(decodeEntryPreviews),
           Effect.mapError(journalReadError),
         );
 
@@ -325,7 +326,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         sql`
           select min(entry_date) as entry_date
           from entry
-          where ${hasArchiveActivity}
+          where ${archiveActivityEntry(sql)}
             and entry_date <= ${today}
         `.pipe(
           Effect.flatMap(decodeEarliestDates),
@@ -356,6 +357,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
       return {
         read,
         readAnniversaries,
+        readCalendar: makeCalendarReader(sql),
         save,
         readArchive,
       } as const;
