@@ -59,10 +59,6 @@ const AppShell = () => {
     select: (state) => state.location.pathname,
   });
   const previousLocationPath = useRef<string>(locationPath);
-  const routeMotionKey =
-    locationPath === '/' || locationPath.startsWith('/day/')
-      ? 'writing'
-      : locationPath;
   const main = useRef<HTMLElement>(null);
   const archiveNavigationStarted: RefObject<boolean> = useRef(false);
   // Client navigation removes the link that held focus. Move focus to the
@@ -170,9 +166,7 @@ const AppShell = () => {
             it replaces, so the fallback has to know it is already inside the
             one main landmark this page gets. */}
         <InsideMainLandmark>
-          <div className="route-entry" key={routeMotionKey}>
-            <Outlet />
-          </div>
+          <Outlet />
         </InsideMainLandmark>
       </main>
       {/*
