@@ -94,6 +94,33 @@ it('preserves paragraph spacing and shows both parts of the day', async () => {
   expect(html).toContain('href="https://www.bibleserver.com/');
 });
 
+it('keeps a memory visible when its stored scripture book has no external link', async () => {
+  const html = await renderInRouter(
+    <OnThisDayPage
+      view={{
+        ...view,
+        anniversaries: [
+          {
+            date: '2025-08-26',
+            journalMarkdown: 'The evening memory remains available.',
+            scriptureMarkdown: 'A note about the morning.',
+            scriptureReference: {
+              book: 'Hesiod',
+              chapter: 1,
+            },
+            yearsAgo: 1,
+            words: 10,
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(plainText(html)).toContain('Hesiod 1');
+  expect(plainText(html)).toContain('The evening memory remains available.');
+  expect(html).not.toContain('href="https://www.bibleserver.com/');
+});
+
 it('gives an unwritten anniversary date a quiet empty state', async () => {
   const html = await renderInRouter(<OnThisDayPage view={view} />);
 

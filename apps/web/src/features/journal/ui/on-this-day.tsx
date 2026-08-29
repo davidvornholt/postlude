@@ -19,6 +19,7 @@ import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalCountLabel } from '../journal-labels.ts';
 import {
+  findScriptureBook,
   formatScriptureReference,
   scriptureReferenceUrl,
 } from '../scripture-reference.ts';
@@ -34,6 +35,39 @@ const proseClass = [
 type OnThisDayProps = {
   readonly anniversaries: ReadonlyArray<Anniversary>;
   readonly today: JournalDate;
+};
+
+const ScriptureReferenceDisplay = ({
+  reference,
+}: {
+  readonly reference: NonNullable<Anniversary['scriptureReference']>;
+}) => {
+  const referenceLabel = formatScriptureReference(reference);
+  const referenceBook = findScriptureBook(reference.book);
+
+  if (referenceBook === undefined) {
+    return (
+      <p className="py-1 font-display text-ink-muted text-xl">
+        {referenceLabel}
+      </p>
+    );
+  }
+
+  return (
+    <a
+      aria-label={`Read ${referenceLabel} on bibleserver.com in a new tab`}
+      className={[
+        'inline-block py-1 font-display text-ink-muted text-xl underline underline-offset-4',
+        'transition-colors duration-150 ease-standard hover:text-ink',
+        focusRingClass,
+      ].join(' ')}
+      href={scriptureReferenceUrl(reference)}
+      rel="noreferrer"
+      target="_blank"
+    >
+      {referenceLabel}
+    </a>
+  );
 };
 
 const ScriptureMemory = ({
@@ -52,19 +86,7 @@ const ScriptureMemory = ({
       {reference === undefined ? (
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>Morning</p>
       ) : (
-        <a
-          aria-label={`Read ${formatScriptureReference(reference)} on bibleserver.com in a new tab`}
-          className={[
-            'inline-block py-1 font-display text-ink-muted text-xl underline underline-offset-4',
-            'transition-colors duration-150 ease-standard hover:text-ink',
-            focusRingClass,
-          ].join(' ')}
-          href={scriptureReferenceUrl(reference)}
-          rel="noreferrer"
-          target="_blank"
-        >
-          {formatScriptureReference(reference)}
-        </a>
+        <ScriptureReferenceDisplay reference={reference} />
       )}
       {hasNotes ? (
         <ReadOnlyMarkdown
