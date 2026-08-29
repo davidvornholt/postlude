@@ -2,7 +2,7 @@ import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
-import { activityWindow } from '../src/features/journal/activity.ts';
+import { activityWindow, dayWords } from '../src/features/journal/activity.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import {
   sampleArchiveView,
@@ -22,6 +22,9 @@ const sampleSeed = 20_260_826;
 const exportSettlementDelayMs = 1500;
 const journal = sampleJournal(today, sampleDays, sampleSeed);
 const filledView = sampleArchiveView(journal, today);
+export const archiveFixtureHistoryAverage = Math.round(
+  journal.reduce((total, day) => total + dayWords(day), 0) / journal.length,
+);
 export const archiveFixtureHistoryStart = journal[0]?.date;
 const emptyView: ArchiveView = {
   today,

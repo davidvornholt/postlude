@@ -9,6 +9,19 @@ export type EntrySizePoint = {
 
 const averageWindow = 7;
 
+/** Typical entry length, excluding days that have no writing to average. */
+export const averageWrittenDayWords = (
+  points: ReadonlyArray<EntrySizePoint>,
+): number | undefined => {
+  const written = points.filter((point) => point.words > 0);
+  if (written.length === 0) {
+    return;
+  }
+  return Math.round(
+    written.reduce((total, point) => total + point.words, 0) / written.length,
+  );
+};
+
 /** Daily volume with a trailing seven-day average that includes quiet days. */
 export const entrySizeSeries = (
   cells: ReadonlyArray<ActivityCell>,

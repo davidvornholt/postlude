@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
 
 import { journalDateLabel } from '../src/features/journal/day-label.ts';
+import { journalCountLabel } from '../src/features/journal/journal-labels.ts';
 import {
   archiveFixtureConfigs,
+  archiveFixtureHistoryAverage,
   archiveFixtureHistoryStart,
   mountArchivePage,
   scanArchive,
@@ -62,6 +64,12 @@ for (const colorScheme of colorSchemes) {
     await expect(
       page.getByRole('radio', { name: 'Since first entry' }),
     ).toBeChecked();
+    await expect(
+      page.getByText(
+        `${journalCountLabel(archiveFixtureHistoryAverage, 'word')} on an average written day`,
+        { exact: true },
+      ),
+    ).toBeVisible();
     await page.getByRole('region', { name: 'Entry size chart' }).focus();
     await page.keyboard.press('Home');
     if (archiveFixtureHistoryStart === undefined) {
