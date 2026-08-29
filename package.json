@@ -7,6 +7,9 @@
     "apps/*",
     "packages/*"
   ],
+  "devDatabase": {
+    "postgresVersion": "18"
+  },
   "scripts": {
     "dev": "turbo run dev --filter=./apps/*",
     "standards": "standards",
