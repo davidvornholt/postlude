@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { mountArchiveNavigation } from './archive-navigation-test-support.ts';
 
 const writingDayUrl = /\/$/u;
+const namedArchiveUrl = /\/archive\?year=2026$/u;
 
 const expectWritingDay = async (
   page: Parameters<typeof mountArchiveNavigation>[0],
@@ -73,4 +74,33 @@ test('activity squares open their day with a pointer or the keyboard', async ({
   expect(isSelectedDayVisible).toBe(true);
   await page.keyboard.press('Enter');
   await expectWritingDay(page);
+});
+
+test('changing the activity year keeps the reader at the selector', async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 640, width: 390 });
+  await mountArchiveNavigation(page);
+  await page
+    .getByRole('textbox', { name: 'Evening journal' })
+    .fill('Keep the archive in place.');
+  await page.getByRole('link', { name: 'Archive' }).click();
+  const year = page.getByRole('link', { name: '2026' });
+  await year.evaluate((element) => element.scrollIntoView({ block: 'center' }));
+  const before = await page.evaluate(() => globalThis.scrollY);
+  expect(before).toBeGreaterThan(0);
+
+  await year.click();
+
+  await expect(page).toHaveURL(namedArchiveUrl);
+  await expect(year).toHaveAttribute('aria-current', 'page');
+  const after = await page.evaluate(() => globalThis.scrollY);
+  const position = await year.evaluate((element) => {
+    const { bottom, top } = element.getBoundingClientRect();
+    return { bottom, top };
+  });
+  const viewportHeight = await page.evaluate(() => innerHeight);
+  expect(after).toBeGreaterThan(0);
+  expect(position.top).toBeGreaterThanOrEqual(0);
+  expect(position.bottom).toBeLessThanOrEqual(viewportHeight);
 });

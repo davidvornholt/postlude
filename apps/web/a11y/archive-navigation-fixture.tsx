@@ -2,7 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createBrowserHistory, RouterProvider } from '@tanstack/react-router';
 import { createRoot } from 'react-dom/client';
 
-import { activityTotals } from '../src/features/journal/activity.ts';
+import {
+  activityTotals,
+  activityWindow,
+} from '../src/features/journal/activity.ts';
+import type { ArchiveQueryParams } from '../src/features/journal/schemas/archive-query.ts';
 import type { EntryDraft } from '../src/features/journal/schemas/entry.ts';
 import { countJournalWords } from '../src/features/journal/word-count.ts';
 import type { ArchiveNavigationFixtureWindow } from './archive-navigation-fixture-contract.ts';
@@ -52,7 +56,7 @@ const save = async (
 };
 
 fixtureWindow.postludeArchiveNavigationRuntime = {
-  readArchive: async () => {
+  readArchive: async (year: ArchiveQueryParams['year']) => {
     const snapshot = view;
     const reads = Number(document.documentElement.dataset.archiveReads ?? '0');
     document.documentElement.dataset.archiveReads = String(reads + 1);
@@ -64,7 +68,7 @@ fixtureWindow.postludeArchiveNavigationRuntime = {
     if (config.archiveReadOutcome === 'failed') {
       throw new TypeError('The archive transport failed.');
     }
-    return snapshot;
+    return { ...snapshot, window: activityWindow(config.today, year) };
   },
   releaseArchiveRead,
 };

@@ -1,3 +1,4 @@
+import type { ArchiveQueryParams } from '../src/features/journal/schemas/archive-query.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import type { FixtureEntry } from './day-page-fixture-contract.ts';
 
@@ -10,7 +11,9 @@ export type ArchiveNavigationFixtureConfig = {
 };
 
 export type ArchiveNavigationFixtureRuntime = {
-  readonly readArchive: () => Promise<ArchiveView>;
+  readonly readArchive: (
+    year: ArchiveQueryParams['year'],
+  ) => Promise<ArchiveView>;
   readonly releaseArchiveRead: () => void;
 };
 

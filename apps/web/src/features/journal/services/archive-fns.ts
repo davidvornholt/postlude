@@ -9,9 +9,10 @@
  *
  * The streaks are counted over the whole history rather than over the year the
  * map shows, because a run that started before the window is still the run the
- * writer is on. Only the window's days are sent back: the grid needs one entry
- * per square and the rest of the journal has already been reduced to two runs
- * and two totals by the time it leaves the server.
+ * writer is on. The full activity history is sent to the page because the
+ * entry-length chart can show every day since the first entry. The heatmap
+ * still derives its bounded year from that one history rather than asking the
+ * repository for a second shape.
  *
  * Whether each section was first used on the day it is about is decided here
  * rather than in the browser, because the comparison needs the configured zone
@@ -48,7 +49,7 @@ export type ArchiveView = {
   readonly exportAvailable: boolean;
   /** The stretch the map draws, clipped only at the first journal day. */
   readonly window: ActivityWindow;
-  /** Every day in the window that has a row; the gaps are the days without. */
+  /** Every archive activity day through today, oldest first. */
   readonly days: ReadonlyArray<ActivityDay>;
   /** The years the journal covers, newest first, for the map's navigation. */
   readonly years: ReadonlyArray<number>;
@@ -112,9 +113,7 @@ export const readArchiveFn = createServerFn({ method: 'GET' })
           today,
           exportAvailable,
           window,
-          days: history.filter(
-            (day) => day.date >= window.from && day.date <= window.to,
-          ),
+          days: history,
           years: yearsCovered(earliest, today),
           journalStreak: journalStreak(history, today),
           scriptureStreak: scriptureStreak(history, today),

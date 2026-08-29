@@ -12,6 +12,7 @@ import { readArchiveRoute } from '../src/features/journal/browser-archive-naviga
 import { confirmedRevisions } from '../src/features/journal/confirmed-revisions.ts';
 import { journalDateLabel } from '../src/features/journal/day-label.ts';
 import type { JournalDate } from '../src/features/journal/journal-day.ts';
+import { decodeArchiveQuery } from '../src/features/journal/schemas/archive-query.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
@@ -105,16 +106,18 @@ export const createArchiveNavigationRouter = ({
     path: '/day/$date',
   });
   const archiveRoute = createRoute({
-    component: () => (
-      <ArchivePage
-        selectedYear={undefined}
-        view={archiveRoute.useLoaderData()}
-      />
-    ),
+    component: () => {
+      const { year } = archiveRoute.useSearch();
+      return (
+        <ArchivePage selectedYear={year} view={archiveRoute.useLoaderData()} />
+      );
+    },
     getParentRoute: () => appRoute,
     head: () => ({ meta: [{ title: pageTitle('Archive') }] }),
-    loader: () => readArchiveRoute({}),
+    loader: ({ deps }) => readArchiveRoute(deps),
+    loaderDeps: ({ search }) => ({ year: search.year }),
     path: '/archive',
+    validateSearch: decodeArchiveQuery,
   });
   return createRouter({
     defaultErrorComponent: RouterError,

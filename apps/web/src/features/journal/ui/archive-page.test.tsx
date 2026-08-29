@@ -88,6 +88,7 @@ it('shows reference-only scripture activity instead of the empty journal', async
   expect(scriptureOnly).not.toContain('No writing activity yet');
   expect(scriptureOnly).toContain('Activity');
   expect(scriptureOnly).toContain('role="img"');
+  expect(plainText(scriptureOnly)).toContain('No written days to average');
   expect(scriptureOnly).toContain('Download the journal');
 });
 
@@ -139,6 +140,10 @@ it('shows daily entry size and explains its seven-day trend', () => {
   expect(elementAttributes(filled, 'h2', 'Entry length')).not.toBe('');
   expect(filled).toContain('aria-label="Entry size chart"');
   expect(plainText(filled)).toContain('Seven-day average');
+  expect(plainText(filled)).toContain('on an average written day');
+  expect(plainText(filled)).toContain(
+    'Entry length rangeActivity rangeSince first entry',
+  );
 });
 
 it('points the grid at the description that stands in for it', () => {
