@@ -32,7 +32,7 @@ export type CalendarView = {
 
 const calendarDayOf = (entry: EntryPreview): CalendarDay => ({
   date: entry.date,
-  hasScriptureReference: entry.hasScriptureReference,
+  hasScriptureReference: entry.scriptureReference !== undefined,
   revision: entry.revision,
   snippet: archiveSnippet(entry),
   words: entry.journalWordCount + entry.scriptureWordCount,

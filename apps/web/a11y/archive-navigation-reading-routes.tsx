@@ -54,9 +54,10 @@ const onThisDayViewOn = (
     anniversaries: [
       {
         date: `2025-${date.slice(isoMonthStart)}`,
+        journalMarkdown: 'A memory from this date.',
+        scriptureMarkdown: '',
         yearsAgo: 1,
         words: 42,
-        snippet: 'A memory from this date.',
       },
     ],
     date,

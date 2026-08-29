@@ -63,9 +63,10 @@ it('groups an anniversary distance without changing its linked date', async () =
       anniversaries={[
         {
           date: '1026-08-26',
+          journalMarkdown: 'A distant beginning.',
+          scriptureMarkdown: '',
           yearsAgo: thousand,
           words: 1,
-          snippet: 'A distant beginning.',
         },
       ]}
       today={today}

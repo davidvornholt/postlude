@@ -6,6 +6,7 @@ import { entryOn, renderDay } from './day-page-test-support.tsx';
 import { OnThisDayPage } from './on-this-day-page.tsx';
 
 const today = '2026-08-26';
+const longMemorySentenceCount = 20;
 const view = {
   anniversaries: [],
   date: today,
@@ -20,9 +21,10 @@ it('reads back an earlier year and opens the day it came from', async () => {
         anniversaries: [
           {
             date: '2025-08-26',
+            journalMarkdown: 'Moved the desk under the window.',
+            scriptureMarkdown: '',
             yearsAgo: 1,
             words: 210,
-            snippet: 'Moved the desk under the window.',
           },
         ],
       }}
@@ -32,6 +34,91 @@ it('reads back an earlier year and opens the day it came from', async () => {
   expect(html).toContain('Moved the desk under the window.');
   expect(plainText(html)).toContain('1 year ago · Tuesday, August 26, 2025');
   expect(html).toContain('href="/day/2025-08-26"');
+});
+
+it('shows the complete memory rather than an excerpt', async () => {
+  const ending = 'The final sentence is still here.';
+  const html = await renderInRouter(
+    <OnThisDayPage
+      view={{
+        ...view,
+        anniversaries: [
+          {
+            date: '2025-08-26',
+            journalMarkdown: `${'A sentence from the day. '.repeat(longMemorySentenceCount)}${ending}`,
+            scriptureMarkdown: '',
+            yearsAgo: 1,
+            words: 240,
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(plainText(html)).toContain(ending);
+  expect(html).not.toContain('…');
+});
+
+it('preserves paragraph spacing and shows both parts of the day', async () => {
+  const html = await renderInRouter(
+    <OnThisDayPage
+      view={{
+        ...view,
+        anniversaries: [
+          {
+            date: '2025-08-26',
+            journalMarkdown:
+              'First evening paragraph.\n\nSecond evening paragraph.',
+            scriptureMarkdown: 'Patience is not passive.',
+            scriptureReference: {
+              book: 'James',
+              chapter: 5,
+              verseStart: 7,
+              verseEnd: 8,
+            },
+            yearsAgo: 1,
+            words: 12,
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(html).toContain('journal-prose');
+  expect(html).toContain('<p>First evening paragraph.</p>');
+  expect(html).toContain('<p>Second evening paragraph.</p>');
+  const text = plainText(html);
+  expect(text.split('James 5:7-8')).toHaveLength(2);
+  expect(text).toContain('Patience is not passive.');
+  expect(text).toContain('Evening');
+  expect(html).toContain('href="https://www.bibleserver.com/');
+});
+
+it('keeps a memory visible when its stored scripture book has no external link', async () => {
+  const html = await renderInRouter(
+    <OnThisDayPage
+      view={{
+        ...view,
+        anniversaries: [
+          {
+            date: '2025-08-26',
+            journalMarkdown: 'The evening memory remains available.',
+            scriptureMarkdown: 'A note about the morning.',
+            scriptureReference: {
+              book: 'Hesiod',
+              chapter: 1,
+            },
+            yearsAgo: 1,
+            words: 10,
+          },
+        ],
+      }}
+    />,
+  );
+
+  expect(plainText(html)).toContain('Hesiod 1');
+  expect(plainText(html)).toContain('The evening memory remains available.');
+  expect(html).not.toContain('href="https://www.bibleserver.com/');
 });
 
 it('gives an unwritten anniversary date a quiet empty state', async () => {

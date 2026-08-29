@@ -243,29 +243,29 @@ it('reads a calendar month with its earliest available day', async () => {
   expect(
     calendar.entries.map((entry) => ({
       date: entry.date,
-      hasScriptureReference: entry.hasScriptureReference,
       journalMarkdown: entry.journalMarkdown,
+      scriptureReference: entry.scriptureReference,
     })),
   ).toEqual([
     {
       date: '2026-08-19',
-      hasScriptureReference: false,
       journalMarkdown: 'A quiet kind of progress.',
+      scriptureReference: undefined,
     },
     {
       date: '2026-08-20',
-      hasScriptureReference: false,
       journalMarkdown: '```text\nkept source\n```',
+      scriptureReference: undefined,
     },
     {
       date: '2026-08-25',
-      hasScriptureReference: true,
       journalMarkdown: '',
+      scriptureReference: { book: 'Psalms', chapter: 23 },
     },
     {
       date: '2026-08-27',
-      hasScriptureReference: false,
       journalMarkdown: 'A planned entry.',
+      scriptureReference: undefined,
     },
   ]);
 });
@@ -347,7 +347,6 @@ it('reads only the bounded memory projection from rows with large search data', 
   expect(result.storedBytes).toBeGreaterThan(largeSearchByteFloor);
   expect(Object.keys(result.rows[0] ?? {}).sort()).toEqual([
     'date',
-    'hasScriptureReference',
     'journalMarkdown',
     'journalWordCount',
     'revision',
@@ -357,19 +356,19 @@ it('reads only the bounded memory projection from rows with large search data', 
   expect(result.rows.map(anniversaryOf(before))).toEqual(
     ['2025', '2024', '2023', '2022'].map((year) => ({
       date: `${year}-08-26`,
+      journalMarkdown: `## ${year} opening\n\nRecognisable words.`,
+      scriptureMarkdown: hugeScripture,
       yearsAgo: Number(before.slice(0, isoYearEnd)) - Number(year),
       words:
         countJournalWords(`## ${year} opening\n\nRecognisable words.`) +
         countJournalWords(hugeScripture),
-      snippet: `${year} opening Recognisable words.`,
     })),
   );
 });
 /*
- * Scripture prose can carry a memory without evening prose. A reference alone
- * has nothing to show in a list of openings, so it remains excluded.
+ * Morning notes and a passage reference are both visible parts of a memory.
  */
-it('includes scripture prose and leaves out a reference-only anniversary', async () => {
+it('includes scripture notes and a reference-only anniversary', async () => {
   const anniversaries = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save({
@@ -397,11 +396,18 @@ it('includes scripture prose and leaves out a reference-only anniversary', async
     anniversaries.map((entry) => ({
       date: entry.date,
       scriptureMarkdown: entry.scriptureMarkdown,
+      scriptureReference: entry.scriptureReference,
     })),
   ).toEqual([
     {
       date: '2025-08-26',
       scriptureMarkdown: 'A morning worth remembering.',
+      scriptureReference: undefined,
+    },
+    {
+      date: '2024-08-26',
+      scriptureMarkdown: '',
+      scriptureReference: { book: 'Psalms', chapter: 23 },
     },
   ]);
 });

@@ -5,9 +5,8 @@
  * today's entry is written. The page asks about one date at a time, so the
  * years line up as one quiet sequence rather than interrupting a draft.
  *
- * The reduction to a snippet happens on the server. An anniversary is there to
- * be recognised, not re-read: what crosses the wire is the opening of the entry
- * and how long ago it was, and the way to the rest of it is the link.
+ * The server sends both complete sections. Their Markdown stays intact so the
+ * retrospective preserves the paragraph rhythm and structure of the day page.
  */
 
 import {
@@ -16,20 +15,22 @@ import {
   parseJournalDate,
 } from './journal-day.ts';
 import type { EntryPreview } from './schemas/entry-preview.ts';
-import { archiveSnippet } from './snippet.ts';
+import type { ScriptureReference } from './scripture-reference.ts';
 
 /** One earlier year's entry for the same day of the month. */
 export type Anniversary = {
   readonly date: JournalDate;
+  readonly journalMarkdown: string;
+  readonly scriptureMarkdown: string;
+  readonly scriptureReference?: ScriptureReference;
   readonly yearsAgo: number;
   readonly words: number;
-  readonly snippet: string;
 };
 
 /**
  * How many years back the page offers at once. A long journal would otherwise
- * put a decade of openings into one visit, and the nearest years are the ones
- * the writer is most likely to recognise.
+ * put a decade of memories into one visit, and the nearest years are the ones
+ * the writer is most likely to read.
  */
 export const anniversaryLimit = 4;
 
@@ -69,7 +70,11 @@ export const anniversaryOf =
   (on: JournalDate) =>
   (entry: EntryPreview): Anniversary => ({
     date: entry.date,
+    journalMarkdown: entry.journalMarkdown,
+    scriptureMarkdown: entry.scriptureMarkdown,
+    ...(entry.scriptureReference === undefined
+      ? {}
+      : { scriptureReference: entry.scriptureReference }),
     yearsAgo: parseJournalDate(on).year - parseJournalDate(entry.date).year,
     words: entry.journalWordCount + entry.scriptureWordCount,
-    snippet: archiveSnippet(entry),
   });

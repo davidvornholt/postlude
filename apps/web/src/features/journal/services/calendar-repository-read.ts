@@ -50,12 +50,15 @@ const listCalendarEntriesBetween = (
   sql`
     select
       entry_date,
-      scripture_book is not null as has_scripture_reference,
       journal_markdown,
       journal_word_count,
       revision,
       scripture_markdown,
-      scripture_word_count
+      scripture_word_count,
+      scripture_book,
+      scripture_chapter,
+      scripture_verse_start,
+      scripture_verse_end
     from entry
     where entry_date between ${from} and ${to}
       and ${exportableStoredEntry(sql)}

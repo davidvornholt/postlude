@@ -288,10 +288,9 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
 
       /**
        * The same day of the month in earlier years, newest first. Only days
-       * with prose in either section come back: "on this day" exists to hand
-       * the writer something to read, and a day holding a passage reference and
-       * nothing else has nothing to say here. The upper bound is exclusive, so
-       * the day being read is never its own memory.
+       * with a visible section come back. A passage reference is part of the
+       * morning record even when it has no notes. The upper bound is exclusive,
+       * so the day being read is never its own memory.
        */
       const readAnniversaries = (
         monthDay: string,
@@ -301,18 +300,22 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
         sql`
           select
             entry_date,
-            scripture_book is not null as has_scripture_reference,
             journal_markdown,
             journal_word_count,
             revision,
             scripture_markdown,
-            scripture_word_count
+            scripture_word_count,
+            scripture_book,
+            scripture_chapter,
+            scripture_verse_start,
+            scripture_verse_end
           from entry
           where to_char(entry_date, 'MM-DD') = ${monthDay}
             and entry_date < ${before}
             and (
               journal_word_count > 0
               or scripture_word_count > 0
+              or scripture_book is not null
             )
           order by entry_date desc
           limit ${limit}
