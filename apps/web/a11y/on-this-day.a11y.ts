@@ -7,8 +7,9 @@ import {
 } from './reading-page-test-support.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
-const newestMemoryName = /Moved the desk under the window/u;
-const olderMemoryName = /A-long-unbroken-memory/u;
+const newestMemoryName = /1 year ago/u;
+const olderMemoryName = /2 years ago/u;
+const scriptureLinkName = /Read James 5:7-8/u;
 
 for (const colorScheme of colorSchemes) {
   test(`memories remain readable and operable in ${colorScheme} mode`, async ({
@@ -31,6 +32,10 @@ for (const colorScheme of colorSchemes) {
     await expect(older).toHaveAttribute('href', '/day/2024-08-26');
 
     await newest.focus();
+    await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('link', { name: scriptureLinkName }),
+    ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(older).toBeFocused();
     const focus = await older.evaluate((element) => {

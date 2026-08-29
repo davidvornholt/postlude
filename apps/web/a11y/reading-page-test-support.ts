@@ -36,15 +36,24 @@ export const readingPageFixtureConfigs = {
       anniversaries: [
         {
           date: '2025-08-26',
+          journalMarkdown:
+            'Moved the desk under the window.\n\nThe room felt easier to work in.',
+          scriptureMarkdown: 'Patience makes room to notice what is growing.',
+          scriptureReference: {
+            book: 'James',
+            chapter: 5,
+            verseStart: 7,
+            verseEnd: 8,
+          },
           yearsAgo: 1,
           words: 210,
-          snippet: 'Moved the desk under the window.',
         },
         {
           date: '2024-08-26',
+          journalMarkdown: `A-long-unbroken-memory-${'word'.repeat(longMemoryWordRepeats)}`,
+          scriptureMarkdown: '',
           yearsAgo: 2,
           words: 89,
-          snippet: `A-long-unbroken-memory-${'word'.repeat(longMemoryWordRepeats)}`,
         },
       ],
       date: today,

@@ -13,6 +13,11 @@ import { Schema } from 'effect';
 
 import { isJournalDate } from '../journal-day.ts';
 import type { ScriptureReference } from '../scripture-reference.ts';
+import {
+  hasCoherentScriptureReference,
+  scriptureReferenceOfRow,
+  scriptureReferenceRowFields,
+} from './scripture-reference-row.ts';
 
 /**
  * A calendar date, validated rather than trusted. This is what stands between a
@@ -34,9 +39,6 @@ export const RevisionSchema = Schema.Number.pipe(
   Schema.int(),
   Schema.greaterThanOrEqualTo(0),
 );
-const VerseNumber = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
-const containsLetter = /\p{L}/u;
-
 /** A row of `entry`, under the column names Postgres actually returns. */
 const EntryRow = Schema.Struct({
   date: Schema.propertySignature(JournalDateSchema).pipe(
@@ -60,18 +62,7 @@ const EntryRow = Schema.Struct({
   scriptureFirstUsedAt: Schema.propertySignature(
     Schema.NullOr(Schema.ValidDateFromSelf),
   ).pipe(Schema.fromKey('scripture_first_used_at')),
-  scriptureBook: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
-    Schema.fromKey('scripture_book'),
-  ),
-  scriptureChapter: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
-    Schema.fromKey('scripture_chapter'),
-  ),
-  scriptureVerseStart: Schema.propertySignature(
-    Schema.NullOr(VerseNumber),
-  ).pipe(Schema.fromKey('scripture_verse_start')),
-  scriptureVerseEnd: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
-    Schema.fromKey('scripture_verse_end'),
-  ),
+  ...scriptureReferenceRowFields,
   revision: Schema.propertySignature(RevisionSchema).pipe(
     Schema.fromKey('revision'),
   ),
@@ -82,20 +73,11 @@ const EntryRow = Schema.Struct({
     Schema.fromKey('updated_at'),
   ),
 }).pipe(
-  Schema.filter(
-    (row) =>
-      (row.scriptureBook === null) === (row.scriptureChapter === null) &&
-      (row.scriptureVerseStart === null || row.scriptureChapter !== null) &&
-      (row.scriptureVerseEnd === null ||
-        (row.scriptureVerseStart !== null &&
-          row.scriptureVerseEnd >= row.scriptureVerseStart)) &&
-      (row.scriptureBook === null || containsLetter.test(row.scriptureBook)),
-    {
-      identifier: 'CoherentScriptureReferenceColumns',
-      description:
-        'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
-    },
-  ),
+  Schema.filter(hasCoherentScriptureReference, {
+    identifier: 'CoherentScriptureReferenceColumns',
+    description:
+      'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
+  }),
 );
 
 export type JournalEntry = {
@@ -125,29 +107,8 @@ export type JournalEntry = {
  * the alternative is trusting a constraint from inside the code that would have
  * to change if the constraint ever did.
  */
-const referenceOf = (
-  row: Schema.Schema.Type<typeof EntryRow>,
-): ScriptureReference | undefined => {
-  if (row.scriptureBook === null || row.scriptureChapter === null) {
-    return undefined;
-  }
-  const chapter = row.scriptureChapter;
-  if (row.scriptureVerseStart === null) {
-    return { book: row.scriptureBook, chapter };
-  }
-  const verseStart = row.scriptureVerseStart;
-  return row.scriptureVerseEnd === null
-    ? { book: row.scriptureBook, chapter, verseStart }
-    : {
-        book: row.scriptureBook,
-        chapter,
-        verseStart,
-        verseEnd: row.scriptureVerseEnd,
-      };
-};
-
 const entryOf = (row: Schema.Schema.Type<typeof EntryRow>): JournalEntry => {
-  const reference = referenceOf(row);
+  const reference = scriptureReferenceOfRow(row);
   return {
     date: row.date,
     journalMarkdown: row.journalMarkdown ?? '',

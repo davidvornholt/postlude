@@ -16,7 +16,6 @@ import type { EntryPreview } from './schemas/entry-preview.ts';
 
 const entry = (date: string, markdown: string): EntryPreview => ({
   date,
-  hasScriptureReference: false,
   journalMarkdown: markdown,
   journalWordCount: markdown === '' ? 0 : markdown.split(' ').length,
   revision: 1,
@@ -26,6 +25,7 @@ const entry = (date: string, markdown: string): EntryPreview => ({
 
 const threeYears = 3;
 const fourYears = 4;
+const longMemorySentenceCount = 20;
 
 it('keeps dates in the current year, including dates after today', () => {
   expect(onThisDayDate('2026-08-25', '2026-08-26')).toBe('2026-08-25');
@@ -49,29 +49,51 @@ it('counts the years back from the day being read, not from today', () => {
   expect(anniversaryOf('2025-08-24')(written).yearsAgo).toBe(threeYears);
 });
 
-/*
- * The snippet is the entry's own words rather than the markdown carrying them,
- * because it is shown as prose. A heading left as `## Morning` would put its
- * hashes in front of the sentence the writer is meant to recognise.
- */
-it('opens with the words, not with the markdown around them', () => {
+it('keeps the exact evening Markdown for semantic rendering', () => {
   const written = entry('2022-08-24', '## Late\n\nThe rain fell all night.');
 
-  expect(anniversaryOf('2026-08-24')(written).snippet).toBe(
-    'Late The rain fell all night.',
+  expect(anniversaryOf('2026-08-24')(written).journalMarkdown).toBe(
+    '## Late\n\nThe rain fell all night.',
   );
 });
 
-it('falls back to scripture prose when the evening is empty', () => {
+it('keeps the whole memory instead of cutting it to an opening', () => {
+  const ending = 'The last thought stays visible.';
+  const written = entry(
+    '2022-08-24',
+    `${'A sentence from the day. '.repeat(longMemorySentenceCount)}${ending}`,
+  );
+
+  expect(anniversaryOf('2026-08-24')(written).journalMarkdown).toContain(
+    ending,
+  );
+});
+
+it('keeps morning scripture beside the evening instead of choosing one', () => {
   const written = {
-    ...entry('2022-08-24', ''),
+    ...entry('2022-08-24', 'The day ended quietly.'),
     scriptureMarkdown: '## Morning\n\nMercy arrived early.',
+    scriptureReference: {
+      book: 'James',
+      chapter: 5,
+      verseStart: 7,
+      verseEnd: 8,
+    },
     scriptureWordCount: 4,
   };
+  const anniversary = anniversaryOf('2026-08-24')(written);
 
-  expect(anniversaryOf('2026-08-24')(written).snippet).toBe(
-    'Morning Mercy arrived early.',
-  );
+  expect(anniversary).toMatchObject({
+    journalMarkdown: 'The day ended quietly.',
+    scriptureMarkdown: '## Morning\n\nMercy arrived early.',
+    scriptureReference: {
+      book: 'James',
+      chapter: 5,
+      verseStart: 7,
+      verseEnd: 8,
+    },
+  });
+  expect(anniversary.scriptureReference).toEqual(written.scriptureReference);
 });
 
 /*
