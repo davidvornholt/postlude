@@ -139,6 +139,9 @@ it('shows daily entry size and explains its seven-day trend', () => {
   expect(elementAttributes(filled, 'h2', 'Entry length')).not.toBe('');
   expect(filled).toContain('aria-label="Entry size chart"');
   expect(plainText(filled)).toContain('Seven-day average');
+  expect(plainText(filled)).toContain(
+    'Entry length rangeActivity rangeSince first entry',
+  );
 });
 
 it('points the grid at the description that stands in for it', () => {

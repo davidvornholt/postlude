@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
+import { journalDateLabel } from '../src/features/journal/day-label.ts';
 import {
   archiveFixtureConfigs,
+  archiveFixtureHistoryStart,
   mountArchivePage,
   scanArchive,
 } from './archive-page-test-support.ts';
@@ -55,6 +57,21 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('ArrowLeft');
     await expect(sizeChart).toBeFocused();
     await expect(sizeChart).toHaveAttribute('aria-describedby');
+
+    await page.getByRole('radio', { name: 'Since first entry' }).check();
+    await expect(
+      page.getByRole('radio', { name: 'Since first entry' }),
+    ).toBeChecked();
+    await page.getByRole('region', { name: 'Entry size chart' }).focus();
+    await page.keyboard.press('Home');
+    if (archiveFixtureHistoryStart === undefined) {
+      throw new Error('The filled archive fixture has no history.');
+    }
+    await expect(
+      page.getByText(
+        new RegExp(journalDateLabel(archiveFixtureHistoryStart), 'u'),
+      ),
+    ).toBeVisible();
 
     const summary = page.getByText(everyDayWritten);
     await summary.focus();

@@ -45,7 +45,7 @@ const fixtureModules = (): Plugin => ({
       return 'export const hasAuthorizedSessionFn = () => Promise.resolve(true);';
     }
     return id === archiveFunctionsPath
-      ? 'export const readArchiveFn = () => globalThis.postludeArchiveNavigationRuntime.readArchive();'
+      ? 'export const readArchiveFn = ({ data }) => globalThis.postludeArchiveNavigationRuntime.readArchive(data.year);'
       : undefined;
   },
 });

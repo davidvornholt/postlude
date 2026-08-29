@@ -37,7 +37,7 @@ import { monthYearLabel } from '../activity-labels.ts';
 import { journalCountLabel } from '../journal-labels.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
 import { ActivityMap } from './activity-map.tsx';
-import { EntrySizeChart } from './entry-size-chart.tsx';
+import { EntrySizeRangeControl } from './entry-size-range.tsx';
 import { ExportControl, type SettleAutosaves } from './export-control.tsx';
 import { StreakPanel } from './streak-panel.tsx';
 
@@ -91,6 +91,7 @@ const YearNav = ({
                   navLinkClass,
                   current ? navLinkActiveClass : navLinkInactiveClass,
                 ].join(' ')}
+                resetScroll={false}
                 search={year === undefined ? {} : { year }}
                 to="/archive"
               >
@@ -117,6 +118,11 @@ export const ArchivePage = ({
   settleAutosaves,
 }: ArchivePageProps) => {
   const cells = activityCells(view.days, view.window, view.today);
+  const historyCells = activityCells(
+    view.days,
+    { from: view.days[0]?.date ?? view.today, to: view.today },
+    view.today,
+  );
   const written = view.totals.daysWritten;
   const journalIsEmpty = view.years.length === 0;
 
@@ -162,13 +168,10 @@ export const ArchivePage = ({
           </Section>
 
           <Section title="Entry length">
-            <p className={[readingMeasureClass, 'text-ink-muted'].join(' ')}>
-              Each vertical mark is one day. The green line shows the trailing
-              seven-day average, including days without writing.
-            </p>
-            <div className="mt-8">
-              <EntrySizeChart cells={cells} />
-            </div>
+            <EntrySizeRangeControl
+              historyCells={historyCells}
+              windowCells={cells}
+            />
           </Section>
         </>
       )}

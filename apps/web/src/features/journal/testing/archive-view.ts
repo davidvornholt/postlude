@@ -79,9 +79,7 @@ export const sampleArchiveView = (
     today,
     exportAvailable: days.length > 0,
     window,
-    days: days.filter(
-      (day) => day.date >= window.from && day.date <= window.to,
-    ),
+    days,
     years: [Number(today.slice(0, isoYearEnd))],
     journalStreak: journalStreak(days, today),
     scriptureStreak: scriptureStreak(days, today),

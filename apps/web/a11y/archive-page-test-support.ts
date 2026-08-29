@@ -22,6 +22,7 @@ const sampleSeed = 20_260_826;
 const exportSettlementDelayMs = 1500;
 const journal = sampleJournal(today, sampleDays, sampleSeed);
 const filledView = sampleArchiveView(journal, today);
+export const archiveFixtureHistoryStart = journal[0]?.date;
 const emptyView: ArchiveView = {
   today,
   exportAvailable: false,
