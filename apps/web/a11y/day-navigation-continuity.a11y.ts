@@ -3,14 +3,14 @@ import { expect, test } from '@playwright/test';
 import { mountDayNavigation } from './day-navigation-test-support.ts';
 import { scan } from './day-page-test-support.ts';
 
-const writingSurface = (page: Parameters<typeof mountDayNavigation>[0]) =>
-  page.locator('.route-entry');
+const appShell = (page: Parameters<typeof mountDayNavigation>[0]) =>
+  page.locator('main');
 
-const markWritingSurface = async (
+const markAppShell = async (
   page: Parameters<typeof mountDayNavigation>[0],
 ): Promise<void> => {
-  await writingSurface(page).evaluate((element) =>
-    element.setAttribute('data-writing-surface', 'same'),
+  await appShell(page).evaluate((element) =>
+    element.setAttribute('data-app-shell', 'same'),
   );
 };
 
@@ -39,10 +39,7 @@ const expectDay = async (
     page.getByRole('heading', { level: 1, name: heading }),
   ).toBeVisible();
   await expect(page.locator('main')).toBeFocused();
-  await expect(writingSurface(page)).toHaveAttribute(
-    'data-writing-surface',
-    'same',
-  );
+  await expect(appShell(page)).toHaveAttribute('data-app-shell', 'same');
 };
 
 const followDayLink = async (
@@ -54,12 +51,12 @@ const followDayLink = async (
   await page.keyboard.press('Enter');
 };
 
-test('Previous and Next preserve the writing surface and move focus', async ({
+test('Previous and Next preserve the app shell and move focus', async ({
   page,
 }) => {
   await mountDayNavigation(page);
   await expect(page.locator('main')).not.toBeFocused();
-  await markWritingSurface(page);
+  await markAppShell(page);
 
   await followDayLink(page, 'Previous day');
   await expectDay(
@@ -80,11 +77,9 @@ test('Previous and Next preserve the writing surface and move focus', async ({
   await scan(page);
 });
 
-test('browser Back and Forward preserve the settled writing surface', async ({
-  page,
-}) => {
+test('browser Back and Forward preserve the app shell', async ({ page }) => {
   await mountDayNavigation(page);
-  await markWritingSurface(page);
+  await markAppShell(page);
   await followDayLink(page, 'Previous day');
   await expectDay(
     page,
@@ -108,17 +103,14 @@ test('browser Back and Forward preserve the settled writing surface', async ({
     'Monday, August 24, 2026 · Postlude',
     'Monday, August 24, 2026',
   );
-  await expect(writingSurface(page)).toHaveAttribute(
-    'data-writing-surface',
-    'same',
-  );
+  await expect(appShell(page)).toHaveAttribute('data-app-shell', 'same');
 });
 
 test('client navigation restores visible main focus from a scrolled page', async ({
   page,
 }) => {
   await mountDayNavigation(page);
-  await markWritingSurface(page);
+  await markAppShell(page);
   await page.evaluate(() => {
     document.body.style.minHeight = '240vh';
     window.scrollTo({
