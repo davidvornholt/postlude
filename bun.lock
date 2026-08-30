@@ -6,7 +6,7 @@
       "name": "app",
       "devDependencies": {
         "@biomejs/biome": "2.5.8",
-        "@davidvornholt/standards": "0.24.2",
+        "@davidvornholt/standards": "0.24.3",
         "turbo": "^2.10.9",
         "typescript": "7.0.2",
       },
@@ -182,7 +182,7 @@
 
     "@davidvornholt/a11y-testing": ["@davidvornholt/a11y-testing@workspace:packages/a11y-testing"],
 
-    "@davidvornholt/standards": ["@davidvornholt/standards@0.24.2", "", { "dependencies": { "yaml": "^2.9.0" }, "bin": { "standards": "src/cli.ts" } }, "sha512-ooAKxDBOuSo+X3w0tXMLbKpYz2JFjxqiuFpKiRtw4JmkaPyXwchyyKILK7/Ba7Hd8ZpWx+Vj5M4O25IkBPC9ZA=="],
+    "@davidvornholt/standards": ["@davidvornholt/standards@0.24.3", "", { "dependencies": { "yaml": "^2.9.0" }, "bin": { "standards": "src/cli.ts" } }, "sha512-gf6Kc6BWgbPQBUeauVfzrl2B+QkmGfZOPNyZdxD1g2EzSWHA3wo6zGuWD2eJvlFgZPob+VOW3Z2dHo7DVbjVrg=="],
 
     "@davidvornholt/typescript-config": ["@davidvornholt/typescript-config@workspace:packages/typescript-config"],
 
