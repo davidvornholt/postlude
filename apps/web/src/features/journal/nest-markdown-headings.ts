@@ -15,6 +15,7 @@ const setextTextPattern =
 type MarkdownFence = {
   readonly character: '`' | '~';
   readonly length: number;
+  readonly prefix: string;
 };
 
 const withoutCarriageReturn = (line: string): string =>
@@ -25,10 +26,15 @@ const carriageReturnOf = (line: string): '' | '\r' =>
 
 const closingFence = (line: string, fence: MarkdownFence): boolean => {
   const match = closingFencePattern.exec(line);
+  const prefix = match?.groups?.prefix;
   const marker = match?.groups?.marker;
   const [character = ''] = marker ?? '';
   return (
+    prefix !== undefined &&
     marker !== undefined &&
+    (prefix === '' ||
+      prefix === fence.prefix ||
+      fence.prefix.startsWith(prefix)) &&
     character === fence.character &&
     marker.length >= fence.length
   );
@@ -36,15 +42,16 @@ const closingFence = (line: string, fence: MarkdownFence): boolean => {
 
 const openingFence = (line: string): MarkdownFence | undefined => {
   const match = fenceLinePattern.exec(line);
+  const prefix = match?.groups?.prefix;
   const marker = match?.groups?.marker;
   const info = match?.groups?.info;
-  if (marker === undefined || info === undefined) {
+  if (prefix === undefined || marker === undefined || info === undefined) {
     return undefined;
   }
   const character = marker.startsWith('`') ? '`' : '~';
   return character === '`' && info.includes('`')
     ? undefined
-    : { character, length: marker.length };
+    : { character, length: marker.length, prefix };
 };
 
 const nestMarkdownLine = (

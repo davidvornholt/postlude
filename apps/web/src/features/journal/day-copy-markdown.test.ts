@@ -139,4 +139,32 @@ The day ended with [rain](https://example.com).
 ## Evening
 `);
   });
+
+  it('does not treat container-looking lines inside a fence as closers', () => {
+    expect(
+      dayCopyMarkdown({
+        date: '2026-08-26',
+        scriptureReference: '',
+        scriptureMarkdown: [
+          '```md',
+          '- ```',
+          '# Heading inside code',
+          '```',
+          '## After the code',
+        ].join('\n'),
+        journalMarkdown: '',
+      }),
+    ).toBe(`# Wednesday, August 26, 2026
+
+## Morning
+
+\`\`\`md
+- \`\`\`
+# Heading inside code
+\`\`\`
+#### After the code
+
+## Evening
+`);
+  });
 });
