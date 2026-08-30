@@ -31,12 +31,21 @@ const deferClipboardWrites = (
               document.documentElement.dataset.clipboardWriteCount ?? '0',
             ) + 1,
           );
-          return new Promise<void>((resolve) => {
-            document.addEventListener(
-              'resolve-clipboard-copy',
-              () => resolve(),
-              { once: true },
-            );
+          return new Promise<void>((resolve, rejectPromise) => {
+            const settle = () => {
+              cleanup();
+              resolve();
+            };
+            const fail = () => {
+              cleanup();
+              rejectPromise(new Error('Clipboard denied.'));
+            };
+            const cleanup = () => {
+              document.removeEventListener('resolve-clipboard-copy', settle);
+              document.removeEventListener('reject-clipboard-copy', fail);
+            };
+            document.addEventListener('resolve-clipboard-copy', settle);
+            document.addEventListener('reject-clipboard-copy', fail);
           });
         },
       },
@@ -128,5 +137,26 @@ test('copy day keeps keyboard focus while the clipboard request is pending', asy
   );
   await expect(copy).toHaveAttribute('data-copy-state', 'succeeded');
   await expect(copy).toBeFocused();
+  await scan(page);
+});
+
+test('copy day keeps a delayed failure actionable after a draft edit', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  await deferClipboardWrites(page);
+
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
+  await copy.click();
+  await expect(copy).toHaveAttribute('data-copy-state', 'copying');
+  await page
+    .getByRole('textbox', { name: 'Evening journal' })
+    .fill('Edited while copying.');
+
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('reject-clipboard-copy')),
+  );
+  await expect(copy).toHaveAttribute('data-copy-state', 'failed');
+  await expect(page.getByText('Could not copy. Try again.')).toBeVisible();
   await scan(page);
 });

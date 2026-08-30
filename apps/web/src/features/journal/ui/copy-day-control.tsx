@@ -63,9 +63,13 @@ export const CopyDayControl = ({
   let state: CopyState = 'idle';
   if (copying) {
     state = 'copying';
-  } else if (result.day === day) {
-    const { state: resultState } = result;
-    state = resultState;
+  } else {
+    const { day: resultDay, state: resultState } = result;
+    // A failed permission request still needs a recovery action after the
+    // writer changes the draft while that request was pending.
+    if (resultState === 'failed' || resultDay === day) {
+      state = resultState;
+    }
   }
 
   const copy = () => {

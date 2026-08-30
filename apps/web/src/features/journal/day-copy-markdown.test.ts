@@ -98,4 +98,45 @@ The day ended with [rain](https://example.com).
 ## Evening
 `);
   });
+
+  it('nests setext and container headings without rewriting list fences', () => {
+    expect(
+      dayCopyMarkdown({
+        date: '2026-08-26',
+        scriptureReference: '',
+        scriptureMarkdown: [
+          'Morning thought',
+          '==============',
+          '',
+          '> # Quoted thought',
+          '',
+          '- ## List thought',
+          '',
+          '- ```md',
+          '  # Heading inside code',
+          '  ```',
+          '',
+          '## After the code',
+        ].join('\n'),
+        journalMarkdown: '',
+      }),
+    ).toBe(`# Wednesday, August 26, 2026
+
+## Morning
+
+### Morning thought
+
+> ### Quoted thought
+
+- #### List thought
+
+- \`\`\`md
+  # Heading inside code
+  \`\`\`
+
+#### After the code
+
+## Evening
+`);
+  });
 });
