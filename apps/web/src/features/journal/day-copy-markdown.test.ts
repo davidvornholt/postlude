@@ -64,4 +64,38 @@ The day ended with [rain](https://example.com).
 ###### Deepest note
 `);
   });
+
+  it('preserves attachment references and fenced Markdown', () => {
+    expect(
+      dayCopyMarkdown({
+        date: '2026-08-26',
+        scriptureReference: '',
+        scriptureMarkdown: [
+          '# Morning thought',
+          '',
+          '![scan](attachments/scan.png)',
+          '',
+          '````md',
+          '# Heading inside code',
+          '```',
+          '````',
+        ].join('\n'),
+        journalMarkdown: '',
+      }),
+    ).toBe(`# Wednesday, August 26, 2026
+
+## Morning
+
+### Morning thought
+
+![scan](attachments/scan.png)
+
+\`\`\`\`md
+# Heading inside code
+\`\`\`
+\`\`\`\`
+
+## Evening
+`);
+  });
 });

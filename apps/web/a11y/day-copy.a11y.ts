@@ -17,6 +17,32 @@ const captureClipboardWrites = (
     });
   });
 
+const deferClipboardWrites = (
+  page: import('@playwright/test').Page,
+): Promise<void> =>
+  page.evaluate(() => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (markdown: string) => {
+          document.documentElement.dataset.copiedMarkdown = markdown;
+          document.documentElement.dataset.clipboardWriteCount = String(
+            Number(
+              document.documentElement.dataset.clipboardWriteCount ?? '0',
+            ) + 1,
+          );
+          return new Promise<void>((resolve) => {
+            document.addEventListener(
+              'resolve-clipboard-copy',
+              () => resolve(),
+              { once: true },
+            );
+          });
+        },
+      },
+    });
+  });
+
 test('copy day uses the live draft and confirms the Markdown copy', async ({
   page,
 }) => {
@@ -76,5 +102,31 @@ test('copy day leaves an actionable failure when clipboard access is refused', a
   await page.getByRole('button', { name: 'Copy day as Markdown' }).click();
 
   await expect(page.getByText('Could not copy. Try again.')).toBeVisible();
+  await scan(page);
+});
+
+test('copy day keeps keyboard focus while the clipboard request is pending', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  await deferClipboardWrites(page);
+
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
+  await copy.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(copy).toHaveAttribute('data-copy-state', 'copying');
+  await expect(copy).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-clipboard-write-count',
+    '1',
+  );
+
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('resolve-clipboard-copy')),
+  );
+  await expect(copy).toHaveAttribute('data-copy-state', 'succeeded');
+  await expect(copy).toBeFocused();
   await scan(page);
 });

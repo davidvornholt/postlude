@@ -1,6 +1,6 @@
 /** Copies the complete current draft without adding controls to each section. */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { iconButtonClass } from '#/shared/ui/form-classes.ts';
 import {
@@ -57,15 +57,45 @@ export const CopyDayControl = ({
     readonly day: CopyableJournalDay;
     readonly state: CopyState;
   }>({ day, state: 'idle' });
-  const state = result.day === day ? result.state : 'idle';
-  const copying = state === 'copying';
+  const [copying, setCopying] = useState(false);
+  const nextRequestId = useRef(0);
+  const activeRequest = useRef<number | null>(null);
+  let state: CopyState = 'idle';
+  if (copying) {
+    state = 'copying';
+  } else if (result.day === day) {
+    const { state: resultState } = result;
+    state = resultState;
+  }
 
   const copy = () => {
+    if (activeRequest.current !== null) {
+      return;
+    }
+
+    const requestId = nextRequestId.current + 1;
+    nextRequestId.current = requestId;
+    activeRequest.current = requestId;
+    setCopying(true);
     setResult({ day, state: 'copying' });
-    writeClipboardText(dayCopyMarkdown(day)).then(
-      () => setResult({ day, state: 'succeeded' }),
-      () => setResult({ day, state: 'failed' }),
-    );
+
+    const settle = (nextState: 'failed' | 'succeeded') => {
+      if (activeRequest.current !== requestId) {
+        return;
+      }
+      activeRequest.current = null;
+      setCopying(false);
+      setResult({ day, state: nextState });
+    };
+
+    try {
+      writeClipboardText(dayCopyMarkdown(day)).then(
+        () => settle('succeeded'),
+        () => settle('failed'),
+      );
+    } catch {
+      settle('failed');
+    }
   };
 
   return (
@@ -73,9 +103,9 @@ export const CopyDayControl = ({
       <button
         aria-label="Copy day as Markdown"
         aria-busy={copying}
+        aria-disabled={copying}
         className={iconButtonClass}
         data-copy-state={state}
-        disabled={copying}
         onClick={copy}
         title="Copy day as Markdown"
         type="button"
