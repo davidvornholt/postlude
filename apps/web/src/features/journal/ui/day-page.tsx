@@ -34,6 +34,7 @@ import {
 } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
+import { CopyDayControl } from './copy-day-control.tsx';
 import { DayHeading } from './day-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
@@ -102,28 +103,36 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             reads as one stepper at a glance, which two lines of small capitals
             never did. Each one still says where it goes in `aria-label`, and
             the arrow sits in a target wider than the arrow. */}
-        <nav aria-label="Nearby days" className="mt-6 -ml-3 flex gap-1">
-          {previous === undefined ? null : (
-            <DayLink
-              className={iconButtonClass}
-              date={previous}
-              label="Previous day"
-              today={today}
-            >
-              ←
-            </DayLink>
-          )}
-          {next === undefined ? null : (
-            <DayLink
-              className={iconButtonClass}
-              date={next}
-              label="Next day"
-              today={today}
-            >
-              →
-            </DayLink>
-          )}
-        </nav>
+        <div
+          className={[
+            readingMeasureClass,
+            'mt-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-3',
+          ].join(' ')}
+        >
+          <nav aria-label="Nearby days" className="-ml-3 flex gap-1">
+            {previous === undefined ? null : (
+              <DayLink
+                className={iconButtonClass}
+                date={previous}
+                label="Previous day"
+                today={today}
+              >
+                ←
+              </DayLink>
+            )}
+            {next === undefined ? null : (
+              <DayLink
+                className={iconButtonClass}
+                date={next}
+                label="Next day"
+                today={today}
+              >
+                →
+              </DayLink>
+            )}
+          </nav>
+          <CopyDayControl day={autosave.draft} />
+        </div>
       </header>
 
       <div className="mt-10 sm:mt-14">

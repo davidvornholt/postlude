@@ -22,7 +22,10 @@ import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { useEffect, useRef } from 'react';
 
-import { journalMarkdownExtensions } from '../journal-markdown.ts';
+import {
+  journalMarkdownExtensions,
+  serializeJournalMarkdown,
+} from '../journal-markdown.ts';
 import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 
 type MarkdownEditorProps = {
@@ -85,6 +88,14 @@ export const MarkdownEditor = ({
         class: [proseClass, focusClass, writingAreaClass].join(' '),
         role: 'textbox',
       },
+      // Rich destinations still receive ProseMirror's HTML clipboard flavor.
+      // Plain-text destinations receive the canonical Markdown rather than the
+      // words stripped of the structure the writer entered.
+      clipboardTextSerializer: (selection) =>
+        serializeJournalMarkdown({
+          content: selection.content.toJSON(),
+          type: 'doc',
+        }),
     },
     onUpdate: ({ editor: updated }) => changed.current(updated.getMarkdown()),
     onBlur: () => left.current(),

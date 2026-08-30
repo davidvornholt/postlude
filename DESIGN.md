@@ -31,6 +31,8 @@ An empty writing area is the hardest thing on the page to draw, because there is
 
 Routine saving is deliberately uneventful. The visible status stays at the low-contrast promise “Autosave on” while a draft waits, writes, and settles, so pausing between sentences does not flash a new label at the edge of the writing measure. The exact normal state remains available to assistive technology without a live announcement. A failure is different: it replaces the promise with the actionable error and its recovery control.
 
+Copying follows the same rule that the editor is one Markdown document rather than a second rich-text format. A selection carries its rendered HTML to a rich destination and its canonical Markdown as plain text. The day-level controls offer one quiet "Copy day" action for the case selection cannot cover. It copies the current browser draft as a dated Markdown document with Morning and Evening sections, then confirms the copy in place. Repeating that action beside both section headings would add controls to a page whose ordinary section copy is already covered by selection.
+
 ## Colour and dark mode
 
 Dark mode is not a second palette. The page becomes the deep register's world, growing out of its ground and its ink — so the register has to separate from the page some other way, or turning to it would stop feeling like turning a page and start feeling like nothing happened. It lifts rather than inverting: its ground sits a little above the background, which reads as a band edge to edge while keeping the ink at the ratios it holds in the light scheme. A parchment panel here would be a lamp shining out of the page, and this journal is written in the evening.

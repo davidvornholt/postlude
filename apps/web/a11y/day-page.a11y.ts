@@ -4,7 +4,6 @@ import { journalWriteConflictMessage } from '../src/features/journal/errors/jour
 import { editAndLeave, mountDayPage, scan } from './day-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
-
 const passageLinkName = /Read Proverbs 12:5-13/u;
 const bibleserverLinkName = /bibleserver/u;
 const connectionMessage =
@@ -37,6 +36,8 @@ for (const colorScheme of colorSchemes) {
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('link', { name: 'Next day' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Copy day' })).toBeFocused();
     await page.keyboard.press('Tab');
     const passage = page.getByRole('textbox', { name: 'Passage' });
     await expect(passage).toBeFocused();
@@ -112,9 +113,9 @@ for (const colorScheme of colorSchemes) {
     await expect(page.locator(`#${guidanceId ?? ''}`)).toHaveText(
       validationMessage,
     );
-    await expect(page.locator('[aria-live="polite"]')).toHaveText(
-      validationMessage,
-    );
+    await expect(
+      page.locator('[data-save-status] [aria-live="polite"]'),
+    ).toHaveText(validationMessage);
     await expect(
       page.getByRole('link', { name: bibleserverLinkName }),
     ).toHaveCount(0);
@@ -157,7 +158,9 @@ for (const colorScheme of colorSchemes) {
     const editedProse = 'Keep this version from the stale tab.';
     await editAndLeave(page, 'Evening journal', editedProse);
 
-    const conflictStatus = page.locator('[aria-live="polite"]');
+    const conflictStatus = page.locator(
+      '[data-save-status] [aria-live="polite"]',
+    );
     await expect(conflictStatus).toBeVisible();
     await expect(conflictStatus).toHaveText(journalWriteConflictMessage);
     await expect(

@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-import { markdownSemanticsLinks } from '../src/features/journal/ui/markdown-semantics.fixture.ts';
+import {
+  markdownSemanticsFixture,
+  markdownSemanticsLinks,
+} from '../src/features/journal/ui/markdown-semantics.fixture.ts';
 import { mountSemanticDayPage, scan } from './day-page-test-support.ts';
 
 const desktopViewportWidth = 1280;
@@ -69,4 +72,36 @@ test('the hydrated editor keeps the production viewport and Markdown setting', a
     ),
   );
   await scan(page);
+});
+
+test('editor copy keeps Markdown in plain text and rendered HTML for rich destinations', async ({
+  page,
+}) => {
+  await mountSemanticDayPage(page);
+  const evening = page.getByRole('textbox', { name: 'Evening journal' });
+  const copied = page.evaluate(
+    () =>
+      new Promise<{ readonly html: string; readonly text: string }>(
+        (resolve) => {
+          document.addEventListener(
+            'copy',
+            (event) =>
+              resolve({
+                html: event.clipboardData?.getData('text/html') ?? '',
+                text: event.clipboardData?.getData('text/plain') ?? '',
+              }),
+            { once: true },
+          );
+        },
+      ),
+  );
+
+  await evening.focus();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Control+c');
+
+  expect(await copied).toEqual({
+    html: expect.stringContaining('<h3'),
+    text: markdownSemanticsFixture,
+  });
 });
