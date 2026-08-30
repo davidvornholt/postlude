@@ -1,5 +1,6 @@
 const sectionHeadingDepth = 2;
 const deepestMarkdownHeading = 6;
+const minimumIndentedCodeSpacing = 5;
 
 const fenceLinePattern =
   /^(?<prefix>(?:(?: {0,3}>[ \t]?)|(?: {0,3}(?:[-+*]|\d+[.)])[ \t]+))*)(?<indent> {0,3})(?<marker>`{3,}|~{3,})(?<info>.*)$/u;
@@ -11,19 +12,26 @@ const setextUnderlinePattern =
   /^(?<prefix>(?:(?: {0,3}>[ \t]?)|(?: {0,3}(?:[-+*]|\d+[.)])[ \t]+))*)(?<indent> {0,3})(?<marker>=+|-+)[ \t]*$/u;
 const setextTextPattern =
   /^(?<prefix>(?:(?: {0,3}>[ \t]?)|(?: {0,3}(?:[-+*]|\d+[.)])[ \t]+))*)(?<indent> {0,3})(?<text>\S(?:.*?\S)?)[ \t]*$/u;
-
+const listMarkerSpacingPattern =
+  /(?:^|[ \t>])(?:[-+*]|\d+[.)])(?<spacing>[ \t]+)/gu;
 type MarkdownFence = {
   readonly character: '`' | '~';
   readonly length: number;
   readonly prefix: string;
 };
-
 const withoutCarriageReturn = (line: string): string =>
   line.endsWith('\r') ? line.slice(0, -1) : line;
 
 const carriageReturnOf = (line: string): '' | '\r' =>
   line.endsWith('\r') ? '\r' : '';
-
+const hasIndentedCodeListPrefix = (prefix: string): boolean => {
+  for (const match of prefix.matchAll(listMarkerSpacingPattern)) {
+    if ((match.groups?.spacing ?? '').length >= minimumIndentedCodeSpacing) {
+      return true;
+    }
+  }
+  return false;
+};
 const closingFence = (line: string, fence: MarkdownFence): boolean => {
   const match = closingFencePattern.exec(line);
   const prefix = match?.groups?.prefix;
@@ -53,7 +61,6 @@ const openingFence = (line: string): MarkdownFence | undefined => {
     ? undefined
     : { character, length: marker.length, prefix };
 };
-
 const nestMarkdownLine = (
   line: string,
   fence: MarkdownFence | undefined,
@@ -83,6 +90,9 @@ const nestMarkdownLine = (
   if (prefix === undefined || indent === undefined || hashes === undefined) {
     return { fence, line };
   }
+  if (hasIndentedCodeListPrefix(prefix)) {
+    return { fence, line };
+  }
   const { spacing = ' ', text = '' } = groups ?? {};
 
   const level = Math.min(
@@ -94,19 +104,21 @@ const nestMarkdownLine = (
     line: `${prefix}${indent}${'#'.repeat(level)}${spacing}${text}${carriageReturn}`,
   };
 };
-
 type MarkdownSourceLine = {
   readonly sourceIndex: number;
   line: string;
 };
-
 const replaceSetextHeading = (
   output: Array<MarkdownSourceLine>,
   sourceIndex: number,
   line: string,
 ): boolean => {
-  const marker = setextUnderlinePattern.exec(withoutCarriageReturn(line))
-    ?.groups?.marker;
+  const underlineGroups = setextUnderlinePattern.exec(
+    withoutCarriageReturn(line),
+  )?.groups;
+  const marker = underlineGroups?.marker;
+  const underlinePrefix = underlineGroups?.prefix;
+  const underlineIndent = underlineGroups?.indent;
   const previous = output.at(-1);
   if (
     marker === undefined ||
@@ -125,18 +137,23 @@ const replaceSetextHeading = (
   if (prefix === undefined || indent === undefined || text === undefined) {
     return false;
   }
+  if (
+    underlinePrefix !== prefix ||
+    underlineIndent !== indent ||
+    hasIndentedCodeListPrefix(prefix)
+  ) {
+    return false;
+  }
 
   const level = marker.startsWith('=') ? 1 : 2;
   const previousCarriageReturn = carriageReturnOf(previous.line);
   previous.line = `${prefix}${indent}${'#'.repeat(level)} ${text}${previousCarriageReturn}`;
   return true;
 };
-
 type MarkdownLine = {
   readonly line: string;
   readonly sourceIndex: number;
 };
-
 const normalizeSetextHeadings = (markdown: string): string => {
   let fence: MarkdownFence | undefined;
   const output: Array<MarkdownLine> = [];

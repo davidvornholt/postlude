@@ -167,4 +167,24 @@ The day ended with [rain](https://example.com).
 ## Evening
 `);
   });
+
+  it('preserves indented list code and list horizontal rules', () => {
+    expect(
+      dayCopyMarkdown({
+        date: '2026-08-26',
+        scriptureReference: '',
+        scriptureMarkdown: ['-     # Code heading', '- item', '---'].join('\n'),
+        journalMarkdown: '',
+      }),
+    ).toBe(`# Wednesday, August 26, 2026
+
+## Morning
+
+-     # Code heading
+- item
+---
+
+## Evening
+`);
+  });
 });
