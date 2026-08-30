@@ -1,0 +1,162 @@
+import { expect, test } from '@playwright/test';
+
+import { mountDayPage, scan } from './day-page-test-support.ts';
+
+const captureClipboardWrites = (
+  page: import('@playwright/test').Page,
+): Promise<void> =>
+  page.evaluate(() => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (markdown: string) => {
+          document.documentElement.dataset.copiedMarkdown = markdown;
+          return Promise.resolve();
+        },
+      },
+    });
+  });
+
+const deferClipboardWrites = (
+  page: import('@playwright/test').Page,
+): Promise<void> =>
+  page.evaluate(() => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: (markdown: string) => {
+          document.documentElement.dataset.copiedMarkdown = markdown;
+          document.documentElement.dataset.clipboardWriteCount = String(
+            Number(
+              document.documentElement.dataset.clipboardWriteCount ?? '0',
+            ) + 1,
+          );
+          return new Promise<void>((resolve, rejectPromise) => {
+            const settle = () => {
+              cleanup();
+              resolve();
+            };
+            const fail = () => {
+              cleanup();
+              rejectPromise(new Error('Clipboard denied.'));
+            };
+            const cleanup = () => {
+              document.removeEventListener('resolve-clipboard-copy', settle);
+              document.removeEventListener('reject-clipboard-copy', fail);
+            };
+            document.addEventListener('resolve-clipboard-copy', settle);
+            document.addEventListener('reject-clipboard-copy', fail);
+          });
+        },
+      },
+    });
+  });
+
+test('copy day uses the live draft and confirms the Markdown copy', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['pending']);
+  await captureClipboardWrites(page);
+
+  await page.getByRole('textbox', { name: 'Passage' }).fill('Proverbs 12:5');
+  await page
+    .getByRole('textbox', { name: 'Morning scripture notes' })
+    .fill('Morning draft.');
+  await page
+    .getByRole('textbox', { name: 'Evening journal' })
+    .fill('Evening draft.');
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
+  await copy.scrollIntoViewIfNeeded();
+  const positionBefore = await copy.boundingBox();
+  await copy.click();
+
+  await expect(copy).toHaveAttribute('data-copy-state', 'succeeded');
+  await expect(page.getByText('Day copied as Markdown.')).toHaveText(
+    'Day copied as Markdown.',
+  );
+  const positionAfter = await copy.boundingBox();
+  expect(positionAfter?.x).toBe(positionBefore?.x);
+  expect(positionAfter?.y).toBe(positionBefore?.y);
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-copied-markdown',
+    `# Wednesday, August 26, 2026
+
+## Morning
+
+Passage: Proverbs 12:5
+
+Morning draft.
+
+## Evening
+
+Evening draft.
+`,
+  );
+  await scan(page);
+});
+
+test('copy day leaves an actionable failure when clipboard access is refused', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  await page.evaluate(() => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () => Promise.reject(new Error('Clipboard denied.')),
+      },
+    });
+  });
+
+  await page.getByRole('button', { name: 'Copy day as Markdown' }).click();
+
+  await expect(page.getByText('Could not copy. Try again.')).toBeVisible();
+  await scan(page);
+});
+
+test('copy day keeps keyboard focus while the clipboard request is pending', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  await deferClipboardWrites(page);
+
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
+  await copy.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(copy).toHaveAttribute('data-copy-state', 'copying');
+  await expect(copy).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute(
+    'data-clipboard-write-count',
+    '1',
+  );
+
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('resolve-clipboard-copy')),
+  );
+  await expect(copy).toHaveAttribute('data-copy-state', 'succeeded');
+  await expect(copy).toBeFocused();
+  await scan(page);
+});
+
+test('copy day keeps a delayed failure actionable after a draft edit', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  await deferClipboardWrites(page);
+
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
+  await copy.click();
+  await expect(copy).toHaveAttribute('data-copy-state', 'copying');
+  await page
+    .getByRole('textbox', { name: 'Evening journal' })
+    .fill('Edited while copying.');
+
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event('reject-clipboard-copy')),
+  );
+  await expect(copy).toHaveAttribute('data-copy-state', 'failed');
+  await expect(page.getByText('Could not copy. Try again.')).toBeVisible();
+  await scan(page);
+});

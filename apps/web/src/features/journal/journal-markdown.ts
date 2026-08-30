@@ -49,6 +49,10 @@ const markdownManager = new MarkdownManager({
 export const parseJournalMarkdown = (markdown: string): JSONContent =>
   markdownManager.parse(markdown);
 
+/** Serializes editor content with the same Markdown vocabulary used to parse it. */
+export const serializeJournalMarkdown = (content: JSONContent): string =>
+  markdownManager.serialize(content);
+
 const blockWithLineSeparatedChildren = new Set([
   'blockquote',
   'bulletList',
