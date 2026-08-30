@@ -103,12 +103,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             reads as one stepper at a glance, which two lines of small capitals
             never did. Each one still says where it goes in `aria-label`, and
             the arrow sits in a target wider than the arrow. */}
-        <div
-          className={[
-            readingMeasureClass,
-            'mt-6 flex flex-wrap items-center justify-between gap-x-8 gap-y-3',
-          ].join(' ')}
-        >
+        <div className={[readingMeasureClass, 'mt-6'].join(' ')}>
           <nav aria-label="Nearby days" className="-ml-3 flex gap-1">
             {previous === undefined ? null : (
               <DayLink
@@ -131,7 +126,6 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
               </DayLink>
             )}
           </nav>
-          <CopyDayControl day={autosave.draft} />
         </div>
       </header>
 
@@ -174,11 +168,11 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             proseClass="journal-prose"
           />
         </div>
-        {/* The count and the save state are the page's only chrome, and they
-            sit below the writing rather than beside it, so nothing hovers next
-            to the words while they are being typed. The rule above them is the
-            writing area's own, which follows the words down as the entry
-            grows; a second one here would be the same line drawn twice. */}
+        {/* The document utilities sit below the writing rather than beside it,
+            so nothing hovers next to the words while they are being typed. The
+            rule above them is the writing area's own, which follows the words
+            down as the entry grows; a second one here would be the same line
+            drawn twice. */}
         <div
           className={[
             readingMeasureClass,
@@ -191,6 +185,9 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             onRetry={autosave.flush}
             status={autosave.status}
           />
+        </div>
+        <div className={[readingMeasureClass, 'mt-5'].join(' ')}>
+          <CopyDayControl day={autosave.draft} />
         </div>
       </section>
     </>

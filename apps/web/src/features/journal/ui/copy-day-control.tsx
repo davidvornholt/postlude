@@ -45,7 +45,7 @@ export const CopyDayControl = ({
   };
 
   return (
-    <div className="flex w-full items-start gap-x-4 sm:w-72 sm:flex-row-reverse">
+    <div className="flex min-h-5 items-start gap-x-4 sm:flex-row-reverse">
       <button
         aria-busy={copying}
         className={quietButtonClass}
@@ -58,7 +58,7 @@ export const CopyDayControl = ({
       <span
         aria-atomic="true"
         aria-live="polite"
-        className="min-w-0 flex-1 text-ink-faint text-sm sm:text-right"
+        className="text-ink-faint text-sm"
       >
         {statusText[state]}
       </span>
