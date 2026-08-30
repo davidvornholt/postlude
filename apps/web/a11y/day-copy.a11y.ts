@@ -30,12 +30,15 @@ test('copy day uses the live draft and confirms the Markdown copy', async ({
   await page
     .getByRole('textbox', { name: 'Evening journal' })
     .fill('Evening draft.');
-  const copy = page.getByRole('button', { name: 'Copy day' });
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
   await copy.scrollIntoViewIfNeeded();
   const positionBefore = await copy.boundingBox();
   await copy.click();
 
-  await expect(page.getByText('Day copied as Markdown.')).toBeVisible();
+  await expect(copy).toHaveAttribute('data-copy-state', 'succeeded');
+  await expect(page.getByText('Day copied as Markdown.')).toHaveText(
+    'Day copied as Markdown.',
+  );
   const positionAfter = await copy.boundingBox();
   expect(positionAfter?.x).toBe(positionBefore?.x);
   expect(positionAfter?.y).toBe(positionBefore?.y);
@@ -70,7 +73,7 @@ test('copy day leaves an actionable failure when clipboard access is refused', a
     });
   });
 
-  await page.getByRole('button', { name: 'Copy day' }).click();
+  await page.getByRole('button', { name: 'Copy day as Markdown' }).click();
 
   await expect(page.getByText('Could not copy. Try again.')).toBeVisible();
   await scan(page);

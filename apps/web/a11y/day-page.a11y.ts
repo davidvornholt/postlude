@@ -37,6 +37,8 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('Tab');
     await expect(page.getByRole('link', { name: 'Next day' })).toBeFocused();
     await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Copy day as Markdown')).toBeFocused();
+    await page.keyboard.press('Tab');
     const passage = page.getByRole('textbox', { name: 'Passage' });
     await expect(passage).toBeFocused();
     await page.keyboard.type('Proverbs 12:5-13');
@@ -57,7 +59,6 @@ for (const colorScheme of colorSchemes) {
     await expect(evening).toHaveAttribute('aria-multiline', 'true');
     await page.keyboard.type('A quiet evening ended well.');
     await page.keyboard.press('Tab');
-    await expect(page.getByRole('button', { name: 'Copy day' })).toBeFocused();
 
     await expect(morning).toContainText('Mercy arrived this morning.');
     await expect(evening).toContainText('A quiet evening ended well.');

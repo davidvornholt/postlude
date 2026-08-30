@@ -16,11 +16,10 @@
  * in Postlude floats, so both shadow tokens are off and there is no raised edge
  * for a radius to soften.
  *
- * The one control that is a glyph rather than words is the step to the day
- * before or after, which sits under a heading that already names the day it
- * would step from. It carries its name in `aria-label`, and it is sized past
- * the 24px a pointer target has to clear rather than being an arrow the width
- * of an arrow.
+ * The day toolbar's glyph controls are the steps to the day before and after,
+ * plus the whole-day copy action. They carry their names in `aria-label`, and
+ * are sized past the 24px a pointer target has to clear rather than taking the
+ * width of their glyphs.
  *
  * A small group of choices stays a native radio group at its call site. The
  * browser owns its grouping and arrow-key behavior, while `accent-primary`
@@ -127,11 +126,10 @@ export const deepFieldClass = [
 ].join(' ');
 
 /*
- * A step to the next thing along, drawn as the arrow it is. There is no rule
- * under it: a rule under a lone arrow reads as a line through the page rather
- * than as a control, and the arrow is already a shape the eye takes as one. The
- * ink deepens under a pointer and on a press, which is the same thing the quiet
- * control's type does.
+ * A compact glyph in the day toolbar. There is no rule under it: a rule under
+ * a lone arrow reads as a line through the page, while the copy glyph already
+ * carries its own outline. The ink deepens under a pointer and on a press,
+ * which is the same thing the quiet control's type does.
  */
 export const iconButtonClass = [
   'inline-flex h-11 w-11 items-center justify-center',
