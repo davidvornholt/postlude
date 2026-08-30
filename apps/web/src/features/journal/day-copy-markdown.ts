@@ -25,7 +25,7 @@ const fenceLinePattern =
   /^(?<indent> {0,3})(?<marker>`{3,}|~{3,})(?<info>.*)$/u;
 const closingFencePattern = /^(?<indent> {0,3})(?<marker>`{3,}|~{3,})[ \t]*$/u;
 const headingLinePattern =
-  /^(?<indent> {0,3})(?<hashes>#{1,6})(?<spacing>[ \t]+)(?<text>.*)$/u;
+  /^(?<indent> {0,3})(?<hashes>#{1,6})(?:(?<spacing>[ \t]+)(?<text>.*))?$/u;
 
 type MarkdownFence = {
   readonly character: '`' | '~';
@@ -80,16 +80,10 @@ const nestMarkdownLine = (
   const groups = headingLinePattern.exec(content)?.groups;
   const indent = groups?.indent;
   const hashes = groups?.hashes;
-  const spacing = groups?.spacing;
-  const text = groups?.text;
-  if (
-    indent === undefined ||
-    hashes === undefined ||
-    spacing === undefined ||
-    text === undefined
-  ) {
+  if (indent === undefined || hashes === undefined) {
     return { fence, line };
   }
+  const { spacing = ' ', text = '' } = groups ?? {};
 
   const level = Math.min(
     hashes.length + sectionHeadingDepth,
