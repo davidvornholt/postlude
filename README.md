@@ -22,6 +22,12 @@ Non-secret dev config lives in `config/dev.yaml`; secrets in SOPS-encrypted `sec
 
 `secrets/pr-preview.yaml` contains only the forced-command SSH key used by the protected `pr-preview` GitHub environment. Its dedicated age identity cannot decrypt development, CI, or production credentials.
 
+## Pull request screenshots
+
+`config/screenshots.yaml` binds `bun standards screenshots publish` to the shared personal R2 screenshot host. Its credential reference, bucket, upload endpoint, and public base URL are required and have no defaults. The host infrastructure lives in `personal-infra`; this repository owns only its consumer binding.
+
+`secrets/assets.yaml` contains the required brokered `access_key_id` and `secret_access_key` values at `assets.screenshots_rw`. Only the publish command consumes them; builds, tests, and deployments do not.
+
 ## Container release
 
 Every push to `main` is published as `ghcr.io/davidvornholt/postlude:main` only after the Standards gate succeeds for that exact commit and the commit is still current `main`. A completed-run follow-up announces the immutable image digest to personal-infra, which owns promotion and deployment. The deploy host runs `bun run db:migrate:deploy` from `/app/apps/web` before starting the server.

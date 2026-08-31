@@ -23,6 +23,13 @@ creation_rules:
           - *david-x1-nixos
           - *david-debian
 
+  - path_regex: secrets/assets\.yaml$
+    key_groups:
+      - age:
+          - *david-z890-nixos
+          - *david-x1-nixos
+          - *david-debian
+
   - path_regex: secrets/ci\.yaml$
     key_groups:
       - age:
