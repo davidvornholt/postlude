@@ -55,9 +55,9 @@ export const CalendarPage = ({
 
   return (
     <div className={pageFrameClass}>
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-4">
+      <header className="flex flex-wrap items-center gap-4">
         {previous === undefined ? (
-          <span aria-hidden="true" className="h-11 w-11" />
+          <span aria-hidden="true" className="size-11" />
         ) : (
           <Link
             aria-label="Previous month"

@@ -27,7 +27,7 @@ const writeClipboardText = (markdown: string): Promise<void> => {
 const CopyIcon = () => (
   <svg
     aria-hidden="true"
-    className="h-5 w-5"
+    className="size-5"
     fill="none"
     focusable="false"
     viewBox="0 0 24 24"
@@ -39,7 +39,7 @@ const CopyIcon = () => (
 const CopiedIcon = () => (
   <svg
     aria-hidden="true"
-    className="h-5 w-5"
+    className="size-5"
     fill="none"
     focusable="false"
     viewBox="0 0 24 24"
