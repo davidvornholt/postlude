@@ -1,13 +1,6 @@
 /*
- * The Postlude theme. The journal is set like a thoughtfully made periodical:
- * parchment grounds and deep warm inks, structure from typography and hairline
- * rules rather than from boxes, square corners everywhere, and one deep
- * register that carries the weight a card would carry elsewhere. Nothing
- * floats, so both shadow tokens stay off.
- *
- * `DESIGN.md` at the repo root states the intent these values serve; this file
- * is the only place the values themselves live. Only these semantic tokens may
- * color the app — the Tailwind palette is off.
+ * Postlude visual tokens. This file is the source of truth, and the Tailwind
+ * palette is disabled so application code can only use these semantic values.
  */
 
 :root {
