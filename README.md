@@ -14,7 +14,7 @@ A calm, single-user journaling app for closing out the day. Each journal day run
 
 - `apps/web` — the application.
 - `packages/db` — Drizzle schema and database client.
-- `packages/ui` — design tokens (`src/theme.css`) and the audits that hold them to WCAG AA. `DESIGN.md` states the design intent those values serve.
+- `packages/ui` — design tokens (`src/theme.css`) and the audits that hold them to WCAG AA.
 
 ## Configuration and secrets
 

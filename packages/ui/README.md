@@ -1,6 +1,6 @@
 # @postlude/ui
 
-Design tokens for Postlude. `DESIGN.md` at the repo root states the intent these values serve; this package holds the values and the audits that keep them honest.
+Design tokens for Postlude. This package holds the visual values and the audits that keep them honest.
 
 `src/theme.css` defines the semantic `--pl-*` tokens (oklch only, light plus `prefers-color-scheme: dark`) and maps them into Tailwind via `@theme`. The default Tailwind palette is disabled, so components color themselves exclusively through these tokens. `:root` also declares `color-scheme: light dark` so browser-painted chrome (scrollbars, form controls, the canvas behind the page) follows the same preference the dark palette does.
 

@@ -1,8 +1,7 @@
 /**
  * The shape vocabulary every page shares: the page frame, the reading measure
- * inside it, the letterspaced eyebrow, the focus ring. `DESIGN.md` says what
- * each one is for; this file is where the classes that build them live, so one
- * page cannot drift from another by retyping them.
+ * inside it, the letterspaced eyebrow, and the focus ring. This file owns the
+ * classes that build them so one page cannot drift by retyping them.
  *
  * These carry shape, and callers add the colour a state needs. The one colour
  * held here is the focus ring's, which is fixed because no caller re-colours it:
