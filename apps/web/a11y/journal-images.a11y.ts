@@ -1,3 +1,4 @@
+import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { mountDayPage, scan } from './day-page-test-support.ts';
@@ -28,10 +29,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     );
     await page.goto('/image-fixture');
     await mountDayPage(page, ['stored']);
-    let uploads = 0;
+    const uploads: Array<playwright.Route> = [];
     await page.route('**/api/journal-images/', (route) => {
-      uploads += 1;
-      return route.fulfill({ json: { src: imageUrl } });
+      uploads.push(route);
     });
     await page.route(`**${imageUrl}`, (route) =>
       route.fulfill({ contentType: 'image/png', body: image.buffer }),
@@ -58,10 +58,15 @@ for (const colorScheme of ['light', 'dark'] as const) {
       .fill('Evening at the lake');
     await scan(page);
     await form.getByRole('button', { name: 'Insert image' }).click();
+    await expect.poll(() => uploads.length).toBe(1);
+    await expect(evening).toHaveAttribute('contenteditable', 'false');
+    await evening.locator('strong').click({ clickCount: 3 });
+    await uploads[0]?.fulfill({ json: { src: imageUrl } });
     const enlarge = page.getByRole('button', {
       name: 'Enlarge image: Evening at the lake',
     });
     await expect(enlarge).toBeVisible();
+    await expect(evening.locator('strong')).toHaveText('A quiet evening.');
     await enlarge.click();
     const viewer = page.getByRole('dialog', { name: 'Evening at the lake' });
     await expect(viewer).toBeVisible();
@@ -76,28 +81,19 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await evening.locator('p').last().click();
     await evening.evaluate((element, base64) => {
       const clipboard = new DataTransfer();
-      clipboard.items.add(
-        new File(
-          [
-            Uint8Array.from(atob(base64), (character) =>
-              character.charCodeAt(0),
-            ),
-          ],
-          'pasted.png',
-          { type: 'image/png' },
-        ),
-      );
-      clipboard.items.add(
-        new File(
-          [
-            Uint8Array.from(atob(base64), (character) =>
-              character.charCodeAt(0),
-            ),
-          ],
-          'second.png',
-          { type: 'image/png' },
-        ),
-      );
+      for (const name of ['pasted.png', 'second.png']) {
+        clipboard.items.add(
+          new File(
+            [
+              Uint8Array.from(atob(base64), (character) =>
+                character.charCodeAt(0),
+              ),
+            ],
+            name,
+            { type: 'image/png' },
+          ),
+        );
+      }
       element.dispatchEvent(
         new ClipboardEvent('paste', {
           clipboardData: clipboard,
@@ -106,11 +102,17 @@ for (const colorScheme of ['light', 'dark'] as const) {
         }),
       );
     }, imageBase64);
+    await expect.poll(() => uploads.length).toBe(2);
+    await evening.locator('strong').click({ clickCount: 3 });
+    await uploads[1]?.fulfill({ json: { src: imageUrl } });
+    await expect.poll(() => uploads.length).toBe(expectedImages);
+    await evening.locator('strong').click({ clickCount: 3 });
+    await uploads[2]?.fulfill({ json: { src: imageUrl } });
     await expect(evening.locator('.journal-image-button')).toHaveCount(
       expectedImages,
     );
-    expect(uploads).toBe(expectedImages);
     await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
+    await scan(page);
     const morning = page.getByRole('textbox', {
       name: 'Morning scripture notes',
     });

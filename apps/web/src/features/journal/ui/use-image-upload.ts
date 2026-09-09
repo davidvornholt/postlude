@@ -1,3 +1,4 @@
+import type { Selection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -30,6 +31,7 @@ export const useImageUpload = (editor: Editor, label: string) => {
     file: File,
     description: string,
     signal: AbortSignal,
+    selection: Selection,
   ) => {
     const result = await uploadJournalImage(file, signal);
     if (signal.aborted || editor.isDestroyed) {
@@ -43,6 +45,10 @@ export const useImageUpload = (editor: Editor, label: string) => {
     const inserted = editor
       .chain()
       .focus()
+      .command(({ tr }) => {
+        tr.setSelection(selection);
+        return true;
+      })
       .setImage({ src: result.src, alt: description.trim() })
       .createParagraphNear()
       .run();
@@ -60,13 +66,16 @@ export const useImageUpload = (editor: Editor, label: string) => {
     setOpen(true);
     setBusy(true);
     setError('');
+    // Locking input still permits selection changes; keep the insertion point for the batch.
+    let { selection } = editor.state;
     editor.setEditable(false);
     try {
       for (const file of files) {
         // biome-ignore lint/performance/noAwaitInLoops: Preserve clipboard order and bound memory to one upload.
-        if (!(await insert(file, description, controller.signal))) {
+        if (!(await insert(file, description, controller.signal, selection))) {
           return;
         }
+        ({ selection } = editor.state);
       }
       setOpen(false);
     } catch {
