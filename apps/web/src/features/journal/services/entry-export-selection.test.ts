@@ -1,13 +1,13 @@
 import { expect, it } from 'bun:test';
 import { Chunk, Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
-
 import {
   parseEntriesDocument,
   parseManifestDocument,
 } from '../export-format.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import { exportArchiveStream } from './export-stream.ts';
+import { JournalImages } from './journal-images.ts';
 
 const { withJournal } = journalDatabase();
 const exportedSourceCount = 5;
@@ -51,7 +51,11 @@ it('exports every non-empty stored source exactly, even when it has no prose', a
         exports,
         'Europe/Berlin',
         () => undefined,
-      ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+      ).pipe(
+        Stream.provideLayer(JournalImages.Default),
+        Stream.runCollect,
+        Effect.map(Chunk.toReadonlyArray),
+      );
     }),
   );
   const files = unzipSync(bytesOf(result));

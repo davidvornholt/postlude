@@ -28,6 +28,17 @@
   },
   "overrides": [
     {
+      // AWS's S3 command properties are protocol-owned PascalCase names.
+      "includes": ["apps/web/src/features/journal/services/journal-images.ts"],
+      "linter": { "rules": { "style": { "useNamingConvention": "off" } } }
+    },
+    {
+      // This TanStack application has no next/image; authenticated images must
+      // use the session-bearing same-origin route rather than an optimizer proxy.
+      "includes": ["apps/web/src/features/journal/ui/image-viewer.tsx"],
+      "linter": { "rules": { "performance": { "noImgElement": "off" } } }
+    },
+    {
       // These framework boundaries require default exports as part of their
       // file-based configuration contracts (Vite, Playwright, Drizzle Kit).
       "includes": [

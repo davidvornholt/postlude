@@ -20,6 +20,10 @@ const zipStreamError = (cause: unknown): ZipStreamError =>
 export type StreamingZip = {
   readonly addFile: (file: ArchiveFile) => Effect.Effect<void, ZipStreamError>;
   readonly beginFile: (path: string) => Effect.Effect<void, ZipStreamError>;
+  readonly writeBytes: (
+    bytes: Uint8Array,
+    final: boolean,
+  ) => Effect.Effect<void, ZipStreamError>;
   readonly writeText: (
     text: string,
     final?: boolean,
@@ -63,19 +67,22 @@ const acquireZip = (offer: (chunk: Uint8Array) => Effect.Effect<void>) =>
         zip.add(active);
       });
 
-    const writeText = (text: string, final = false) =>
+    const writeBytes = (bytes: Uint8Array, final: boolean) =>
       mutate(() => {
         const file = active;
         if (file === undefined) {
           throw new Error('No ZIP member is open.');
         }
-        file.push(encoder.encode(text), final);
+        file.push(bytes, final);
         if (final) {
           active = undefined;
         }
       });
 
+    const writeText = (text: string, final = false) =>
+      writeBytes(encoder.encode(text), final);
     const writer: StreamingZip = {
+      writeBytes,
       beginFile,
       writeText,
       endFile: writeText('', true),

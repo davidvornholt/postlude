@@ -1,3 +1,4 @@
+import { JournalImage } from '../journal-image-extension.ts';
 /**
  * The surface an entry is written on.
  *
@@ -19,13 +20,15 @@
  */
 
 import { Placeholder } from '@tiptap/extensions';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import { useEffect, useRef } from 'react';
 
 import {
   journalMarkdownExtensions,
   serializeJournalMarkdown,
 } from '../journal-markdown.ts';
+import { ImageNodeView } from './image-node-view.tsx';
+import { ImageUploadControl } from './image-upload-control.tsx';
 import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 
 type MarkdownEditorProps = {
@@ -66,6 +69,9 @@ export const MarkdownEditor = ({
   // page opened, every time.
   const changed = useRef(onChange);
   const left = useRef(onLeave);
+  const pasteImages = useRef<(files: ReadonlyArray<File>) => void>(
+    () => undefined,
+  );
   useEffect(() => {
     changed.current = onChange;
     left.current = onLeave;
@@ -76,12 +82,29 @@ export const MarkdownEditor = ({
     // rendered on the server, so it waits for the browser.
     immediatelyRender: false,
     extensions: [
-      ...journalMarkdownExtensions(),
+      ...journalMarkdownExtensions().map((extension) =>
+        extension.name === 'image'
+          ? JournalImage.extend({
+              addNodeView: () => ReactNodeViewRenderer(ImageNodeView),
+            })
+          : extension,
+      ),
       Placeholder.configure({ placeholder }),
     ],
     content: initialMarkdown,
     contentType: 'markdown',
     editorProps: {
+      handlePaste: (_view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []).filter(
+          (file) => file.type.startsWith('image/'),
+        );
+        if (files.length === 0) {
+          return false;
+        }
+        event.preventDefault();
+        pasteImages.current(files);
+        return true;
+      },
       attributes: {
         'aria-label': label,
         'aria-multiline': 'true',
@@ -110,5 +133,15 @@ export const MarkdownEditor = ({
     );
   }
 
-  return <EditorContent editor={editor} />;
+  return (
+    <>
+      <EditorContent editor={editor} />
+      <ImageUploadControl
+        editor={editor}
+        focusClass={focusClass}
+        label={label}
+        pasteImages={pasteImages}
+      />
+    </>
+  );
 };

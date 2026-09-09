@@ -19,6 +19,18 @@ apps:
     # this zone, on every device, so a late-night entry belongs to the evening
     # it closes out wherever it was written.
     JOURNAL_TIME_ZONE: Europe/Berlin
+    # Isolated private development storage. EU endpoint and bucket have no defaults.
+    # All four R2 values are needed for images; absent values leave text journaling available.
+    R2_ENDPOINT: https://831f91724ea62b0cb0215829eb001f66.eu.r2.cloudflarestorage.com
+    R2_BUCKET: postlude-images-dev
+    R2_ACCESS_KEY_ID:
+      brokeredS3: assets
+      key: assets.images_rw
+      part: access_key_id
+    R2_SECRET_ACCESS_KEY:
+      brokeredS3: assets
+      key: assets.images_rw
+      part: secret_access_key
 packages:
   db:
     # The app and the migration tooling share one local database.

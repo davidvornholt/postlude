@@ -151,3 +151,13 @@ GitHub OAuth keeps signed-in production routes outside that scan. Isolated brows
 The reading-comfort suite reuses those signed-in fixtures to assert the shared frame, 65-character reading measure, overflow, keyboard focus, balanced date heading, and deep-register separation across desktop and mobile in both colour schemes.
 
 Server-rendered tests keep the boundaries a browser fixture does not own. `src/routes/_app.test.tsx` asserts the shell's current-page marker, landmark, skip link, and sign-out states. `src/features/journal/ui/day-page.test.tsx` owns the pre-hydration day markup and content rules. `src/routes/_app/page-frames.test.tsx` owns the exact frame wrappers for writing and archive pages. The two tests under `src/routes` are colocated beside the routes they cover, which the route generator would otherwise read as route files, so `tsr.config.json` sets `routeFileIgnorePattern` to skip `*.test.ts` and `*.test.tsx` there. That file is read by both the Vite plugin and `bun run generate-routes`, so the setting is stated once.
+
+## Entry images and formatting
+
+Use **Add image** in either writing section, or paste an image from the clipboard. JPEG, PNG, GIF, and WebP files up to 10 MiB are accepted. An optional description supplies the image’s accessible name. Uploads finish before insertion; autosave then stores a permanent private image reference in the Markdown. The fixed toolbar formats the last focused writing section. Select an image to enlarge it; close the viewer with Escape or **Close image**. The transition respects reduced-motion preferences.
+
+Image reads and writes require the same single-account session as the journal. Images are served through the application, without public bucket URLs or expiring links. External image references remain in Markdown but are not loaded. The server checks file signatures, rejects SVG, and counts streamed upload bytes before buffering. Removing an image from an entry retains its object for undo and older database backups; there is no automatic object deletion.
+
+`personal-infra` owns the EU buckets, public-access settings, and production environment. Development uses a separate bucket through the brokered pair documented in `secrets/assets.example.yaml`. Generate local configuration with `just dev-env-generate`. PR previews receive no R2 credentials; image uploads fail explicitly there, while text journaling remains available.
+
+Exports include each referenced original once under `images/`, and fail if a referenced object cannot be read. To recover images alongside a database restore, copy these files to the private bucket using their filenames as object keys. The archive’s `entries.ndjson` retains the original private URLs. Exports omit unreferenced uploads.

@@ -2,7 +2,6 @@ import { expect, it } from 'bun:test';
 import { SqlClient } from '@effect/sql';
 import { Chunk, Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
-
 import {
   parseEntriesDocument,
   parseManifestDocument,
@@ -10,6 +9,7 @@ import {
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import type { EntryExport, ExportEntry } from './entry-export.ts';
 import { exportArchiveStream } from './export-stream.ts';
+import { JournalImages } from './journal-images.ts';
 import { ZipStreamError } from './streaming-zip.ts';
 
 const { withJournal } = journalDatabase();
@@ -168,7 +168,11 @@ it('streams one exact snapshot instant into every ZIP document', async () => {
         (observed) => {
           context = observed;
         },
-      ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+      ).pipe(
+        Stream.provideLayer(JournalImages.Default),
+        Stream.runCollect,
+        Effect.map(Chunk.toReadonlyArray),
+      );
       return { chunks, context };
     }),
   );

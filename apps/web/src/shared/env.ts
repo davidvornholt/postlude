@@ -12,6 +12,13 @@ const minSecretLength = 32;
 
 export const env = createEnv({
   server: {
+    R2_ENDPOINT: z
+      .string()
+      .regex(/^https:\/\/[\da-f]{32}\.eu\.r2\.cloudflarestorage\.com$/u)
+      .optional(),
+    R2_BUCKET: z.string().min(1).optional(),
+    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     DATABASE_URL: z.url(),
     BETTER_AUTH_SECRET: z.string().min(minSecretLength),
     BETTER_AUTH_URL: z.url(),

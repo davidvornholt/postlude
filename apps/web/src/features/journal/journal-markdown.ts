@@ -2,6 +2,8 @@ import type { AnyExtension, JSONContent, NodeConfig } from '@tiptap/core';
 import { Markdown, MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 
+import { JournalImage } from './journal-image-extension.ts';
+
 const headingTags = ['h3', 'h4', 'h5', 'h6', 'h6', 'h6'] as const;
 const firstMarkdownHeadingLevel = 1;
 type NodeRenderProps = Parameters<NonNullable<NodeConfig['renderHTML']>>[0];
@@ -38,6 +40,7 @@ export const journalMarkdownExtensions = () => [
   // Underline has no Markdown spelling. Leaving it in would let a keyboard
   // shortcut produce formatting that the next save silently discards.
   JournalStarterKit.configure({ underline: false }),
+  JournalImage,
   Markdown,
 ];
 

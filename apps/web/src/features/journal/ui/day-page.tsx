@@ -38,6 +38,7 @@ import { CopyDayControl } from './copy-day-control.tsx';
 import { DayHeading } from './day-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
+import { FormattingToolbarProvider } from './formatting-toolbar.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
@@ -204,5 +205,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
  * call sites, so no route can forget it.
  */
 export const DayPage = ({ entry, today, save }: DayPageProps) => (
-  <DayBody entry={entry} key={entry.date} save={save} today={today} />
+  <FormattingToolbarProvider key={entry.date}>
+    <DayBody entry={entry} save={save} today={today} />
+  </FormattingToolbarProvider>
 );

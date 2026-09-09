@@ -51,6 +51,7 @@ body {
     border-bottom: 1px solid var(--journal-rule);
     padding-bottom: 1.5rem;
     cursor: text;
+    scroll-margin-top: 5rem;
     transition: border-color 150ms var(--ease-standard);
   }
 
@@ -147,6 +148,73 @@ body {
 
   .journal-prose strong {
     font-weight: 600;
+  }
+
+  .journal-prose img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-block: 1.5em;
+  }
+
+  .journal-prose img.ProseMirror-selectednode {
+    outline: 2px solid currentColor;
+    outline-offset: 4px;
+  }
+
+  .journal-image-button {
+    display: block;
+    max-width: 100%;
+    cursor: zoom-in;
+  }
+
+  .journal-image-dialog {
+    margin: auto;
+    width: min(96vw, 90rem);
+    max-height: 94dvh;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+      opacity 180ms ease,
+      transform 180ms ease,
+      display 180ms allow-discrete,
+      overlay 180ms allow-discrete;
+  }
+
+  .journal-image-dialog[open] {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .journal-image-dialog img {
+    width: auto;
+    max-width: 100%;
+    max-height: 76dvh;
+    margin: auto;
+    object-fit: contain;
+  }
+
+  .journal-image-dialog::backdrop {
+    background: color-mix(in oklch, var(--color-ink) 70%, transparent);
+  }
+
+  @starting-style {
+    .journal-image-dialog[open] {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .journal-image-dialog {
+      transition: none;
+    }
+  }
+
+  body:has([data-formatting-toolbar]) {
+    padding-top: 4rem;
   }
 
   .journal-prose em {

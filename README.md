@@ -7,8 +7,7 @@ A calm, single-user journaling app for closing out the day. Each journal day run
 - Runtime: TanStack Start + Vite on Bun, deployed as a Podman container on
   personal-infra (`postlude.vornholt.online`).
 - Auth: GitHub OAuth via better-auth, restricted to a single allowed account.
-- Data: Postgres (Drizzle) on the shared prod-1 instance. The editor currently
-  stores Markdown only; it has no image-upload storage.
+- Data: Postgres (Drizzle) on the shared prod-1 instance. Entries use Markdown; uploaded images live in private Cloudflare R2 storage restricted to the EU jurisdiction.
 
 ## Workspaces
 
