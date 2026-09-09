@@ -164,6 +164,8 @@ body {
 
   .journal-image-button {
     display: block;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
     max-width: 100%;
     cursor: zoom-in;
   }
