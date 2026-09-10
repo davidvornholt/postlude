@@ -87,7 +87,7 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await expect(bold).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(evening).toBeFocused();
-  await expect(page.locator('.journal-toolbar')).toHaveCSS(
+  await expect(page.locator('[data-formatting-toolbar]')).toHaveCSS(
     'position',
     'sticky',
   );
@@ -112,7 +112,7 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await scan(page);
   expect(
     await page
-      .locator('button, input, .journal-icon-hint')
+      .locator('button, input, [role=tooltip]')
       .evaluateAll(nonSquareControls),
   ).toEqual([]);
   await page.keyboard.press('Escape');
@@ -120,4 +120,42 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await expect(evening).toBeFocused();
   await expect(evening).toHaveText('Keep these words.');
   await expect.poll(geometry).toEqual(bottomGeometry);
+});
+
+test('tooltips dismiss with Escape and return on a new keyboard or pointer visit', async ({
+  page,
+}) => {
+  await page.route('**/tooltip-fixture', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<html lang="en"><title>Writing tool hints</title></html>',
+    }),
+  );
+  await page.goto('/tooltip-fixture');
+  await mountDayPage(page, ['stored']);
+  const evening = page.getByRole('textbox', { name: 'Evening journal' });
+  await evening.fill('Keep writing.');
+  const bold = page
+    .getByRole('toolbar')
+    .getByRole('button', { name: 'Bold', exact: true });
+  const hint = page.getByRole('tooltip').filter({ hasText: 'Bold' });
+  await page.keyboard.press('Alt+F10');
+  await expect(hint).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(hint).not.toBeVisible();
+  await expect(evening).toBeFocused();
+  await page.keyboard.press('Alt+F10');
+  await expect(bold).toBeFocused();
+  await expect(hint).toBeVisible();
+  await scan(page);
+  await bold.hover();
+  await page.keyboard.press('Escape');
+  await expect(hint).not.toBeVisible();
+  await page.mouse.move(0, 0);
+  await expect(hint).not.toBeVisible();
+  await bold.hover();
+  const canHover = await page.evaluate(
+    () => matchMedia('(hover: hover)').matches,
+  );
+  await expect(hint).toBeVisible({ visible: canHover });
 });

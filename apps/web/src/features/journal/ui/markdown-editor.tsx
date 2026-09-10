@@ -52,7 +52,8 @@ type MarkdownEditorProps = {
  * anything written. Both wear it so the page does not resize when ProseMirror
  * arrives and the read-only surface becomes an editor.
  */
-const writingAreaClass = 'journal-writing min-h-48';
+const writingAreaClass =
+  'min-h-48 cursor-text scroll-mt-24 border-(--journal-rule) border-b pb-6 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';
 
 export const MarkdownEditor = ({
   label,

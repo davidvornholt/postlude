@@ -22,7 +22,11 @@ const navigateToolbar = (
 ) => {
   if (event.key === 'Escape') {
     event.preventDefault();
-    active?.editor.commands.focus();
+    if (active && !active.editor.isDestroyed) {
+      // Tiptap focuses twice on mobile; avoid a delayed focus stealing a quick Alt+F10 return.
+      active.editor.view.focus();
+      active.editor.commands.scrollIntoView();
+    }
     return;
   }
   if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
@@ -59,26 +63,37 @@ export const FormattingToolbar = () => {
   }, [active]);
   const disabled = !active?.editor.isEditable || active.editor.isDestroyed;
   return (
-    <div className="journal-toolbar" data-formatting-toolbar="">
-      <div className={`${pageFrameClass} journal-toolbar-inner`}>
-        <div className="journal-toolbar-context">
+    <div
+      className="sticky top-0 z-30 mt-8 border-border border-y bg-background text-ink"
+      data-formatting-toolbar=""
+    >
+      <div
+        className={`${pageFrameClass} flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6`}
+      >
+        <div className="flex min-h-5 items-center justify-between gap-4 sm:flex-col sm:items-start sm:gap-0.5">
           <span className="text-ink-muted text-xs">
             {active?.label ?? 'Writing tools'}
           </span>
-          <span className="text-ink-faint text-xs">
+          <span className="hidden text-ink-faint text-xs sm:inline">
             {active ? 'Alt + F10 for tools' : 'Choose a writing section'}
           </span>
         </div>
         <div
           aria-label={active ? `Formatting ${active.label}` : 'Formatting'}
-          className="journal-toolbar-actions"
+          className="flex min-w-0 items-center justify-between sm:w-88"
           data-toolbar-actions=""
           role="toolbar"
         >
           {formattingActions.map((action) => (
             <JournalIconButton
               aria-pressed={active?.editor.isActive(action.mark) ?? false}
-              data-divider={action.mark === 'bulletList' || undefined}
+              divider={action.mark === 'bulletList'}
+              inToolbar={true}
+              hintAlign={
+                ['bold', 'italic', 'heading'].includes(action.mark)
+                  ? 'start'
+                  : 'end'
+              }
               disabled={disabled}
               hint={action.hint}
               icon={action.mark}
@@ -101,7 +116,9 @@ export const FormattingToolbar = () => {
             />
           ))}
           <JournalIconButton
-            data-divider="true"
+            divider={true}
+            inToolbar={true}
+            hintAlign="end"
             disabled={disabled}
             hint="Or paste a photo"
             icon="image"

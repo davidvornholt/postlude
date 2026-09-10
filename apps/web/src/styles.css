@@ -7,20 +7,7 @@ body {
   font-family: var(--font-sans);
 }
 
-/*
- * The written page.
- *
- * Markdown is typed and rendered in place, so what the writer sees is the
- * finished setting rather than a preview of one. That means these rules dress
- * elements nothing in the source names: the editor produces the heading, the
- * list, the quote, and there is no component to hang a utility on.
- *
- * Structure here is rules and type, as everywhere else in Postlude — a quote
- * and a code block are a hairline down the left, not a filled box. The two
- * colors that vary between the page and the deep register are the only ones
- * these rules name, and they are named as custom properties so the register
- * re-points them for its whole subtree rather than restating the block.
- */
+/* Shared descendant styles for Markdown rendered by the editor or read-only view. */
 @layer components {
   .journal-prose {
     --journal-rule: var(--pl-border);
@@ -34,35 +21,6 @@ body {
     --journal-rule: var(--pl-deep-rule);
     --journal-quiet: var(--pl-deep-ink-muted);
     --journal-prompt: var(--pl-deep-ink-muted);
-  }
-
-  /*
-   * The area a day is written in.
-   *
-   * Everything else on this page is type on a ground, so an empty writing area
-   * is indistinguishable from the space around it and there is nothing to say
-   * that clicking it does anything. It gets the rule a paper form puts under
-   * the line you are meant to write on, and the rule follows the words down as
-   * the entry grows, so it is always the foot of the writing rather than a box
-   * drawn around it. Under a pointer the rule strengthens, which is the same
-   * move both controls make.
-   */
-  .journal-writing {
-    border-bottom: 1px solid var(--journal-rule);
-    padding-bottom: 1.5rem;
-    cursor: text;
-    scroll-margin-top: 5rem;
-    transition: border-color 150ms var(--ease-standard);
-  }
-
-  .journal-writing:hover {
-    border-bottom-color: var(--journal-quiet);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .journal-writing {
-      transition: none;
-    }
   }
 
   .journal-prose > * + * {
@@ -137,9 +95,6 @@ body {
     padding-left: 1.1em;
   }
 
-  /* A link is underlined rather than colored: color is the welcome here, never
-     the structure, and an underline works on the parchment and on the deep
-     ground without a second token. */
   .journal-prose a {
     padding-block: 0.25em;
     text-decoration: underline;
@@ -162,20 +117,8 @@ body {
     outline-offset: 4px;
   }
 
-  .journal-image-button {
-    display: block;
-    min-width: 2.75rem;
-    min-height: 2.75rem;
-    max-width: 100%;
-    cursor: zoom-in;
-  }
-
+  /* Native dialog entry/exit needs discrete display and top-layer transitions. */
   .journal-image-dialog {
-    margin: auto;
-    width: min(96vw, 90rem);
-    max-height: 94dvh;
-    padding: 1rem;
-    border: 1px solid var(--color-border);
     opacity: 0;
     transform: scale(0.96);
     transition:
@@ -188,18 +131,6 @@ body {
   .journal-image-dialog[open] {
     opacity: 1;
     transform: scale(1);
-  }
-
-  .journal-image-dialog img {
-    width: auto;
-    max-width: 100%;
-    max-height: 76dvh;
-    margin: auto;
-    object-fit: contain;
-  }
-
-  .journal-image-dialog::backdrop {
-    background: color-mix(in oklch, var(--color-ink) 70%, transparent);
   }
 
   @starting-style {
@@ -215,148 +146,11 @@ body {
     }
   }
 
-  .journal-upload-dialog {
-    margin: auto;
-    width: min(32rem, calc(100% - 2rem));
-    max-height: calc(100dvh - 2rem);
-    padding: 1.5rem;
-    border: 1px solid var(--pl-border);
-  }
-  .journal-upload-dialog::backdrop {
-    background: color-mix(in oklch, var(--pl-ink) 50%, transparent);
-  }
-  .journal-toolbar {
-    position: sticky;
-    top: 0;
-    z-index: 30;
-    margin-top: 2rem;
-    border-block: 1px solid var(--pl-border);
-    background: var(--pl-background);
-    color: var(--pl-ink);
-  }
-  .journal-toolbar-inner {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    padding-block: 0.5rem;
-  }
-  .journal-toolbar-context {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    min-height: 1.25rem;
-  }
-  .journal-toolbar-context > :last-child {
-    display: none;
-  }
-  .journal-toolbar-actions {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-width: 0;
-  }
-  .journal-icon-control {
-    position: relative;
-    display: inline-flex;
-    flex-shrink: 0;
-  }
-  .journal-icon-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    cursor: pointer;
-    transition: background-color 120ms var(--ease-standard);
-  }
-  .journal-icon-button:hover:not(:disabled) {
-    background: color-mix(in oklch, currentColor 8%, transparent);
-  }
-  .journal-icon-button:disabled {
-    opacity: 0.4;
-    cursor: default;
-  }
-  .journal-icon-button[aria-pressed="true"] {
-    background: var(--pl-primary-subtle);
-    color: var(--pl-primary);
-    box-shadow: inset 0 -2px var(--pl-primary);
-  }
-  .journal-toolbar-actions .journal-icon-control {
-    flex: 1 1 0;
-    max-width: 2.75rem;
-  }
-  .journal-toolbar-actions .journal-icon-button {
-    width: 100%;
-    min-width: 2rem;
-  }
-  .journal-toolbar-actions .journal-icon-control:has([data-divider]) {
-    margin-left: 0.35rem;
-    padding-left: 0.35rem;
-    border-left: 1px solid var(--pl-border);
-    box-sizing: content-box;
-  }
-  .journal-icon-hint {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    z-index: 40;
-    width: max-content;
-    max-width: 12rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    padding: 0.5rem 0.75rem;
-    background: var(--pl-ink);
-    color: var(--pl-background);
-    font-size: 0.75rem;
-    line-height: 1.5;
-    visibility: hidden;
-  }
-  .journal-icon-control:not([data-hint-dismissed]):is(:hover, :focus-within)
-    > .journal-icon-hint {
-    visibility: visible;
-  }
-  .journal-toolbar-actions
-    .journal-icon-control:nth-last-child(-n + 4)
-    > .journal-icon-hint,
-  .journal-image-dialog .journal-icon-hint {
-    right: 0;
-    left: auto;
-  }
-  @media (min-width: 640px) {
-    .journal-toolbar-inner {
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      gap: 1.5rem;
-    }
-    .journal-toolbar-context {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 0.125rem;
-    }
-    .journal-toolbar-context > :last-child {
-      display: inline;
-    }
-    .journal-toolbar-actions {
-      width: 22rem;
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .journal-icon-button {
-      transition: none;
-    }
-  }
-
   .journal-prose em {
     font-style: italic;
   }
 
-  /* The prompt on an untouched page. It floats out of the flow so the caret
-     sits where the first word will, rather than after the prompt. It is set in
-     italic and a step fainter than the writing, because the one thing it must
-     never be mistaken for is a line the writer already put there. */
+  /* TipTap supplies the placeholder attribute; keep it out of the text flow. */
   .journal-prose p.is-empty:first-child::before {
     content: attr(data-placeholder);
     float: left;

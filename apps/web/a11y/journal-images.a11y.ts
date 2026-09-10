@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import { mountDayPage, scan } from './day-page-test-support.ts';
 
 const expectedImages = 3;
+const enlargeImageName = /^Enlarge image/u;
 const key = '12345678-1234-4234-8234-123456789abc.png';
 const imageUrl = `/api/journal-images/${key}`;
 const imageBase64 =
@@ -110,9 +111,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await expect.poll(() => uploads.length).toBe(expectedImages);
     await evening.locator('strong').click({ clickCount: 3 });
     await uploads[2]?.fulfill({ json: { src: imageUrl } });
-    await expect(evening.locator('.journal-image-button')).toHaveCount(
-      expectedImages,
-    );
+    await expect(
+      evening.getByRole('button', { name: enlargeImageName }),
+    ).toHaveCount(expectedImages);
     await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
     await scan(page);
     const morning = page.getByRole('textbox', {

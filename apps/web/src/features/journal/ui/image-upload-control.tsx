@@ -40,7 +40,7 @@ export const ImageUploadControl = ({
       {image.open ? (
         <dialog
           aria-labelledby={titleId}
-          className="journal-upload-dialog bg-background text-ink"
+          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg border border-border bg-background p-6 text-ink backdrop:bg-ink/50"
           onCancel={(event) => {
             if (image.busy) {
               event.preventDefault();
@@ -61,6 +61,7 @@ export const ImageUploadControl = ({
             <JournalIconButton
               icon="close"
               label="Cancel image upload"
+              hintAlign="end"
               hint="Esc"
               disabled={image.busy}
               onClick={image.cancel}

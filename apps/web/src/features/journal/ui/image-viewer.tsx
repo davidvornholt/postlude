@@ -14,7 +14,7 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
     <>
       <button
         aria-label={`Enlarge image${alt ? `: ${alt}` : ''}`}
-        className={`${focusRingClass} journal-image-button`}
+        className={`${focusRingClass} block min-h-11 min-w-11 max-w-full cursor-zoom-in`}
         onClick={() => dialog.current?.showModal()}
         ref={trigger}
         type="button"
@@ -23,7 +23,7 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
       </button>
       <dialog
         aria-labelledby={title}
-        className="journal-image-dialog bg-background text-ink"
+        className="journal-image-dialog m-auto max-h-[94dvh] w-[min(96vw,90rem)] border border-border bg-background p-4 text-ink backdrop:bg-ink/70"
         ref={dialog}
         onClose={() => trigger.current?.focus()}
       >
@@ -34,11 +34,16 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
           <JournalIconButton
             icon="close"
             label="Close image"
+            hintAlign="end"
             hint="Esc"
             onClick={() => dialog.current?.close()}
           />
         </div>
-        <img alt={alt} src={src} />
+        <img
+          alt={alt}
+          className="m-auto max-h-[76dvh] w-auto max-w-full object-contain"
+          src={src}
+        />
       </dialog>
     </>
   );
