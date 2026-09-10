@@ -21,6 +21,8 @@ import { Route as AppArchiveExportRouteImport } from './routes/_app/archive_.exp
 import { Route as AppDayIndexRouteImport } from './routes/_app/day.index'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiJournalImagesIndexRouteImport } from './routes/api/journal-images/index'
+import { Route as ApiJournalImagesKeyRouteImport } from './routes/api/journal-images/$key'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -81,6 +83,16 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiJournalImagesIndexRoute = ApiJournalImagesIndexRouteImport.update({
+  id: '/api/journal-images/',
+  path: '/api/journal-images/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiJournalImagesKeyRoute = ApiJournalImagesKeyRouteImport.update({
+  id: '/api/journal-images/$key',
+  path: '/api/journal-images/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -93,7 +105,9 @@ export interface FileRoutesByFullPath {
   '/archive/export': typeof AppArchiveExportRoute
   '/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
   '/day/': typeof AppDayIndexRoute
+  '/api/journal-images/': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
@@ -106,7 +120,9 @@ export interface FileRoutesByTo {
   '/archive/export': typeof AppArchiveExportRoute
   '/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
   '/day': typeof AppDayIndexRoute
+  '/api/journal-images': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -121,7 +137,9 @@ export interface FileRoutesById {
   '/_app/archive_/export': typeof AppArchiveExportRoute
   '/_app/day/$date': typeof AppDayDateRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
   '/_app/day/': typeof AppDayIndexRoute
+  '/api/journal-images/': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,7 +154,9 @@ export interface FileRouteTypes {
     | '/archive/export'
     | '/day/$date'
     | '/api/auth/$'
+    | '/api/journal-images/$key'
     | '/day/'
+    | '/api/journal-images/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
@@ -149,7 +169,9 @@ export interface FileRouteTypes {
     | '/archive/export'
     | '/day/$date'
     | '/api/auth/$'
+    | '/api/journal-images/$key'
     | '/day'
+    | '/api/journal-images'
   id:
     | '__root__'
     | '/_app'
@@ -163,7 +185,9 @@ export interface FileRouteTypes {
     | '/_app/archive_/export'
     | '/_app/day/$date'
     | '/api/auth/$'
+    | '/api/journal-images/$key'
     | '/_app/day/'
+    | '/api/journal-images/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -171,6 +195,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ApiHealthzRoute: typeof ApiHealthzRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiJournalImagesKeyRoute: typeof ApiJournalImagesKeyRoute
+  ApiJournalImagesIndexRoute: typeof ApiJournalImagesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -259,6 +285,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/journal-images/': {
+      id: '/api/journal-images/'
+      path: '/api/journal-images'
+      fullPath: '/api/journal-images/'
+      preLoaderRoute: typeof ApiJournalImagesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/journal-images/$key': {
+      id: '/api/journal-images/$key'
+      path: '/api/journal-images/$key'
+      fullPath: '/api/journal-images/$key'
+      preLoaderRoute: typeof ApiJournalImagesKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -291,6 +331,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ApiHealthzRoute: ApiHealthzRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiJournalImagesKeyRoute: ApiJournalImagesKeyRoute,
+  ApiJournalImagesIndexRoute: ApiJournalImagesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

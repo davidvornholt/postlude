@@ -96,6 +96,7 @@ type SafeFailure = {
 
 const badRequest = 400;
 const conflict = 409;
+const serviceUnavailable = 503;
 
 const taggedSafeFailure = (error: unknown): SafeFailure | undefined => {
   const failure = failureOf(error);
@@ -107,6 +108,9 @@ const taggedSafeFailure = (error: unknown): SafeFailure | undefined => {
     typeof failure.message !== 'string'
   ) {
     return undefined;
+  }
+  if (failure._tag === 'JournalImageError') {
+    return { message: failure.message, status: serviceUnavailable };
   }
   if (failure._tag === 'JournalValidationError') {
     return { message: failure.message, status: badRequest };

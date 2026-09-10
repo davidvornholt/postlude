@@ -54,6 +54,12 @@ for (const colorScheme of colorSchemes) {
     await expect(morning).toHaveAttribute('aria-multiline', 'true');
     await page.keyboard.type('Mercy arrived this morning.');
     await page.keyboard.press('Tab');
+    await expect(
+      page.getByRole('button', {
+        name: 'Add image to Morning scripture notes',
+      }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
     await expect(evening).toBeFocused();
     await expect(evening).toHaveAttribute('aria-multiline', 'true');

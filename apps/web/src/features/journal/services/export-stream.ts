@@ -20,6 +20,7 @@ import { type ExportGrouping, periodPath } from '../export-period.ts';
 import { journalDateAt } from '../journal-day.ts';
 import type { ExportSnapshot } from './entry-export.ts';
 import { EntryExport } from './entry-export.ts';
+import { exportImagesPass } from './export-images.ts';
 import { type StreamingZip, streamingZip } from './streaming-zip.ts';
 
 type ObserveExportContext = (context: ExportContext) => void;
@@ -120,6 +121,7 @@ const writeArchive = ({
         after: zip.endFile,
       },
       ...(dailyPass === undefined ? [] : [dailyPass]),
+      exportImagesPass(zip),
     ],
     ...(periodPass === undefined ? {} : { periodPass }),
   });

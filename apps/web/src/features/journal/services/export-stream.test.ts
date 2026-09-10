@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'bun:test';
 import { Chunk, Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
-
 import { parseEntriesDocument } from '../export-format.ts';
 import { shiftJournalDate } from '../journal-day.ts';
 import { EntryExport, type ExportEntry } from './entry-export.ts';
 import { exportArchiveStream, exportContextAt } from './export-stream.ts';
+import { JournalImageError } from './journal-image-error.ts';
+import { JournalImages } from './journal-images.ts';
 
 const separatedBacktickRunCount = 1_000_000;
 const leapYearDayCount = 366;
@@ -85,7 +86,11 @@ it('streams a million separated backtick runs without losing source or joining s
       exportsOf([entry]),
       'Europe/Berlin',
       () => undefined,
-    ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray)),
+    ).pipe(
+      Stream.provideLayer(JournalImages.Default),
+      Stream.runCollect,
+      Effect.map(Chunk.toReadonlyArray),
+    ),
   );
   const files = unzipSync(bytesOf(chunks));
   const decoder = new TextDecoder();
@@ -149,7 +154,9 @@ it('backpressures a large leap-year period and releases its snapshot on cancella
       ),
   });
   const body = Stream.toReadableStream(
-    exportArchiveStream(exports, 'Europe/Berlin', () => undefined, 'year'),
+    exportArchiveStream(exports, 'Europe/Berlin', () => undefined, 'year').pipe(
+      Stream.provideLayer(JournalImages.Default),
+    ),
   );
   const reader = body.getReader();
 
@@ -189,4 +196,60 @@ describe('export snapshot journal day', () => {
       '2026-10-25',
     );
   });
+});
+
+it('includes each referenced private image once and fails an incomplete backup', async () => {
+  const key = '12345678-1234-4234-8234-123456789abc.png';
+  const markdown = `![Lake](/api/journal-images/${key})`;
+  const entry: ExportEntry = {
+    date: '2026-03-01',
+    journalMarkdown: markdown,
+    scriptureMarkdown: markdown,
+    scriptureReference: null,
+    journalFirstUsedAt: timestamp,
+    scriptureFirstUsedAt: timestamp,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  const bytes = new TextEncoder().encode('stored image bytes');
+  let reads = 0;
+  const images = JournalImages.make({
+    upload: () => Effect.die('Export does not upload images.'),
+    read: () =>
+      Effect.sync(() => {
+        reads += 1;
+        return bytes;
+      }),
+  });
+  const stream = exportArchiveStream(
+    exportsOf([entry]),
+    'Europe/Berlin',
+    () => undefined,
+  );
+  const chunks = await Effect.runPromise(
+    stream.pipe(
+      Stream.provideService(JournalImages, images),
+      Stream.runCollect,
+      Effect.map(Chunk.toReadonlyArray),
+    ),
+  );
+  const files = unzipSync(bytesOf(chunks));
+  expect(files[`images/${key}`]).toEqual(bytes);
+  expect(reads).toBe(1);
+  expect(
+    parseEntriesDocument(new TextDecoder().decode(files['entries.ndjson'])),
+  ).toEqual([entry]);
+  const missing = JournalImages.make({
+    ...images,
+    read: () =>
+      Effect.fail(new JournalImageError({ message: 'Image missing.' })),
+  });
+  const failure = await Effect.runPromise(
+    stream.pipe(
+      Stream.provideService(JournalImages, missing),
+      Stream.runDrain,
+      Effect.either,
+    ),
+  );
+  expect(failure._tag).toBe('Left');
 });

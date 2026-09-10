@@ -22,12 +22,14 @@ import { pool } from '#/shared/db/pool.ts';
 import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { EntrySearch } from './entry-search.ts';
+import { JournalImages } from './journal-images.ts';
 
 const journalLayer = Layer.provide(
   Layer.mergeAll(
     EntryRepository.Default,
     EntrySearch.Default,
     EntryExport.Default,
+    JournalImages.Default,
   ),
   Layer.suspend(() => pgClientLayer(pool)),
 );
@@ -40,11 +42,15 @@ const journalLayer = Layer.provide(
  * mentioned it.
  */
 type JournalRuntime = ManagedRuntime.ManagedRuntime<
-  EntryRepository | EntrySearch | EntryExport,
+  EntryRepository | EntrySearch | EntryExport | JournalImages,
   SqlError
 >;
 
-type JournalServices = EntryRepository | EntrySearch | EntryExport;
+type JournalServices =
+  | EntryRepository
+  | EntrySearch
+  | EntryExport
+  | JournalImages;
 
 let runtime: JournalRuntime | undefined;
 

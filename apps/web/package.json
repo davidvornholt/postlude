@@ -21,6 +21,7 @@
     "test:a11y": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1129.0",
     "@effect/sql": "^0.52.1",
     "@effect/sql-pg": "^0.53.0",
     "@fontsource-variable/fraunces": "^5.3.0",
@@ -34,6 +35,7 @@
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.49",
     "@tiptap/core": "^3.30.5",
+    "@tiptap/extension-image": "3.30.5",
     "@tiptap/extensions": "^3.30.5",
     "@tiptap/markdown": "^3.30.5",
     "@tiptap/pm": "^3.30.5",

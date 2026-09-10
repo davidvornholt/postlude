@@ -85,6 +85,8 @@ const publicRouteHandlers = [
 const privateRouteHandlers = [
   { path: 'routes/_app/archive_.export.ts', name: 'POST' },
   { path: 'routes/_app/search.tsx', name: 'POST' },
+  { path: 'routes/api/journal-images/$key.ts', name: 'GET' },
+  { path: 'routes/api/journal-images/index.ts', name: 'POST' },
 ];
 
 const app = scanModules(

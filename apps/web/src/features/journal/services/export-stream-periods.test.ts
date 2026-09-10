@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 import { Chunk, Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
-
 import { parseEntriesDocument } from '../export-format.ts';
 import type { ExportGrouping } from '../export-period.ts';
 import { shiftJournalDate } from '../journal-day.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import { exportPageSize } from './entry-export.ts';
 import { exportArchiveStream } from './export-stream.ts';
+import { JournalImages } from './journal-images.ts';
 
 const { withJournal } = journalDatabase();
 const decoder = new TextDecoder();
@@ -50,7 +50,11 @@ const exportFiles = (grouping: ExportGrouping) =>
         'Europe/Berlin',
         () => undefined,
         grouping,
-      ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+      ).pipe(
+        Stream.provideLayer(JournalImages.Default),
+        Stream.runCollect,
+        Effect.map(Chunk.toReadonlyArray),
+      );
       return unzipSync(bytesOf(chunks));
     }),
   );
@@ -136,7 +140,11 @@ describe('production projection streams', () => {
           'Europe/Berlin',
           () => undefined,
           'year',
-        ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray));
+        ).pipe(
+          Stream.provideLayer(JournalImages.Default),
+          Stream.runCollect,
+          Effect.map(Chunk.toReadonlyArray),
+        );
         return unzipSync(bytesOf(chunks));
       }),
     );
