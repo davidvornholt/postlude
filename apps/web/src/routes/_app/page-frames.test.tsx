@@ -62,7 +62,7 @@ const archive = await renderInRouter(
 );
 
 /*
- * Three frames, because the writing page is three blocks: the day's heading,
+ * Four frames: the day's heading, the persistent toolbar,
  * the deep register's own frame inside its edge-to-edge ground, and the
  * evening's writing. The register sets its own rather than sharing the page's,
  * which is the whole reason the shell sets none — a ground that has to reach
@@ -79,7 +79,7 @@ it('wraps the writing page in the shared frame', () => {
  * The register's ground is a sibling of the frames rather than a child of one,
  * and its own frame is inside it. Wrapping the page in a single frame instead
  * would leave the panel inset, which reads as a card — the one thing the design
- * has none of — and would show up here as a fourth wrapper.
+ * has none of — and would add an unwanted outer wrapper.
  */
 it('renders the deep register on its own ground', () => {
   expect(today).toContain('bg-deep-ground');
