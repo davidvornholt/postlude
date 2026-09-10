@@ -99,6 +99,7 @@ it('rejects cross-origin uploads and bounds chunked bodies before buffering', as
     await Effect.runPromise(
       readImageUpload(
         new Request(url, { method: 'POST', headers, body: bytes }),
+        headers.origin,
       ),
     ),
   ).toEqual(bytes);
@@ -111,6 +112,7 @@ it('rejects cross-origin uploads and bounds chunked bodies before buffering', as
           headers: { ...headers, origin },
           body: bytes,
         }),
+        headers.origin,
       ).pipe(Effect.either),
     );
     expect(result._tag).toBe('Left');
@@ -124,9 +126,10 @@ it('rejects cross-origin uploads and bounds chunked bodies before buffering', as
     },
   });
   const result = await Effect.runPromise(
-    readImageUpload(new Request(url, { method: 'POST', headers, body })).pipe(
-      Effect.either,
-    ),
+    readImageUpload(
+      new Request(url, { method: 'POST', headers, body }),
+      headers.origin,
+    ).pipe(Effect.either),
   );
   expect(result._tag).toBe('Left');
   expect(cancelled).toBeTrue();

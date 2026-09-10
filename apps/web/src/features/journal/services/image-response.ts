@@ -43,11 +43,12 @@ const readBoundedImage = async (request: Request): Promise<Uint8Array> => {
 };
 
 /** Count streamed bytes before buffering so chunked uploads obey the same limit. */
-export const readImageUpload = (request: Request) =>
+export const readImageUpload = (request: Request, publicOrigin: string) =>
   Effect.tryPromise({
     try: async () => {
       if (
-        request.headers.get('origin') !== new URL(request.url).origin ||
+        // TLS terminates at the proxy; the internal request URL can use HTTP.
+        request.headers.get('origin') !== publicOrigin ||
         request.headers.get('x-postlude-image-upload') !== 'true'
       ) {
         throw new JournalValidationError({
@@ -69,9 +70,13 @@ export const uploadImageResponse = async (
   request: Request,
 ): Promise<Response> => {
   const { runJournalEffect } = await import('./journal-runtime.ts');
+  const { env } = await import('#/shared/env.ts');
   return runJournalEffect(
     Effect.gen(function* () {
-      const bytes = yield* readImageUpload(request);
+      const bytes = yield* readImageUpload(
+        request,
+        new URL(env.BETTER_AUTH_URL).origin,
+      );
       const images = yield* JournalImages;
       const uploaded = yield* images.upload(bytes);
       return Response.json(uploaded, { headers: privateResponseHeaders });
