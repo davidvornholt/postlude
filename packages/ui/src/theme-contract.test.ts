@@ -10,6 +10,9 @@ import {
   textPairFindings,
 } from './theme-audit.ts';
 
+const squareElementDefault =
+  /\*,\s*::before,\s*::after\s*\{\s*border-radius:\s*0;/u;
+
 const themeUrl = new URL('./theme.css', import.meta.url);
 const theme = await Bun.file(themeUrl).text();
 
@@ -133,4 +136,19 @@ it('rejects activity marks that blend into the page', () => {
       );
     }
   }
+});
+
+it('disables intermediate corner radii and makes every element square by default', () => {
+  const declarations = Array.from(
+    theme.matchAll(
+      /(?<property>--radius(?:-[\w*-]+)?|border(?:-[a-z]+)*-radius)\s*:\s*(?<value>[^;}]+)/gu,
+    ),
+    (match) => [match.groups?.property, match.groups?.value?.trim()],
+  );
+  expect(declarations).toEqual([
+    ['--radius-*', 'initial'],
+    ['--radius', '0'],
+    ['border-radius', '0'],
+  ]);
+  expect(theme).toMatch(squareElementDefault);
 });

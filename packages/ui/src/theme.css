@@ -134,6 +134,10 @@
   /* Default palette off — the semantic tokens below are the only colors. */
   --color-*: initial;
 
+  /* Corners are square unless a component explicitly uses rounded-full. */
+  --radius-*: initial;
+  --radius: 0;
+
   /* The single easing curve. */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
 }
@@ -178,4 +182,12 @@
   --color-deep-ink: var(--pl-deep-ink);
   --color-deep-ink-muted: var(--pl-deep-ink-muted);
   --color-deep-rule: var(--pl-deep-rule);
+}
+
+@layer base {
+  *,
+  ::before,
+  ::after {
+    border-radius: 0;
+  }
 }

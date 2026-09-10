@@ -4,6 +4,19 @@ import { mountDayPage, scan } from './day-page-test-support.ts';
 
 const narrowWidth = 320;
 
+const nonSquareControls = (elements: Array<Element>) =>
+  elements
+    .filter((element) => {
+      const style = getComputedStyle(element);
+      return [
+        style.borderTopLeftRadius,
+        style.borderTopRightRadius,
+        style.borderBottomLeftRadius,
+        style.borderBottomRightRadius,
+      ].some((radius) => radius !== '0px');
+    })
+    .map((element) => element.outerHTML);
+
 test('writing tools fit a narrow screen, preserve selection, and support keyboard navigation', async ({
   page,
 }) => {
@@ -97,6 +110,11 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await expect(dialog.getByLabel('Image file')).toBeFocused();
   await expect.poll(geometry).toEqual(bottomGeometry);
   await scan(page);
+  expect(
+    await page
+      .locator('button, input, .journal-icon-hint')
+      .evaluateAll(nonSquareControls),
+  ).toEqual([]);
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await expect(evening).toBeFocused();

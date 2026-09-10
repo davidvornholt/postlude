@@ -14,3 +14,7 @@ The Effect data layer is in place, adopted with the journal feature (issue #7). 
 One process, one pool. `@postlude/db`'s `createPool` owns the connection string; better-auth's Drizzle adapter and the Effect SQL client both receive that same pool through `pgClientLayer`, which never opens or closes one of its own. A second pool would be a second copy of configuration the package already owns.
 
 Tests that need a database use `src/shared/testing/test-database.ts`, which creates and migrates the configured database with `_test` appended and rolls each test body back. They fail rather than skip when `DATABASE_URL` is absent.
+
+## Corner geometry
+
+Corners must be square (0 px) or fully rounded. The shared UI theme owns radius declarations and disables Tailwind's intermediate radius scale. App components may use only `rounded-none` or `rounded-full`; do not declare CSS or inline corner radii in app code.

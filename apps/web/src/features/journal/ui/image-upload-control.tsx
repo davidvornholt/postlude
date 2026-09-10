@@ -87,7 +87,7 @@ export const ImageUploadControl = ({
               </label>
               <input
                 accept={acceptedImageTypes}
-                className={`${focusRingClass} my-2 block min-h-11 w-full max-w-full rounded border border-border p-2`}
+                className={`${focusRingClass} my-2 block min-h-11 w-full max-w-full border border-border p-2`}
                 disabled={image.busy}
                 id={fileId}
                 name="image"
@@ -103,7 +103,7 @@ export const ImageUploadControl = ({
                 Image description (optional)
               </label>
               <input
-                className={`${focusRingClass} mt-2 min-h-11 w-full rounded border border-border bg-transparent px-3`}
+                className={`${focusRingClass} mt-2 min-h-11 w-full border border-border bg-transparent px-3`}
                 disabled={image.busy}
                 id={descriptionId}
                 name="description"
@@ -112,7 +112,7 @@ export const ImageUploadControl = ({
             </div>
             <div className="flex items-center gap-3">
               <button
-                className={`${focusRingClass} min-h-11 rounded bg-primary px-4 font-medium text-on-primary disabled:opacity-60`}
+                className={`${focusRingClass} min-h-11 bg-primary px-4 font-medium text-on-primary disabled:opacity-60`}
                 disabled={image.busy}
                 type="submit"
               >
