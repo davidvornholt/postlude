@@ -16,12 +16,9 @@ import {
   useRef,
   useState,
 } from 'react';
-
-import {
-  pageFrameClass,
-  readingMeasureClass,
-} from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { ActionAnchor, Button } from '#/shared/ui/action.tsx';
+import { readingMeasureClass } from '#/shared/ui/design-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { searchFailureKind } from '../errors/search-errors.ts';
 import {
   type SearchResults,
@@ -136,7 +133,7 @@ export const SearchPage = ({
   };
 
   return (
-    <div className={pageFrameClass}>
+    <PageFrame>
       <h1 className="font-display text-4xl text-ink sm:text-5xl">Search</h1>
       <SearchForm
         errorId={errorId}
@@ -171,13 +168,14 @@ export const SearchPage = ({
             >
               {searchUnavailableMessage}
             </p>
-            <button
-              className={[quietButtonClass, 'mt-5'].join(' ')}
+            <Button
+              variant="quiet"
+              className="mt-5"
               form={formId}
               type="submit"
             >
               Try again
-            </button>
+            </Button>
           </div>
         ) : null}
         {state.state === 'authentication-required' ? (
@@ -189,16 +187,17 @@ export const SearchPage = ({
             >
               {searchAuthenticationMessage}
             </p>
-            <a
-              className={[quietButtonClass, 'mt-5 inline-block'].join(' ')}
+            <ActionAnchor
+              variant="quiet"
+              className="mt-5 inline-block"
               href="/login"
               ref={signInRef}
             >
               Sign in again
-            </a>
+            </ActionAnchor>
           </div>
         ) : null}
       </div>
-    </div>
+    </PageFrame>
   );
 };

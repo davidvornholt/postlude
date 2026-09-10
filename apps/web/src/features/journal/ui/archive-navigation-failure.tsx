@@ -1,6 +1,5 @@
-import { Link } from '@tanstack/react-router';
+import { ActionLink } from '#/shared/ui/action-link.tsx';
 
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 
@@ -15,14 +14,14 @@ export const ArchiveNavigationFailure = ({
 }: ArchiveNavigationFailureProps) => (
   <p className="border-critical border-y py-3 text-ink text-sm" role="alert">
     Archive stayed closed because changes from{' '}
-    <Link
-      className={quietButtonClass}
+    <ActionLink
+      variant="quiet"
       onClick={onOpen}
       params={{ date }}
       to="/day/$date"
     >
       {journalDateLabel(date)}
-    </Link>{' '}
+    </ActionLink>{' '}
     could not be saved. Open that day to recover the draft, then try Archive
     again.
   </p>

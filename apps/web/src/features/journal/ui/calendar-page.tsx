@@ -1,7 +1,5 @@
-import { Link } from '@tanstack/react-router';
-
-import { pageFrameClass } from '#/shared/ui/design-classes.ts';
-import { iconButtonClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { ActionLink } from '#/shared/ui/action-link.tsx';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import {
   datesInMonth,
   journalMonthLabel,
@@ -54,41 +52,42 @@ export const CalendarPage = ({
       : undefined;
 
   return (
-    <div className={pageFrameClass}>
+    <PageFrame>
       <header className="flex flex-wrap items-center gap-4">
         {previous === undefined ? (
           <span aria-hidden="true" className="size-11" />
         ) : (
-          <Link
+          <ActionLink
             aria-label="Previous month"
-            className={iconButtonClass}
+            variant="icon"
             search={{ month: previous }}
             to="/calendar"
           >
             ←
-          </Link>
+          </ActionLink>
         )}
         <h1 className="text-balance font-display text-4xl text-ink sm:text-5xl">
           {journalMonthLabel(view.month)}
         </h1>
         {next === undefined ? null : (
-          <Link
+          <ActionLink
             aria-label="Next month"
-            className={iconButtonClass}
+            variant="icon"
             search={{ month: next }}
             to="/calendar"
           >
             →
-          </Link>
+          </ActionLink>
         )}
         {view.month === journalMonthOf(view.today) ? null : (
-          <Link
-            className={[quietButtonClass, 'ml-2'].join(' ')}
+          <ActionLink
+            variant="quiet"
+            className="ml-2"
             search={{ day: view.today, month: journalMonthOf(view.today) }}
             to="/calendar"
           >
             Today
-          </Link>
+          </ActionLink>
         )}
       </header>
       <div className="mt-8 grid gap-10 lg:grid-cols-4 lg:gap-12">
@@ -104,6 +103,6 @@ export const CalendarPage = ({
           <CalendarPreview day={day} selected={selected} today={view.today} />
         </div>
       </div>
-    </div>
+    </PageFrame>
   );
 };

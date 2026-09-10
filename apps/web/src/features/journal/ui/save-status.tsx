@@ -11,8 +11,9 @@
  * one that needs attention adds a control rather than a hue.
  */
 
+import { ActionAnchor, Button } from '#/shared/ui/action.tsx';
+
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import type { AutosaveFailure, SaveStatus } from '../autosave.ts';
 
 const assistiveWording: Record<Exclude<SaveStatus, 'failed'>, string> = {
@@ -33,15 +34,15 @@ const failureAction = (
 ) => {
   if (failure?.kind === 'authentication') {
     return (
-      <a className={quietButtonClass} href="/login">
+      <ActionAnchor variant="quiet" href="/login">
         Sign in again
-      </a>
+      </ActionAnchor>
     );
   }
   return failure?.kind === 'network' ? (
-    <button className={quietButtonClass} onClick={onRetry} type="button">
+    <Button variant="quiet" onClick={onRetry} type="button">
       Try again
-    </button>
+    </Button>
   ) : null;
 };
 

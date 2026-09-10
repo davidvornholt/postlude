@@ -74,6 +74,26 @@ describe('approved private recovery responses', () => {
     expect(countRecipe(document, readingMeasureClass)).toBe(1);
   });
 
+  it('escapes recovery text and attributes when rendering the shared controls', async () => {
+    const response = privateHtmlRecoveryResponse({
+      actionHref: '/archive?q=" onmouseover="alert(1)',
+      actionLabel: '<img src=x onerror=alert(1)>',
+      heading: '<script>alert(1)</script>',
+      message: 'A & B < C',
+      styleSheetHrefs: ['/assets/postlude.css'],
+      title: '</title><script>alert(1)</script>',
+    });
+    const document = await response.text();
+    expect(document).not.toContain('<script>');
+    expect(document).not.toContain('<img');
+    expect(document).not.toContain('" onmouseover="');
+    expect(document).toContain('A &amp; B &lt; C');
+    expect(document).toContain(
+      'href="/archive?q=&quot; onmouseover=&quot;alert(1)"',
+    );
+    expect(document).toContain('autofocus=""');
+  });
+
   it('keeps approved nested and thrown responses without widening approval', async () => {
     const nested = recoveryResponse();
     const nestedResult = await runProtectedCall({

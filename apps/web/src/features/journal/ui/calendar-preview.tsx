@@ -2,7 +2,6 @@ import {
   eyebrowClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalCountLabel } from '../journal-labels.ts';
@@ -51,11 +50,7 @@ export const CalendarPreview = ({
           {journalCountLabel(day.words, 'word')}
         </p>
       )}
-      <DayLink
-        className={[quietButtonClass, 'mt-7'].join(' ')}
-        date={selected}
-        today={today}
-      >
+      <DayLink variant="quiet" className="mt-7" date={selected} today={today}>
         {selected === today ? 'Open today' : 'Open day'}
       </DayLink>
     </div>

@@ -34,12 +34,14 @@ import {
   elementContent,
 } from '#/shared/testing/rendered-html.ts';
 import { BrandLink } from './brand-link.tsx';
-import { pageFrameClass } from './design-classes.ts';
+
 import {
   InsideMainLandmark,
   RouterError,
   RouterNotFound,
 } from './router-fallbacks.tsx';
+
+const expectedPageFrame = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 
 /**
  * Only the part of `_app` a fallback's position depends on: a wordmark it can
@@ -123,7 +125,7 @@ const renderAt = async (path: string): Promise<string> => {
 const mainLandmarks = (html: string): number => countElements(html, 'main');
 
 const frameWrappers = (html: string): number =>
-  countRecipe(elementContent(html, 'main'), pageFrameClass);
+  countRecipe(elementContent(html, 'main'), expectedPageFrame);
 
 /** The attributes of the one anchor with this exact text. */
 const linkAttributes = (html: string, text: string): string =>

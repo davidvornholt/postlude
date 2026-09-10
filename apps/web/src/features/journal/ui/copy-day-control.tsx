@@ -1,8 +1,8 @@
 /** Copies the complete current draft without adding controls to each section. */
 
 import { useRef, useState } from 'react';
+import { Button } from '#/shared/ui/action.tsx';
 
-import { iconButtonClass } from '#/shared/ui/form-classes.ts';
 import {
   type CopyableJournalDay,
   dayCopyMarkdown,
@@ -104,18 +104,18 @@ export const CopyDayControl = ({
 
   return (
     <div className="flex min-h-11 items-center gap-3">
-      <button
+      <Button
         aria-label="Copy day as Markdown"
         aria-busy={copying}
         aria-disabled={copying}
-        className={iconButtonClass}
+        variant="icon"
         data-copy-state={state}
         onClick={copy}
         title="Copy day as Markdown"
         type="button"
       >
         {state === 'succeeded' ? <CopiedIcon /> : <CopyIcon />}
-      </button>
+      </Button>
       <span
         aria-atomic="true"
         aria-live="polite"

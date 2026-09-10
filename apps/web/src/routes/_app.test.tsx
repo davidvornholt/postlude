@@ -43,7 +43,8 @@ import {
   elementAttributes,
   openingTag,
 } from '#/shared/testing/rendered-html.ts';
-import { pageFrameClass } from '#/shared/ui/design-classes.ts';
+
+const expectedPageFrame = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 
 type SignOutState = {
   readonly isError: boolean;
@@ -172,7 +173,7 @@ it('marks only one page as current away from home', async () => {
 
 // Any class the frame recipe is built from, so a frame put back on <main> is
 // caught whichever part of it went back.
-const frameNames = new Set(pageFrameClass.split(' '));
+const frameNames = new Set(expectedPageFrame.split(' '));
 
 const setsAFrame = (attributes: string): boolean =>
   [...classNames(attributes)].some((name) => frameNames.has(name));

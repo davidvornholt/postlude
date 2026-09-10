@@ -13,7 +13,6 @@ import {
   focusRingClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import type { Anniversary } from '../anniversary.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
@@ -136,11 +135,7 @@ export const OnThisDay = ({ anniversaries, today }: OnThisDayProps) => (
           key={anniversary.date}
         >
           <h2 id={headingId}>
-            <DayLink
-              className={quietButtonClass}
-              date={anniversary.date}
-              today={today}
-            >
+            <DayLink variant="quiet" date={anniversary.date} today={today}>
               {`${journalCountLabel(anniversary.yearsAgo, 'year')} ago · ${journalDateLabel(anniversary.date)}`}
             </DayLink>
           </h2>

@@ -1,7 +1,8 @@
 import type { Editor } from '@tiptap/react';
 import { type RefObject, useId } from 'react';
-
+import { Button } from '#/shared/ui/action.tsx';
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
+import { TextField } from '#/shared/ui/text-field.tsx';
 import { acceptedImageTypes } from '../images.ts';
 import { JournalIconButton } from './journal-icon-button.tsx';
 import { useImageUpload } from './use-image-upload.ts';
@@ -103,8 +104,9 @@ export const ImageUploadControl = ({
               <label className="block" htmlFor={descriptionId}>
                 Image description (optional)
               </label>
-              <input
-                className={`${focusRingClass} mt-2 min-h-11 w-full border border-border bg-transparent px-3`}
+              <TextField
+                appearance="outlined"
+                className="mt-2"
                 disabled={image.busy}
                 id={descriptionId}
                 name="description"
@@ -112,21 +114,17 @@ export const ImageUploadControl = ({
               />
             </div>
             <div className="flex items-center gap-3">
-              <button
-                className={`${focusRingClass} min-h-11 bg-primary px-4 font-medium text-on-primary disabled:opacity-60`}
-                disabled={image.busy}
-                type="submit"
-              >
+              <Button size="dialog" disabled={image.busy} type="submit">
                 {image.busy ? 'Uploading image…' : 'Insert image'}
-              </button>
-              <button
-                className={`${focusRingClass} min-h-11 px-3`}
+              </Button>
+              <Button
+                variant="plain"
                 disabled={image.busy}
                 onClick={image.cancel}
                 type="button"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
             <p aria-live="polite" role="status">
               {status}

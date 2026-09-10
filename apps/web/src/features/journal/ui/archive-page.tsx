@@ -19,19 +19,14 @@
  * can still be recoverable source even when they produce no activity year.
  */
 
-import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-
 import {
   eyebrowClass,
-  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import {
-  navLinkActiveClass,
-  navLinkClass,
-  navLinkInactiveClass,
-} from '#/shared/ui/form-classes.ts';
+import { NavigationLink } from '#/shared/ui/navigation-link.tsx';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
+
 import { activityCells } from '../activity-cells.ts';
 import { monthYearLabel } from '../activity-labels.ts';
 import { journalCountLabel } from '../journal-labels.ts';
@@ -84,19 +79,16 @@ const YearNav = ({
           const current = year === selected;
           return (
             <li key={year ?? 'rolling'}>
-              <Link
+              <NavigationLink
                 activeOptions={{ exact: true, includeSearch: true }}
                 aria-current={current ? 'page' : undefined}
-                className={[
-                  navLinkClass,
-                  current ? navLinkActiveClass : navLinkInactiveClass,
-                ].join(' ')}
+                current={current}
                 resetScroll={false}
                 search={year === undefined ? {} : { year }}
                 to="/archive"
               >
                 {year === undefined ? 'Past year' : archiveYearLabel(year)}
-              </Link>
+              </NavigationLink>
             </li>
           );
         })}
@@ -127,7 +119,7 @@ export const ArchivePage = ({
   const journalIsEmpty = view.years.length === 0;
 
   return (
-    <div className={pageFrameClass}>
+    <PageFrame>
       <h1 className={headingClass}>Archive</h1>
       {journalIsEmpty ? (
         <p
@@ -180,6 +172,6 @@ export const ArchivePage = ({
           <ExportControl settleAutosaves={settleAutosaves} />
         </Section>
       ) : null}
-    </div>
+    </PageFrame>
   );
 };

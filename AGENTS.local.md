@@ -21,4 +21,4 @@ Corners must be square (0 px) or fully rounded. The shared UI theme owns radius 
 
 ## Styling
 
-Use Tailwind utilities in components for layout, spacing, sizing, colors, states, and responsive behavior. Keep shared tokens in the UI theme. Reserve application CSS for global defaults, generated editor content, and behavior such as native dialog transitions that is clearer as a small CSS rule. Do not create parallel component styling in `styles.css`.
+Use Tailwind utilities in components for layout, spacing, sizing, colors, states, and responsive behavior. Keep shared tokens in the UI theme. Reserve application CSS for global defaults, generated editor content, and behavior such as native dialog transitions that is clearer as a small CSS rule. Share repeated controls and layout through components with explicit variants, not exported class bundles. Small typography and focus utilities may stay shared across unrelated elements. Do not create parallel component styling in `styles.css`.

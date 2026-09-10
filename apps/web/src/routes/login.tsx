@@ -1,17 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
 import { createFileRoute, redirect } from '@tanstack/react-router';
 import { type RefObject, useRef } from 'react';
-
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { parseOAuthErrorSearch } from '#/shared/auth/oauth-error-search.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
+import { Button } from '#/shared/ui/action.tsx';
 import {
   eyebrowClass,
-  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
 
 // A notice is one of the few places a filled ground is right: it has to be
@@ -54,7 +53,7 @@ const SignInPage = () => {
     <main className="flex min-h-svh flex-col justify-center bg-background py-16">
       {/* No card: the page is the sign-in, set in its own frame the way every
           other page is set. */}
-      <div className={pageFrameClass}>
+      <PageFrame>
         <p className={[eyebrowClass, 'text-accent'].join(' ')}>
           Private journal
         </p>
@@ -92,19 +91,19 @@ const SignInPage = () => {
           notes, and a quiet archive.
         </p>
         <p className="mt-10">
-          <button
+          <Button
             // Staying enabled keeps focus on the button while the request is in
             // flight; disabling it here would drop focus to <body> and announce
             // the new label to nobody.
             aria-busy={signInMutation.isPending}
-            className={primaryButtonClass}
+            variant="primary"
             onClick={startSignIn}
             type="button"
           >
             {signInMutation.isPending
               ? 'Opening GitHub sign-in …'
               : 'Sign in with GitHub'}
-          </button>
+          </Button>
         </p>
         {/* This one keeps `role="alert"`: it appears in response to the reader
             pressing the button, on a page they are already reading. */}
@@ -117,7 +116,7 @@ const SignInPage = () => {
         <p className="mt-10 text-ink-faint text-sm">
           Private access: only the allowed GitHub account can sign in.
         </p>
-      </div>
+      </PageFrame>
     </main>
   );
 };

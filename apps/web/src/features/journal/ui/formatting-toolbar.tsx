@@ -6,8 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
-
-import { pageFrameClass } from '#/shared/ui/design-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { formattingActions } from './formatting-actions.ts';
 import {
   type ActiveEditor,
@@ -67,9 +66,7 @@ export const FormattingToolbar = () => {
       className="sticky top-0 z-30 mt-8 border-border border-y bg-background text-ink"
       data-formatting-toolbar=""
     >
-      <div
-        className={`${pageFrameClass} flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6`}
-      >
+      <PageFrame className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
         <div className="flex min-h-5 items-center justify-between gap-4 sm:flex-col sm:items-start sm:gap-0.5">
           <span className="text-ink-muted text-xs">
             {active?.label ?? 'Writing tools'}
@@ -130,7 +127,7 @@ export const FormattingToolbar = () => {
             tabIndex={focused === 'Add image' ? 0 : -1}
           />
         </div>
-      </div>
+      </PageFrame>
     </div>
   );
 };

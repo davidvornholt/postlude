@@ -17,14 +17,12 @@
  */
 
 import { useId } from 'react';
-
 import {
   eyebrowClass,
   focusRingClass,
-  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { iconButtonClass } from '#/shared/ui/form-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { journalDayRelation } from '../day-label.ts';
 import {
   earliestJournalDate,
@@ -96,7 +94,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
 
   return (
     <>
-      <header className={pageFrameClass}>
+      <PageFrame as="header">
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           {journalDayRelation(entry.date, today)}
         </p>
@@ -115,7 +113,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           <nav aria-label="Nearby days" className="-ml-3 flex gap-1">
             {previous === undefined ? null : (
               <DayLink
-                className={iconButtonClass}
+                variant="icon"
                 date={previous}
                 label="Previous day"
                 today={today}
@@ -125,7 +123,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             )}
             {next === undefined ? null : (
               <DayLink
-                className={iconButtonClass}
+                variant="icon"
                 date={next}
                 label="Next day"
                 today={today}
@@ -136,7 +134,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           </nav>
           <CopyDayControl day={autosave.draft} />
         </div>
-      </header>
+      </PageFrame>
 
       <FormattingToolbar />
 
@@ -155,9 +153,10 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
         />
       </div>
 
-      <section
+      <PageFrame
         aria-labelledby={eveningId}
-        className={[pageFrameClass, 'mt-10 sm:mt-14'].join(' ')}
+        as="section"
+        className="mt-10 sm:mt-14"
       >
         <h2
           className={[eyebrowClass, 'text-ink-muted'].join(' ')}
@@ -197,7 +196,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             status={autosave.status}
           />
         </div>
-      </section>
+      </PageFrame>
     </>
   );
 };
