@@ -139,7 +139,6 @@ export const MarkdownEditor = ({
       <EditorContent editor={editor} />
       <ImageUploadControl
         editor={editor}
-        focusClass={focusClass}
         label={label}
         pasteImages={pasteImages}
       />

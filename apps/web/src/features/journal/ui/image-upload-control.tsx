@@ -9,14 +9,12 @@ import { useImageUpload } from './use-image-upload.ts';
 
 type ImageUploadControlProps = {
   readonly editor: Editor;
-  readonly focusClass: string;
   readonly label: string;
   readonly pasteImages: RefObject<(files: ReadonlyArray<File>) => void>;
 };
 
 export const ImageUploadControl = ({
   editor,
-  focusClass,
   label,
   pasteImages,
 }: ImageUploadControlProps) => {
@@ -31,17 +29,11 @@ export const ImageUploadControl = ({
     ? 'Keep this page open while the image uploads.'
     : image.error;
   return (
-    <div className="mt-3 text-sm">
-      <JournalIconButton
-        className={focusClass}
-        icon="image"
-        label={`Add image to ${label}`}
-        onClick={image.addImage}
-      />
+    <>
       {image.open ? (
         <dialog
           aria-labelledby={titleId}
-          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg border border-border bg-background p-6 text-ink backdrop:bg-ink/50"
+          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg border border-border bg-background p-6 text-ink text-sm backdrop:bg-ink/50"
           onCancel={(event) => {
             if (image.busy) {
               event.preventDefault();
@@ -133,10 +125,10 @@ export const ImageUploadControl = ({
         </dialog>
       ) : null}
       {!image.open && status ? (
-        <p className="mt-2" aria-live="polite" role="status">
+        <p className="mt-3 text-sm" aria-live="polite" role="status">
           {status}
         </p>
       ) : null}
-    </div>
+    </>
   );
 };

@@ -108,5 +108,5 @@ export const useImageUpload = (editor: Editor, label: string) => {
     setError('');
     editor.commands.focus();
   };
-  return { open, busy, error, dialog, addImage, upload, cancel };
+  return { open, busy, error, dialog, upload, cancel };
 };
