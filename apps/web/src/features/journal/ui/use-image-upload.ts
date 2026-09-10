@@ -104,9 +104,14 @@ export const useImageUpload = (editor: Editor, label: string) => {
     }
   };
   const cancel = () => {
+    dialog.current?.close();
     setOpen(false);
     setError('');
-    editor.commands.focus();
+    if (!editor.isDestroyed) {
+      // Restore focus during dismissal; a delayed close event may follow a switch of sections.
+      editor.view.focus();
+      editor.commands.scrollIntoView();
+    }
   };
   return { open, busy, error, dialog, upload, cancel };
 };

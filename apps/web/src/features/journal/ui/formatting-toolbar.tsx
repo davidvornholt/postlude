@@ -67,14 +67,9 @@ export const FormattingToolbar = () => {
       data-formatting-toolbar=""
     >
       <PageFrame className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <div className="flex min-h-5 items-center justify-between gap-4 sm:flex-col sm:items-start sm:gap-0.5">
-          <span className="text-ink-muted text-xs">
-            {active?.label ?? 'Writing tools'}
-          </span>
-          <span className="hidden text-ink-faint text-xs sm:inline">
-            {active ? 'Alt + F10 for tools' : 'Choose a writing section'}
-          </span>
-        </div>
+        <span className="min-h-5 text-ink-muted text-xs">
+          {active?.label ?? 'Writing tools'}
+        </span>
         <div
           aria-label={active ? `Formatting ${active.label}` : 'Formatting'}
           className="flex min-w-0 items-center justify-between sm:w-88"

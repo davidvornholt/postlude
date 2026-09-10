@@ -35,11 +35,11 @@ export const ImageUploadControl = ({
           aria-labelledby={titleId}
           className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg border border-border bg-background p-6 text-ink text-sm backdrop:bg-ink/50"
           onCancel={(event) => {
-            if (image.busy) {
-              event.preventDefault();
+            event.preventDefault();
+            if (!image.busy) {
+              image.cancel();
             }
           }}
-          onClose={image.cancel}
           ref={image.dialog}
         >
           <div className="mb-6 flex items-start justify-between gap-4">
