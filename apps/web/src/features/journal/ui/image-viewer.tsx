@@ -1,6 +1,7 @@
 import { useId, useRef } from 'react';
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
+import { JournalIconButton } from './journal-icon-button.tsx';
 
 type ImageViewerProps = { readonly src: string; readonly alt: string };
 
@@ -30,13 +31,12 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
           <p className="text-sm" id={title}>
             {alt || 'Image'}
           </p>
-          <button
-            className={`${focusRingClass} min-h-11 shrink-0 px-3 underline underline-offset-4`}
+          <JournalIconButton
+            icon="close"
+            label="Close image"
+            hint="Esc"
             onClick={() => dialog.current?.close()}
-            type="button"
-          >
-            Close image
-          </button>
+          />
         </div>
         <img alt={alt} src={src} />
       </dialog>

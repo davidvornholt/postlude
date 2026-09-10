@@ -40,7 +40,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await evening.fill('A quiet evening.');
     await evening.focus();
     await page.keyboard.press('ControlOrMeta+a');
-    const toolbar = page.getByRole('group', {
+    const toolbar = page.getByRole('toolbar', {
       name: 'Formatting Evening journal',
     });
     await toolbar.getByRole('button', { name: 'Bold', exact: true }).click();
@@ -60,7 +60,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await form.getByRole('button', { name: 'Insert image' }).click();
     await expect.poll(() => uploads.length).toBe(1);
     await expect(evening).toHaveAttribute('contenteditable', 'false');
-    await evening.locator('strong').click({ clickCount: 3 });
+    await expect(
+      page.getByRole('dialog', { name: 'Add image', exact: true }),
+    ).toBeVisible();
     await uploads[0]?.fulfill({ json: { src: imageUrl } });
     const enlarge = page.getByRole('button', {
       name: 'Enlarge image: Evening at the lake',
@@ -120,7 +122,7 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await morning.focus();
     await page.keyboard.press('ControlOrMeta+a');
     await page
-      .getByRole('group', { name: 'Formatting Morning scripture notes' })
+      .getByRole('toolbar', { name: 'Formatting Morning scripture notes' })
       .getByRole('button', { name: 'Italic', exact: true })
       .click();
     await expect(morning.locator('em')).toHaveText('Morning thought');

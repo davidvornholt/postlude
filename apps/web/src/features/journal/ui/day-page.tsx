@@ -38,7 +38,10 @@ import { CopyDayControl } from './copy-day-control.tsx';
 import { DayHeading } from './day-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
-import { FormattingToolbarProvider } from './formatting-toolbar.tsx';
+import {
+  FormattingToolbar,
+  FormattingToolbarProvider,
+} from './formatting-toolbar.tsx';
 import { MarkdownEditor } from './markdown-editor.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
@@ -134,6 +137,8 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
           <CopyDayControl day={autosave.draft} />
         </div>
       </header>
+
+      <FormattingToolbar />
 
       <div className="mt-10 sm:mt-14">
         <ScriptureRegister

@@ -7,6 +7,11 @@ export type ActiveEditor = {
   readonly addImage: () => void;
 };
 export const FormattingContext = createContext<
-  ((active: ActiveEditor) => void) | undefined
+  | {
+      readonly active: ActiveEditor | undefined;
+      readonly activate: (active: ActiveEditor) => void;
+      readonly focusToolbar: () => void;
+    }
+  | undefined
 >(undefined);
 export const useFormattingToolbar = () => useContext(FormattingContext);

@@ -1,85 +1,118 @@
-import type { Editor } from '@tiptap/react';
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { focusRingClass, pageFrameClass } from '#/shared/ui/design-classes.ts';
-import { type ActiveEditor, FormattingContext } from './formatting-context.ts';
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
-const actions = [
-  {
-    label: 'Bold',
-    mark: 'bold',
-    run: (editor: Editor) => editor.chain().focus().toggleBold().run(),
-  },
-  {
-    label: 'Italic',
-    mark: 'italic',
-    run: (editor: Editor) => editor.chain().focus().toggleItalic().run(),
-  },
-  {
-    label: 'Heading',
-    mark: 'heading',
-    run: (editor: Editor) =>
-      editor.chain().focus().toggleHeading({ level: 1 }).run(),
-  },
-  {
-    label: 'Bullet list',
-    mark: 'bulletList',
-    run: (editor: Editor) => editor.chain().focus().toggleBulletList().run(),
-  },
-  {
-    label: 'Numbered list',
-    mark: 'orderedList',
-    run: (editor: Editor) => editor.chain().focus().toggleOrderedList().run(),
-  },
-  {
-    label: 'Quote',
-    mark: 'blockquote',
-    run: (editor: Editor) => editor.chain().focus().toggleBlockquote().run(),
-  },
-] as const;
+import { pageFrameClass } from '#/shared/ui/design-classes.ts';
+import { formattingActions } from './formatting-actions.ts';
+import {
+  type ActiveEditor,
+  FormattingContext,
+  useFormattingToolbar,
+} from './formatting-context.ts';
+import { JournalIconButton } from './journal-icon-button.tsx';
 
-const Toolbar = ({ active }: { readonly active: ActiveEditor }) => {
+const navigateToolbar = (
+  event: KeyboardEvent<HTMLElement>,
+  active: ActiveEditor | undefined,
+) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    active?.editor.commands.focus();
+    return;
+  }
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+    return;
+  }
+  event.preventDefault();
+  const buttons = Array.from(
+    event.currentTarget
+      .closest('[role="toolbar"]')
+      ?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [],
+  );
+  const current = buttons.indexOf(event.target as HTMLButtonElement);
+  let next = event.key === 'ArrowLeft' ? current - 1 : current + 1;
+  if (event.key === 'Home') {
+    next = 0;
+  }
+  if (event.key === 'End') {
+    next = buttons.length - 1;
+  }
+  buttons[(next + buttons.length) % buttons.length]?.focus();
+};
+
+export const FormattingToolbar = () => {
+  const context = useFormattingToolbar();
+  const active = context?.active;
   const [, render] = useState(0);
+  const [focused, setFocused] = useState('Bold');
   useEffect(() => {
     const update = () => render((revision) => revision + 1);
-    active.editor.on('transaction', update);
+    active?.editor.on('transaction', update);
     return () => {
-      active.editor.off('transaction', update);
+      active?.editor.off('transaction', update);
     };
-  }, [active.editor]);
+  }, [active]);
+  const disabled = !active?.editor.isEditable || active.editor.isDestroyed;
   return (
-    <div
-      data-formatting-toolbar=""
-      className="fixed inset-x-0 top-0 z-30 border-border border-b bg-background text-ink"
-    >
-      <div className={`${pageFrameClass} flex items-center gap-3 py-2`}>
-        <span className="sr-only">Formatting {active.label}</span>
-        <fieldset
-          aria-label={`Formatting ${active.label}`}
-          className="flex min-w-0 gap-1 overflow-x-auto"
+    <div className="journal-toolbar" data-formatting-toolbar="">
+      <div className={`${pageFrameClass} journal-toolbar-inner`}>
+        <div className="journal-toolbar-context">
+          <span className="text-ink-muted text-xs">
+            {active?.label ?? 'Writing tools'}
+          </span>
+          <span className="text-ink-faint text-xs">
+            {active ? 'Alt + F10 for tools' : 'Choose a writing section'}
+          </span>
+        </div>
+        <div
+          aria-label={active ? `Formatting ${active.label}` : 'Formatting'}
+          className="journal-toolbar-actions"
+          data-toolbar-actions=""
+          role="toolbar"
         >
-          {actions.map((action) => (
-            <button
-              aria-pressed={active.editor.isActive(action.mark)}
-              className={`${focusRingClass} min-h-11 shrink-0 px-3 text-sm aria-pressed:bg-ink aria-pressed:text-background`}
-              disabled={!active.editor.isEditable}
+          {formattingActions.map((action) => (
+            <JournalIconButton
+              aria-pressed={active?.editor.isActive(action.mark) ?? false}
+              data-divider={action.mark === 'bulletList' || undefined}
+              disabled={disabled}
+              hint={action.hint}
+              icon={action.mark}
               key={action.label}
-              onClick={() => action.run(active.editor)}
+              label={action.label}
+              onClick={(event) => {
+                if (active && !disabled) {
+                  const chain = active.editor.chain();
+                  action.run(
+                    event.detail === 0
+                      ? chain
+                      : chain.focus(undefined, { scrollIntoView: false }),
+                  );
+                }
+              }}
+              onKeyDown={(event) => navigateToolbar(event, active)}
+              onFocus={() => setFocused(action.label)}
               onMouseDown={(event) => event.preventDefault()}
-              type="button"
-            >
-              {action.label}
-            </button>
+              tabIndex={focused === action.label ? 0 : -1}
+            />
           ))}
-          <button
-            className={`${focusRingClass} min-h-11 shrink-0 px-3 text-sm underline underline-offset-4`}
-            disabled={!active.editor.isEditable}
-            onClick={active.addImage}
+          <JournalIconButton
+            data-divider="true"
+            disabled={disabled}
+            hint="Or paste a photo"
+            icon="image"
+            label="Add image"
+            onClick={active?.addImage}
+            onKeyDown={(event) => navigateToolbar(event, active)}
+            onFocus={() => setFocused('Add image')}
             onMouseDown={(event) => event.preventDefault()}
-            type="button"
-          >
-            Add image
-          </button>
-        </fieldset>
+            tabIndex={focused === 'Add image' ? 0 : -1}
+          />
+        </div>
       </div>
     </div>
   );
@@ -91,13 +124,18 @@ export const FormattingToolbarProvider = ({
   readonly children: ReactNode;
 }) => {
   const [active, setActive] = useState<ActiveEditor>();
+  const container = useRef<HTMLDivElement>(null);
   const activate = useCallback((value: ActiveEditor) => setActive(value), []);
+  const focusToolbar = useCallback(() => {
+    container.current
+      ?.querySelector('[data-toolbar-actions]')
+      // biome-ignore lint/security/noSecrets: Static CSS selector for the toolbar's keyboard entry point.
+      ?.querySelector<HTMLButtonElement>('button[tabindex="0"]')
+      ?.focus();
+  }, []);
   return (
-    <FormattingContext value={activate}>
-      {children}
-      {active && !active.editor.isDestroyed ? (
-        <Toolbar active={active} />
-      ) : null}
+    <FormattingContext value={{ active, activate, focusToolbar }}>
+      <div ref={container}>{children}</div>
     </FormattingContext>
   );
 };

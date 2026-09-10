@@ -10,21 +10,35 @@ export const useImageUpload = (editor: Editor, label: string) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const request = useRef<AbortController | undefined>(undefined);
-  const form = useRef<HTMLFormElement>(null);
-  const activate = useFormattingToolbar();
-  const addImage = useCallback(() => {
-    setOpen(true);
-    requestAnimationFrame(() =>
-      form.current?.scrollIntoView({ block: 'center' }),
-    );
-  }, []);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const formatting = useFormattingToolbar();
+  const activate = formatting?.activate;
+  const focusToolbar = formatting?.focusToolbar;
+  const addImage = useCallback(() => setOpen(true), []);
+  useEffect(() => {
+    const { current } = dialog;
+    if (open) {
+      current?.showModal();
+      current?.querySelector('input')?.focus();
+    }
+    return () => current?.close();
+  }, [open]);
   useEffect(() => {
     const focused = () => activate?.({ editor, label, addImage });
     editor.on('focus', focused);
+    const shortcut = (event: KeyboardEvent) => {
+      if (event.altKey && event.key === 'F10') {
+        event.preventDefault();
+        focused();
+        focusToolbar?.();
+      }
+    };
+    editor.view.dom.addEventListener('keydown', shortcut);
     return () => {
       editor.off('focus', focused);
+      editor.view.dom.removeEventListener('keydown', shortcut);
     };
-  }, [activate, editor, label, addImage]);
+  }, [activate, editor, label, addImage, focusToolbar]);
   useEffect(() => () => request.current?.abort(), []);
 
   const insert = async (
@@ -63,7 +77,6 @@ export const useImageUpload = (editor: Editor, label: string) => {
     }
     const controller = new AbortController();
     request.current = controller;
-    setOpen(true);
     setBusy(true);
     setError('');
     // Locking input still permits selection changes; keep the insertion point for the batch.
@@ -95,5 +108,5 @@ export const useImageUpload = (editor: Editor, label: string) => {
     setError('');
     editor.commands.focus();
   };
-  return { open, busy, error, form, addImage, upload, cancel };
+  return { open, busy, error, dialog, addImage, upload, cancel };
 };

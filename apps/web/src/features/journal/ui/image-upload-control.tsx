@@ -1,7 +1,9 @@
 import type { Editor } from '@tiptap/react';
 import { type RefObject, useId } from 'react';
 
+import { focusRingClass } from '#/shared/ui/design-classes.ts';
 import { acceptedImageTypes } from '../images.ts';
+import { JournalIconButton } from './journal-icon-button.tsx';
 import { useImageUpload } from './use-image-upload.ts';
 
 type ImageUploadControlProps = {
@@ -20,7 +22,7 @@ export const ImageUploadControl = ({
   const image = useImageUpload(editor, label);
   const descriptionId = useId();
   const fileId = useId();
-  const buttonClass = `${focusClass} min-h-11 px-2 underline underline-offset-4 disabled:opacity-60`;
+  const titleId = useId();
   pasteImages.current = (files) => {
     image.upload(files, '').catch(() => undefined);
   };
@@ -30,73 +32,113 @@ export const ImageUploadControl = ({
   return (
     <div className="mt-3 text-sm">
       {image.open ? (
-        <form
-          aria-label={`Add image to ${label}`}
-          className="space-y-3"
-          ref={image.form}
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const data = new FormData(event.currentTarget);
-            const file = data.get('image');
-            if (file instanceof File) {
-              await image.upload([file], String(data.get('description') ?? ''));
+        <dialog
+          aria-labelledby={titleId}
+          className="journal-upload-dialog bg-background text-ink"
+          onCancel={(event) => {
+            if (image.busy) {
+              event.preventDefault();
             }
           }}
+          onClose={image.cancel}
+          ref={image.dialog}
         >
-          <div>
-            <label className="block" htmlFor={fileId}>
-              Image file
-            </label>
-            <input
-              accept={acceptedImageTypes}
-              className={`${focusClass} mt-1 block min-h-11 max-w-full`}
-              disabled={image.busy}
-              id={fileId}
-              name="image"
-              required={true}
-              type="file"
-            />
-            <p>JPEG, PNG, GIF, or WebP, up to 10 MiB.</p>
-          </div>
-          <div>
-            <label className="block" htmlFor={descriptionId}>
-              Image description (optional)
-            </label>
-            <input
-              className={`${focusClass} mt-1 min-h-11 w-full border-current border-b bg-transparent`}
-              disabled={image.busy}
-              id={descriptionId}
-              name="description"
-              type="text"
-            />
-          </div>
-          <div className="flex gap-3">
-            <button className={buttonClass} disabled={image.busy} type="submit">
-              {image.busy ? 'Uploading image…' : 'Insert image'}
-            </button>
-            <button
-              className={buttonClass}
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl" id={titleId}>
+                Add image
+              </h2>
+              <p className="mt-1 text-ink-muted text-sm">
+                At your cursor in {label.toLowerCase()}.
+              </p>
+            </div>
+            <JournalIconButton
+              icon="close"
+              label="Cancel image upload"
+              hint="Esc"
               disabled={image.busy}
               onClick={image.cancel}
-              type="button"
-            >
-              Cancel
-            </button>
+            />
           </div>
-          <p aria-live="polite" role="status">
-            {status}
-          </p>
-        </form>
+          <form
+            aria-label={`Add image to ${label}`}
+            className="space-y-5"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const data = new FormData(event.currentTarget);
+              const file = data.get('image');
+              if (file instanceof File) {
+                await image.upload(
+                  [file],
+                  String(data.get('description') ?? ''),
+                );
+              }
+            }}
+          >
+            <div>
+              <label className="block" htmlFor={fileId}>
+                Image file
+              </label>
+              <input
+                accept={acceptedImageTypes}
+                className={`${focusRingClass} my-2 block min-h-11 w-full max-w-full rounded border border-border p-2`}
+                disabled={image.busy}
+                id={fileId}
+                name="image"
+                required={true}
+                type="file"
+              />
+              <p className="text-ink-muted text-xs">
+                JPEG, PNG, GIF, or WebP, up to 10 MiB.
+              </p>
+            </div>
+            <div>
+              <label className="block" htmlFor={descriptionId}>
+                Image description (optional)
+              </label>
+              <input
+                className={`${focusRingClass} mt-2 min-h-11 w-full rounded border border-border bg-transparent px-3`}
+                disabled={image.busy}
+                id={descriptionId}
+                name="description"
+                type="text"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                className={`${focusRingClass} min-h-11 rounded bg-primary px-4 font-medium text-on-primary disabled:opacity-60`}
+                disabled={image.busy}
+                type="submit"
+              >
+                {image.busy ? 'Uploading image…' : 'Insert image'}
+              </button>
+              <button
+                className={`${focusRingClass} min-h-11 px-3`}
+                disabled={image.busy}
+                onClick={image.cancel}
+                type="button"
+              >
+                Cancel
+              </button>
+            </div>
+            <p aria-live="polite" role="status">
+              {status}
+            </p>
+          </form>
+        </dialog>
       ) : (
-        <button
-          aria-label={`Add image to ${label}`}
-          className={buttonClass}
+        <JournalIconButton
+          className={focusClass}
+          icon="image"
+          label={`Add image to ${label}`}
           onClick={image.addImage}
-          type="button"
-        >
-          Add image
-        </button>
+        />
       )}
+      {!image.open && status ? (
+        <p className="mt-2" aria-live="polite" role="status">
+          {status}
+        </p>
+      ) : null}
     </div>
   );
 };
