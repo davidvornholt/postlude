@@ -68,7 +68,8 @@ const archive = await renderInRouter(
  * which is the whole reason the shell sets none — a ground that has to reach
  * the viewport edges cannot do it from inside a frame.
  */
-const writingPageFrames = 3;
+// Date navigation, persistent writing toolbar, scripture, and evening share the frame.
+const writingPageFrames = 4;
 
 it('wraps the writing page in the shared frame', () => {
   expect(countRecipe(today, pageFrameClass)).toBe(writingPageFrames);
