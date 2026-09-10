@@ -31,6 +31,12 @@ export const ImageUploadControl = ({
     : image.error;
   return (
     <div className="mt-3 text-sm">
+      <JournalIconButton
+        className={focusClass}
+        icon="image"
+        label={`Add image to ${label}`}
+        onClick={image.addImage}
+      />
       {image.open ? (
         <dialog
           aria-labelledby={titleId}
@@ -126,14 +132,7 @@ export const ImageUploadControl = ({
             </p>
           </form>
         </dialog>
-      ) : (
-        <JournalIconButton
-          className={focusClass}
-          icon="image"
-          label={`Add image to ${label}`}
-          onClick={image.addImage}
-        />
-      )}
+      ) : null}
       {!image.open && status ? (
         <p className="mt-2" aria-live="polite" role="status">
           {status}

@@ -23,6 +23,21 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
     toolbar.getByRole('button', { name: 'Bold', exact: true }),
   ).toBeDisabled();
   await scan(page);
+  const geometry = () =>
+    evening.evaluate((element) => ({
+      top: element.getBoundingClientRect().top + window.scrollY,
+      height: document.documentElement.scrollHeight,
+      scrollY: window.scrollY,
+    }));
+  await page.getByRole('textbox', { name: 'Morning scripture notes' }).focus();
+  const morningGeometry = await geometry();
+  await toolbar.getByRole('button', { name: 'Add image', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Add image', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect.poll(geometry).toEqual(morningGeometry);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect.poll(geometry).toEqual(morningGeometry);
   const originalTop = await evening.evaluate(
     (element) => element.getBoundingClientRect().top + window.scrollY,
   );
@@ -73,12 +88,18 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
     await toolbar.evaluate((element) => element.clientWidth),
   );
   await page.keyboard.press('ArrowRight');
+  await page.evaluate(() =>
+    window.scrollTo(0, document.documentElement.scrollHeight),
+  );
+  const bottomGeometry = await geometry();
+  expect(bottomGeometry.scrollY).toBeGreaterThan(0);
   await addImage.click();
-  const dialog = page.getByRole('dialog', { name: 'Add image', exact: true });
   await expect(dialog.getByLabel('Image file')).toBeFocused();
+  await expect.poll(geometry).toEqual(bottomGeometry);
   await scan(page);
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await expect(evening).toBeFocused();
   await expect(evening).toHaveText('Keep these words.');
+  await expect.poll(geometry).toEqual(bottomGeometry);
 });
