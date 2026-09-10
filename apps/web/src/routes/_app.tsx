@@ -14,7 +14,6 @@ import {
   useRef,
   useState,
 } from 'react';
-
 import {
   discardPreparedArchiveNavigation,
   preloadArchiveNavigation,
@@ -26,10 +25,10 @@ import { ArchiveNavigationFailure } from '#/features/journal/ui/archive-navigati
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
+import { Button } from '#/shared/ui/action.tsx';
 import { BrandLink } from '#/shared/ui/brand-link.tsx';
-import { pageFrameClass } from '#/shared/ui/design-classes.ts';
-import { quietButtonClass } from '#/shared/ui/form-classes.ts';
 import { MainNavigation } from '#/shared/ui/main-navigation.tsx';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 
 // `focus`, not `focus-visible`: the link is only reachable by keyboard, so it
@@ -128,12 +127,7 @@ const AppShell = () => {
         Skip to content
       </a>
       <header className="border-border border-b">
-        <div
-          className={[
-            pageFrameClass,
-            'flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 py-5',
-          ].join(' ')}
-        >
+        <PageFrame className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 py-5">
           <p className="font-display text-ink text-xl">
             <BrandLink>Postlude</BrandLink>
           </p>
@@ -142,15 +136,15 @@ const AppShell = () => {
             onOpenArchive={openArchive}
             onPrepareArchive={preloadArchiveNavigation}
           />
-        </div>
+        </PageFrame>
       </header>
       {blockedArchiveDay === undefined ? null : (
-        <div className={[pageFrameClass, 'pt-6'].join(' ')}>
+        <PageFrame className="pt-6">
           <ArchiveNavigationFailure
             date={blockedArchiveDay}
             onOpen={() => setBlockedArchiveDay(undefined)}
           />
-        </div>
+        </PageFrame>
       )}
       {/* No frame here, even though every page sets the same one. The morning
           scripture's deep register has to run edge to edge, and it cannot
@@ -178,18 +172,18 @@ const AppShell = () => {
         rather than to whatever is being read above it.
       */}
       <footer className="border-border border-t">
-        <div className={[pageFrameClass, 'py-6'].join(' ')}>
-          <button
+        <PageFrame className="py-6">
+          <Button
             // Staying enabled keeps focus on the button while the request is
             // in flight; disabling it here would drop focus to <body> and
             // announce the new label to nobody.
             aria-busy={signOutMutation.isPending}
-            className={quietButtonClass}
+            variant="quiet"
             onClick={startSignOut}
             type="button"
           >
             {signOutMutation.isPending ? 'Signing out …' : 'Sign out'}
-          </button>
+          </Button>
           {signOutMutation.isError ? (
             <p
               className="mt-4 border border-critical bg-critical-subtle px-3 py-2 text-ink text-sm"
@@ -199,7 +193,7 @@ const AppShell = () => {
               and try again.
             </p>
           ) : null}
-        </div>
+        </PageFrame>
       </footer>
     </div>
   );

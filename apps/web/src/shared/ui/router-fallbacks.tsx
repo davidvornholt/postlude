@@ -13,14 +13,10 @@
  */
 
 import { createContext, type ReactNode, useContext, useEffect } from 'react';
-
-import {
-  pageFrameClass,
-  readingMeasureClass,
-} from '#/shared/ui/design-classes.ts';
-import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
+import { UnmarkedActionLink } from '#/shared/ui/action-link.tsx';
+import { readingMeasureClass } from '#/shared/ui/design-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { pageTitle } from '#/shared/ui/page-title.ts';
-import { UnmarkedLink } from '#/shared/ui/unmarked-link.tsx';
 
 const MainLandmarkContext = createContext(false);
 
@@ -63,13 +59,13 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
           — a bad search param on the home page, or an error inside it — so it
           goes through the link that never marks itself as the current page. */}
       <p className="mt-10">
-        <UnmarkedLink
+        <UnmarkedActionLink
           activeProps={{ className: '' }}
-          className={primaryButtonClass}
+          variant="primary"
           to="/"
         >
           Back to Postlude
-        </UnmarkedLink>
+        </UnmarkedActionLink>
       </p>
     </section>
   );
@@ -85,9 +81,9 @@ const FallbackBody = ({ heading, message }: FallbackContent) => {
  */
 const FallbackPage = ({ heading, message }: FallbackContent) => {
   const frame = (
-    <div className={pageFrameClass}>
+    <PageFrame>
       <FallbackBody heading={heading} message={message} />
-    </div>
+    </PageFrame>
   );
 
   return useContext(MainLandmarkContext) ? (

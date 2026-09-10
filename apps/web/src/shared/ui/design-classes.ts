@@ -1,6 +1,6 @@
 /**
- * The shape vocabulary every page shares: the page frame, the reading measure
- * inside it, the letterspaced eyebrow, and the focus ring. This file owns the
+ * Small typography and focus utilities shared across unrelated elements.
+ * Repeated controls and layout belong to components, including PageFrame. This file owns the
  * classes that build them so one page cannot drift by retyping them.
  *
  * These carry shape, and callers add the colour a state needs. The one colour
@@ -30,15 +30,6 @@ export const focusRingClass =
  */
 export const deepFocusRingClass =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-deep-ink';
-
-/**
- * The page frame: one width for every page and for the masthead above them, so
- * the brand, the navigation, and whatever a page opens with all start on the
- * same vertical line. It is set at the width the archive needs for a year of
- * days, because a frame that changed between pages would move the masthead
- * under the reader as they walked from one to the next.
- */
-export const pageFrameClass = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 
 /**
  * The measure text is read and written at: roughly 65 characters, which is a

@@ -28,7 +28,8 @@ import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import { countRecipe } from '#/shared/testing/rendered-html.ts';
-import { pageFrameClass } from '#/shared/ui/design-classes.ts';
+
+const expectedPageFrame = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
 
 const emptyDay: JournalEntry = {
   date: '2026-08-26',
@@ -72,7 +73,7 @@ const archive = await renderInRouter(
 const writingPageFrames = 4;
 
 it('wraps the writing page in the shared frame', () => {
-  expect(countRecipe(today, pageFrameClass)).toBe(writingPageFrames);
+  expect(countRecipe(today, expectedPageFrame)).toBe(writingPageFrames);
 });
 
 /*
@@ -92,5 +93,5 @@ it('renders the deep register on its own ground', () => {
  * the other. That is the complaint this frame was made one to answer.
  */
 it('wraps the archive in the frame the writing page uses', () => {
-  expect(countRecipe(archive, pageFrameClass)).toBe(1);
+  expect(countRecipe(archive, expectedPageFrame)).toBe(1);
 });

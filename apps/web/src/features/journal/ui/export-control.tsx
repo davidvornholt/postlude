@@ -10,13 +10,13 @@
 
 import type { RefObject, SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
+import { Button } from '#/shared/ui/action.tsx';
 
 import {
   eyebrowClass,
   focusRingClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { primaryButtonClass } from '#/shared/ui/form-classes.ts';
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 import { type ExportGrouping, exportGroupings } from '../export-period.ts';
 
@@ -132,15 +132,16 @@ export const ExportControl = ({
           ))}
         </div>
       </fieldset>
-      <button
+      <Button
         aria-busy={settling}
         aria-describedby={state === 'failed' ? failureId : undefined}
         aria-disabled={settling || submitted}
-        className={[primaryButtonClass, 'mt-6'].join(' ')}
+        variant="primary"
+        className="mt-6"
         type="submit"
       >
         {exportLabel[state]}
-      </button>
+      </Button>
       {state === 'failed' ? (
         <p
           className={[

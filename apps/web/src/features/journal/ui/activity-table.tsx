@@ -93,6 +93,7 @@ export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
               <tr className="border-border border-t" key={cell.date}>
                 <td className="px-3 py-2 text-ink">
                   <DayLink
+                    variant="text"
                     className={dayLinkClass}
                     date={cell.date}
                     today={today}

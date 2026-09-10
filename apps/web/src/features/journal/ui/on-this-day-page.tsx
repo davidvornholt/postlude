@@ -1,11 +1,9 @@
-import { Link } from '@tanstack/react-router';
-
+import { ActionLink } from '#/shared/ui/action-link.tsx';
 import {
   eyebrowClass,
-  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { iconButtonClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { onThisDayBounds } from '../anniversary.ts';
 import { journalDateLabel } from '../day-label.ts';
 import { shiftJournalDate } from '../journal-day.ts';
@@ -22,7 +20,7 @@ export const OnThisDayPage = ({
   const next = date < bounds.last ? shiftJournalDate(date, 1) : undefined;
 
   return (
-    <div className={pageFrameClass}>
+    <PageFrame>
       <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>On this day</p>
       <header>
         <h1 className="mt-3 text-balance font-display text-4xl text-ink sm:text-5xl">
@@ -33,33 +31,34 @@ export const OnThisDayPage = ({
           className="mt-6 -ml-3 flex flex-wrap items-center gap-x-1 gap-y-3"
         >
           {previous === undefined ? null : (
-            <Link
+            <ActionLink
               aria-label="Previous date"
-              className={iconButtonClass}
+              variant="icon"
               search={{ date: previous }}
               to="/on-this-day"
             >
               ←
-            </Link>
+            </ActionLink>
           )}
           {next === undefined ? null : (
-            <Link
+            <ActionLink
               aria-label="Next date"
-              className={iconButtonClass}
+              variant="icon"
               search={next === today ? {} : { date: next }}
               to="/on-this-day"
             >
               →
-            </Link>
+            </ActionLink>
           )}
           {date === today ? null : (
-            <Link
-              className={[quietButtonClass, 'ml-2'].join(' ')}
+            <ActionLink
+              variant="quiet"
+              className="ml-2"
               search={{}}
               to="/on-this-day"
             >
               Today
-            </Link>
+            </ActionLink>
           )}
         </nav>
       </header>
@@ -84,6 +83,6 @@ export const OnThisDayPage = ({
           <OnThisDay anniversaries={anniversaries} today={today} />
         </div>
       )}
-    </div>
+    </PageFrame>
   );
 };

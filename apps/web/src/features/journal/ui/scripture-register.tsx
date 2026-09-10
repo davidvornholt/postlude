@@ -14,14 +14,13 @@
  */
 
 import { useId } from 'react';
-
 import {
   deepFocusRingClass,
   eyebrowClass,
-  pageFrameClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { deepFieldClass } from '#/shared/ui/form-classes.ts';
+import { PageFrame } from '#/shared/ui/page-frame.tsx';
+import { TextField } from '#/shared/ui/text-field.tsx';
 import {
   formatScriptureReference,
   parseScriptureReference,
@@ -57,7 +56,7 @@ export const ScriptureRegister = ({
       aria-labelledby={headingId}
       className="bg-deep-ground py-10 text-deep-ink sm:py-12"
     >
-      <div className={pageFrameClass}>
+      <PageFrame>
         <h2
           className={[eyebrowClass, 'text-deep-ink-muted'].join(' ')}
           id={headingId}
@@ -71,15 +70,14 @@ export const ScriptureRegister = ({
         >
           Passage
         </label>
-        <input
+        <TextField
           aria-describedby={referenceError === undefined ? undefined : errorId}
           aria-invalid={referenceError === undefined ? undefined : true}
           autoComplete="off"
-          className={[
-            deepFieldClass,
-            readingMeasureClass,
-            'mt-2 font-display text-2xl',
-          ].join(' ')}
+          tone="deep"
+          className={[readingMeasureClass, 'mt-2 font-display text-2xl'].join(
+            ' ',
+          )}
           id={fieldId}
           // Leaving the field is a save, the same as leaving either editor.
           onBlur={onLeave}
@@ -130,7 +128,7 @@ export const ScriptureRegister = ({
             proseClass="journal-prose journal-prose-deep"
           />
         </div>
-      </div>
+      </PageFrame>
     </section>
   );
 };

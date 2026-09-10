@@ -23,9 +23,9 @@
 
 import { useNavigate } from '@tanstack/react-router';
 import { type FocusEvent, type SubmitEvent, useId, useState } from 'react';
-
+import { Button } from '#/shared/ui/action.tsx';
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
-import { fieldClass, quietButtonClass } from '#/shared/ui/form-classes.ts';
+import { TextField } from '#/shared/ui/text-field.tsx';
 import { journalDateLabel } from '../day-label.ts';
 import {
   isJournalDate,
@@ -134,9 +134,9 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
           >
             Go to a day
           </label>
-          <input
+          <TextField
             aria-label={`${label}. Go to another day.`}
-            className={[fieldClass, 'mt-2'].join(' ')}
+            className="mt-2"
             defaultValue={date}
             id={fieldId}
             // Re-keying on the day lets the field follow a navigation rather
@@ -151,14 +151,15 @@ export const DayHeading = ({ date, today }: DayHeadingProps) => {
             type="date"
           />
         </div>
-        <button
-          className={[quietButtonClass, 'pb-2'].join(' ')}
+        <Button
+          variant="quiet"
+          className="pb-2"
           onBlur={leaveControls}
           onFocus={() => setActive(true)}
           type="submit"
         >
           Open
-        </button>
+        </Button>
       </div>
     </form>
   );

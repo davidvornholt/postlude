@@ -1,11 +1,5 @@
-import { Link } from '@tanstack/react-router';
 import type { MouseEvent } from 'react';
-
-import {
-  navLinkActiveClass,
-  navLinkClass,
-  navLinkInactiveClass,
-} from './form-classes.ts';
+import { NavigationLink } from '#/shared/ui/navigation-link.tsx';
 
 const navItems = [
   { to: '/', label: 'Today' },
@@ -36,12 +30,9 @@ const NavigationItem = ({
   const archive = item.to === '/archive';
   return (
     <li className={archive ? 'relative' : undefined}>
-      <Link
+      <NavigationLink
         activeOptions={{ exact: item.to === '/' }}
-        activeProps={{ className: navLinkActiveClass }}
         aria-busy={archive && archivePending ? true : undefined}
-        className={navLinkClass}
-        inactiveProps={{ className: navLinkInactiveClass }}
         onClick={archive ? onOpenArchive : undefined}
         onFocus={archive ? onPrepareArchive : undefined}
         onPointerEnter={archive ? onPrepareArchive : undefined}
@@ -49,7 +40,7 @@ const NavigationItem = ({
         to={item.to}
       >
         {item.label}
-      </Link>
+      </NavigationLink>
       {archive ? (
         <span
           aria-hidden="true"

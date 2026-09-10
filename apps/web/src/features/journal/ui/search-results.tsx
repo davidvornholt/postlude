@@ -82,6 +82,7 @@ export const SearchResults = ({ hits, today }: SearchResultsProps) => (
   <div>
     {hits.map((hit) => (
       <DayLink
+        variant="text"
         className={linkClass}
         date={hit.date}
         key={hit.date}

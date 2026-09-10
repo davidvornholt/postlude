@@ -1,6 +1,11 @@
 import { expect, it } from 'bun:test';
 
 import { runSessionRequired } from '#/shared/auth/session-required.ts';
+import {
+  attributeValue,
+  elementAttributes,
+  openingTag,
+} from '#/shared/testing/rendered-html.ts';
 
 import {
   exportDownloadResponse,
@@ -67,7 +72,14 @@ it('turns a failure before the first chunk into a safe retryable response', asyn
   expect(document).toContain('href="/archive"');
   expect(document).toContain('<title>Export unavailable | Postlude</title>');
   expect(document).toContain('<main class=');
-  expect(document).toContain('id="recovery-heading">Export unavailable</h1>');
+  const headingId = attributeValue(
+    elementAttributes(document, 'h1', 'Export unavailable'),
+    'id',
+  );
+  expect(headingId).not.toBe('');
+  expect(
+    attributeValue(openingTag(document, 'section'), 'aria-labelledby'),
+  ).toBe(headingId);
   for (const href of styleSheetHrefs) {
     expect(document).toContain(`href="${href}"`);
   }

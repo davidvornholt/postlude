@@ -4,9 +4,8 @@ import {
   requestHandler,
 } from '@tanstack/react-start/server';
 
-import { exportDownloadResponse } from '../src/features/journal/services/download-response.ts';
-import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
-import { runSessionRequired } from '../src/shared/auth/session-required.ts';
+import viteReact from '@vitejs/plugin-react';
+import { createServer } from 'vite';
 
 const exportFileName = 'postlude-2026-08-26-daily.zip';
 const styleSheetAssets = [
@@ -48,30 +47,53 @@ export const answerWithUnavailableExport = async (
   route: playwright.Route,
   styleSheetHrefs: readonly [string, ...Array<string>],
 ): Promise<void> => {
-  const body = new ReadableStream<Uint8Array>({
-    start: (controller) => controller.error(new Error(privateFailureDetail)),
+  // Playwright serializes imported JSX for browser mounting. Compile this real
+  // server response with Vite, as the other SSR fixtures do, so React receives elements.
+  const server = await createServer({
+    appType: 'custom',
+    configFile: false,
+    logLevel: 'silent',
+    plugins: [viteReact()],
+    resolve: { tsconfigPaths: true },
+    server: { middlewareMode: true },
   });
-  const recovery = await exportDownloadResponse({
-    body,
-    fileName: () => exportFileName,
-    signal: new AbortController().signal,
-    styleSheetHrefs,
-  });
-  const request = new Request(route.request().url(), { method: 'POST' });
-  const handler = requestHandler(() =>
-    runSessionRequired({
-      request,
-      authorize: () => Promise.resolve(true),
-      next: () => Promise.resolve(recovery),
-      publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
-    }),
-  );
-  const result = await handler(request, {});
-  await route.fulfill({
-    body: await result.text(),
-    headers: Object.fromEntries(result.headers),
-    status: result.status,
-  });
+  try {
+    const { exportDownloadResponse } = (await server.ssrLoadModule(
+      '/src/features/journal/services/download-response.ts',
+    )) as typeof import('../src/features/journal/services/download-response.ts');
+    const { applyPrivateResponseHeaders } = (await server.ssrLoadModule(
+      '/src/shared/auth/private-response.ts',
+    )) as typeof import('../src/shared/auth/private-response.ts');
+    const { runSessionRequired } = (await server.ssrLoadModule(
+      '/src/shared/auth/session-required.ts',
+    )) as typeof import('../src/shared/auth/session-required.ts');
+    const body = new ReadableStream<Uint8Array>({
+      start: (controller) => controller.error(new Error(privateFailureDetail)),
+    });
+    const recovery = await exportDownloadResponse({
+      body,
+      fileName: () => exportFileName,
+      signal: new AbortController().signal,
+      styleSheetHrefs,
+    });
+    const request = new Request(route.request().url(), { method: 'POST' });
+    const handler = requestHandler(() =>
+      runSessionRequired({
+        request,
+        authorize: () => Promise.resolve(true),
+        next: () => Promise.resolve(recovery),
+        publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
+      }),
+    );
+    const result = await handler(request, {});
+    await route.fulfill({
+      body: await result.text(),
+      headers: Object.fromEntries(result.headers),
+      status: result.status,
+    });
+  } finally {
+    await server.close();
+  }
 };
 
 type RecoveryFonts = {

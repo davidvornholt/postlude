@@ -1,21 +1,20 @@
 import type { Editor } from '@tiptap/react';
 import { type RefObject, useId } from 'react';
-
+import { Button } from '#/shared/ui/action.tsx';
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
+import { TextField } from '#/shared/ui/text-field.tsx';
 import { acceptedImageTypes } from '../images.ts';
 import { JournalIconButton } from './journal-icon-button.tsx';
 import { useImageUpload } from './use-image-upload.ts';
 
 type ImageUploadControlProps = {
   readonly editor: Editor;
-  readonly focusClass: string;
   readonly label: string;
   readonly pasteImages: RefObject<(files: ReadonlyArray<File>) => void>;
 };
 
 export const ImageUploadControl = ({
   editor,
-  focusClass,
   label,
   pasteImages,
 }: ImageUploadControlProps) => {
@@ -30,23 +29,17 @@ export const ImageUploadControl = ({
     ? 'Keep this page open while the image uploads.'
     : image.error;
   return (
-    <div className="mt-3 text-sm">
-      <JournalIconButton
-        className={focusClass}
-        icon="image"
-        label={`Add image to ${label}`}
-        onClick={image.addImage}
-      />
+    <>
       {image.open ? (
         <dialog
           aria-labelledby={titleId}
-          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg border border-border bg-background p-6 text-ink backdrop:bg-ink/50"
+          className="m-auto max-h-[calc(100dvh_-_2rem)] w-[calc(100%_-_2rem)] max-w-lg border border-border bg-background p-6 text-ink text-sm backdrop:bg-ink/50"
           onCancel={(event) => {
-            if (image.busy) {
-              event.preventDefault();
+            event.preventDefault();
+            if (!image.busy) {
+              image.cancel();
             }
           }}
-          onClose={image.cancel}
           ref={image.dialog}
         >
           <div className="mb-6 flex items-start justify-between gap-4">
@@ -103,8 +96,9 @@ export const ImageUploadControl = ({
               <label className="block" htmlFor={descriptionId}>
                 Image description (optional)
               </label>
-              <input
-                className={`${focusRingClass} mt-2 min-h-11 w-full border border-border bg-transparent px-3`}
+              <TextField
+                appearance="outlined"
+                className="mt-2"
                 disabled={image.busy}
                 id={descriptionId}
                 name="description"
@@ -112,21 +106,17 @@ export const ImageUploadControl = ({
               />
             </div>
             <div className="flex items-center gap-3">
-              <button
-                className={`${focusRingClass} min-h-11 bg-primary px-4 font-medium text-on-primary disabled:opacity-60`}
-                disabled={image.busy}
-                type="submit"
-              >
+              <Button size="dialog" disabled={image.busy} type="submit">
                 {image.busy ? 'Uploading image…' : 'Insert image'}
-              </button>
-              <button
-                className={`${focusRingClass} min-h-11 px-3`}
+              </Button>
+              <Button
+                variant="plain"
                 disabled={image.busy}
                 onClick={image.cancel}
                 type="button"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
             <p aria-live="polite" role="status">
               {status}
@@ -135,10 +125,10 @@ export const ImageUploadControl = ({
         </dialog>
       ) : null}
       {!image.open && status ? (
-        <p className="mt-2" aria-live="polite" role="status">
+        <p className="mt-3 text-sm" aria-live="polite" role="status">
           {status}
         </p>
       ) : null}
-    </div>
+    </>
   );
 };

@@ -3,6 +3,7 @@ import { expect, test } from '@playwright/test';
 import { mountDayPage, scan } from './day-page-test-support.ts';
 
 const narrowWidth = 320;
+const addImageName = /^Add image/u;
 
 const nonSquareControls = (elements: Array<Element>) =>
   elements
@@ -32,6 +33,7 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await mountDayPage(page, ['stored']);
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
   const toolbar = page.getByRole('toolbar');
+  await expect(page.getByRole('button', { name: addImageName })).toHaveCount(1);
   await expect(
     toolbar.getByRole('button', { name: 'Bold', exact: true }),
   ).toBeDisabled();
@@ -47,21 +49,17 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await toolbar.getByRole('button', { name: 'Add image', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Add image', exact: true });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('form')).toHaveAttribute(
+    'aria-label',
+    'Add image to Morning scripture notes',
+  );
   await expect.poll(geometry).toEqual(morningGeometry);
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await expect.poll(geometry).toEqual(morningGeometry);
-  const originalTop = await evening.evaluate(
-    (element) => element.getBoundingClientRect().top + window.scrollY,
-  );
+  const originalTop = (await geometry()).top;
   await evening.fill('Keep these words.');
-  await expect
-    .poll(() =>
-      evening.evaluate(
-        (element) => element.getBoundingClientRect().top + window.scrollY,
-      ),
-    )
-    .toBe(originalTop);
+  await expect.poll(async () => (await geometry()).top).toBe(originalTop);
   await page.keyboard.press('ControlOrMeta+a');
   await page.keyboard.press('Alt+F10');
   const bold = toolbar.getByRole('button', { name: 'Bold', exact: true });
@@ -108,6 +106,10 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   expect(bottomGeometry.scrollY).toBeGreaterThan(0);
   await addImage.click();
   await expect(dialog.getByLabel('Image file')).toBeFocused();
+  await expect(dialog.getByRole('form')).toHaveAttribute(
+    'aria-label',
+    'Add image to Evening journal',
+  );
   await expect.poll(geometry).toEqual(bottomGeometry);
   await scan(page);
   expect(
