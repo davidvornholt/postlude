@@ -133,10 +133,10 @@ export const FormattingToolbarProvider = ({
   readonly children: ReactNode;
 }) => {
   const [active, setActive] = useState<ActiveEditor>();
-  const container = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const activate = useCallback((value: ActiveEditor) => setActive(value), []);
   const focusToolbar = useCallback(() => {
-    container.current
+    containerRef.current
       ?.querySelector('[data-toolbar-actions]')
       // biome-ignore lint/security/noSecrets: Static CSS selector for the toolbar's keyboard entry point.
       ?.querySelector<HTMLButtonElement>('button[tabindex="0"]')
@@ -144,7 +144,7 @@ export const FormattingToolbarProvider = ({
   }, []);
   return (
     <FormattingContext value={{ active, activate, focusToolbar }}>
-      <div ref={container}>{children}</div>
+      <div ref={containerRef}>{children}</div>
     </FormattingContext>
   );
 };

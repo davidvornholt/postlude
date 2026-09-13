@@ -58,8 +58,8 @@ export const CopyDayControl = ({
     readonly state: CopyState;
   }>({ day, state: 'idle' });
   const [copying, setCopying] = useState(false);
-  const nextRequestId = useRef(0);
-  const activeRequest = useRef<number | null>(null);
+  const nextRequestIdRef = useRef(0);
+  const activeRequestRef = useRef<number | null>(null);
   let state: CopyState = 'idle';
   if (copying) {
     state = 'copying';
@@ -73,21 +73,21 @@ export const CopyDayControl = ({
   }
 
   const copy = () => {
-    if (activeRequest.current !== null) {
+    if (activeRequestRef.current !== null) {
       return;
     }
 
-    const requestId = nextRequestId.current + 1;
-    nextRequestId.current = requestId;
-    activeRequest.current = requestId;
+    const requestId = nextRequestIdRef.current + 1;
+    nextRequestIdRef.current = requestId;
+    activeRequestRef.current = requestId;
     setCopying(true);
     setResult({ day, state: 'copying' });
 
     const settle = (nextState: 'failed' | 'succeeded') => {
-      if (activeRequest.current !== requestId) {
+      if (activeRequestRef.current !== requestId) {
         return;
       }
-      activeRequest.current = null;
+      activeRequestRef.current = null;
       setCopying(false);
       setResult({ day, state: nextState });
     };

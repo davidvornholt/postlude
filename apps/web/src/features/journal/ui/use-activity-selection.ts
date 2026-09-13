@@ -28,11 +28,11 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
   const [activeDate, setActiveDate] = useState<JournalDate | undefined>(
     days.at(-1)?.date,
   );
-  const elements = useRef(new Map<JournalDate, HTMLDivElement>());
+  const elementsRef = useRef(new Map<JournalDate, HTMLDivElement>());
   const activeDay = days.find((day) => day.date === activeDate) ?? days.at(-1);
   const activeIndex = days.findIndex((day) => day.date === activeDay?.date);
   const scrollCellIntoView = (date: JournalDate): void => {
-    elements.current.get(date)?.scrollIntoView({
+    elementsRef.current.get(date)?.scrollIntoView({
       block: 'nearest',
       inline: 'nearest',
     });
@@ -66,9 +66,9 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
     (date: JournalDate): RefCallback<HTMLDivElement> =>
     (element) => {
       if (element === null) {
-        elements.current.delete(date);
+        elementsRef.current.delete(date);
       } else {
-        elements.current.set(date, element);
+        elementsRef.current.set(date, element);
       }
     };
 

@@ -1,3 +1,4 @@
+// biome-ignore lint/nursery/noBunModules: This module runs under Bun and uses its runtime or test API.
 import { spawnSync } from 'bun';
 
 const bunGlobal: unknown = Reflect.get(globalThis, 'Bun');
