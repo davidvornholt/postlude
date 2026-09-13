@@ -57,17 +57,17 @@ const AppShell = () => {
   const locationPath = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const previousLocationPath = useRef<string>(locationPath);
-  const main = useRef<HTMLElement>(null);
-  const archiveNavigationStarted: RefObject<boolean> = useRef(false);
+  const previousLocationPathRef = useRef<string>(locationPath);
+  const mainRef = useRef<HTMLElement>(null);
+  const archiveNavigationStartedRef: RefObject<boolean> = useRef(false);
   // Client navigation removes the link that held focus. Move focus to the
   // landmark containing the new route, but leave an initial page load alone.
   useEffect(() => {
-    if (previousLocationPath.current === locationPath) {
+    if (previousLocationPathRef.current === locationPath) {
       return;
     }
-    previousLocationPath.current = locationPath;
-    const target = main.current;
+    previousLocationPathRef.current = locationPath;
+    const target = mainRef.current;
     if (target !== null) {
       focusMainAfterNavigation(target);
     }
@@ -75,19 +75,19 @@ const AppShell = () => {
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
   // fire the request twice. Flipping a ref before the call closes that window.
-  const signOutStarted: RefObject<boolean> = useRef(false);
+  const signOutStartedRef: RefObject<boolean> = useRef(false);
   const signOutMutation = useMutation({
     mutationFn: () => authClient.signOut().then(rejectAuthError),
     onSuccess: () => router.navigate({ to: '/login' }),
     onSettled: () => {
-      signOutStarted.current = false;
+      signOutStartedRef.current = false;
     },
   });
   const startSignOut = () => {
-    if (signOutStarted.current) {
+    if (signOutStartedRef.current) {
       return;
     }
-    signOutStarted.current = true;
+    signOutStartedRef.current = true;
     signOutMutation.mutate();
   };
   const openArchive = async (
@@ -103,10 +103,10 @@ const AppShell = () => {
       return;
     }
     event.preventDefault();
-    if (archiveNavigationStarted.current) {
+    if (archiveNavigationStartedRef.current) {
       return;
     }
-    archiveNavigationStarted.current = true;
+    archiveNavigationStartedRef.current = true;
     setArchiveNavigationPending(true);
     try {
       const result = await navigateAfterAutosavesSettle(
@@ -116,7 +116,7 @@ const AppShell = () => {
       setBlockedArchiveDay(result._tag === 'blocked' ? result.date : undefined);
     } finally {
       discardPreparedArchiveNavigation();
-      archiveNavigationStarted.current = false;
+      archiveNavigationStartedRef.current = false;
       setArchiveNavigationPending(false);
     }
   };
@@ -153,7 +153,7 @@ const AppShell = () => {
       <main
         className="flex-1 py-10 sm:py-14"
         id={mainId}
-        ref={main}
+        ref={mainRef}
         tabIndex={-1}
       >
         {/* A route that fails renders its fallback here, in place of the page

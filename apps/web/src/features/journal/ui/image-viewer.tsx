@@ -7,28 +7,28 @@ type ImageViewerProps = { readonly src: string; readonly alt: string };
 
 /** Native dialog supplies focus containment, Escape, and focus restoration. */
 export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
-  const dialog = useRef<HTMLDialogElement>(null);
-  const title = useId();
-  const trigger = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
     <>
       <button
         aria-label={`Enlarge image${alt ? `: ${alt}` : ''}`}
         className={`${focusRingClass} block min-h-11 min-w-11 max-w-full cursor-zoom-in`}
-        onClick={() => dialog.current?.showModal()}
-        ref={trigger}
+        onClick={() => dialogRef.current?.showModal()}
+        ref={triggerRef}
         type="button"
       >
         <img alt={alt} loading="lazy" src={src} />
       </button>
       <dialog
-        aria-labelledby={title}
+        aria-labelledby={titleId}
         className="journal-image-dialog m-auto max-h-[94dvh] w-[min(96vw,90rem)] border border-border bg-background p-4 text-ink backdrop:bg-ink/70"
-        ref={dialog}
-        onClose={() => trigger.current?.focus()}
+        ref={dialogRef}
+        onClose={() => triggerRef.current?.focus()}
       >
         <div className="flex items-center justify-between gap-6 pb-3">
-          <p className="text-sm" id={title}>
+          <p className="text-sm" id={titleId}>
             {alt || 'Image'}
           </p>
           <JournalIconButton
@@ -36,7 +36,7 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
             label="Close image"
             hintAlign="end"
             hint="Esc"
-            onClick={() => dialog.current?.close()}
+            onClick={() => dialogRef.current?.close()}
           />
         </div>
         <img

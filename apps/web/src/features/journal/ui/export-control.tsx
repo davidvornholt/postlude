@@ -57,8 +57,8 @@ export const ExportControl = ({
   const [grouping, setGrouping] = useState<ExportGrouping>('day');
   const [submittedGrouping, setSubmittedGrouping] = useState<ExportGrouping>();
   const [state, setState] = useState<ExportState>('idle');
-  const form: RefObject<HTMLFormElement | null> = useRef(null);
-  const started: RefObject<boolean> = useRef(false);
+  const formRef: RefObject<HTMLFormElement | null> = useRef(null);
+  const startedRef: RefObject<boolean> = useRef(false);
   const settling = state === 'settling';
   const submitted = state === 'submitted';
 
@@ -66,19 +66,19 @@ export const ExportControl = ({
     event: SyntheticEvent<HTMLFormElement, SubmitEvent>,
   ): Promise<void> => {
     event.preventDefault();
-    if (started.current) {
+    if (startedRef.current) {
       return Promise.resolve();
     }
-    started.current = true;
+    startedRef.current = true;
     setSubmittedGrouping(grouping);
     setState('settling');
     return settleAutosaves().then(
       () => {
         setState('submitted');
-        form.current?.submit();
+        formRef.current?.submit();
       },
       () => {
-        started.current = false;
+        startedRef.current = false;
         setSubmittedGrouping(undefined);
         setState('failed');
       },
@@ -91,7 +91,7 @@ export const ExportControl = ({
       aria-busy={settling}
       method="post"
       onSubmit={submitAfterSettling}
-      ref={form}
+      ref={formRef}
     >
       <p className={[readingMeasureClass, 'text-ink-muted text-lg'].join(' ')}>
         Every export contains the exact Postlude backup for recovery or import.

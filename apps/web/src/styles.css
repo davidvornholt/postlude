@@ -1,10 +1,14 @@
+/* biome-ignore lint/nursery/useLayeredStyles: The imported stylesheet declares its own cascade layers. */
 @import "tailwindcss";
+/* biome-ignore lint/nursery/useLayeredStyles: The imported stylesheet declares its own cascade layers. */
 @import "@postlude/ui/theme.css";
 
-body {
-  background-color: var(--pl-background);
-  color: var(--pl-ink);
-  font-family: var(--font-sans);
+@layer overrides {
+  body {
+    background-color: var(--pl-background);
+    color: var(--pl-ink);
+    font-family: var(--font-sans);
+  }
 }
 
 /* Shared descendant styles for Markdown rendered by the editor or read-only view. */

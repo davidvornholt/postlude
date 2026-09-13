@@ -31,6 +31,7 @@ const remapHeading = (extension: AnyExtension): AnyExtension =>
 
 const JournalStarterKit = StarterKit.extend({
   addExtensions() {
+    // biome-ignore lint/nursery/noThisOutsideOfClass: Tiptap binds the extension instance as this when invoking addExtensions.
     return (this.parent?.() ?? []).map(remapHeading);
   },
 });

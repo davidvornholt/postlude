@@ -27,7 +27,7 @@ const SignInPage = () => {
   // two activations inside one React batch would both read "not pending" and
   // open the OAuth redirect twice. Flipping a ref before the call closes that
   // window.
-  const signInStarted: RefObject<boolean> = useRef(false);
+  const signInStartedRef: RefObject<boolean> = useRef(false);
   const signInMutation = useMutation({
     mutationFn: () =>
       authClient.signIn
@@ -38,14 +38,14 @@ const SignInPage = () => {
         })
         .then(rejectAuthError),
     onSettled: () => {
-      signInStarted.current = false;
+      signInStartedRef.current = false;
     },
   });
   const startSignIn = () => {
-    if (signInStarted.current) {
+    if (signInStartedRef.current) {
       return;
     }
-    signInStarted.current = true;
+    signInStartedRef.current = true;
     signInMutation.mutate();
   };
 

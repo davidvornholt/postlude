@@ -9,14 +9,14 @@ export const useImageUpload = (editor: Editor, label: string) => {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const request = useRef<AbortController | undefined>(undefined);
-  const dialog = useRef<HTMLDialogElement>(null);
+  const requestRef = useRef<AbortController | undefined>(undefined);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const formatting = useFormattingToolbar();
   const activate = formatting?.activate;
   const focusToolbar = formatting?.focusToolbar;
   const addImage = useCallback(() => setOpen(true), []);
   useEffect(() => {
-    const { current } = dialog;
+    const { current } = dialogRef;
     if (open) {
       current?.showModal();
       current?.querySelector('input')?.focus();
@@ -39,7 +39,7 @@ export const useImageUpload = (editor: Editor, label: string) => {
       editor.view.dom.removeEventListener('keydown', shortcut);
     };
   }, [activate, editor, label, addImage, focusToolbar]);
-  useEffect(() => () => request.current?.abort(), []);
+  useEffect(() => () => requestRef.current?.abort(), []);
 
   const insert = async (
     file: File,
@@ -72,11 +72,11 @@ export const useImageUpload = (editor: Editor, label: string) => {
     return inserted;
   };
   const upload = async (files: ReadonlyArray<File>, description: string) => {
-    if (request.current !== undefined) {
+    if (requestRef.current !== undefined) {
       return;
     }
     const controller = new AbortController();
-    request.current = controller;
+    requestRef.current = controller;
     setBusy(true);
     setError('');
     // Locking input still permits selection changes; keep the insertion point for the batch.
@@ -94,7 +94,7 @@ export const useImageUpload = (editor: Editor, label: string) => {
     } catch {
       setError('The image could not be inserted. Try again.');
     } finally {
-      request.current = undefined;
+      requestRef.current = undefined;
       if (!editor.isDestroyed) {
         editor.setEditable(true);
       }
@@ -104,7 +104,7 @@ export const useImageUpload = (editor: Editor, label: string) => {
     }
   };
   const cancel = () => {
-    dialog.current?.close();
+    dialogRef.current?.close();
     setOpen(false);
     setError('');
     if (!editor.isDestroyed) {
@@ -113,5 +113,5 @@ export const useImageUpload = (editor: Editor, label: string) => {
       editor.commands.scrollIntoView();
     }
   };
-  return { open, busy, error, dialog, upload, cancel };
+  return { open, busy, error, dialog: dialogRef, upload, cancel };
 };

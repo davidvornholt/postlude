@@ -22,7 +22,7 @@ export const EntrySizeRangeControl = ({
   readonly historyCells: ReadonlyArray<ActivityCell>;
   readonly windowCells: ReadonlyArray<ActivityCell>;
 }) => {
-  const groupName = useId();
+  const groupNameId = useId();
   const [range, setRange] = useState<EntrySizeRange>('window');
   const cells = range === 'history' ? historyCells : windowCells;
 
@@ -45,7 +45,7 @@ export const EntrySizeRangeControl = ({
               <input
                 checked={range === option}
                 className={['accent-primary', focusRingClass].join(' ')}
-                name={groupName}
+                name={groupNameId}
                 onChange={() => setRange(option)}
                 type="radio"
                 value={option}

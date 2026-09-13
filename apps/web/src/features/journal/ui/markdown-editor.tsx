@@ -68,14 +68,14 @@ export const MarkdownEditor = ({
   // the editor is created. Passing them straight in would freeze the first
   // render's closures into the editor and post the draft as it was when the
   // page opened, every time.
-  const changed = useRef(onChange);
-  const left = useRef(onLeave);
-  const pasteImages = useRef<(files: ReadonlyArray<File>) => void>(
+  const changedRef = useRef(onChange);
+  const leftRef = useRef(onLeave);
+  const pasteImagesRef = useRef<(files: ReadonlyArray<File>) => void>(
     () => undefined,
   );
   useEffect(() => {
-    changed.current = onChange;
-    left.current = onLeave;
+    changedRef.current = onChange;
+    leftRef.current = onLeave;
   });
 
   const editor = useEditor({
@@ -103,7 +103,7 @@ export const MarkdownEditor = ({
           return false;
         }
         event.preventDefault();
-        pasteImages.current(files);
+        pasteImagesRef.current(files);
         return true;
       },
       attributes: {
@@ -121,8 +121,9 @@ export const MarkdownEditor = ({
           type: 'doc',
         }),
     },
-    onUpdate: ({ editor: updated }) => changed.current(updated.getMarkdown()),
-    onBlur: () => left.current(),
+    onUpdate: ({ editor: updated }) =>
+      changedRef.current(updated.getMarkdown()),
+    onBlur: () => leftRef.current(),
   });
 
   if (editor === null) {
@@ -140,7 +141,7 @@ export const MarkdownEditor = ({
       <ImageUploadControl
         editor={editor}
         label={label}
-        pasteImages={pasteImages}
+        pasteImages={pasteImagesRef}
       />
     </>
   );
