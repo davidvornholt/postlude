@@ -30,7 +30,7 @@
     "@postlude/ui": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
     "@tailwindcss/vite": "^4.3.3",
-    "@tanstack/react-query": "^5.102.1",
+    "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-router": "^1.170.32",
     "@tanstack/react-router-ssr-query": "^1.167.1",
     "@tanstack/react-start": "^1.168.49",
