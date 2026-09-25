@@ -6,7 +6,6 @@ import {
   Outlet,
   type RouterHistory,
 } from '@tanstack/react-router';
-
 import { activityWindow } from '../src/features/journal/activity.ts';
 import { readArchiveRoute } from '../src/features/journal/browser-archive-navigation.ts';
 import { confirmedRevisions } from '../src/features/journal/confirmed-revisions.ts';
@@ -16,6 +15,7 @@ import { decodeArchiveQuery } from '../src/features/journal/schemas/archive-quer
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
+import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import { RouterError } from '../src/shared/ui/router-fallbacks.tsx';
 import { ArchivePage } from './archive-navigation-archive-module.ts';
@@ -33,6 +33,7 @@ type ArchiveNavigationDependencies = {
 const NavigationRoot = () => (
   <>
     <HeadContent />
+    <NavigationFocus />
     <Outlet />
   </>
 );

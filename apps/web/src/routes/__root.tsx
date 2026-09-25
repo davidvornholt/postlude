@@ -2,9 +2,11 @@ import type { QueryClient } from '@tanstack/react-query';
 import {
   createRootRouteWithContext,
   HeadContent,
+  Outlet,
   Scripts,
 } from '@tanstack/react-router';
 import { applicationStyleSheetHrefs } from '../shared/ui/application-style-sheets.ts';
+import { NavigationFocus } from '../shared/ui/navigation-focus';
 import { viewportContent } from '../shared/ui/viewport.ts';
 
 type RouterContext = {
@@ -41,4 +43,10 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     })),
   }),
   shellComponent: RootDocument,
+  component: () => (
+    <>
+      <NavigationFocus />
+      <Outlet />
+    </>
+  ),
 });

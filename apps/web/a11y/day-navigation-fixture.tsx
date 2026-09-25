@@ -10,10 +10,10 @@ import {
   useLoaderData,
 } from '@tanstack/react-router';
 import { createRoot } from 'react-dom/client';
-
 import { journalDateLabel } from '../src/features/journal/day-label.ts';
 import type { JournalDate } from '../src/features/journal/journal-day.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
+import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import { AppShell, DayPage } from './day-navigation-fixture-module.ts';
 
@@ -45,6 +45,7 @@ const useFixtureDay = (): FixtureDay =>
 export const NavigationRoot = () => (
   <>
     <HeadContent />
+    <NavigationFocus />
     <Outlet />
   </>
 );
