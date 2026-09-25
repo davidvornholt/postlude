@@ -30,6 +30,7 @@
       "outputs": []
     },
     "test:a11y": {
+      "env": ["DATABASE_URL"],
       "dependsOn": ["build"],
       "cache": false
     }

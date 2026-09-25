@@ -28,6 +28,16 @@
   },
   "overrides": [
     {
+      // Playwright configuration runs in Node and owns the public fixture environment passed to its server.
+      "includes": ["apps/web/playwright.config.ts"],
+      "linter": {
+        "rules": {
+          "correctness": { "noNodejsModules": "off" },
+          "style": { "noProcessEnv": "off" }
+        }
+      }
+    },
+    {
       // Migration drift validation runs only in Bun tests and uses Node filesystem
       // APIs to isolate drizzle-kit output from the committed migration history.
       "includes": ["packages/db/src/migration-drift.test.ts"],

@@ -50,7 +50,10 @@ const SignInPage = () => {
   };
 
   return (
-    <main className="flex min-h-svh flex-col justify-center bg-background py-16">
+    <main
+      tabIndex={-1}
+      className="flex min-h-svh flex-col justify-center bg-background py-16"
+    >
       {/* No card: the page is the sign-in, set in its own frame the way every
           other page is set. */}
       <PageFrame>

@@ -4,12 +4,10 @@ import {
   Outlet,
   redirect,
   useRouter,
-  useRouterState,
 } from '@tanstack/react-router';
 import {
   type MouseEvent,
   type RefObject,
-  useEffect,
   useId,
   useRef,
   useState,
@@ -38,14 +36,6 @@ import { InsideMainLandmark } from '#/shared/ui/router-fallbacks.tsx';
 const skipLinkClass =
   'sr-only text-ink text-sm focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-10 focus:border focus:border-ink focus:bg-background focus:px-4 focus:py-2 focus:outline-2 focus:outline-offset-2 focus:outline-primary';
 
-const focusMainAfterNavigation = (target: HTMLElement): void => {
-  target.focus({ preventScroll: true });
-  const { bottom, top } = target.getBoundingClientRect();
-  if (bottom <= 0 || top >= window.innerHeight || top < 0) {
-    window.scrollTo({ behavior: 'auto', left: 0, top: 0 });
-  }
-};
-
 const AppShell = () => {
   const mainId = useId();
   const router = useRouter();
@@ -54,24 +44,8 @@ const AppShell = () => {
   >();
   const [archiveNavigationPending, setArchiveNavigationPending] =
     useState(false);
-  const locationPath = useRouterState({
-    select: (state) => state.location.pathname,
-  });
-  const previousLocationPathRef = useRef<string>(locationPath);
   const mainRef = useRef<HTMLElement>(null);
   const archiveNavigationStartedRef: RefObject<boolean> = useRef(false);
-  // Client navigation removes the link that held focus. Move focus to the
-  // landmark containing the new route, but leave an initial page load alone.
-  useEffect(() => {
-    if (previousLocationPathRef.current === locationPath) {
-      return;
-    }
-    previousLocationPathRef.current = locationPath;
-    const target = mainRef.current;
-    if (target !== null) {
-      focusMainAfterNavigation(target);
-    }
-  }, [locationPath]);
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
   // fire the request twice. Flipping a ref before the call closes that window.
