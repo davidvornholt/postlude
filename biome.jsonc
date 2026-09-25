@@ -28,6 +28,12 @@
   },
   "overrides": [
     {
+      // Migration drift validation runs only in Bun tests and uses Node filesystem
+      // APIs to isolate drizzle-kit output from the committed migration history.
+      "includes": ["packages/db/src/migration-drift.test.ts"],
+      "linter": { "rules": { "correctness": { "noNodejsModules": "off" } } }
+    },
+    {
       // AWS's S3 command properties are protocol-owned PascalCase names.
       "includes": ["apps/web/src/features/journal/services/journal-images.ts"],
       "linter": { "rules": { "style": { "useNamingConvention": "off" } } }
