@@ -1,6 +1,6 @@
 import { Schema } from 'effect';
 
-import { JournalDateSchema } from './entry.ts';
+import { JournalDateSchema, WordCountSchema } from './entry.ts';
 
 /**
  * One day as the archive needs it: enough to place a mark on the heatmap and to
@@ -11,13 +11,13 @@ export const EntrySummaryFromRow = Schema.Struct({
   date: Schema.propertySignature(JournalDateSchema).pipe(
     Schema.fromKey('entry_date'),
   ),
-  journalWordCount: Schema.propertySignature(Schema.Number).pipe(
+  journalWordCount: Schema.propertySignature(WordCountSchema).pipe(
     Schema.fromKey('journal_word_count'),
   ),
   journalFirstUsedAt: Schema.propertySignature(
     Schema.NullOr(Schema.ValidDateFromSelf),
   ).pipe(Schema.fromKey('journal_first_used_at')),
-  scriptureWordCount: Schema.propertySignature(Schema.Number).pipe(
+  scriptureWordCount: Schema.propertySignature(WordCountSchema).pipe(
     Schema.fromKey('scripture_word_count'),
   ),
   scriptureFirstUsedAt: Schema.propertySignature(
