@@ -73,3 +73,17 @@ it('escapes raw HTML and refuses executable link protocols', () => {
   expect(html).toContain('Run it');
   expect(html).not.toContain('href="javascript:');
 });
+
+it('renders a pipe table with column headers and alignment', () => {
+  const html = render(`| Hour | Mood |
+| :--- | ---: |
+| Dawn | **calm**<br>then busy |`);
+
+  expect(html).toContain(
+    '<table><tbody><tr><th class="text-left" scope="col"><p>Hour</p></th>',
+  );
+  expect(html).toContain('<th class="text-right" scope="col"><p>Mood</p></th>');
+  expect(html).toContain(
+    '<td class="text-right"><p><strong>calm</strong><br/>then busy</p></td>',
+  );
+});

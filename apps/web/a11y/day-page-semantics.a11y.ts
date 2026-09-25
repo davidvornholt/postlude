@@ -71,6 +71,13 @@ test('the hydrated editor keeps the production viewport and Markdown setting', a
       ),
     ),
   );
+  const table = evening.getByRole('table');
+  await expect(table.getByRole('columnheader')).toHaveText(['Hour', 'Mood']);
+  await expect(table.getByRole('cell', { name: 'Dusk' })).toBeVisible();
+  await expect(table.getByRole('cell', { name: 'Tired' })).toHaveCSS(
+    'text-align',
+    'right',
+  );
   await scan(page);
 });
 
