@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM docker.io/oven/bun:1.3.14-alpine AS deps
+FROM docker.io/oven/bun:1.4.2-alpine AS deps
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -11,14 +11,14 @@ COPY packages/typescript-config/package.json ./packages/typescript-config/packag
 COPY packages/ui/package.json ./packages/ui/package.json
 RUN bun install --frozen-lockfile
 
-FROM docker.io/oven/bun:1.3.14-alpine AS builder
+FROM docker.io/oven/bun:1.4.2-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app ./
 COPY . .
 RUN bun run --cwd apps/web build
 
-FROM docker.io/oven/bun:1.3.14-alpine AS prod-deps
+FROM docker.io/oven/bun:1.4.2-alpine AS prod-deps
 WORKDIR /app
 
 COPY package.json bun.lock ./
@@ -29,7 +29,7 @@ COPY packages/typescript-config/package.json ./packages/typescript-config/packag
 COPY packages/ui/package.json ./packages/ui/package.json
 RUN bun install --frozen-lockfile --production
 
-FROM docker.io/oven/bun:1.3.14-alpine AS runner
+FROM docker.io/oven/bun:1.4.2-alpine AS runner
 WORKDIR /app/apps/web
 
 ENV NODE_ENV=production

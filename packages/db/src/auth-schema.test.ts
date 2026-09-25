@@ -10,10 +10,10 @@ const dialect = new PgDialect();
  * unique index carries a `where` predicate, and rows outside that predicate may
  * repeat the pair freely, so the pin records the predicate alongside the columns
  * rather than only the columns: a narrowed index then fails here instead of
- * letting two accounts share (issuer, account_id) until an OAuth callback finds
+ * letting two accounts share (provider_id, account_id) until an OAuth callback finds
  * both.
  */
-it('account carries exactly one unique key, over (issuer, account_id), covering every row', () => {
+it('account carries exactly one unique key, over (provider_id, account_id), covering every row', () => {
   const config = getTableConfig(account);
   const uniqueKeys = [
     ...config.uniqueConstraints.map((constraint) => ({
@@ -33,6 +33,6 @@ it('account carries exactly one unique key, over (issuer, account_id), covering 
       })),
   ];
   expect(uniqueKeys).toEqual([
-    { columns: ['issuer', 'account_id'], partialWhere: null },
+    { columns: ['provider_id', 'account_id'], partialWhere: null },
   ]);
 });

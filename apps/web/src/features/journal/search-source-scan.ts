@@ -128,7 +128,7 @@ const foldedSource = (text: string) => {
 };
 
 /** Shared token-to-visible-text mapping for persisted evidence and live highlighting. */
-export function* searchSourceTokens(text: string) {
+export const searchSourceTokens = function* (text: string) {
   const source = foldedSource(text);
   for (const token of source.folded.matchAll(searchTokenRuns)) {
     yield {
@@ -139,7 +139,7 @@ export function* searchSourceTokens(text: string) {
       }),
     };
   }
-}
+};
 
 const matchingTerms = (
   token: string,

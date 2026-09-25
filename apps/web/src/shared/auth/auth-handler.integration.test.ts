@@ -23,7 +23,7 @@ it('real Better Auth rejects reads and mutations after account drift and still s
     Effect.scoped(
       Effect.gen(function* () {
         const pool = yield* openTestDatabase((database) =>
-          migrateGeneratedThrough(database, '0003_motionless_gauntlet'),
+          migrateGeneratedThrough(database, '0008_free_mindworm'),
         );
         yield* Effect.tryPromise(async () => {
           const client = await pool.connect();
