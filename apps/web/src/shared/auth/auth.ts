@@ -5,6 +5,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 
 import { pool } from '#/shared/db/pool.ts';
 import { env } from '#/shared/env.ts';
+import { createAuthorizedAuthHandler } from './auth-handler.ts';
 import { createAuthOptions } from './auth-options.ts';
 
 const schema = { account, session, user, verification };
@@ -19,4 +20,10 @@ export const auth = betterAuth({
     secret: env.BETTER_AUTH_SECRET,
   }),
   database: drizzleAdapter(db, { provider: 'pg' }),
+});
+
+export const authorizedAuthHandler = createAuthorizedAuthHandler({
+  api: auth.api,
+  handler: auth.handler,
+  allowedAccountId: env.GITHUB_ALLOWED_ACCOUNT_ID,
 });
