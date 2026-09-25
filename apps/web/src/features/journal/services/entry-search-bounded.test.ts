@@ -121,3 +121,53 @@ it('clears evidence when prose is cleared and preserves it after a stale save', 
   expect(result.current).toHaveLength(1);
   expect(result.retained).toEqual([]);
 });
+
+it('retains actual evidence when a 200-character query expands to more than 100 terms', async () => {
+  const query =
+    'ﷺ ¼ ℀ ⅔ ⅚ ⅞ ㎧ ㎯ ﷻ ℅ ℆ ⅑ ⅒ ↉ ㏆ ㏘ ㏞ b d e f g h i j k l n q r t w x y z µ À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð Ñ Ò Ó Ô Õ Ö Ø Ù Ú Û Ü Ý Þ ß ÿ Ā Ă Ą Ć Ĉ Ċ Č Ď Đ Ē Ĕ Ė Ę Ě Ĝ Ğ Ġ Ģ Ĥ Ħ Ĩ Ī Ĭ Į ı Ĳ Ĵ Ķ ĸ Ĺ Ļ Ľ ';
+  const terms = searchTerms(query);
+  const raw = terms.join(' distant context ');
+  const evidence = storedSearchEvidence({
+    journalText: raw,
+    scriptureText: raw,
+    scriptureReferenceText: raw,
+  });
+  const matches = await withJournal(({ search }) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`insert into entry (entry_date,journal_markdown,journal_word_count,journal_search_text,scripture_search_text,
+      scripture_reference_search_text,search_token_text,search_projection_revision,search_evidence_revision)
+      values ('2026-03-01','',1,${raw},${raw},${raw},${terms.join(' ')},1,1)`;
+      yield* sql`insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length)
+      select '2026-03-01',kind,token,position,excerpt,"matchStart","matchLength"
+      from jsonb_to_recordset(${JSON.stringify(evidence)}::jsonb)
+        as evidence(kind text,token text,position integer,excerpt text,"matchStart" integer,"matchLength" integer)`;
+      return yield* search.search(terms, hitCount);
+    }),
+  );
+  const maximumQueryLength = 200;
+  const expandedTermCount = 111;
+  const maximumHitBytes = 1200;
+  const sourceKindCount = 3;
+  expect(query).toHaveLength(maximumQueryLength);
+  expect(terms).toHaveLength(expandedTermCount);
+  expect(matches).toHaveLength(1);
+  expect(matches[0]?.evidence).toHaveLength(terms.length * sourceKindCount);
+  expect(
+    matches[0]?.evidence.every(
+      ({ text, matchLength }) => text.length > 0 && matchLength > 0,
+    ),
+  ).toBe(true);
+  expect(
+    matches[0]?.evidence.reduce(
+      (sum, { text }) => sum + Buffer.byteLength(text),
+      0,
+    ),
+  ).toBeLessThanOrEqual(maximumHitBytes);
+  const hit = matches[0] && searchHitOf(terms)(matches[0]);
+  expect(
+    hit?.sources.every(({ excerpts }) =>
+      excerpts.every((excerpt) => excerpt.some(({ match }) => match)),
+    ),
+  ).toBe(true);
+});
