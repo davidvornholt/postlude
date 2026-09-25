@@ -8,14 +8,14 @@
  * is also why it lives here rather than in the editor's own code.
  */
 
+import { Lexer, type Token } from 'marked';
+
 const backtickFencedBlock =
   /^ {0,3}(?<fence>`{3,})[^`\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>`*[ \t]*\r?$/gmu;
 const tildeFencedBlock =
   /^ {0,3}(?<fence>~{3,})[^\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>~*[ \t]*\r?$/gmu;
 const unclosedFence = /^ {0,3}(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)\r?$[\s\S]*/mu;
 const htmlComment = /<!--[\s\S]*?-->/gu;
-const image = /!\[(?<alt>[^\]]*)\]\([^)]*\)/gu;
-const inlineLink = /\[(?<label>[^\]]*)\]\([^)]*\)/gu;
 const referenceLink = /\[(?<label>[^\]]*)\]\[[^\]]*\]/gu;
 const autolink = /<(?<target>https?:\/\/[^>\s]+)>/gu;
 const linkDefinition = /^[ \t]*\[[^\]]+\]:[ \t]*\S+.*$/gmu;
@@ -28,6 +28,27 @@ const tablePipe = /[|]/gu;
 const tableDivider = /^[ \t]*:?-{3,}:?(?:[ \t]*[|][ \t]*:?-+:?)*[ \t]*$/gmu;
 const emphasis = /(?<!\\)(?:\*{1,3}|_{1,3}|~{2})/gu;
 const escaped = /\\(?<character>[\\`*_{}[\]()#+\-.!>~|])/gu;
+
+// Use the editor's Markdown grammar for destinations (balanced/escaped parentheses,
+// optional titles and nested inline formatting) instead of truncating at the first ')'.
+const inlineProse = (tokens: ReadonlyArray<Token>): string =>
+  tokens
+    .map((token) => {
+      if (token.type === 'image') {
+        return ' ';
+      }
+      if (
+        (token.type === 'link' ||
+          token.type === 'strong' ||
+          token.type === 'em' ||
+          token.type === 'del') &&
+        token.tokens !== undefined
+      ) {
+        return inlineProse(token.tokens);
+      }
+      return token.raw;
+    })
+    .join('');
 
 /**
  * The words of a markdown document, with the syntax that carries them taken
@@ -45,15 +66,14 @@ const escaped = /\\(?<character>[\\`*_{}[\]()#+\-.!>~|])/gu;
  * one, and letting the count leap while the block is still open would make the
  * number jump around under the writer's hands.
  */
-export const journalPlainText = (markdown: string): string =>
-  markdown
+export const journalPlainText = (markdown: string): string => {
+  const prose = markdown
     .replace(backtickFencedBlock, ' ')
     .replace(tildeFencedBlock, ' ')
     .replace(unclosedFence, ' ')
     .replace(htmlComment, ' ')
-    .replace(linkDefinition, ' ')
-    .replace(image, ' ')
-    .replace(inlineLink, ' $<label> ')
+    .replace(linkDefinition, ' ');
+  return inlineProse(Lexer.lexInline(prose))
     .replace(referenceLink, ' $<label> ')
     .replace(autolink, ' $<target> ')
     .replace(inlineCode, ' $<code> ')
@@ -65,6 +85,7 @@ export const journalPlainText = (markdown: string): string =>
     .replace(emphasis, '')
     .replace(escaped, '$<character>')
     .trim();
+};
 
 /**
  * A word is a run of anything that is not whitespace. Punctuation on its own
