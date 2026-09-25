@@ -1,14 +1,14 @@
 import { expect, it } from 'bun:test';
 import { Effect } from 'effect';
 
-import { searchTerms, searchTsQuery } from '../search-query.ts';
+import { searchTerms } from '../search-query.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 
 const { withJournal } = journalDatabase();
 
 const plenty = 20;
 
-const asked = (query: string) => searchTsQuery(searchTerms(query));
+const asked = (query: string) => searchTerms(query);
 
 it('uses the same canonical tokens for punctuation and difficult case folds', async () => {
   const prose =
@@ -28,7 +28,7 @@ it('uses the same canonical tokens for punctuation and difficult case folds', as
         queries.map((query) => search.search(asked(query), plenty)),
         { concurrency: 1 },
       );
-      return { answers, raw: answers[0]?.[0]?.journalText };
+      return { answers, raw: answers[0]?.[0]?.texts[0] };
     }),
   );
   expect(observed.answers.map((answers) => answers[0]?.date)).toEqual([
@@ -64,6 +64,10 @@ it('finds Song of Songs through every accepted joined and natural German spellin
   ]);
   for (const answers of observed) {
     expect(answers).toHaveLength(1);
-    expect(answers[0]?.scriptureReferenceText).toContain('Hohes Lied 2:10');
+    expect(
+      answers[0]?.evidence.some(
+        (evidence) => evidence.kind === 'passage-reference',
+      ),
+    ).toBe(true);
   }
 });

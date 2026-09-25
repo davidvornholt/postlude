@@ -1,107 +1,96 @@
-/**
- * Finding a day by what is written on it.
- *
- * This is its own service rather than another method on `EntryRepository`. The
- * repository reads and writes the day: a row keyed by a date, with the columns
- * the writing page and the archive need. Search reads an index instead, and owns
- * a small query language of its own — what a typed line means, which days count
- * as answering it, and in what order they come back. The two touch the same
- * table and answer different questions about it, and each owns the projection
- * its own answer needs.
- *
- * The index is a stored `tsvector` the database keeps for every row, so it can
- * never fall behind the words it describes; `packages/db/src/schema.ts` is where
- * it is declared and binds it to the app-owned token stream.
- *
- * Results come back newest first rather than by relevance score. A journal is
- * read in time: two days that both hold the word are told apart by which was
- * more recent, not by which repeated it more often.
- */
-
 import { SqlClient } from '@effect/sql';
 import { Effect, Schema } from 'effect';
-
 import { journalReadError } from '../errors/journal-errors.ts';
 import { JournalDateSchema } from '../schemas/entry.ts';
+import { searchTsQuery } from '../search-query.ts';
 
-/**
- * A matched day, with the visible projections the excerpt is cut from. The
- * stored search vector is deliberately not selected: it holds the canonical
- * lexemes derived from these raw sources, while a result needs the exact text
- * the Markdown reader showed.
- */
+/** Every hit returns at most 1,200 UTF-8 bytes, below 64 KiB for 50 hits. */
+export const searchResultByteBudget = 1200;
+export const SearchEvidence = Schema.Struct({
+  kind: Schema.Literal('evening', 'scripture-notes', 'passage-reference'),
+  textIndex: Schema.Number,
+  termIndex: Schema.Number,
+  matchStart: Schema.Number,
+  matchLength: Schema.Number,
+});
 const SearchRow = Schema.Struct({
   date: Schema.propertySignature(JournalDateSchema).pipe(
     Schema.fromKey('entry_date'),
   ),
-  journalText: Schema.propertySignature(Schema.String).pipe(
-    Schema.fromKey('journal_search_text'),
-  ),
-  scriptureText: Schema.propertySignature(Schema.String).pipe(
-    Schema.fromKey('scripture_search_text'),
-  ),
-  scriptureReferenceText: Schema.propertySignature(Schema.String).pipe(
-    Schema.fromKey('scripture_reference_search_text'),
-  ),
-  words: Schema.propertySignature(Schema.Number).pipe(Schema.fromKey('words')),
+  words: Schema.Number,
+  texts: Schema.Array(Schema.String),
+  evidence: Schema.Array(SearchEvidence),
 });
-
-export type SearchMatch = {
-  readonly date: string;
-  readonly journalText: string;
-  readonly scriptureText: string;
-  readonly scriptureReferenceText: string;
-  readonly words: number;
-};
-
+export type SearchMatch = Schema.Schema.Type<typeof SearchRow>;
+// Shared text is capped even for an infeasible internal query: null fails
+// decoding rather than returning blank evidence or exceeding the text budget.
 const decodeRows = Schema.decodeUnknown(Schema.Array(SearchRow));
-
-const matchOf = (row: Schema.Schema.Type<typeof SearchRow>): SearchMatch => ({
-  date: row.date,
-  journalText: row.journalText,
-  scriptureText: row.scriptureText,
-  scriptureReferenceText: row.scriptureReferenceText,
-  words: row.words,
-});
 
 export class EntrySearch extends Effect.Service<EntrySearch>()(
   'journal/EntrySearch',
   {
     effect: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-
-      /**
-       * The days matching a `tsquery`, newest first.
-       *
-       * The query arrives as the application-owned canonical tokens joined by
-       * tsquery operators. Casting it preserves those lexemes instead of asking
-       * Postgres to parse and case-fold the source text a second way. Each token
-       * contains only letters and digits, so none can become query syntax.
-       */
       const search = (
-        tsQuery: string,
+        terms: ReadonlyArray<string>,
         limit: number,
       ): Effect.Effect<
         ReadonlyArray<SearchMatch>,
         ReturnType<typeof journalReadError>
       > =>
         sql`
-          select
-            entry_date,
-            journal_search_text,
-            scripture_search_text,
-            scripture_reference_search_text,
-            journal_word_count + scripture_word_count as words
-          from entry
-          where search_vector @@ ${tsQuery}::tsquery
-          order by entry_date desc
-          limit ${limit}
-        `.pipe(
-          Effect.flatMap(decodeRows),
-          Effect.map((rows) => rows.map(matchOf)),
-          Effect.mapError(journalReadError),
-        );
-
+        with matched as materialized (
+          select entry_date, journal_word_count + scripture_word_count as words
+          from entry where search_vector @@ ${searchTsQuery(terms)}::tsquery
+          order by entry_date desc limit ${limit}
+        ), requested as (
+          select value as term, (ordinality - 1)::integer as term_index
+          from jsonb_array_elements_text(${JSON.stringify(terms)}::jsonb) with ordinality
+        ), windows as (
+          select matched.entry_date, matched.words, requested.term_index, found.*,
+            count(*) over (partition by matched.entry_date) as window_count,
+            sum(octet_length(substring(found.excerpt from found.match_start + 1 for found.anchor_length)))
+              over (partition by matched.entry_date) as minimum_bytes
+          from matched cross join requested
+          cross join (values ('evening'), ('scripture-notes'), ('passage-reference')) as source(kind)
+          cross join lateral (
+            select evidence.kind, evidence.excerpt, evidence.match_start, evidence.match_length, evidence.anchor_length
+            from entry_search_evidence as evidence
+            where evidence.entry_date = matched.entry_date and evidence.kind = source.kind
+              and evidence.token collate "C" >= requested.term collate "C"
+              and evidence.token collate "C" < (requested.term || chr(1114111)) collate "C"
+            order by evidence.position limit 1
+          ) as found
+        ), budgeted as (
+          select *, case when minimum_bytes <= ${searchResultByteBudget}
+            then anchor_length + ((${searchResultByteBudget} - minimum_bytes) / (4 * window_count))::integer
+            else anchor_length end as budget from windows
+        ), positioned as (
+          select *, greatest(0, match_start - (budget - anchor_length) / 4) as start_at from budgeted
+        ), bounded as (
+          select *, substring(excerpt from start_at + 1 for budget) as bounded_text from positioned
+        ), text_windows as materialized (
+          select entry_date, bounded_text,
+            (row_number() over (partition by entry_date order by bounded_text) - 1)::integer as text_index
+          from (select distinct entry_date, bounded_text from bounded) as unique_text
+        ), text_rows as (
+          select entry_date, jsonb_agg(bounded_text order by text_index) as texts,
+            sum(octet_length(bounded_text)) as returned_bytes
+          from text_windows group by entry_date
+        )
+        select bounded.entry_date, words,
+          case when text_rows.returned_bytes <= ${searchResultByteBudget} then text_rows.texts else null end as texts,
+          jsonb_agg(jsonb_build_object(
+            'kind', kind, 'textIndex', text_windows.text_index, 'termIndex', term_index,
+            'matchStart', match_start - start_at,
+            'matchLength', greatest(0, least(match_length, char_length(bounded.bounded_text) - (match_start - start_at)))
+          ) order by kind, term_index) as evidence
+        from bounded
+        join text_windows on text_windows.entry_date = bounded.entry_date and text_windows.bounded_text = bounded.bounded_text
+        join text_rows on text_rows.entry_date = bounded.entry_date
+        group by bounded.entry_date, words, text_rows.texts, text_rows.returned_bytes
+        order by bounded.entry_date desc
+      `.pipe(Effect.flatMap(decodeRows), Effect.mapError(journalReadError));
       return { search } as const;
     }),
   },

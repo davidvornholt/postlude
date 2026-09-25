@@ -19,6 +19,8 @@ export const migrationFolder = decodeURIComponent(
 export const searchProjectionColumnsMigrationTag =
   '0004_charming_cassandra_nova';
 
+export const searchEvidenceMigrationTag = '0006_fuzzy_the_leader';
+
 export type ApplicationMigration = {
   readonly afterTag: string;
   readonly run: (pool: Pool) => Promise<void>;
@@ -64,17 +66,28 @@ export const migrateGeneratedThrough = (pool: Pool, tag: string) =>
 /** Applies generated DDL around the application-owned data transformation. */
 export const migrateDatabase = (
   pool: Pool,
-  applicationMigration: ApplicationMigration,
+  applicationMigrations: ReadonlyArray<ApplicationMigration>,
 ) =>
   Effect.tryPromise({
     try: async () => {
       const migrations = readMigrationFiles({
         migrationsFolder: migrationFolder,
       });
-      const barrier = migrationsThrough(applicationMigration.afterTag).length;
-      await applyMigrations(pool, migrations.slice(0, barrier));
-      await applicationMigration.run(pool);
-      await applyMigrations(pool, migrations.slice(barrier));
+      const applyNext = async (index: number, start: number): Promise<void> => {
+        const migration = applicationMigrations[index];
+        if (!migration) {
+          await applyMigrations(pool, migrations.slice(start));
+          return;
+        }
+        const barrier = migrationsThrough(migration.afterTag).length;
+        if (barrier < start) {
+          throw new Error('Application migration barriers must be ordered.');
+        }
+        await applyMigrations(pool, migrations.slice(start, barrier));
+        await migration.run(pool);
+        await applyNext(index + 1, barrier);
+      };
+      await applyNext(0, 0);
     },
     catch: (cause) =>
       new DatabaseMigrationError({

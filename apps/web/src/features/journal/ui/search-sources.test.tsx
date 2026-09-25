@@ -1,18 +1,14 @@
 import { expect, it } from 'bun:test';
-
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import {
   attributeValue,
   elementAttributes,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
-import {
-  type SearchHit,
-  type SearchResults,
-  searchHitOf,
-} from '../search-contract.ts';
+import type { SearchHit, SearchResults } from '../search-contract.ts';
 import { searchExcerpt } from '../search-excerpt.ts';
 import { searchTerms } from '../search-query.ts';
+import { searchHitFixture } from '../testing/search-hit-fixture.ts';
 import { SearchPage } from './search-page.tsx';
 
 const today = '2026-08-26';
@@ -75,7 +71,7 @@ it('offers sign-in recovery without exposing a private failure', async () => {
 
 it('renders dotted I and final sigma evidence as the writer entered it', async () => {
   const query = 'istanbul τελικόσ';
-  const hit = searchHitOf(searchTerms(query))({
+  const hit = searchHitFixture(searchTerms(query))({
     date: '2026-03-01',
     journalText: 'İstanbul after dusk.',
     scriptureText: 'Μια σκέψη τελικός.',

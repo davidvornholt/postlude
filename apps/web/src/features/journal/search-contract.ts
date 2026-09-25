@@ -1,6 +1,5 @@
 import { Schema } from 'effect';
 import { JournalDateSchema } from './schemas/entry.ts';
-import { searchExcerpts } from './search-excerpt.ts';
 import type { SearchMatch } from './services/entry-search.ts';
 
 export const searchQueryLengthLimit = 200;
@@ -65,29 +64,56 @@ export const SearchResults = Schema.Struct({
 });
 export type SearchResults = Schema.Schema.Type<typeof SearchResults>;
 
-const hasMatch = (excerpt: SearchHitSource['excerpts'][number]): boolean =>
-  excerpt.some((segment) => segment.match);
-
-const sourceOf = (
-  kind: SearchHitSourceKind,
+const excerptOf = (
   text: string,
-  terms: ReadonlyArray<string>,
-): SearchHitSource | undefined => {
-  const excerpts = searchExcerpts(text, terms, {
-    hardLineBoundaries: kind === 'passage-reference',
-  }).excerpts.filter(hasMatch);
-  return excerpts.length === 0 ? undefined : { kind, excerpts };
+  evidence: ReadonlyArray<SearchMatch['evidence'][number]>,
+): SearchHitSource['excerpts'][number] => {
+  const characters = Array.from(text);
+  const ranges = evidence
+    .map(({ matchStart, matchLength }) => ({
+      start: matchStart,
+      end: matchStart + matchLength,
+    }))
+    .sort((a, b) => a.start - b.start);
+  const segments: Array<{ text: string; match: boolean; at: number }> = [];
+  let cursor = 0;
+  let offset = 0;
+  const append = (start: number, end: number, match: boolean) => {
+    const content = characters.slice(start, end).join('');
+    if (content !== '') {
+      segments.push({ text: content, match, at: offset });
+      offset += content.length;
+    }
+  };
+  for (const range of ranges) {
+    if (range.end > cursor) {
+      append(cursor, range.start, false);
+      append(Math.max(cursor, range.start), range.end, true);
+      cursor = range.end;
+    }
+  }
+  append(cursor, characters.length, false);
+  return segments;
 };
 
-/** Keeps enough attributed evidence to explain every term in a database match. */
-export const searchHitOf =
-  (terms: ReadonlyArray<string>) =>
-  (match: SearchMatch): SearchHit => ({
-    date: match.date,
-    words: match.words,
-    sources: [
-      sourceOf('evening', match.journalText, terms),
-      sourceOf('scripture-notes', match.scriptureText, terms),
-      sourceOf('passage-reference', match.scriptureReferenceText, terms),
-    ].filter((source): source is SearchHitSource => source !== undefined),
-  });
+/** Only verified source coordinates are highlighted: a cropped suffix is not a new token. */
+export const searchHitOf = (match: SearchMatch): SearchHit => ({
+  date: match.date,
+  words: match.words,
+  sources: (
+    ['evening', 'scripture-notes', 'passage-reference'] as const
+  ).flatMap((kind) => {
+    const groups = new Map<number, Array<SearchMatch['evidence'][number]>>();
+    for (const evidence of match.evidence) {
+      if (evidence.kind === kind) {
+        const group = groups.get(evidence.textIndex) ?? [];
+        group.push(evidence);
+        groups.set(evidence.textIndex, group);
+      }
+    }
+    const excerpts = [...groups].map(([index, evidence]) =>
+      excerptOf(match.texts[index] ?? '', evidence),
+    );
+    return excerpts.length === 0 ? [] : [{ kind, excerpts }];
+  }),
+});

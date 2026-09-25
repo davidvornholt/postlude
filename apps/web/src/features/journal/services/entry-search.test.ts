@@ -12,7 +12,7 @@
 import { expect, it } from 'bun:test';
 import { Effect } from 'effect';
 
-import { searchTerms, searchTsQuery } from '../search-query.ts';
+import { searchTerms } from '../search-query.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 
 const { withJournal } = journalDatabase();
@@ -20,7 +20,7 @@ const { withJournal } = journalDatabase();
 /** More than any of these tests writes, so nothing is cut off by accident. */
 const plenty = 20;
 
-const asked = (query: string) => searchTsQuery(searchTerms(query));
+const asked = (query: string) => searchTerms(query);
 
 const datesFor = (query: string, limit = plenty) =>
   withJournal(({ entries, search }) =>
@@ -138,7 +138,7 @@ it('forgets a word the writer took back out', async () => {
   expect(dates).toEqual([]);
 });
 
-it('hands back the indexed visible sources and the day, counted', async () => {
+it('returns only contributing bounded sources and the day, counted', async () => {
   const words = 5;
   const match = await withJournal(({ entries, search }) =>
     Effect.gen(function* () {
@@ -153,10 +153,16 @@ it('hands back the indexed visible sources and the day, counted', async () => {
       return matches.at(0);
     }),
   );
-  expect(match?.journalText).toBe('The rain fell all night.');
-  expect(match?.scriptureText).toBe('');
-  expect(match?.scriptureReferenceText).toContain('Psalms 23');
-  expect(match?.scriptureReferenceText).toContain('Psalm 23');
+  expect(match?.evidence).toEqual([
+    {
+      kind: 'evening',
+      textIndex: 0,
+      termIndex: 0,
+      matchStart: 4,
+      matchLength: 4,
+    },
+  ]);
+  expect(match?.texts).toEqual(['The rain fell all night.']);
   expect(match?.words).toBe(words);
 });
 
@@ -204,11 +210,16 @@ it('finds a reference by German names and keyboard aliases', async () => {
       const keyboard = yield* search.search(asked('sprueche'), plenty);
       const alias = yield* search.search(asked('spr'), plenty);
       return [german, keyboard, alias].map(
-        (matches) => matches[0]?.scriptureReferenceText,
+        (matches) =>
+          matches[0]?.texts[
+            matches[0]?.evidence.find(
+              (evidence) => evidence.kind === 'passage-reference',
+            )?.textIndex ?? -1
+          ],
       );
     }),
   );
   for (const label of labels) {
-    expect(label).toContain('Sprüche 12:5-13');
+    expect(label).toContain('12:5-13');
   }
 });

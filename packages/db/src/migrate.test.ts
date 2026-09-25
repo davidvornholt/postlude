@@ -8,12 +8,13 @@ import type { Pool } from 'pg';
 import {
   migrateDatabase,
   migrationFolder,
+  searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
 } from './migrate.ts';
 import { createPool } from './pool.ts';
 
 const latestLegacyMigration = 2;
-const expectedMigrationCount = 6;
+const expectedMigrationCount = 8;
 const testTimeoutMilliseconds = 30_000;
 const generatedEnvFile = new URL('../.env.local', import.meta.url).pathname;
 
@@ -131,11 +132,12 @@ const firstUseColumnCount = async (pool: Pool): Promise<number> => {
 };
 
 const migrateTestDatabase = (pool: Pool) =>
-  migrateDatabase(pool, {
-    afterTag: searchProjectionColumnsMigrationTag,
-    run: (migrationPool) =>
-      migrationPool
-        .query(`
+  migrateDatabase(pool, [
+    {
+      afterTag: searchProjectionColumnsMigrationTag,
+      run: (migrationPool) =>
+        migrationPool
+          .query(`
           update entry
           set journal_search_text = '',
               scripture_search_text = '',
@@ -148,8 +150,17 @@ const migrateTestDatabase = (pool: Pool) =>
              or search_token_text is null
              or search_projection_revision is null
         `)
-        .then(() => undefined),
-  });
+          .then(() => undefined),
+    },
+    {
+      afterTag: searchEvidenceMigrationTag,
+      run: async (migrationPool) => {
+        await migrationPool.query(
+          'update entry set search_evidence_revision = revision',
+        );
+      },
+    },
+  ]);
 
 it(
   'preserves a 0002 database and keeps fresh migration runs idempotent',

@@ -8,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 /** PostgreSQL's generated full-text search vector. */
@@ -72,6 +73,7 @@ export const entry = pgTable(
     ).notNull(),
     searchTokenText: text('search_token_text').notNull(),
     searchProjectionRevision: integer('search_projection_revision').notNull(),
+    searchEvidenceRevision: integer('search_evidence_revision').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -92,6 +94,10 @@ export const entry = pgTable(
   },
   (table) => [
     check('entry_revision_positive', sql`${table.revision} >= 1`),
+    check(
+      'entry_search_evidence_current',
+      sql`${table.searchEvidenceRevision} = ${table.revision}`,
+    ),
     check(
       'entry_search_projection_current',
       sql`${table.searchProjectionRevision} = ${table.revision}`,
@@ -128,6 +134,42 @@ export const entry = pgTable(
     check(
       'entry_scripture_book_not_blank',
       sql`${table.scriptureBook} is null or ${table.scriptureBook} ~ '[[:alpha:]]'`,
+    ),
+  ],
+);
+
+/** Bounded visible evidence; canonical token ordering supports indexed prefix lookups per day/source. */
+export const entrySearchEvidence = pgTable(
+  'entry_search_evidence',
+  {
+    entryDate: date('entry_date')
+      .notNull()
+      .references(() => entry.entryDate, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    token: text('token').notNull(),
+    position: integer('position').notNull(),
+    excerpt: text('excerpt').notNull(),
+    matchStart: integer('match_start').notNull(),
+    matchLength: integer('match_length').notNull(),
+    anchorLength: integer('anchor_length').notNull(),
+  },
+  (table) => [
+    uniqueIndex('entry_search_evidence_prefix').on(
+      table.entryDate,
+      table.kind,
+      sql`${table.token} collate "C"`,
+    ),
+    check(
+      'entry_search_evidence_bounded',
+      sql`octet_length(${table.excerpt}) <= 960`,
+    ),
+    check(
+      'entry_search_evidence_kind',
+      sql`${table.kind} in ('evening', 'scripture-notes', 'passage-reference')`,
+    ),
+    check(
+      'entry_search_evidence_range',
+      sql`${table.matchStart} >= 0 and ${table.matchLength} >= 1 and ${table.anchorLength} >= 1 and ${table.anchorLength} <= ${table.matchLength} and ${table.matchStart} + ${table.matchLength} <= char_length(${table.excerpt})`,
     ),
   ],
 );

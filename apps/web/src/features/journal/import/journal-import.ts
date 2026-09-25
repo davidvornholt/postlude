@@ -1,5 +1,7 @@
 import type { createPool } from '@postlude/db/pool';
 import { Data, Effect } from 'effect';
+import { storedSearchEvidence } from '../search-stored-evidence.ts';
+import { replaceSearchEvidenceWithClient } from '../services/search-evidence-write.ts';
 
 import type {
   JournalImportIssue,
@@ -123,14 +125,14 @@ export const importJournalRecords = (
                scripture_search_text,
                scripture_reference_search_text,
                search_token_text,
-               search_projection_revision
+               search_projection_revision, search_evidence_revision
              ) values (
                $1::date, $2::text, $3::integer,
                case when $3::integer > 0 then now() else null end,
                $4::text, $5::integer,
                case when $5::integer > 0 or $6::text is not null then now() else null end,
                $6::text, $7::integer, $8::integer, $9::integer,
-               1, $10::text, $11::text, $12::text, $13::text, 1
+               1, $10::text, $11::text, $12::text, $13::text, 1, 1
              )`,
             [
               record.date,
@@ -147,6 +149,11 @@ export const importJournalRecords = (
               document.scriptureReferenceText,
               document.searchTokenText,
             ],
+          );
+          await replaceSearchEvidenceWithClient(
+            client,
+            record.date,
+            storedSearchEvidence(document),
           );
         }
         await client.query('commit');

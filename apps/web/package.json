@@ -17,7 +17,8 @@
     "lint": "biome check --error-on-warnings .",
     "lint:fix": "biome check --write --error-on-warnings .",
     "test": "bun test",
-    "test:a11y": "playwright test --config playwright.config.ts"
+    "test:a11y": "playwright test --config playwright.config.ts",
+    "benchmark:search": "bun scripts/benchmark-search.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1129.0",

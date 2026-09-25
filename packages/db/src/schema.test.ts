@@ -112,6 +112,10 @@ it('requires every search projection to name the entry revision it covers', () =
 
 /** Constraint name paired with the predicate Postgres will enforce. */
 const expectedChecks: ReadonlyArray<readonly [string, string]> = [
+  [
+    'entry_search_evidence_current',
+    '"entry"."search_evidence_revision" = "entry"."revision"',
+  ],
   ['entry_revision_positive', '"entry"."revision" >= 1'],
   [
     'entry_search_projection_current',

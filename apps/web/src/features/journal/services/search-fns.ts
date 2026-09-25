@@ -5,9 +5,8 @@
  * is the journal's prose, so an unguarded one would hand over the contents of a
  * private journal to anyone who could guess a word in it.
  *
- * The excerpt is cut here rather than in the browser. The alternative is sending
- * every matching day's markdown and cutting it there, which means shipping a
- * page of entries in full so that a couple of lines of each can be shown.
+ * The database returns bounded windows from stored search evidence. This boundary
+ * highlights those windows without loading complete matching entry projections.
  */
 
 import { createServerFn } from '@tanstack/react-start';
@@ -20,7 +19,7 @@ import {
   type SearchResults,
   searchHitOf,
 } from '../search-contract.ts';
-import { searchTerms, searchTsQuery } from '../search-query.ts';
+import { searchTerms } from '../search-query.ts';
 import { EntrySearch } from './entry-search.ts';
 import { currentJournalDate } from './journal-fns.ts';
 import { runJournalEffect } from './journal-runtime.ts';
@@ -44,15 +43,12 @@ export const searchJournalFn = createServerFn({ method: 'POST' })
       runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntrySearch;
-          const matches = yield* entries.search(
-            searchTsQuery(terms),
-            searchLimit,
-          );
+          const matches = yield* entries.search(terms, searchLimit);
           return {
             query,
             today,
             terms,
-            hits: matches.map(searchHitOf(terms)),
+            hits: matches.map(searchHitOf),
             limited: matches.length === searchLimit,
           };
         }),

@@ -6,8 +6,8 @@ import {
 import { createPool } from '@postlude/db/pool';
 import { Effect } from 'effect';
 import { configuredDatabaseUrl } from '#/shared/testing/test-database.ts';
-import { searchHitOf } from '../search-contract.ts';
 import { searchTerms, searchTsQuery } from '../search-query.ts';
+import { searchHitFixture } from '../testing/search-hit-fixture.ts';
 import {
   migrateJournalDatabase,
   searchBackfillBatchSize,
@@ -15,7 +15,7 @@ import {
 
 const databaseUpgradeTimeout = 30_000;
 const beforeSearchMigration = '0003_motionless_gauntlet';
-const expectedMigrationCount = 6;
+const expectedMigrationCount = 8;
 const chapter = 12;
 const verseStart = 5;
 const verseEnd = 13;
@@ -67,6 +67,37 @@ const readOldWriterProjection = async (
     where entry_date = date '1900-01-01'
   `);
   return rewritten.rows[0];
+};
+
+const storedWindowMaximumBytes = 960;
+const backfilledEvidenceAndIdempotence = async (upgrade: MigrationPool) => {
+  const query = `select entry_date,kind,token,position,excerpt,match_start,match_length
+    from entry_search_evidence order by entry_date,kind,token`;
+  const before = await upgrade.query(query);
+  const auditBefore = await upgrade.query(
+    'select count(*)::integer as count from search_backfill_audit',
+  );
+  await Effect.runPromise(migrateJournalDatabase(upgrade));
+  const after = await upgrade.query(query);
+  const auditAfter = await upgrade.query(
+    'select count(*)::integer as count from search_backfill_audit',
+  );
+  return {
+    visible: before.rows.some(
+      (row) => row.token === 'sprüche' && row.kind === 'scripture-notes',
+    ),
+    hidden: before.rows.some((row) => row.token === 'hidden-target'),
+    concurrentWriter: before.rows.some(
+      (row) => row.token === 'changed' && row.entry_date === '1900-01-01',
+    ),
+    bounded: before.rows.every(
+      (row) => Buffer.byteLength(row.excerpt) <= storedWindowMaximumBytes,
+    ),
+    evidenceUnchanged:
+      JSON.stringify(before.rows) === JSON.stringify(after.rows),
+    auditUnchanged:
+      JSON.stringify(auditBefore.rows) === JSON.stringify(auditAfter.rows),
+  };
 };
 
 // This real multi-stage upgrade runs concurrently with the production build in the full gate.
@@ -169,7 +200,7 @@ it(
       expect(match.scriptureReferenceText).toContain('Sprueche 12:5-13');
       expect(match.revision).toBe(1);
       expect(match.searchProjectionRevision).toBe(match.revision);
-      const hit = searchHitOf(terms)(match);
+      const hit = searchHitFixture(terms)(match);
       expect(hit.sources.map(({ kind }) => kind)).toEqual([
         'scripture-notes',
         'passage-reference',
@@ -194,6 +225,7 @@ it(
              or search_token_text is null
              or search_projection_revision is null
              or search_projection_revision <> revision
+             or search_evidence_revision is distinct from revision
         )::integer as incomplete,
         count(*)::integer as projected
       from entry
@@ -226,14 +258,14 @@ it(
         transactions: 2,
       });
 
-      const auditedBeforeRerun = await upgrade.query<{
-        readonly count: number;
-      }>('select count(*)::integer as count from search_backfill_audit');
-      await Effect.runPromise(migrateJournalDatabase(upgrade));
-      const auditedAfterRerun = await upgrade.query<{ readonly count: number }>(
-        'select count(*)::integer as count from search_backfill_audit',
-      );
-      expect(auditedAfterRerun.rows).toEqual(auditedBeforeRerun.rows);
+      expect(await backfilledEvidenceAndIdempotence(upgrade)).toEqual({
+        visible: true,
+        hidden: false,
+        concurrentWriter: true,
+        bounded: true,
+        evidenceUnchanged: true,
+        auditUnchanged: true,
+      });
 
       const oldWriterFailure = await upgrade
         .query(`
@@ -247,7 +279,7 @@ it(
         .catch((error: unknown) => error);
       expect(oldWriterFailure).toMatchObject({
         code: '23514',
-        constraint: 'entry_search_projection_current',
+        constraint: 'entry_search_evidence_current',
       });
       const retained = await upgrade.query<{
         readonly journalMarkdown: string;
