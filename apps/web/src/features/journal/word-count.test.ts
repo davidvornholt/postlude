@@ -184,3 +184,21 @@ describe('countJournalCharacters', () => {
     expect(family.length).toBeGreaterThan(1);
   });
 });
+
+it('uses Markdown link destinations without counting URL punctuation', () => {
+  const links = [
+    '[A quiet](https://example.com/foo_(bar))',
+    '[A quiet](https://example.com/foo_(bar_(baz)))',
+    '[A quiet](https://example.com/foo\\(bar\\))',
+    '[A quiet](https://example.com/foo_(bar) "A title")',
+    '[A quiet](<https://example.com/foo_(bar)> "A title")',
+    '[A quiet](https://example.com/foo_(bar)).',
+    '**[A quiet](https://example.com/foo_(bar))**',
+  ];
+  for (const link of links) {
+    expect(countJournalWords(link)).toBe(2);
+  }
+  expect(
+    countJournalWords('Before ![alt](https://example.com/foo_(bar)) after'),
+  ).toBe(2);
+});
