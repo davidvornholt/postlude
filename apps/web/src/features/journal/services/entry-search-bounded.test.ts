@@ -10,6 +10,9 @@ const { withJournal } = journalDatabase();
 const hitCount = 50;
 const maximumBytes = 65_536;
 const contextRepeats = 4096;
+const cjkStart = 0x50_00;
+const queryNearLimit = 199;
+const longPrependCount = 300;
 const loneSurrogate =
   /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/u;
 
@@ -31,10 +34,10 @@ it('bounds 50 three-source Unicode results while retaining distant prefix eviden
       from generate_series(0, ${hitCount} - 1) as series(day_offset)
     `;
       yield* sql`
-      insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length)
-      select entry_date,kind,token,position,excerpt,"matchStart","matchLength"
+      insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length,anchor_length)
+      select entry_date,kind,token,position,excerpt,"matchStart","matchLength","anchorLength"
       from entry cross join jsonb_to_recordset(${JSON.stringify(evidence)}::jsonb)
-        as evidence(kind text,token text,position integer,excerpt text,"matchStart" integer,"matchLength" integer)
+        as evidence(kind text,token text,position integer,excerpt text,"matchStart" integer,"matchLength" integer, "anchorLength" integer)
     `;
       return yield* search.search(terms, hitCount);
     }),
@@ -146,10 +149,10 @@ it.each([
         yield* sql`insert into entry (entry_date,journal_markdown,journal_word_count,journal_search_text,scripture_search_text,
       scripture_reference_search_text,search_token_text,search_projection_revision,search_evidence_revision)
       values ('2026-03-01','',1,${raw},${raw},${raw},${terms.join(' ')},1,1)`;
-        yield* sql`insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length)
-      select '2026-03-01',kind,token,position,excerpt,"matchStart","matchLength"
+        yield* sql`insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length,anchor_length)
+      select '2026-03-01',kind,token,position,excerpt,"matchStart","matchLength","anchorLength"
       from jsonb_to_recordset(${JSON.stringify(evidence)}::jsonb)
-        as evidence(kind text,token text,position integer,excerpt text,"matchStart" integer,"matchLength" integer)`;
+        as evidence(kind text,token text,position integer,excerpt text,"matchStart" integer,"matchLength" integer, "anchorLength" integer)`;
         return yield* search.search(terms, hitCount);
       }),
     );
@@ -199,4 +202,123 @@ it('does not turn a cropped word suffix into a prefix highlight', async () => {
       .map(({ text }) => text),
   );
   expect(marked).toEqual(['rain']);
+});
+
+it('retains the actual Unicode token when a combined grapheme is cropped', async () => {
+  const cjk = Array.from({ length: 99 }, (_, index) =>
+    String.fromCodePoint(cjkStart + index),
+  );
+  const query = [...cjk, 'ष'].join(' ');
+  const prose = `J\u030c ${cjk.join(' ')} क्ष`;
+  expect(query.length).toBe(queryNearLimit);
+  const matches = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        ...draft('2026-03-01', prose),
+        scriptureMarkdown: prose,
+      });
+      return yield* search.search(searchTerms(query), hitCount);
+    }),
+  );
+  expect(matches).toHaveLength(1);
+  const [match] = matches;
+  if (match === undefined) {
+    throw new Error('Expected a matching entry.');
+  }
+  const hit = searchHitOf(match);
+  expect(hit.sources).toHaveLength(2);
+  for (const source of hit.sources) {
+    const highlighted = source.excerpts
+      .flat()
+      .filter(({ match: matched }) => matched)
+      .map(({ text }) => text);
+    expect(highlighted).toContain('ष');
+    expect(highlighted).not.toContain('क');
+  }
+});
+
+it('keeps token evidence after an arbitrarily long grapheme prefix', async () => {
+  const prose = `J\u030c ${'\u0600'.repeat(longPrependCount)}foo`;
+  const matches = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        ...draft('2026-03-01', prose),
+        scriptureMarkdown: prose,
+      });
+      return yield* search.search(['foo'], hitCount);
+    }),
+  );
+  expect(matches).toHaveLength(1);
+  const [match] = matches;
+  if (match === undefined) {
+    throw new Error('Expected a matching entry.');
+  }
+  const hit = searchHitOf(match);
+  expect(hit.sources).toHaveLength(2);
+  for (const source of hit.sources) {
+    expect(
+      source.excerpts
+        .flat()
+        .filter(({ match: matched }) => matched)
+        .map(({ text }) => text),
+    ).toContain('foo');
+  }
+});
+
+it('retains every source character needed by a composed canonical match', async () => {
+  const cjk = Array.from({ length: 99 }, (_, index) =>
+    String.fromCodePoint(cjkStart + index),
+  );
+  const query = [...cjk, 'ǰ'].join(' ');
+  const prose = `${cjk.join(' ')} J\u030c`;
+  const matches = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        ...draft('2026-03-01', prose),
+        scriptureMarkdown: prose,
+      });
+      return yield* search.search(searchTerms(query), hitCount);
+    }),
+  );
+  expect(matches).toHaveLength(1);
+  const [match] = matches;
+  if (match === undefined) {
+    throw new Error('Expected a matching entry.');
+  }
+  const hit = searchHitOf(match);
+  expect(hit.sources).toHaveLength(2);
+  for (const source of hit.sources) {
+    expect(
+      source.excerpts
+        .flat()
+        .filter(({ match: matched }) => matched)
+        .map(({ text }) => text),
+    ).toContain('J\u030c');
+  }
+});
+
+it('retains a canonical match composed across arbitrarily many intervening marks', async () => {
+  const prose = `J${'\u0323'.repeat(longPrependCount)}\u030c`;
+  const matches = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save({
+        ...draft('2026-03-01', prose),
+        scriptureMarkdown: prose,
+      });
+      return yield* search.search(['ǰ'], hitCount);
+    }),
+  );
+  expect(matches).toHaveLength(1);
+  const [match] = matches;
+  if (match === undefined) {
+    throw new Error('Expected a matching entry.');
+  }
+  for (const source of searchHitOf(match).sources) {
+    expect(
+      source.excerpts
+        .flat()
+        .filter(({ match: matched }) => matched)
+        .map(({ text }) => text),
+    ).toContain('ǰ');
+  }
 });

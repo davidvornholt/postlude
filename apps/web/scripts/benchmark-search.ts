@@ -131,8 +131,8 @@ try {
       [text, hitCount],
     );
     await pool.query(`
-      insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length)
-      select entry_date, kind, 'needle', 0, 'needle with bounded context', 0, 6
+      insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length,anchor_length)
+      select entry_date, kind, 'needle', 0, 'needle with bounded context', 0, 6, 1
       from entry cross join (values ('evening'),('scripture-notes'),('passage-reference')) as source(kind)
     `);
     await pool.query('analyze entry');

@@ -49,12 +49,12 @@ export class EntrySearch extends Effect.Service<EntrySearch>()(
         ), windows as (
           select matched.entry_date, matched.words, requested.term_index, found.*,
             count(*) over (partition by matched.entry_date) as window_count,
-            sum(octet_length(substring(found.excerpt from found.match_start + 1 for 1)))
+            sum(octet_length(substring(found.excerpt from found.match_start + 1 for found.anchor_length)))
               over (partition by matched.entry_date) as minimum_bytes
           from matched cross join requested
           cross join (values ('evening'), ('scripture-notes'), ('passage-reference')) as source(kind)
           cross join lateral (
-            select evidence.kind, evidence.excerpt, evidence.match_start, evidence.match_length
+            select evidence.kind, evidence.excerpt, evidence.match_start, evidence.match_length, evidence.anchor_length
             from entry_search_evidence as evidence
             where evidence.entry_date = matched.entry_date and evidence.kind = source.kind
               and evidence.token collate "C" >= requested.term collate "C"
@@ -63,10 +63,10 @@ export class EntrySearch extends Effect.Service<EntrySearch>()(
           ) as found
         ), budgeted as (
           select *, case when minimum_bytes <= ${searchResultByteBudget}
-            then 1 + ((${searchResultByteBudget} - minimum_bytes) / (4 * window_count))::integer
-            else 1 end as budget from windows
+            then anchor_length + ((${searchResultByteBudget} - minimum_bytes) / (4 * window_count))::integer
+            else anchor_length end as budget from windows
         ), positioned as (
-          select *, greatest(0, match_start - budget / 4) as start_at from budgeted
+          select *, greatest(0, match_start - (budget - anchor_length) / 4) as start_at from budgeted
         ), bounded as (
           select *, substring(excerpt from start_at + 1 for budget) as bounded_text from positioned
         ), text_windows as materialized (

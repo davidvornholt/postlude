@@ -19,7 +19,7 @@ export const migrationFolder = decodeURIComponent(
 export const searchProjectionColumnsMigrationTag =
   '0004_charming_cassandra_nova';
 
-export const searchEvidenceMigrationTag = '0006_mixed_prodigy';
+export const searchEvidenceMigrationTag = '0006_fuzzy_the_leader';
 
 export type ApplicationMigration = {
   readonly afterTag: string;

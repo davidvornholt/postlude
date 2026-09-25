@@ -151,6 +151,7 @@ export const entrySearchEvidence = pgTable(
     excerpt: text('excerpt').notNull(),
     matchStart: integer('match_start').notNull(),
     matchLength: integer('match_length').notNull(),
+    anchorLength: integer('anchor_length').notNull(),
   },
   (table) => [
     uniqueIndex('entry_search_evidence_prefix').on(
@@ -168,7 +169,7 @@ export const entrySearchEvidence = pgTable(
     ),
     check(
       'entry_search_evidence_range',
-      sql`${table.matchStart} >= 0 and ${table.matchLength} >= 1 and ${table.matchStart} + ${table.matchLength} <= char_length(${table.excerpt})`,
+      sql`${table.matchStart} >= 0 and ${table.matchLength} >= 1 and ${table.anchorLength} >= 1 and ${table.anchorLength} <= ${table.matchLength} and ${table.matchStart} + ${table.matchLength} <= char_length(${table.excerpt})`,
     ),
   ],
 );

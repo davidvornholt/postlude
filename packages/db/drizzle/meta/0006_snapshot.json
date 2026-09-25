@@ -1,5 +1,5 @@
 {
-  "id": "f59a75b9-13f0-4bfb-a73b-37003e7e679b",
+  "id": "53de332a-e977-4c7d-a8f1-0129e8845713",
   "prevId": "5df3f534-e8e4-4812-82eb-d2453fc1279f",
   "version": "7",
   "dialect": "postgresql",
@@ -254,6 +254,12 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "anchor_length": {
+          "name": "anchor_length",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {
@@ -314,7 +320,7 @@
         },
         "entry_search_evidence_range": {
           "name": "entry_search_evidence_range",
-          "value": "\"entry_search_evidence\".\"match_start\" >= 0 and \"entry_search_evidence\".\"match_length\" >= 1 and \"entry_search_evidence\".\"match_start\" + \"entry_search_evidence\".\"match_length\" <= char_length(\"entry_search_evidence\".\"excerpt\")"
+          "value": "\"entry_search_evidence\".\"match_start\" >= 0 and \"entry_search_evidence\".\"match_length\" >= 1 and \"entry_search_evidence\".\"anchor_length\" >= 1 and \"entry_search_evidence\".\"anchor_length\" <= \"entry_search_evidence\".\"match_length\" and \"entry_search_evidence\".\"match_start\" + \"entry_search_evidence\".\"match_length\" <= char_length(\"entry_search_evidence\".\"excerpt\")"
         }
       },
       "isRLSEnabled": false

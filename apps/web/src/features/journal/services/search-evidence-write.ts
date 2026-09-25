@@ -11,10 +11,10 @@ export const replaceSearchEvidence = (
   Effect.gen(function* () {
     yield* sql`delete from entry_search_evidence where entry_date = ${date}::date`;
     yield* sql`
-    insert into entry_search_evidence (entry_date, kind, token, position, excerpt, match_start, match_length)
-    select ${date}::date, kind, token, position, excerpt, "matchStart", "matchLength"
+    insert into entry_search_evidence (entry_date, kind, token, position, excerpt, match_start, match_length, anchor_length)
+    select ${date}::date, kind, token, position, excerpt, "matchStart", "matchLength", "anchorLength"
     from jsonb_to_recordset(${JSON.stringify(evidence)}::jsonb)
-      as evidence(kind text, token text, position integer, excerpt text, "matchStart" integer, "matchLength" integer)
+      as evidence(kind text, token text, position integer, excerpt text, "matchStart" integer, "matchLength" integer, "anchorLength" integer)
   `;
   });
 
@@ -31,10 +31,10 @@ export const replaceSearchEvidenceWithClient = async (
   );
   await client.query(
     `
-    insert into entry_search_evidence (entry_date, kind, token, position, excerpt, match_start, match_length)
-    select $1::date, kind, token, position, excerpt, "matchStart", "matchLength"
+    insert into entry_search_evidence (entry_date, kind, token, position, excerpt, match_start, match_length, anchor_length)
+    select $1::date, kind, token, position, excerpt, "matchStart", "matchLength", "anchorLength"
     from jsonb_to_recordset($2::jsonb)
-      as evidence(kind text, token text, position integer, excerpt text, "matchStart" integer, "matchLength" integer)
+      as evidence(kind text, token text, position integer, excerpt text, "matchStart" integer, "matchLength" integer, "anchorLength" integer)
   `,
     [date, JSON.stringify(evidence)],
   );

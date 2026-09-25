@@ -18,6 +18,7 @@ export type StoredSearchEvidence = {
   readonly excerpt: string;
   readonly matchStart: number;
   readonly matchLength: number;
+  readonly anchorLength: number;
 };
 
 const evidenceWindow = (
@@ -27,8 +28,33 @@ const evidenceWindow = (
     readonly token: string;
     readonly start: number;
     readonly end: number;
+    readonly anchorEnd: number;
   },
 ): StoredSearchEvidence => {
+  const anchorLength = Array.from(
+    text.slice(found.start, found.anchorEnd),
+  ).length;
+  const [firstCanonicalCharacter] = Array.from(found.token);
+  const canonicalComponents = Array.from(
+    firstCanonicalCharacter?.normalize('NFD') ?? '',
+  ).length;
+  if (anchorLength > canonicalComponents) {
+    // Canonical composition can jump over arbitrarily many intervening marks.
+    // In that case show the actual canonical token, rather than a clipped
+    // source fragment that no longer represents its matching character.
+    const excerpt = Array.from(found.token)
+      .slice(0, excerptCharacters)
+      .join('');
+    return {
+      kind,
+      token: found.token,
+      position: found.start,
+      excerpt,
+      matchStart: 0,
+      matchLength: Array.from(excerpt).length,
+      anchorLength: 1,
+    };
+  }
   const hardLines = kind === 'passage-reference';
   const lineStart = hardLines ? text.lastIndexOf('\n', found.start) + 1 : 0;
   const nextLine = hardLines ? text.indexOf('\n', found.start) : -1;
@@ -54,6 +80,7 @@ const evidenceWindow = (
     excerpt,
     matchStart,
     matchLength: matchEnd - matchStart,
+    anchorLength,
   };
 };
 
