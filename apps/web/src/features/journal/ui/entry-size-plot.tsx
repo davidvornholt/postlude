@@ -4,6 +4,7 @@ import { parseJournalDate } from '../journal-day.ts';
 import { journalMonthLabel } from '../journal-labels.ts';
 
 const chartWidth = 840;
+const percentageScale = 100;
 const chartTop = 8;
 const chartBottom = 176;
 const chartHeight = chartBottom - chartTop;
@@ -28,10 +29,11 @@ const monthName = (date: string): string =>
 
 const visibleMonths = (
   points: ReadonlyArray<EntrySizePoint>,
-): ReadonlyArray<EntrySizePoint> =>
+): ReadonlyArray<{ readonly point: EntrySizePoint; readonly index: number }> =>
   points
+    .map((point, index) => ({ point, index }))
     .filter(
-      (point, index) =>
+      ({ point, index }) =>
         index === 0 ||
         point.date.slice(0, isoMonthLength) !==
           points[index - 1]?.date.slice(0, isoMonthLength),
@@ -106,10 +108,19 @@ export const EntrySizePlot = ({
       </svg>
       <div
         aria-hidden="true"
-        className="mt-2 flex justify-between text-ink-faint text-xs"
+        className="relative mt-2 h-4 text-ink-faint text-xs"
       >
-        {visibleMonths(points).map((point) => (
-          <span key={point.date}>{monthName(point.date)}</span>
+        {visibleMonths(points).map(({ point, index }) => (
+          <span
+            key={point.date}
+            className="absolute -translate-x-1/2"
+            // biome-ignore lint/nursery/noInlineStyles: Label position uses the exact dynamic data index, matching the SVG x-coordinate.
+            style={{
+              left: `${(xAt(index, points.length) / chartWidth) * percentageScale}%`,
+            }}
+          >
+            {monthName(point.date)}
+          </span>
         ))}
       </div>
     </>
