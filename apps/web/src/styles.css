@@ -99,6 +99,34 @@
     padding-left: 1.1em;
   }
 
+  /* The editor wraps each table in `.tableWrapper`; the read-only view does not. */
+  .journal-prose .tableWrapper {
+    overflow-x: auto;
+  }
+
+  .journal-prose table {
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .journal-prose :is(th, td) {
+    border-bottom: 1px solid var(--journal-rule);
+    padding: 0.4em 1em 0.4em 0;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .journal-prose th {
+    font-weight: 600;
+    text-align: left;
+    border-bottom-color: var(--journal-quiet);
+  }
+
+  /* ProseMirror marks each cell of a multi-cell selection. */
+  .journal-prose .selectedCell {
+    background-color: var(--pl-primary-subtle);
+  }
+
   .journal-prose a {
     padding-block: 0.25em;
     text-decoration: underline;

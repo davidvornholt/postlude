@@ -82,6 +82,20 @@ const markedText = (node: JSONContent, key: string): ReactNode => {
   return content;
 };
 
+const cellAlignClasses = {
+  center: 'text-center',
+  left: 'text-left',
+  right: 'text-right',
+} as const;
+
+// GFM stores alignment per column; the parser copies it onto every cell.
+const cellAlignClassOf = (node: JSONContent): string | undefined => {
+  const align: unknown = node.attrs?.align;
+  return align === 'center' || align === 'left' || align === 'right'
+    ? cellAlignClasses[align]
+    : undefined;
+};
+
 const renderNode = (node: JSONContent, key: string): ReactNode => {
   const children = childrenOf(node, key);
   switch (node.type) {
@@ -125,6 +139,26 @@ const renderNode = (node: JSONContent, key: string): ReactNode => {
         <pre key={key}>
           <code>{children}</code>
         </pre>
+      );
+    case 'table':
+      return (
+        <table key={key}>
+          <tbody>{children}</tbody>
+        </table>
+      );
+    case 'tableRow':
+      return <tr key={key}>{children}</tr>;
+    case 'tableHeader':
+      return (
+        <th className={cellAlignClassOf(node)} key={key} scope="col">
+          {children}
+        </th>
+      );
+    case 'tableCell':
+      return (
+        <td className={cellAlignClassOf(node)} key={key}>
+          {children}
+        </td>
       );
     case 'hardBreak':
       return <br key={key} />;

@@ -137,12 +137,6 @@ describe('countJournalWords', () => {
     expect(journalPlainText('5 \\* 3')).toBe('5 * 3');
   });
 
-  it('counts the cells of a table and not its rules', () => {
-    const table = '| Day | Words |\n| --- | --- |\n| Monday | 200 |';
-    const cellWords = 6;
-    expect(countJournalWords(table)).toBe(cellWords);
-  });
-
   it('counts an entry the way a writer would read it', () => {
     const entry = [
       '## Evening',
@@ -201,4 +195,20 @@ it('uses Markdown link destinations without counting URL punctuation', () => {
   expect(
     countJournalWords('Before ![alt](https://example.com/foo_(bar)) after'),
   ).toBe(2);
+});
+
+it('counts the words on each side of an HTML line break', () => {
+  const words = 3;
+  expect(countJournalWords('Calm<br>then<BR/>busy')).toBe(words);
+});
+
+it('counts the cells of a table and not its rules', () => {
+  const cellWords = 4;
+  for (const table of [
+    '| Day | Words |\n| --- | --- |\n| Monday | 200 |',
+    '|Day|Words|\n|:-|-:|\n|Monday|200|',
+    'Day | Words\n--- | ---\nMonday | 200',
+  ]) {
+    expect(countJournalWords(table)).toBe(cellWords);
+  }
 });
