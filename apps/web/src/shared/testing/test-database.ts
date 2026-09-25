@@ -12,6 +12,7 @@
  * touches the journal you write in.
  */
 
+import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 import { SqlClient } from '@effect/sql';
 import type { SqlError } from '@effect/sql/SqlError';
@@ -27,19 +28,24 @@ import { TestDatabaseSetupError } from './test-database-errors.ts';
  * reaches this path. Locally the value is read back through Bun's own env
  * loader — the same way the canonical justfile reads it — rather than by
  * parsing the file here, so what a generated env file means still has one
- * implementation.
+ * implementation. Playwright loads this module under Node for the browser
+ * database, so the child process is spawned through Node's API, which Bun also
+ * provides.
  */
 const generatedDevEnvFile = new URL('../../../.env.local', import.meta.url)
   .pathname;
 
 const fromGeneratedDevEnv = (): string => {
-  const loaded = Bun.spawnSync([
+  const loaded = spawnSync(
     'bun',
-    `--env-file=${generatedDevEnvFile}`,
-    '-e',
-    'process.stdout.write(process.env.DATABASE_URL ?? "")',
-  ]);
-  return loaded.exitCode === 0 ? loaded.stdout.toString() : '';
+    [
+      `--env-file=${generatedDevEnvFile}`,
+      '-e',
+      'process.stdout.write(process.env.DATABASE_URL ?? "")',
+    ],
+    { encoding: 'utf8' },
+  );
+  return loaded.status === 0 ? loaded.stdout : '';
 };
 
 /**
