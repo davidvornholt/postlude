@@ -57,6 +57,13 @@
       "when": 1790333805631,
       "tag": "0007_bent_old_lace",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790356363124,
+      "tag": "0008_free_mindworm",
+      "breakpoints": true
     }
   ]
 }

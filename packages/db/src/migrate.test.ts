@@ -7,6 +7,7 @@ import type { Pool } from 'pg';
 
 import {
   migrateDatabase,
+  migrateGeneratedThrough,
   migrationFolder,
   searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
@@ -14,7 +15,7 @@ import {
 import { createPool } from './pool.ts';
 
 const latestLegacyMigration = 2;
-const expectedMigrationCount = 8;
+const expectedMigrationCount = 9;
 const testTimeoutMilliseconds = 30_000;
 const generatedEnvFile = new URL('../.env.local', import.meta.url).pathname;
 
@@ -216,3 +217,95 @@ it(
   },
   testTimeoutMilliseconds,
 );
+
+it('preserves legacy identities and accepts new provider-key accounts without issuer', async () => {
+  await Effect.runPromise(
+    withTemporaryDatabase(databaseUrl(), (pool) =>
+      Effect.gen(function* () {
+        yield* migrateGeneratedThrough(pool, '0007_bent_old_lace');
+        yield* Effect.promise(() =>
+          pool.query(`
+      insert into "user" (id,name,email) values ('owner','Owner','owner@example.test');
+      insert into account (id,issuer,account_id,provider_id,user_id)
+      values ('legacy','https://github.com','123','github','owner');
+    `),
+        );
+        yield* migrateTestDatabase(pool);
+        const legacy = yield* Effect.promise(() =>
+          pool.query(
+            'select issuer,account_id as "accountId",provider_id as "providerId",user_id as "userId" from account where id=$1',
+            ['legacy'],
+          ),
+        );
+        expect(legacy.rows).toEqual([
+          {
+            issuer: 'https://github.com',
+            accountId: '123',
+            providerId: 'github',
+            userId: 'owner',
+          },
+        ]);
+        yield* Effect.promise(() =>
+          pool.query(
+            `insert into account (id,account_id,provider_id,user_id) values ('new','456','github','owner')`,
+          ),
+        );
+        yield* Effect.promise(() =>
+          pool.query(
+            `insert into account (id,account_id,provider_id,user_id) values ('other-provider','123','other','owner')`,
+          ),
+        );
+        yield* Effect.promise(async () =>
+          expect(
+            pool.query(
+              `insert into account (id,account_id,provider_id,user_id) values ('duplicate','123','github','owner')`,
+            ),
+          ).rejects.toMatchObject({ code: '23505' }),
+        );
+        yield* migrateTestDatabase(pool);
+        const count = yield* Effect.promise(() =>
+          pool.query('select count(*)::integer as count from account'),
+        );
+        expect(count.rows).toEqual([{ count: 3 }]);
+      }),
+    ),
+  );
+});
+
+it('refuses ambiguous legacy provider keys and rolls back the complete migration', async () => {
+  await Effect.runPromise(
+    withTemporaryDatabase(databaseUrl(), (pool) =>
+      Effect.gen(function* () {
+        yield* migrateGeneratedThrough(pool, '0007_bent_old_lace');
+        yield* Effect.promise(() =>
+          pool.query(`
+      insert into "user" (id,name,email) values ('one','One','one@example.test'), ('two','Two','two@example.test');
+      insert into account (id,issuer,account_id,provider_id,user_id)
+      values ('one','https://one.example','123','github','one'), ('two','https://two.example','123','github','two');
+    `),
+        );
+        const result = yield* Effect.either(migrateTestDatabase(pool));
+        expect(result).toMatchObject({
+          _tag: 'Left',
+          left: { _tag: 'DatabaseMigrationError' },
+        });
+        const count = yield* Effect.promise(() =>
+          pool.query('select count(*)::integer as count from account'),
+        );
+        expect(count.rows).toEqual([{ count: 2 }]);
+        const column = yield* Effect.promise(() =>
+          pool.query(
+            `select is_nullable as "isNullable" from information_schema.columns where table_name='account' and column_name='issuer'`,
+          ),
+        );
+        expect(column.rows).toEqual([{ isNullable: 'NO' }]);
+        const index = yield* Effect.promise(() =>
+          pool.query(
+            `select indexname from pg_indexes where indexname='account_issuer_account_id_unique'`,
+          ),
+        );
+        expect(index.rows).toHaveLength(1);
+      }),
+    ),
+  );
+});

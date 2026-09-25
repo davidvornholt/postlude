@@ -15,7 +15,7 @@ import {
 
 const databaseUpgradeTimeout = 30_000;
 const beforeSearchMigration = '0003_motionless_gauntlet';
-const expectedMigrationCount = 8;
+const expectedMigrationCount = 9;
 const chapter = 12;
 const verseStart = 5;
 const verseEnd = 13;
