@@ -85,7 +85,20 @@ it('commits once, accepts an exact rerun, and refuses the whole conflicting batc
               [[firstDate, secondDate]],
             ),
           );
-          return { imported, rerun, corruptRerun, conflict, rows: rows.rows };
+          const evidence = yield* Effect.promise(() =>
+            pool.query<{ date: string; kind: string; token: string }>(
+              'select entry_date as date, kind, token from entry_search_evidence where entry_date=any($1::date[]) order by kind,token',
+              [[firstDate, secondDate]],
+            ),
+          );
+          return {
+            imported,
+            rerun,
+            corruptRerun,
+            conflict,
+            rows: rows.rows,
+            evidence: evidence.rows,
+          };
         }).pipe(Effect.ensuring(clean));
       }),
     ),
@@ -95,6 +108,22 @@ it('commits once, accepts an exact rerun, and refuses the whole conflicting batc
   expect(result.rerun).toEqual({ inserted: 0, unchanged: 1 });
   expect(result.corruptRerun._tag).toBe('Failure');
   expect(result.conflict._tag).toBe('Failure');
+  expect(result.evidence.every(({ date }) => date === firstDate)).toBe(true);
+  expect(result.evidence).toContainEqual({
+    date: firstDate,
+    kind: 'evening',
+    token: 'imported',
+  });
+  expect(result.evidence).toContainEqual({
+    date: firstDate,
+    kind: 'scripture-notes',
+    token: 'morning',
+  });
+  expect(result.evidence).toContainEqual({
+    date: firstDate,
+    kind: 'passage-reference',
+    token: 'psalms',
+  });
   expect(result.rows).toEqual([
     {
       date: firstDate,

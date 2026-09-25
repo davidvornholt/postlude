@@ -1,11 +1,13 @@
 import {
   migrateDatabase,
+  searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
 } from '@postlude/db/migrate';
 import type { createPool } from '@postlude/db/pool';
 import { Schema } from 'effect';
 
 import { searchDocumentOf } from '../search-document.ts';
+import { backfillSearchEvidence } from './search-evidence-migration.ts';
 
 const ProjectionRow = Schema.Struct({
   date: Schema.String,
@@ -120,7 +122,10 @@ const backfillSearchDocuments = async (pool: MigrationPool): Promise<void> => {
 };
 
 export const migrateJournalDatabase = (pool: MigrationPool) =>
-  migrateDatabase(pool, {
-    afterTag: searchProjectionColumnsMigrationTag,
-    run: backfillSearchDocuments,
-  });
+  migrateDatabase(pool, [
+    {
+      afterTag: searchProjectionColumnsMigrationTag,
+      run: backfillSearchDocuments,
+    },
+    { afterTag: searchEvidenceMigrationTag, run: backfillSearchEvidence },
+  ]);

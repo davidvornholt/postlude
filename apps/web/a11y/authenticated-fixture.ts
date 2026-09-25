@@ -1,6 +1,8 @@
 import type * as playwright from '@playwright/test';
 import { createPool } from '@postlude/db/pool';
 import { makeSignature } from 'better-auth/crypto';
+import { storedSearchEvidence } from '../src/features/journal/search-stored-evidence.ts';
+import { replaceSearchEvidenceWithClient } from '../src/features/journal/services/search-evidence-write.ts';
 import { env } from '../src/shared/env';
 
 const ownerId = 'postlude-a11y-owner';
@@ -42,10 +44,32 @@ export const signInToRealJournal = async (
       "insert into session (id,token,user_id,expires_at) values ($1,$2,$3,now()+interval '1 hour')",
       [token, token, ownerId],
     );
-    await pool.query(
-      `insert into entry (entry_date,journal_markdown,journal_word_count,journal_search_text,scripture_search_text,scripture_reference_search_text,search_token_text,search_projection_revision) values ($1,$2,8,$2,'','','a quiet evening with time to listen',1) on conflict (entry_date) do nothing`,
-      [entryDate, fixtureText],
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('begin');
+      await client.query(
+        "select pg_advisory_xact_lock(hashtext('postlude-a11y-entry'))",
+      );
+      await client.query(
+        `insert into entry (entry_date,journal_markdown,journal_word_count,journal_search_text,scripture_search_text,scripture_reference_search_text,search_token_text,search_projection_revision,search_evidence_revision) values ($1,$2,8,$2,'','','a quiet evening with time to listen',1,1) on conflict (entry_date) do nothing`,
+        [entryDate, fixtureText],
+      );
+      await replaceSearchEvidenceWithClient(
+        client,
+        entryDate,
+        storedSearchEvidence({
+          journalText: fixtureText,
+          scriptureText: '',
+          scriptureReferenceText: '',
+        }),
+      );
+      await client.query('commit');
+    } catch (error) {
+      await client.query('rollback');
+      throw error;
+    } finally {
+      client.release();
+    }
     await page.context().addCookies([
       {
         name: 'better-auth.session_token',

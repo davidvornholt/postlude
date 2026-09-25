@@ -1,12 +1,8 @@
 import { expect, it } from 'bun:test';
 import { Schema } from 'effect';
-
-import {
-  SearchQuery,
-  searchHitOf,
-  searchQueryLengthLimit,
-} from '../search-contract.ts';
+import { SearchQuery, searchQueryLengthLimit } from '../search-contract.ts';
 import { searchTerms } from '../search-query.ts';
+import { searchHitFixture } from '../testing/search-hit-fixture.ts';
 
 const distantWordGap = 80;
 
@@ -14,7 +10,7 @@ const joined = (excerpt: ReadonlyArray<{ readonly text: string }>) =>
   excerpt.map((segment) => segment.text).join('');
 
 it('attributes and highlights a book-only match to the morning', () => {
-  const hit = searchHitOf(['sprüche'])({
+  const hit = searchHitFixture(['sprüche'])({
     date: '2026-03-01',
     journalText: 'A quiet evening.',
     scriptureText: '',
@@ -33,7 +29,7 @@ it('attributes and highlights a book-only match to the morning', () => {
 });
 
 it('keeps evidence for terms split across evening, notes, and reference', () => {
-  const hit = searchHitOf(['rain', 'mercy', 'sprüche'])({
+  const hit = searchHitFixture(['rain', 'mercy', 'sprüche'])({
     date: '2026-03-01',
     journalText: 'Rain came after dusk.',
     scriptureText: 'Mercy was the morning note.',
@@ -59,7 +55,7 @@ it('keeps evidence for terms split across evening, notes, and reference', () => 
 });
 
 it('shows distant terms from one source in separate excerpts', () => {
-  const hit = searchHitOf(['rain', 'orchard'])({
+  const hit = searchHitFixture(['rain', 'orchard'])({
     date: '2026-03-01',
     journalText: `Rain opened the day. ${'quiet '.repeat(distantWordGap)}The orchard closed it.`,
     scriptureText: '',
@@ -77,7 +73,7 @@ it('shows distant terms from one source in separate excerpts', () => {
 });
 
 it('attributes canonical dotted I and final sigma matches to original prose', () => {
-  const hit = searchHitOf(searchTerms('istanbul τελικόσ'))({
+  const hit = searchHitFixture(searchTerms('istanbul τελικόσ'))({
     date: '2026-03-01',
     journalText: 'İstanbul after dusk.',
     scriptureText: 'Μια σκέψη τελικός.',

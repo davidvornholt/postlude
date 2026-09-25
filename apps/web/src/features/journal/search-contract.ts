@@ -65,29 +65,52 @@ export const SearchResults = Schema.Struct({
 });
 export type SearchResults = Schema.Schema.Type<typeof SearchResults>;
 
-const hasMatch = (excerpt: SearchHitSource['excerpts'][number]): boolean =>
-  excerpt.some((segment) => segment.match);
-
-const sourceOf = (
-  kind: SearchHitSourceKind,
-  text: string,
+const excerptOf = (
+  evidence: SearchMatch['evidence'][number],
   terms: ReadonlyArray<string>,
-): SearchHitSource | undefined => {
-  const excerpts = searchExcerpts(text, terms, {
-    hardLineBoundaries: kind === 'passage-reference',
-  }).excerpts.filter(hasMatch);
-  return excerpts.length === 0 ? undefined : { kind, excerpts };
+): SearchHitSource['excerpts'][number] => {
+  const term = terms[evidence.termIndex];
+  if (term && searchExcerpts(evidence.text, [term]).excerpts.length > 0) {
+    const [highlighted] = searchExcerpts(evidence.text, [
+      term,
+      ...terms.filter((value) => value !== term),
+    ]).excerpts;
+    if (highlighted) {
+      return highlighted;
+    }
+  }
+  const characters = Array.from(evidence.text);
+  const before = characters.slice(0, evidence.matchStart).join('');
+  const matched = characters
+    .slice(evidence.matchStart, evidence.matchStart + evidence.matchLength)
+    .join('');
+  const after = characters
+    .slice(evidence.matchStart + evidence.matchLength)
+    .join('');
+  return [
+    { text: before, match: false, at: 0 },
+    { text: matched, match: true, at: before.length },
+    { text: after, match: false, at: before.length + matched.length },
+  ].filter(({ text }) => text !== '');
 };
 
-/** Keeps enough attributed evidence to explain every term in a database match. */
+/** Bounded database windows retain one attributed match for each contributing term. */
 export const searchHitOf =
   (terms: ReadonlyArray<string>) =>
   (match: SearchMatch): SearchHit => ({
     date: match.date,
     words: match.words,
-    sources: [
-      sourceOf('evening', match.journalText, terms),
-      sourceOf('scripture-notes', match.scriptureText, terms),
-      sourceOf('passage-reference', match.scriptureReferenceText, terms),
-    ].filter((source): source is SearchHitSource => source !== undefined),
+    sources: (
+      ['evening', 'scripture-notes', 'passage-reference'] as const
+    ).flatMap((kind) => {
+      const excerpts = match.evidence
+        .filter((evidence) => evidence.kind === kind)
+        .map((evidence) => excerptOf(evidence, terms));
+      const unique = [
+        ...new Map(
+          excerpts.map((excerpt) => [JSON.stringify(excerpt), excerpt]),
+        ).values(),
+      ];
+      return unique.length === 0 ? [] : [{ kind, excerpts: unique }];
+    }),
   });

@@ -84,6 +84,20 @@ const foldedSource = (text: string) => {
   };
 };
 
+/** Shared token-to-visible-text mapping for persisted evidence and live highlighting. */
+export function* searchSourceTokens(text: string) {
+  const source = foldedSource(text);
+  for (const token of source.folded.matchAll(searchTokenRuns)) {
+    yield {
+      token: token[0],
+      ...source.visibleSpan({
+        start: token.index,
+        end: token.index + token[0].length,
+      }),
+    };
+  }
+}
+
 const matchingTerms = (
   token: string,
   trie: Trie,

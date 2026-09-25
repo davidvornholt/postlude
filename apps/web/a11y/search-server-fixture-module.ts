@@ -1,10 +1,10 @@
-import {
-  type SearchHit,
-  type SearchResults,
-  searchHitOf,
+import type {
+  SearchHit,
+  SearchResults,
 } from '../src/features/journal/search-contract.ts';
 import { searchExcerpt } from '../src/features/journal/search-excerpt.ts';
 import { searchTerms } from '../src/features/journal/search-query.ts';
+import { searchHitFixture } from '../src/features/journal/testing/search-hit-fixture.ts';
 import type { SearchPageView } from '../src/features/journal/ui/search-page.tsx';
 import type {
   SearchFixtureOutcome,
@@ -53,7 +53,7 @@ const multiSourceHit = (): SearchHit => ({
 });
 
 const unicodeHit = (query: string): SearchHit =>
-  searchHitOf(searchTerms(query))({
+  searchHitFixture(searchTerms(query))({
     date: '2026-03-01',
     journalText: 'İstanbul after dusk.',
     scriptureText: 'Μια σκέψη τελικός.',

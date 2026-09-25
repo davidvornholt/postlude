@@ -32,7 +32,8 @@ import {
   EntrySummaryFromRow,
 } from '../schemas/entry-summary.ts';
 import { parseScriptureReference } from '../scripture-reference.ts';
-import { searchDocumentOf } from '../search-document.ts';
+import { type SearchDocument, searchDocumentOf } from '../search-document.ts';
+import { storedSearchEvidence } from '../search-stored-evidence.ts';
 import { countJournalWords } from '../word-count.ts';
 import { makeCalendarReader } from './calendar-repository-read.ts';
 import {
@@ -40,6 +41,7 @@ import {
   exportableStoredEntry,
 } from './entry-content-sql.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
+import { replaceSearchEvidence } from './search-evidence-write.ts';
 
 const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
 const exactParseOptions = { onExcessProperty: 'error' } as const;
@@ -82,6 +84,13 @@ export type ArchiveRead = {
 export type ArchiveReadRequest = {
   readonly today: JournalDate;
 };
+
+const persistSavedEvidence =
+  (sql: SqlClient.SqlClient, date: string, document: SearchDocument) =>
+  (rows: ReadonlyArray<JournalEntry>) =>
+    rows[0] === undefined
+      ? Effect.void
+      : replaceSearchEvidence(sql, date, storedSearchEvidence(document));
 
 export class EntryRepository extends Effect.Service<EntryRepository>()(
   'journal/EntryRepository',
@@ -162,6 +171,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_reference_search_text,
             search_token_text,
             search_projection_revision,
+            search_evidence_revision,
             base_revision
           ) as (values (
             ${draft.date}::date,
@@ -179,6 +189,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             ${searchDocument.scriptureText}::text,
             ${searchDocument.scriptureReferenceText}::text,
             ${searchDocument.searchTokenText}::text,
+            ${draft.baseRevision + 1}::integer,
             ${draft.baseRevision + 1}::integer,
             ${draft.baseRevision}::integer
           )), updated as (
@@ -204,6 +215,7 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
             scripture_reference_search_text = candidate.scripture_reference_search_text,
             search_token_text = candidate.search_token_text,
             search_projection_revision = candidate.search_projection_revision,
+            search_evidence_revision = candidate.search_evidence_revision,
             revision = entry.revision + 1,
             updated_at = now()
             from candidate
@@ -227,7 +239,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               scripture_search_text,
               scripture_reference_search_text,
               search_token_text,
-              search_projection_revision
+              search_projection_revision,
+              search_evidence_revision
             ) select
               entry_date,
               journal_markdown,
@@ -244,7 +257,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
               scripture_search_text,
               scripture_reference_search_text,
               search_token_text,
-              search_projection_revision
+              search_projection_revision,
+              search_evidence_revision
             from candidate
             where base_revision = 0
             on conflict (entry_date) do nothing
@@ -255,6 +269,8 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
           select * from inserted
           `.pipe(
             Effect.flatMap(decodeEntries),
+            Effect.tap(persistSavedEvidence(sql, draft.date, searchDocument)),
+            sql.withTransaction,
             Effect.mapError(journalWriteError),
           );
           return saved[0] === undefined

@@ -1,0 +1,2 @@
+ALTER TABLE "entry" ALTER COLUMN "search_evidence_revision" SET NOT NULL;--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_search_evidence_current" CHECK ("entry"."search_evidence_revision" = "entry"."revision");
