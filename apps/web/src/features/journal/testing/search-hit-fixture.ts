@@ -10,9 +10,10 @@ type FixtureDocument = Pick<
 export const searchHitFixture =
   (terms: ReadonlyArray<string>) => (document: FixtureDocument) => {
     const stored = storedSearchEvidence(document);
-    return searchHitOf(terms)({
+    return searchHitOf({
       date: document.date,
       words: document.words,
+      texts: stored.map(({ excerpt }) => excerpt),
       evidence: terms.flatMap((term, termIndex) =>
         (['evening', 'scripture-notes', 'passage-reference'] as const).flatMap(
           (kind) => {
@@ -25,7 +26,7 @@ export const searchHitFixture =
                   {
                     kind,
                     termIndex,
-                    text: evidence.excerpt,
+                    textIndex: stored.indexOf(evidence),
                     matchStart: evidence.matchStart,
                     matchLength: evidence.matchLength,
                   },

@@ -44,15 +44,12 @@ it('bounds 50 three-source Unicode results while retaining distant prefix eviden
     matches.reduce(
       (total, match) =>
         total +
-        match.evidence.reduce(
-          (sum, item) => sum + Buffer.byteLength(item.text),
-          0,
-        ),
+        match.texts.reduce((sum, text) => sum + Buffer.byteLength(text), 0),
       0,
     ),
   ).toBeLessThanOrEqual(maximumBytes);
   for (const match of matches) {
-    const hit = searchHitOf(terms)(match);
+    const hit = searchHitOf(match);
     expect(hit.sources.map(({ kind }) => kind)).toEqual([
       'evening',
       'scripture-notes',
@@ -122,52 +119,84 @@ it('clears evidence when prose is cleared and preserves it after a stale save', 
   expect(result.retained).toEqual([]);
 });
 
-it('retains actual evidence when a 200-character query expands to more than 100 terms', async () => {
-  const query =
-    'ﷺ ¼ ℀ ⅔ ⅚ ⅞ ㎧ ㎯ ﷻ ℅ ℆ ⅑ ⅒ ↉ ㏆ ㏘ ㏞ b d e f g h i j k l n q r t w x y z µ À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð Ñ Ò Ó Ô Õ Ö Ø Ù Ú Û Ü Ý Þ ß ÿ Ā Ă Ą Ć Ĉ Ċ Č Ď Đ Ē Ĕ Ė Ę Ě Ĝ Ğ Ġ Ģ Ĥ Ħ Ĩ Ī Ĭ Į ı Ĳ Ĵ Ķ ĸ Ĺ Ļ Ľ ';
-  const terms = searchTerms(query);
-  const raw = terms.join(' distant context ');
-  const evidence = storedSearchEvidence({
-    journalText: raw,
-    scriptureText: raw,
-    scriptureReferenceText: raw,
-  });
-  const matches = await withJournal(({ search }) =>
-    Effect.gen(function* () {
-      const sql = yield* SqlClient.SqlClient;
-      yield* sql`insert into entry (entry_date,journal_markdown,journal_word_count,journal_search_text,scripture_search_text,
+it.each([
+  {
+    query:
+      'ﷺ ¼ ℀ ⅔ ⅚ ⅞ ㎧ ㎯ ﷻ ℅ ℆ ⅑ ⅒ ↉ ㏆ ㏘ ㏞ b d e f g h i j k l n q r t w x y z µ À Á Â Ã Ä Å Æ Ç È É Ê Ë Ì Í Î Ï Ð Ñ Ò Ó Ô Õ Ö Ø Ù Ú Û Ü Ý Þ ß ÿ Ā Ă Ą Ć Ĉ Ċ Č Ď Đ Ē Ĕ Ė Ę Ě Ĝ Ğ Ġ Ģ Ĥ Ħ Ĩ Ī Ĭ Į ı Ĳ Ĵ Ķ ĸ Ĺ Ļ Ľ ',
+    expectedTerms: 111,
+  },
+  {
+    query:
+      '⑴⑵⑶⑷⑸⑹⑺⑻⑼⑽⑾⑿⒀⒁⒂⒃⒄⒅⒆⒇⒜⒝⒞⒟⒠⒡⒢⒣⒤⒥⒦⒧⒨⒩⒪⒫⒬⒭⒮⒯⒰⒱⒲⒳⒴⒵㈀㈁㈂㈃㈄㈅㈆㈇㈈㈉㈊㈋㈌㈍㈎㈏㈐㈑㈒㈓㈔㈕㈖㈗㈘㈙㈚㈛㈜㈝㈞㈠㈡㈢㈣㈤㈥㈦㈧㈨㈩㈪㈫㈬㈭㈮㈯㈰㈱㈲㈳㈴㈵㈶㈷㈸㈹㈺㈻㈼㈽㈾㈿㉀㉁㉂㉃倀 倁 倂 倃 倄 倅 倆 倇 倈 倉 倊 個 倌 倍 倎 倏 倐 們 倒 倓 倔 倕 倖 倗 倘 候 倚 倛 倜 倝 倞 借 倠 倡 倢 倣 値 倥 倦 倧 倨 倩 倪 ',
+    expectedTerms: 156,
+  },
+])(
+  'retains actual evidence after compatibility query expansion',
+  async ({ query, expectedTerms }) => {
+    const terms = searchTerms(query);
+    const raw = terms.join(' distant context ');
+    const evidence = storedSearchEvidence({
+      journalText: raw,
+      scriptureText: raw,
+      scriptureReferenceText: raw,
+    });
+    const matches = await withJournal(({ search }) =>
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        yield* sql`insert into entry (entry_date,journal_markdown,journal_word_count,journal_search_text,scripture_search_text,
       scripture_reference_search_text,search_token_text,search_projection_revision,search_evidence_revision)
       values ('2026-03-01','',1,${raw},${raw},${raw},${terms.join(' ')},1,1)`;
-      yield* sql`insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length)
+        yield* sql`insert into entry_search_evidence (entry_date,kind,token,position,excerpt,match_start,match_length)
       select '2026-03-01',kind,token,position,excerpt,"matchStart","matchLength"
       from jsonb_to_recordset(${JSON.stringify(evidence)}::jsonb)
         as evidence(kind text,token text,position integer,excerpt text,"matchStart" integer,"matchLength" integer)`;
-      return yield* search.search(terms, hitCount);
+        return yield* search.search(terms, hitCount);
+      }),
+    );
+    const maximumQueryLength = 200;
+    const maximumHitBytes = 1200;
+    const sourceKindCount = 3;
+    expect(query.length).toBeLessThanOrEqual(maximumQueryLength);
+    expect(terms).toHaveLength(expectedTerms);
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.evidence).toHaveLength(terms.length * sourceKindCount);
+    expect(
+      matches[0]?.evidence.every(
+        ({ textIndex, matchLength }) =>
+          (matches[0]?.texts[textIndex]?.length ?? 0) > 0 && matchLength > 0,
+      ),
+    ).toBe(true);
+    expect(
+      matches[0]?.texts.reduce((sum, text) => sum + Buffer.byteLength(text), 0),
+    ).toBeLessThanOrEqual(maximumHitBytes);
+    const hit = matches[0] && searchHitOf(matches[0]);
+    expect(
+      hit?.sources.every(({ excerpts }) =>
+        excerpts.every((excerpt) => excerpt.some(({ match }) => match)),
+      ),
+    ).toBe(true);
+  },
+);
+
+it('does not turn a cropped word suffix into a prefix highlight', async () => {
+  const separatorLength = 54;
+  const match = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save(
+        draft('2026-03-01', `brain ${'x'.repeat(separatorLength)} rain`),
+      );
+      return (yield* search.search(['rain'], hitCount))[0];
     }),
   );
-  const maximumQueryLength = 200;
-  const expandedTermCount = 111;
-  const maximumHitBytes = 1200;
-  const sourceKindCount = 3;
-  expect(query).toHaveLength(maximumQueryLength);
-  expect(terms).toHaveLength(expandedTermCount);
-  expect(matches).toHaveLength(1);
-  expect(matches[0]?.evidence).toHaveLength(terms.length * sourceKindCount);
-  expect(
-    matches[0]?.evidence.every(
-      ({ text, matchLength }) => text.length > 0 && matchLength > 0,
-    ),
-  ).toBe(true);
-  expect(
-    matches[0]?.evidence.reduce(
-      (sum, { text }) => sum + Buffer.byteLength(text),
-      0,
-    ),
-  ).toBeLessThanOrEqual(maximumHitBytes);
-  const hit = matches[0] && searchHitOf(terms)(matches[0]);
-  expect(
-    hit?.sources.every(({ excerpts }) =>
-      excerpts.every((excerpt) => excerpt.some(({ match }) => match)),
-    ),
-  ).toBe(true);
+  expect(match).toBeDefined();
+  if (!match) {
+    throw new Error('Expected stored search evidence.');
+  }
+  const marked = searchHitOf(match).sources.flatMap(({ excerpts }) =>
+    excerpts
+      .flat()
+      .filter(({ match: isMarked }) => isMarked)
+      .map(({ text }) => text),
+  );
+  expect(marked).toEqual(['rain']);
 });

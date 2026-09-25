@@ -48,7 +48,7 @@ export const searchJournalFn = createServerFn({ method: 'POST' })
             query,
             today,
             terms,
-            hits: matches.map(searchHitOf(terms)),
+            hits: matches.map(searchHitOf),
             limited: matches.length === searchLimit,
           };
         }),

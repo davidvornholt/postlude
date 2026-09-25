@@ -28,7 +28,7 @@ it('uses the same canonical tokens for punctuation and difficult case folds', as
         queries.map((query) => search.search(asked(query), plenty)),
         { concurrency: 1 },
       );
-      return { answers, raw: answers[0]?.[0]?.evidence[0]?.text };
+      return { answers, raw: answers[0]?.[0]?.texts[0] };
     }),
   );
   expect(observed.answers.map((answers) => answers[0]?.date)).toEqual([

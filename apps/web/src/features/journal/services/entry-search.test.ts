@@ -156,12 +156,13 @@ it('returns only contributing bounded sources and the day, counted', async () =>
   expect(match?.evidence).toEqual([
     {
       kind: 'evening',
-      text: 'The rain fell all night.',
+      textIndex: 0,
       termIndex: 0,
       matchStart: 4,
       matchLength: 4,
     },
   ]);
+  expect(match?.texts).toEqual(['The rain fell all night.']);
   expect(match?.words).toBe(words);
 });
 
@@ -210,9 +211,11 @@ it('finds a reference by German names and keyboard aliases', async () => {
       const alias = yield* search.search(asked('spr'), plenty);
       return [german, keyboard, alias].map(
         (matches) =>
-          matches[0]?.evidence.find(
-            (evidence) => evidence.kind === 'passage-reference',
-          )?.text,
+          matches[0]?.texts[
+            matches[0]?.evidence.find(
+              (evidence) => evidence.kind === 'passage-reference',
+            )?.textIndex ?? -1
+          ],
       );
     }),
   );

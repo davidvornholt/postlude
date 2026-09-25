@@ -1,6 +1,5 @@
 import { Schema } from 'effect';
 import { JournalDateSchema } from './schemas/entry.ts';
-import { searchExcerpts } from './search-excerpt.ts';
 import type { SearchMatch } from './services/entry-search.ts';
 
 export const searchQueryLengthLimit = 200;
@@ -66,51 +65,55 @@ export const SearchResults = Schema.Struct({
 export type SearchResults = Schema.Schema.Type<typeof SearchResults>;
 
 const excerptOf = (
-  evidence: SearchMatch['evidence'][number],
-  terms: ReadonlyArray<string>,
+  text: string,
+  evidence: ReadonlyArray<SearchMatch['evidence'][number]>,
 ): SearchHitSource['excerpts'][number] => {
-  const term = terms[evidence.termIndex];
-  if (term && searchExcerpts(evidence.text, [term]).excerpts.length > 0) {
-    const [highlighted] = searchExcerpts(evidence.text, [
-      term,
-      ...terms.filter((value) => value !== term),
-    ]).excerpts;
-    if (highlighted) {
-      return highlighted;
+  const characters = Array.from(text);
+  const ranges = evidence
+    .map(({ matchStart, matchLength }) => ({
+      start: matchStart,
+      end: matchStart + matchLength,
+    }))
+    .sort((a, b) => a.start - b.start);
+  const segments: Array<{ text: string; match: boolean; at: number }> = [];
+  let cursor = 0;
+  let offset = 0;
+  const append = (start: number, end: number, match: boolean) => {
+    const content = characters.slice(start, end).join('');
+    if (content !== '') {
+      segments.push({ text: content, match, at: offset });
+      offset += content.length;
+    }
+  };
+  for (const range of ranges) {
+    if (range.end > cursor) {
+      append(cursor, range.start, false);
+      append(Math.max(cursor, range.start), range.end, true);
+      cursor = range.end;
     }
   }
-  const characters = Array.from(evidence.text);
-  const before = characters.slice(0, evidence.matchStart).join('');
-  const matched = characters
-    .slice(evidence.matchStart, evidence.matchStart + evidence.matchLength)
-    .join('');
-  const after = characters
-    .slice(evidence.matchStart + evidence.matchLength)
-    .join('');
-  return [
-    { text: before, match: false, at: 0 },
-    { text: matched, match: true, at: before.length },
-    { text: after, match: false, at: before.length + matched.length },
-  ].filter(({ text }) => text !== '');
+  append(cursor, characters.length, false);
+  return segments;
 };
 
-/** Bounded database windows retain one attributed match for each contributing term. */
-export const searchHitOf =
-  (terms: ReadonlyArray<string>) =>
-  (match: SearchMatch): SearchHit => ({
-    date: match.date,
-    words: match.words,
-    sources: (
-      ['evening', 'scripture-notes', 'passage-reference'] as const
-    ).flatMap((kind) => {
-      const excerpts = match.evidence
-        .filter((evidence) => evidence.kind === kind)
-        .map((evidence) => excerptOf(evidence, terms));
-      const unique = [
-        ...new Map(
-          excerpts.map((excerpt) => [JSON.stringify(excerpt), excerpt]),
-        ).values(),
-      ];
-      return unique.length === 0 ? [] : [{ kind, excerpts: unique }];
-    }),
-  });
+/** Only verified source coordinates are highlighted: a cropped suffix is not a new token. */
+export const searchHitOf = (match: SearchMatch): SearchHit => ({
+  date: match.date,
+  words: match.words,
+  sources: (
+    ['evening', 'scripture-notes', 'passage-reference'] as const
+  ).flatMap((kind) => {
+    const groups = new Map<number, Array<SearchMatch['evidence'][number]>>();
+    for (const evidence of match.evidence) {
+      if (evidence.kind === kind) {
+        const group = groups.get(evidence.textIndex) ?? [];
+        group.push(evidence);
+        groups.set(evidence.textIndex, group);
+      }
+    }
+    const excerpts = [...groups].map(([index, evidence]) =>
+      excerptOf(match.texts[index] ?? '', evidence),
+    );
+    return excerpts.length === 0 ? [] : [{ kind, excerpts }];
+  }),
+});

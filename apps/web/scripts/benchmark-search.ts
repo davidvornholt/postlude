@@ -96,8 +96,8 @@ const boundedQuery = async (): Promise<Sample> => {
     bytes: rows.reduce(
       (sum, row) =>
         sum +
-        row.evidence.reduce(
-          (subtotal, evidence) => subtotal + Buffer.byteLength(evidence.text),
+        row.texts.reduce(
+          (subtotal, text) => subtotal + Buffer.byteLength(text),
           0,
         ),
       0,
