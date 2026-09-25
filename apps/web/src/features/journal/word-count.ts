@@ -16,6 +16,8 @@ const tildeFencedBlock =
   /^ {0,3}(?<fence>~{3,})[^\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>~*[ \t]*\r?$/gmu;
 const unclosedFence = /^ {0,3}(?:`{3,}[^`\r\n]*|~{3,}[^\r\n]*)\r?$[\s\S]*/mu;
 const htmlComment = /<!--[\s\S]*?-->/gu;
+// The editor reads `<br>` as a line break, which is how a table cell spells one.
+const htmlLineBreak = /<br\s*\/?>/giu;
 const referenceLink = /\[(?<label>[^\]]*)\]\[[^\]]*\]/gu;
 const autolink = /<(?<target>https?:\/\/[^>\s]+)>/gu;
 const linkDefinition = /^[ \t]*\[[^\]]+\]:[ \t]*\S+.*$/gmu;
@@ -25,7 +27,9 @@ const blockMarker =
 const thematicBreak = /^[ \t]*(?:[-*_][ \t]*){3,}$/gmu;
 const setextUnderline = /^[ \t]*(?:=+|-+)[ \t]*$/gmu;
 const tablePipe = /[|]/gu;
-const tableDivider = /^[ \t]*:?-{3,}:?(?:[ \t]*[|][ \t]*:?-+:?)*[ \t]*$/gmu;
+// A delimiter row has at least one pipe, with or without the outer ones.
+const tableDivider =
+  /^[ \t]*[|]?(?:[ \t]*:?-+:?[ \t]*[|])+[ \t]*(?::?-+:?[ \t]*)?$/gmu;
 const emphasis = /(?<!\\)(?:\*{1,3}|_{1,3}|~{2})/gu;
 const escaped = /\\(?<character>[\\`*_{}[\]()#+\-.!>~|])/gu;
 
@@ -72,6 +76,7 @@ export const journalPlainText = (markdown: string): string => {
     .replace(tildeFencedBlock, ' ')
     .replace(unclosedFence, ' ')
     .replace(htmlComment, ' ')
+    .replace(htmlLineBreak, ' ')
     .replace(linkDefinition, ' ');
   return inlineProse(Lexer.lexInline(prose))
     .replace(referenceLink, ' $<label> ')
