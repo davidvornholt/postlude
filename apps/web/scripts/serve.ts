@@ -8,7 +8,6 @@
 import { realpath } from 'node:fs/promises';
 import process from 'node:process';
 
-import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
 import { parsePort } from './server-config.ts';
 
 type FetchHandler = (request: Request) => Promise<Response> | Response;
@@ -88,7 +87,9 @@ export const createFetchHandler = async (
     // TanStack can replace its response after middleware publishes headers.
     const response = await ssrFetch(request);
     const headers = new Headers(response.headers);
-    applyPrivateResponseHeaders(headers);
+    headers.set('cache-control', 'private, no-store, max-age=0');
+    headers.set('pragma', 'no-cache');
+    headers.set('x-content-type-options', 'nosniff');
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
