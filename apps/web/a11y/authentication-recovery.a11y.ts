@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { signInToRealJournal } from './authenticated-fixture.ts';
 
+const unauthorizedStatus = 401;
+
 test('a real serialized expired-session error offers sign-in recovery', async ({
   page,
 }) => {
@@ -14,7 +16,16 @@ test('a real serialized expired-session error offers sign-in recovery', async ({
     await field.fill('quiet');
     // Revoke only this fixture session after rendering, so the next real RPC fails.
     await cleanup();
+    const expiredResponse = page.waitForResponse(
+      (candidate) => candidate.status() === unauthorizedStatus,
+    );
     await field.press('Enter');
+    const response = await expiredResponse;
+    expect(response.headers()['cache-control']).toBe(
+      'private, no-store, max-age=0',
+    );
+    expect(response.headers().pragma).toBe('no-cache');
+    expect(response.headers()['x-content-type-options']).toBe('nosniff');
     await expect(
       page.getByText('Your sign-in ended before the search finished'),
     ).toBeVisible();

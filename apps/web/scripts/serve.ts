@@ -8,6 +8,7 @@
 import { realpath } from 'node:fs/promises';
 import process from 'node:process';
 
+import { applyPrivateResponseHeaders } from '../src/shared/auth/private-response.ts';
 import { parsePort } from './server-config.ts';
 
 type FetchHandler = (request: Request) => Promise<Response> | Response;
@@ -79,7 +80,20 @@ export const createFetchHandler = async (
 
   return async (request) => {
     const { pathname } = new URL(request.url);
-    return (await serveStatic(pathname)) ?? ssrFetch(request);
+    const staticResponse = await serveStatic(pathname);
+    if (staticResponse !== null) {
+      return staticResponse;
+    }
+    // Dynamic responses are journal/auth state, including serialized failures.
+    // TanStack can replace its response after middleware publishes headers.
+    const response = await ssrFetch(request);
+    const headers = new Headers(response.headers);
+    applyPrivateResponseHeaders(headers);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   };
 };
 

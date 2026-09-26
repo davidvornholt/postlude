@@ -3,6 +3,8 @@ import { rm, symlink } from 'node:fs/promises';
 
 import { bootSelfCheckFailure, createFetchHandler } from './serve.ts';
 
+const unauthorizedStatus = 401;
+const redirectStatus = 303;
 const okStatus = 200;
 const emptyStatus = 204;
 const serverErrorStatus = 500;
@@ -35,6 +37,53 @@ afterAll(async () => {
 });
 
 describe('createFetchHandler', () => {
+  it('keeps final dynamic failures private while preserving their body, status and cookies', async () => {
+    const privateHandler = await createFetchHandler(
+      clientDir,
+      () =>
+        new Response('vetted serialized failure', {
+          status: unauthorizedStatus,
+          headers: [
+            ['content-type', 'application/json'],
+            ['x-tss-serialized', 'true'],
+            ['set-cookie', 'first=fixture; HttpOnly'],
+            ['set-cookie', 'second=fixture; HttpOnly'],
+          ],
+        }),
+    );
+    const response = await privateHandler(
+      new Request('http://127.0.0.1/_serverFn/fixture'),
+    );
+    expect(response.status).toBe(unauthorizedStatus);
+    expect(await response.text()).toBe('vetted serialized failure');
+    expect(response.headers.get('cache-control')).toBe(
+      'private, no-store, max-age=0',
+    );
+    expect(response.headers.get('pragma')).toBe('no-cache');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('x-tss-serialized')).toBe('true');
+    expect(response.headers.getSetCookie()).toEqual([
+      'first=fixture; HttpOnly',
+      'second=fixture; HttpOnly',
+    ]);
+  });
+
+  it('can preserve an immutable redirect response as private', async () => {
+    const redirectHandler = await createFetchHandler(clientDir, () =>
+      Response.redirect('https://postlude.test/login', redirectStatus),
+    );
+    const response = await redirectHandler(
+      new Request('http://127.0.0.1/archive'),
+    );
+    expect(response.status).toBe(redirectStatus);
+    expect(response.headers.get('location')).toBe(
+      'https://postlude.test/login',
+    );
+    expect(response.headers.get('cache-control')).toBe(
+      'private, no-store, max-age=0',
+    );
+  });
+
   it('serves a built asset with the immutable cache header', async () => {
     const response = await get(assetPath);
 
