@@ -19,3 +19,17 @@ it('keeps SSR function storage failures serializable without leaking the cause',
   expect((failure as Error).cause).toBeUndefined();
   expect(publishStatus).toHaveBeenCalledWith(internalServerError);
 });
+
+it('retains public authentication status for browser recovery without running the operation', async () => {
+  const next = mock(() => Promise.resolve('private result'));
+  const failure = await runSessionRequired({
+    transport: 'server-function',
+    authorize: () => Promise.resolve(false),
+    next,
+    publishHeaders: () => undefined,
+    publishStatus: () => undefined,
+  }).catch((error: unknown) => error);
+  expect(failure).toBeInstanceOf(Error);
+  expect(failure).toMatchObject({ message: 'Not authorized.', status: 401 });
+  expect(next).not.toHaveBeenCalled();
+});

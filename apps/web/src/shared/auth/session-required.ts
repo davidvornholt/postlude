@@ -27,8 +27,10 @@ export const runSessionRequired = async <T>({
     }
     if (transport === 'server-function') {
       publishStatus(error.status);
-      // biome-ignore lint/style/useErrorCause: Seroval cannot carry a Response cause; only its vetted message may reach the client.
-      throw new Error(await error.text());
+      // Keep only the vetted message and public status; a Response cause cannot serialize.
+      throw Object.assign(new Error(await error.text()), {
+        status: error.status,
+      });
     }
     if (error.status === unauthorized) {
       throw signInPrivateRedirect();
