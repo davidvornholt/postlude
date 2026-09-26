@@ -44,7 +44,7 @@ const privateBadRequestResult = async (
   const publishedHeaders = new Headers();
   const response = await responseFrom(
     runSessionRequired({
-      request,
+      transport: 'route',
       authorize: () => Promise.resolve(true),
       next: () =>
         exportJournalResponseWith(request, () => {
@@ -52,6 +52,7 @@ const privateBadRequestResult = async (
           return Promise.resolve(new Response(null, { status: okStatus }));
         }),
       publishHeaders: () => applyPrivateResponseHeaders(publishedHeaders),
+      publishStatus: () => undefined,
     }),
   );
 

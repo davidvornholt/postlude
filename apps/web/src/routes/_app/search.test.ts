@@ -133,7 +133,7 @@ it('redirects an expired native POST before the route can search', async () => {
     method: 'POST',
   });
   const failure = await runSessionRequired({
-    request,
+    transport: 'route',
     authorize: () => Promise.resolve(false),
     next: () =>
       handleSearchPost(
@@ -144,6 +144,7 @@ it('redirects an expired native POST before the route can search', async () => {
         search,
       ),
     publishHeaders: () => applyPrivateResponseHeaders(responseHeaders),
+    publishStatus: () => undefined,
   }).then(
     () => undefined,
     (error: unknown) => error,
@@ -161,25 +162,24 @@ it('redirects an expired native POST before the route can search', async () => {
   expect(privateHeadersOf(responseHeaders)).toEqual(expectedPrivateHeaders);
 });
 
-it('keeps an expired server-function call on a private raw 401', async () => {
+it('keeps an expired server-function call private with a safe error and 401 status', async () => {
+  let status: number | undefined;
+  const responseHeaders = new Headers();
   const failure = await runSessionRequired({
-    request: new Request('https://postlude.test/server-function', {
-      headers: { 'x-tsr-serverFn': 'true' },
-      method: 'POST',
-    }),
+    transport: 'server-function',
     authorize: () => Promise.resolve(false),
     next: () => Promise.reject(new Error('unreachable private search')),
-    publishHeaders: () => undefined,
+    publishHeaders: () => applyPrivateResponseHeaders(responseHeaders),
+    publishStatus: (value) => {
+      status = value;
+    },
   }).then(
     () => undefined,
     (error: unknown) => error,
   );
 
-  expect(failure).toBeInstanceOf(Response);
-  if (!(failure instanceof Response)) {
-    throw new Error('The expired server function did not return a response.');
-  }
-  expect(failure.status).toBe(unauthorized);
-  expect(privateHeadersOf(failure.headers)).toEqual(expectedPrivateHeaders);
-  expect(await failure.text()).toBe('Not authorized.');
+  expect(failure).toBeInstanceOf(Error);
+  expect(status).toBe(unauthorized);
+  expect(privateHeadersOf(responseHeaders)).toEqual(expectedPrivateHeaders);
+  expect((failure as Error).message).toBe('Not authorized.');
 });

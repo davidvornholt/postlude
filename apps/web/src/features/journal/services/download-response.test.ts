@@ -103,12 +103,11 @@ it('keeps the actual export recovery response through session authentication', a
   });
 
   const result = await runSessionRequired({
-    request: new Request('https://postlude.test/archive/export', {
-      method: 'POST',
-    }),
+    transport: 'route',
     authorize: () => Promise.resolve(true),
     next: () => Promise.resolve(recovery),
     publishHeaders: () => undefined,
+    publishStatus: () => undefined,
   });
 
   expect(result).toBe(recovery);
