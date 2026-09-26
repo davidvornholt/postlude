@@ -79,10 +79,11 @@ export const answerWithUnavailableExport = async (
     const request = new Request(route.request().url(), { method: 'POST' });
     const handler = requestHandler(() =>
       runSessionRequired({
-        request,
+        transport: 'route',
         authorize: () => Promise.resolve(true),
         next: () => Promise.resolve(recovery),
         publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
+        publishStatus: () => undefined,
       }),
     );
     const result = await handler(request, {});

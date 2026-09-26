@@ -79,7 +79,22 @@ export const createFetchHandler = async (
 
   return async (request) => {
     const { pathname } = new URL(request.url);
-    return (await serveStatic(pathname)) ?? ssrFetch(request);
+    const staticResponse = await serveStatic(pathname);
+    if (staticResponse !== null) {
+      return staticResponse;
+    }
+    // Dynamic responses are journal/auth state, including serialized failures.
+    // TanStack can replace its response after middleware publishes headers.
+    const response = await ssrFetch(request);
+    const headers = new Headers(response.headers);
+    headers.set('cache-control', 'private, no-store, max-age=0');
+    headers.set('pragma', 'no-cache');
+    headers.set('x-content-type-options', 'nosniff');
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   };
 };
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import { runSessionRequired } from '#/shared/auth/session-required.ts';
 
 import {
   authenticationSaveMessage,
@@ -44,5 +45,19 @@ describe('autosave failure boundary', () => {
       kind: 'conflict',
       message: journalWriteConflictMessage,
     });
+  });
+});
+
+it('recognizes an expired session from the server-function error boundary', async () => {
+  const failure = await runSessionRequired({
+    transport: 'server-function',
+    authorize: () => Promise.resolve(false),
+    next: () => Promise.reject(new Error('must not run')),
+    publishHeaders: () => undefined,
+    publishStatus: () => undefined,
+  }).catch((error: unknown) => error);
+  expect(autosaveFailureOf(failure)).toEqual({
+    kind: 'authentication',
+    message: authenticationSaveMessage,
   });
 });

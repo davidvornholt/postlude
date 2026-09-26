@@ -2,31 +2,38 @@ import { signInPrivateRedirect } from './private-response.ts';
 import { runProtectedCall } from './protected-call.ts';
 
 type SessionRequiredCall<T> = {
-  readonly request: Request;
+  readonly transport: 'server-function' | 'route';
   readonly authorize: () => Promise<boolean>;
   readonly next: () => Promise<T>;
   readonly publishHeaders: () => void;
+  readonly publishStatus: (status: number) => void;
 };
 
-const isServerFunctionRequest = (request: Request): boolean =>
-  request.headers.get('x-tsr-serverFn') === 'true';
 const unauthorized = 401;
 
-/** Runs the authenticated boundary with transport-appropriate sign-in recovery. */
+/** Functions need serializable errors even during SSR; native routes keep Responses. */
 export const runSessionRequired = async <T>({
-  request,
+  transport,
   authorize,
   next,
   publishHeaders,
+  publishStatus,
 }: SessionRequiredCall<T>): Promise<T> => {
   try {
     return await runProtectedCall({ authorize, next, publishHeaders });
   } catch (error) {
-    if (
-      error instanceof Response &&
-      error.status === unauthorized &&
-      !isServerFunctionRequest(request)
-    ) {
+    if (!(error instanceof Response)) {
+      throw error;
+    }
+    if (transport === 'server-function') {
+      publishStatus(error.status);
+      // TanStack strips Error properties; plain vetted data retains recovery status.
+      return Promise.reject({
+        message: await error.text(),
+        status: error.status,
+      });
+    }
+    if (error.status === unauthorized) {
       throw signInPrivateRedirect();
     }
     throw error;

@@ -43,12 +43,11 @@ describe('approved private recovery responses', () => {
   it('keeps the factory response intact through the authenticated boundary', async () => {
     const response = recoveryResponse();
     const result = await runSessionRequired({
-      request: new Request('https://postlude.test/archive/export', {
-        method: 'POST',
-      }),
+      transport: 'route',
       authorize: () => Promise.resolve(true),
       next: () => Promise.resolve(response),
       publishHeaders: () => undefined,
+      publishStatus: () => undefined,
     });
 
     expect(result).toBe(response);

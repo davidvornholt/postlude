@@ -56,10 +56,11 @@ const referenceOnly: ArchivePageFixtureConfig = {
 const answerWithoutSession = async (route: playwright.Route): Promise<void> => {
   const publishedHeaders = new Headers();
   const result = await runSessionRequired({
-    request: new Request(route.request().url(), { method: 'POST' }),
+    transport: 'route',
     authorize: () => Promise.resolve(false),
     next: () => Promise.resolve('private export'),
     publishHeaders: () => applyPrivateResponseHeaders(publishedHeaders),
+    publishStatus: () => undefined,
   }).catch((error: unknown) => error);
   if (!(result instanceof Response)) {
     throw new TypeError('The protected export did not return a response.');
