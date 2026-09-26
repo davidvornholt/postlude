@@ -27,8 +27,9 @@ export const runSessionRequired = async <T>({
     }
     if (transport === 'server-function') {
       publishStatus(error.status);
-      // Keep only the vetted message and public status; a Response cause cannot serialize.
-      throw Object.assign(new Error(await error.text()), {
+      // TanStack strips Error properties; plain vetted data retains recovery status.
+      return Promise.reject({
+        message: await error.text(),
         status: error.status,
       });
     }

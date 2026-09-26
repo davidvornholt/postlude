@@ -178,8 +178,7 @@ it('keeps an expired server-function call private with a safe error and 401 stat
     (error: unknown) => error,
   );
 
-  expect(failure).toBeInstanceOf(Error);
+  expect(failure).toEqual({ message: 'Not authorized.', status: unauthorized });
   expect(status).toBe(unauthorized);
   expect(privateHeadersOf(responseHeaders)).toEqual(expectedPrivateHeaders);
-  expect((failure as Error).message).toBe('Not authorized.');
 });

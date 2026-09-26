@@ -12,11 +12,11 @@ it('keeps SSR function storage failures serializable without leaking the cause',
     publishHeaders: () => undefined,
     publishStatus,
   }).catch((error: unknown) => error);
-  expect(failure).toBeInstanceOf(Error);
-  expect((failure as Error).message).toBe(
-    'The journal request could not be completed.',
-  );
-  expect((failure as Error).cause).toBeUndefined();
+  expect(failure).not.toBeInstanceOf(Error);
+  expect(failure).toEqual({
+    message: 'The journal request could not be completed.',
+    status: internalServerError,
+  });
   expect(publishStatus).toHaveBeenCalledWith(internalServerError);
 });
 
@@ -29,7 +29,7 @@ it('retains public authentication status for browser recovery without running th
     publishHeaders: () => undefined,
     publishStatus: () => undefined,
   }).catch((error: unknown) => error);
-  expect(failure).toBeInstanceOf(Error);
+  expect(failure).not.toBeInstanceOf(Error);
   expect(failure).toMatchObject({ message: 'Not authorized.', status: 401 });
   expect(next).not.toHaveBeenCalled();
 });
