@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import { ActionAnchor } from './action.tsx';
+import { applicationIconLinks } from './application-icons.ts';
 import type { ApplicationStyleSheetHrefs } from './application-style-sheets.ts';
 import { eyebrowClass, readingMeasureClass } from './design-classes.ts';
 import { PageFrame } from './page-frame.tsx';
@@ -30,6 +31,9 @@ export const RecoveryDocument = ({
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
+        {applicationIconLinks.map((link) => (
+          <link key={link.href} {...link} />
+        ))}
         {styleSheetHrefs.map((href) => (
           <link key={href} rel="stylesheet" href={href} />
         ))}

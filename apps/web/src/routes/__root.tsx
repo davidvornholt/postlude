@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router';
+import { applicationIconLinks } from '../shared/ui/application-icons.ts';
 import { applicationStyleSheetHrefs } from '../shared/ui/application-style-sheets.ts';
 import { NavigationFocus } from '../shared/ui/navigation-focus';
 import { viewportContent } from '../shared/ui/viewport.ts';
@@ -37,10 +38,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
           'Postlude — a calm journal for closing out the day: evening writing, morning scripture notes, and a quiet archive.',
       },
     ],
-    links: applicationStyleSheetHrefs.map((href) => ({
-      rel: 'stylesheet',
-      href,
-    })),
+    links: [
+      ...applicationIconLinks,
+      ...applicationStyleSheetHrefs.map((href) => ({
+        rel: 'stylesheet',
+        href,
+      })),
+    ],
   }),
   shellComponent: RootDocument,
   component: () => (
