@@ -28,6 +28,7 @@ export const runSessionRequired = async <T>({
     if (transport === 'server-function') {
       publishStatus(error.status);
       // TanStack strips Error properties; plain vetted data retains recovery status.
+      // biome-ignore lint/nursery/usePromiseRejectErrors: server-function transport drops Error properties, so the client needs this plain { message, status } object; session-required.test.ts asserts it is not an Error.
       return Promise.reject({
         message: await error.text(),
         status: error.status,

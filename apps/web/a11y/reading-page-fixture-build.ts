@@ -33,7 +33,6 @@ export const buildReadingPageFixture = (
           '../src/features/journal/ui/on-this-day-page.tsx',
           import.meta.url,
         ).pathname,
-        // biome-ignore lint/security/noSecrets: this is the exported React component name, not a credential.
         exportNames: ['OnThisDayPage'],
       },
     ],

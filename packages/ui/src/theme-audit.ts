@@ -77,13 +77,13 @@ export const colorTokenNames = (palette: Palette): ReadonlyArray<string> =>
       (token) =>
         !(token.startsWith('--pl-font-') || token.startsWith('--pl-shadow-')),
     )
-    .toSorted();
+    .toSorted((left, right) => left.localeCompare(right));
 
 /** Shadow tokens are audited separately because their values are not colors. */
 export const shadowTokenNames = (palette: Palette): ReadonlyArray<string> =>
   Object.keys(palette)
     .filter((token) => token.startsWith('--pl-shadow-'))
-    .toSorted();
+    .toSorted((left, right) => left.localeCompare(right));
 
 /*
  * Every surface text can sit on, against every color text can be set in. The
