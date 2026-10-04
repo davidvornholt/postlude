@@ -1,9 +1,10 @@
 import { expect, it, mock } from 'bun:test';
+import { ProtectedCallError } from './protected-call-error.ts';
 import { runSessionRequired } from './session-required.ts';
 
 const internalServerError = 500;
 
-it('keeps SSR function storage failures serializable without leaking the cause', async () => {
+it('rejects SSR function storage failures with a vetted error that hides the cause', async () => {
   const publishStatus = mock((_status: number) => undefined);
   const failure = await runSessionRequired({
     transport: 'server-function',
@@ -12,8 +13,8 @@ it('keeps SSR function storage failures serializable without leaking the cause',
     publishHeaders: () => undefined,
     publishStatus,
   }).catch((error: unknown) => error);
-  expect(failure).not.toBeInstanceOf(Error);
-  expect(failure).toEqual({
+  expect(failure).toBeInstanceOf(ProtectedCallError);
+  expect(failure).toMatchObject({
     message: 'The journal request could not be completed.',
     status: internalServerError,
   });
@@ -29,7 +30,7 @@ it('retains public authentication status for browser recovery without running th
     publishHeaders: () => undefined,
     publishStatus: () => undefined,
   }).catch((error: unknown) => error);
-  expect(failure).not.toBeInstanceOf(Error);
+  expect(failure).toBeInstanceOf(ProtectedCallError);
   expect(failure).toMatchObject({ message: 'Not authorized.', status: 401 });
   expect(next).not.toHaveBeenCalled();
 });

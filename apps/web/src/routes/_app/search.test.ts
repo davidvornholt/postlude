@@ -2,6 +2,7 @@ import { beforeEach, expect, it } from 'bun:test';
 
 import type { SearchResults } from '#/features/journal/search-contract.ts';
 import { applyPrivateResponseHeaders } from '#/shared/auth/private-response.ts';
+import { ProtectedCallError } from '#/shared/auth/protected-call-error.ts';
 import { runSessionRequired } from '#/shared/auth/session-required.ts';
 
 const today = '2026-08-26';
@@ -178,7 +179,11 @@ it('keeps an expired server-function call private with a safe error and 401 stat
     (error: unknown) => error,
   );
 
-  expect(failure).toEqual({ message: 'Not authorized.', status: unauthorized });
+  expect(failure).toBeInstanceOf(ProtectedCallError);
+  expect(failure).toMatchObject({
+    message: 'Not authorized.',
+    status: unauthorized,
+  });
   expect(status).toBe(unauthorized);
   expect(privateHeadersOf(responseHeaders)).toEqual(expectedPrivateHeaders);
 });
