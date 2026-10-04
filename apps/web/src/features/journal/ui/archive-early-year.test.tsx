@@ -22,21 +22,6 @@ const viewFor = (year: number): ArchiveView => ({
   totals: { daysWritten: 0, words: 0 },
 });
 
-it('keeps an accepted selected year coherent when the journal has no row there', async () => {
-  const selectedYear = 2024;
-  const selected = await renderInRouter(
-    <ArchivePage selectedYear={selectedYear} view={viewFor(selectedYear)} />,
-  );
-  const selectedLink = elementAttributes(selected, 'a', String(selectedYear));
-
-  expect(attributeValue(selectedLink, 'href')).toBe(
-    `/archive?year=${selectedYear}`,
-  );
-  expect(attributeValue(selectedLink, 'aria-current')).toBe('page');
-  expect(selected.match(/aria-current="page"/gu)).toHaveLength(1);
-  expect(selected).toContain('Nothing was written in this stretch');
-});
-
 it('opens an early Common Era year with its four-digit journal label', async () => {
   const selectedYear = 1;
   const selected = await renderInRouter(

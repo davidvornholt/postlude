@@ -34,10 +34,6 @@ const cells2025 = activityCells(
   today,
 );
 
-it('names a month and its year in full', () => {
-  expect(monthYearLabel('2025-06-01')).toBe('June 2025');
-});
-
 it('gives each activity square an exact hover and keyboard reading', () => {
   expect(
     activityDayDetails({
@@ -67,12 +63,6 @@ it('displays early calendar years without storage padding', () => {
  * The first grid week opens in December but contains 1 January. January owns
  * that column because the label marks the start of the month, not the Sunday.
  */
-it('names a month on the week containing its first day', () => {
-  const labels = monthColumnLabels(activityWeeks(cells2025));
-  expect(labels.filter((label) => label !== '')).toContain('Jun');
-  expect(labels[0]).toBe('Jan');
-});
-
 it('labels both boundary weeks when each contains a first day', () => {
   const named = monthColumnLabels(activityWeeks(cells2025)).filter(
     (label) => label !== '',

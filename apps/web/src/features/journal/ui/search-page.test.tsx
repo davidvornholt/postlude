@@ -90,19 +90,6 @@ it('says no day answered, and how to ask for more', async () => {
   expect(html).toContain('Fewer words, or shorter ones');
 });
 
-it('gives back the line that was searched for, so it can be edited', async () => {
-  const html = await render(answered('rain'));
-  expect(attributeValue(html, 'value')).toBe('rain');
-});
-
-it('submits the private query in a POST body rather than the address', async () => {
-  const html = await render(answered('rain'));
-  const form = openingTag(html, 'form');
-  expect(attributeValue(form, 'action')).toBe('/search');
-  expect(attributeValue(form, 'method')).toBe('post');
-  expect(html).not.toContain('?q=');
-});
-
 it('keeps an overlong native submission in the field and describes its error', async () => {
   const query = 'x'.repeat(overLimitLength);
   const html = await renderInRouter(

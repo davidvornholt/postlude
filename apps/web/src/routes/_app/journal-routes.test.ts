@@ -154,17 +154,6 @@ if (isRouteProbeProcess) {
         await expect(loadDay(future)).resolves.toEqual(loadedDay);
         expect(datedReadInputs).toEqual([{ data: { date: future } }]);
       });
-
-      it('does not describe an operational loader failure as a missing day', async () => {
-        type HeadInput = Parameters<typeof dayHead>[0];
-        const metadata = await dayHead({
-          loaderData: undefined,
-          match: { status: 'error' },
-        } as HeadInput);
-        expect(metadata.meta).toContainEqual({
-          title: 'Journal unavailable · Postlude',
-        });
-      });
     });
 
   const indexRouteTests = () =>

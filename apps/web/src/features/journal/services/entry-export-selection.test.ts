@@ -67,33 +67,50 @@ it('exports every non-empty stored source exactly, even when it has no prose', a
 
   expect(manifest.entries.count).toBe(exportedSourceCount);
   expect(
-    records.map(({ date, journalMarkdown, scriptureMarkdown }) => ({
-      date,
-      journalMarkdown,
-      scriptureMarkdown,
-    })),
+    records.map(
+      ({ date, journalMarkdown, scriptureMarkdown, scriptureReference }) => ({
+        date,
+        journalMarkdown,
+        scriptureMarkdown,
+        scriptureReference,
+      }),
+    ),
   ).toEqual([
     {
       date: '2026-03-01',
       journalMarkdown: codeOnly,
       scriptureMarkdown: '',
+      scriptureReference: null,
     },
     {
       date: '2026-03-02',
       journalMarkdown: '',
       scriptureMarkdown: imageOnly,
+      scriptureReference: null,
     },
     {
       date: '2026-03-03',
       journalMarkdown: structuralOnly,
       scriptureMarkdown: '',
+      scriptureReference: null,
     },
     {
       date: '2026-03-04',
       journalMarkdown: '',
       scriptureMarkdown: whitespaceOnly,
+      scriptureReference: null,
     },
-    { date: '2026-03-05', journalMarkdown: '', scriptureMarkdown: '' },
+    {
+      date: '2026-03-05',
+      journalMarkdown: '',
+      scriptureMarkdown: '',
+      scriptureReference: {
+        book: 'Psalms',
+        chapter: 23,
+        verseStart: null,
+        verseEnd: null,
+      },
+    },
   ]);
   expect(records.map(({ date }) => date)).not.toContain('2026-03-06');
   expect(records.map(({ date }) => date)).not.toContain('2026-03-07');

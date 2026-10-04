@@ -52,10 +52,6 @@ it('normalizes canonically equivalent Unicode before searching', () => {
   expect(searchTerms('Ｆａｉｔｈ')).toEqual(['faith']);
 });
 
-it('uses one case fold for dotted I and both Greek sigmas', () => {
-  expect(searchTerms('İSTANBUL ΟΣ ος οσ')).toEqual(['istanbul', 'οσ']);
-});
-
 it('deduplicates terms after canonical folding', () => {
   expect(searchTerms('İSTANBUL istanbul ΟΣ ος οσ')).toEqual(['istanbul', 'οσ']);
 });

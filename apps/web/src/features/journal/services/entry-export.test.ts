@@ -101,29 +101,6 @@ it('keeps a visitor compression failure tagged in the error channel', async () =
   });
 });
 
-it('leaves cleared and never-written rows out but keeps a reference-only day', async () => {
-  const result = await withJournal(({ entries, exports }) =>
-    Effect.gen(function* () {
-      const written = yield* entries.save(
-        draft('2026-03-01', 'Written, then cleared.'),
-      );
-      yield* entries.save(draft('2026-03-01', '', '', written.revision));
-      yield* entries.save(draft('2026-03-02', ''));
-      yield* entries.save(draft('2026-03-03', '', 'Psalms 23'));
-      return yield* collect(exports);
-    }),
-  );
-
-  expect(result.count).toBe(1);
-  expect(result.first.map(({ date }) => date)).toEqual(['2026-03-03']);
-  expect(result.first[0]?.scriptureReference).toEqual({
-    book: 'Psalms',
-    chapter: 23,
-    verseStart: null,
-    verseEnd: null,
-  });
-});
-
 it('projects stored timestamp provenance as exact UTC microsecond text', async () => {
   const exported = await withJournal(({ entries, exports }) =>
     Effect.gen(function* () {

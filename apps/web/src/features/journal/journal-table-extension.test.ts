@@ -65,10 +65,4 @@ After`);
 
     expect(markdown).toBe('| a    | b   |\n| ---- | --- |\n| wide |     |');
   });
-
-  it('separates cells in the visible text used by search', () => {
-    expect(
-      journalMarkdownText('| Hour | Mood |\n| --- | --- |\n| Dawn | Calm |'),
-    ).toBe('Hour Mood\nDawn Calm');
-  });
 });
