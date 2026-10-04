@@ -131,33 +131,20 @@ const frameWrappers = (html: string): number =>
 const linkAttributes = (html: string, text: string): string =>
   elementAttributes(html, 'a', text);
 
-it('keeps one main landmark when a route inside the shell fails', async () => {
-  const html = await renderAt('/');
+it.each([
+  ['a route inside the shell fails', '/', 'Something went wrong'],
+  ['a route inside the shell is not found', '/gone', 'Page not found'],
+  ['an address never reached the shell', '/nowhere', 'Page not found'],
+  ['the shell guard itself fails', '/guarded', 'Something went wrong'],
+])(
+  'renders exactly one main landmark when %s',
+  async (_position, path, fallbackText) => {
+    const html = await renderAt(path);
 
-  expect(html).toContain('Something went wrong');
-  expect(mainLandmarks(html)).toBe(1);
-});
-
-it('keeps one main landmark when a route inside the shell is not found', async () => {
-  const html = await renderAt('/gone');
-
-  expect(html).toContain('Page not found');
-  expect(mainLandmarks(html)).toBe(1);
-});
-
-it('opens a main landmark for an address that never reached the shell', async () => {
-  const html = await renderAt('/nowhere');
-
-  expect(html).toContain('Page not found');
-  expect(mainLandmarks(html)).toBe(1);
-});
-
-it('opens a main landmark when the shell guard itself fails', async () => {
-  const html = await renderAt('/guarded');
-
-  expect(html).toContain('Something went wrong');
-  expect(mainLandmarks(html)).toBe(1);
-});
+    expect(html).toContain(fallbackText);
+    expect(mainLandmarks(html)).toBe(1);
+  },
+);
 
 /*
  * The fallback owns its frame in both positions, because the shell hands the
@@ -174,26 +161,20 @@ it('sets the page frame exactly once wherever a fallback lands', async () => {
 });
 
 /*
- * Both of the next two render at "/", which is where the two links point: that
- * is the only position where the router would mark them, so it is the only
- * position where the assertion means anything. `href="/"` is asserted first so
- * a renamed or missing link fails there instead of passing an empty attribute
- * string through the negative assertions.
+ * Both links render at "/", which is where they point: that is the only
+ * position where the router would mark them, so it is the only position where
+ * the assertion means anything. `href="/"` is asserted first so a renamed or
+ * missing link fails there instead of passing an empty attribute string through
+ * the negative assertions.
  */
-it('leaves the wordmark unmarked on the page it points at', async () => {
-  const attributes = linkAttributes(await renderAt('/'), 'Wordmark');
+it.each(['Wordmark', 'Back to Postlude'])(
+  'leaves the %s link unmarked on the page it points at',
+  async (text) => {
+    const attributes = linkAttributes(await renderAt('/'), text);
 
-  expect(attributes).toContain('href="/"');
-  expect(attributes).not.toContain('aria-current');
-  expect(attributes).not.toContain('data-status');
-  expect(attributes).not.toContain(' active"');
-});
-
-it('leaves the way back unmarked on the page it points at', async () => {
-  const attributes = linkAttributes(await renderAt('/'), 'Back to Postlude');
-
-  expect(attributes).toContain('href="/"');
-  expect(attributes).not.toContain('aria-current');
-  expect(attributes).not.toContain('data-status');
-  expect(attributes).not.toContain(' active"');
-});
+    expect(attributes).toContain('href="/"');
+    expect(attributes).not.toContain('aria-current');
+    expect(attributes).not.toContain('data-status');
+    expect(attributes).not.toContain(' active"');
+  },
+);

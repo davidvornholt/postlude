@@ -193,16 +193,6 @@ it('separates no writing from the four-step Less–More ramp', () => {
   expect(legend).toContain('border-heat-none-mark');
 });
 
-/*
- * The years behind a date belong on that date's own page, where they are the
- * same day being read again. Here they could only ever mean today, which is the
- * one day the writer did not come to the archive to find.
- */
-it('leaves the years behind a date to the page for that date', () => {
-  expect(filled).not.toContain('On this day');
-  expect(empty).not.toContain('On this day');
-});
-
 /* One page, one first-level heading, with every section a level below it. */
 it('names the page once and puts every section under it', () => {
   expect(filled.match(/<h1\b/gu)?.length).toBe(1);

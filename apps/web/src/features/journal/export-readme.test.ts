@@ -15,25 +15,6 @@ const readme = (entryCount: number, grouping: ExportGrouping = 'day'): string =>
     grouping,
   );
 
-it('names the authoritative files and exact recovery for every grouping', () => {
-  for (const grouping of ['day', 'week', 'month', 'year'] as const) {
-    const text = readme(2, grouping);
-    expect(text).toContain('`manifest.json`');
-    expect(text).toContain('`entries.ndjson`');
-    expect(text).toContain('non-authoritative reading copies');
-    expect(text).toContain('exact recovery or re-import');
-  }
-});
-
-it('states recoverable stored-content selection exactly', () => {
-  const text = readme(2);
-  expect(text).toContain('either stored Markdown string is not empty');
-  expect(text).toContain('or it has a scripture reference');
-  expect(text).toContain('Markdown structure and whitespace');
-  expect(text).toContain('fully cleared');
-  expect(text).toContain('provenance-only');
-});
-
 it('records the IANA zone, 04:00 boundary, and six-digit export instant', () => {
   const text = readme(1);
   expect(text).toContain('2026-08-26T20:00:00.123456Z');

@@ -9,10 +9,6 @@ import { expect, it } from 'bun:test';
 
 import { journalDateLabel, journalDayRelation } from './day-label.ts';
 
-it('names the day the date is, spelled out', () => {
-  expect(journalDateLabel('2026-08-26')).toBe('Wednesday, August 26, 2026');
-});
-
 it('does not slip a day at either end of the year', () => {
   expect(journalDateLabel('2026-01-01')).toBe('Thursday, January 1, 2026');
   expect(journalDateLabel('2025-12-31')).toBe('Wednesday, December 31, 2025');

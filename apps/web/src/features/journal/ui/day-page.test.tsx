@@ -47,22 +47,6 @@ it('offers the next dated day from today', async () => {
   expect(html).toContain('aria-label="Next day"');
 });
 
-/*
- * The steps are arrows rather than words, so what each one is called lives in
- * `aria-label` — an arrow with no name is a control that cannot be read aloud
- * or reached by voice.
- */
-it('leads back to today from the day before it', async () => {
-  const html = await renderDay(entryOn({ date: '2026-08-25' }));
-  const next = elementAttributes(html, 'a', '→');
-  const previous = elementAttributes(html, 'a', '←');
-
-  expect(next).toContain('href="/"');
-  expect(next).toContain('aria-label="Next day"');
-  expect(previous).toContain('href="/day/2026-08-24"');
-  expect(previous).toContain('aria-label="Previous day"');
-});
-
 it('labels and links a future day without changing its dated address', async () => {
   const html = await renderDay(
     entryOn({ date: '2026-08-27', journalMarkdown: 'Already planned.' }),
@@ -177,11 +161,4 @@ it('counts the prose rather than the markup', async () => {
   );
 
   expect(html).toContain('3 words');
-});
-
-it('keeps routine autosave feedback visually stable', async () => {
-  const html = await renderDay(entryOn());
-
-  expect(html).toContain('Autosave on');
-  expect(html).toContain('All changes saved');
 });

@@ -109,19 +109,6 @@ it('searches the morning passage as well as the evening', async () => {
   expect(dates).toEqual(['2026-03-01']);
 });
 
-it('finds a day by the book its morning came from', async () => {
-  const dates = await withJournal(({ entries, search }) =>
-    Effect.gen(function* () {
-      yield* entries.save(
-        draft('2026-03-01', 'A quiet evening.', 'Sprüche 12,5-13'),
-      );
-      const matches = yield* search.search(asked('proverbs'), plenty);
-      return matches.map((match) => match.date);
-    }),
-  );
-  expect(dates).toEqual(['2026-03-01']);
-});
-
 /*
  * The index is a stored column the database keeps for the row, so a rewritten
  * day is searchable as what it now says and not as what it used to.
@@ -200,16 +187,17 @@ it('matches punctuation-delimited words and canonically normalized text', async 
   expect(dates).toEqual(['2026-03-01']);
 });
 
-it('finds a reference by German names and keyboard aliases', async () => {
+it('finds a reference by its English and German names and keyboard aliases', async () => {
   const labels = await withJournal(({ entries, search }) =>
     Effect.gen(function* () {
       yield* entries.save(
         draft('2026-03-01', 'A quiet evening.', 'Sprüche 12,5-13'),
       );
+      const english = yield* search.search(asked('proverbs'), plenty);
       const german = yield* search.search(asked('sprüche'), plenty);
       const keyboard = yield* search.search(asked('sprueche'), plenty);
       const alias = yield* search.search(asked('spr'), plenty);
-      return [german, keyboard, alias].map(
+      return [english, german, keyboard, alias].map(
         (matches) =>
           matches[0]?.texts[
             matches[0]?.evidence.find(

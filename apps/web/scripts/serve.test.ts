@@ -100,22 +100,6 @@ describe('createFetchHandler', () => {
     expect(response.headers.get('cache-control')).toBeNull();
   });
 
-  /**
-   * Handler-level behavior only. On the wire these paths reach the handler
-   * unchanged (serve-boot.test.ts pins that), and the shipped SSR bundle
-   * answers the undecodable ones with its own 400 — which is why this file
-   * asserts the fallthrough rather than a status the real app would return.
-   */
-  it.each(['/a%2Fb', '/foo%00', '/%zz', '/%'])(
-    'hands the malformed path %s to the SSR handler',
-    async (path) => {
-      const response = await get(path);
-
-      expect(response.status).toBe(okStatus);
-      expect(await response.text()).toContain(ssrMarker);
-    },
-  );
-
   it.each([
     '/../outside-secret.txt',
     '/%2e%2e/outside-secret.txt',

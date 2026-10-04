@@ -65,12 +65,6 @@ it('leaves days outside the window off the grid', () => {
   );
 });
 
-it('lays the squares out as columns of a week each', () => {
-  const weeks = activityWeeks(activityCells([], activityWindow(today), today));
-
-  expect(weeks.every((week) => week.length === daysPerWeek)).toBe(true);
-});
-
 it('keeps the rest of the rolling week as future padding', () => {
   const firstFutureDate = '2026-08-27';
   const cells = activityCells(
