@@ -21,7 +21,7 @@
     "benchmark:search": "bun scripts/benchmark-search.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1140.0",
+    "@aws-sdk/client-s3": "^3.1145.0",
     "@effect/sql": "^0.52.1",
     "@effect/sql-pg": "^0.53.0",
     "@fontsource-variable/fraunces": "^5.3.0",
