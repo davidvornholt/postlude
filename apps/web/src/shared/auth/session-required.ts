@@ -1,5 +1,6 @@
 import { signInPrivateRedirect } from './private-response.ts';
 import { runProtectedCall } from './protected-call.ts';
+import { protectedCallErrorFrom } from './protected-call-error.ts';
 
 type SessionRequiredCall<T> = {
   readonly transport: 'server-function' | 'route';
@@ -27,12 +28,8 @@ export const runSessionRequired = async <T>({
     }
     if (transport === 'server-function') {
       publishStatus(error.status);
-      // TanStack strips Error properties; plain vetted data retains recovery status.
-      // biome-ignore lint/nursery/usePromiseRejectErrors: server-function transport drops Error properties, so the client needs this plain { message, status } object; session-required.test.ts asserts it is not an Error.
-      return Promise.reject({
-        message: await error.text(),
-        status: error.status,
-      });
+      // Its serialization adapter carries only this vetted message and status.
+      throw await protectedCallErrorFrom(error);
     }
     if (error.status === unauthorized) {
       throw signInPrivateRedirect();
