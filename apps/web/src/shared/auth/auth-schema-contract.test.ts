@@ -75,8 +75,14 @@ const modelsUnderContract = Object.entries(requiredTables).flatMap(
 
 describe('better-auth table contract', () => {
   it('exports a Drizzle table for exactly the models better-auth requires', () => {
-    expect(Object.keys(drizzleSchema).sort()).toEqual(
-      Object.keys(requiredTables).sort(),
+    expect(
+      Object.keys(drizzleSchema).sort((left, right) =>
+        left.localeCompare(right),
+      ),
+    ).toEqual(
+      Object.keys(requiredTables).sort((left, right) =>
+        left.localeCompare(right),
+      ),
     );
   });
 

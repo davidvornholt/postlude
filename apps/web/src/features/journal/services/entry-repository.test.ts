@@ -345,7 +345,11 @@ it('reads only the bounded memory projection from rows with large search data', 
   );
 
   expect(result.storedBytes).toBeGreaterThan(largeSearchByteFloor);
-  expect(Object.keys(result.rows[0] ?? {}).sort()).toEqual([
+  expect(
+    Object.keys(result.rows[0] ?? {}).sort((left, right) =>
+      left.localeCompare(right),
+    ),
+  ).toEqual([
     'date',
     'journalMarkdown',
     'journalWordCount',

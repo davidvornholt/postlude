@@ -138,7 +138,6 @@ export const FormattingToolbarProvider = ({
   const focusToolbar = useCallback(() => {
     containerRef.current
       ?.querySelector('[data-toolbar-actions]')
-      // biome-ignore lint/security/noSecrets: Static CSS selector for the toolbar's keyboard entry point.
       ?.querySelector<HTMLButtonElement>('button[tabindex="0"]')
       ?.focus();
   }, []);

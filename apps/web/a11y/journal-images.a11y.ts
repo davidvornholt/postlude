@@ -8,7 +8,6 @@ const enlargeImageName = /^Enlarge image/u;
 const key = '12345678-1234-4234-8234-123456789abc.png';
 const imageUrl = `/api/journal-images/${key}`;
 const imageBase64 =
-  // biome-ignore lint/security/noSecrets: Public one-pixel PNG test fixture, not a credential.
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
 const image = {
   name: 'lake.png',
@@ -24,7 +23,6 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await page.route('**/image-fixture', (route) =>
       route.fulfill({
         contentType: 'text/html',
-        // biome-ignore lint/security/noSecrets: Static HTML fixture contains no credential.
         body: '<html lang="en"><title>Journal fixture</title></html>',
       }),
     );
@@ -136,7 +134,6 @@ test('failed image uploads retain the writing and offer retry', async ({
   await page.route('**/image-fixture', (route) =>
     route.fulfill({
       contentType: 'text/html',
-      // biome-ignore lint/security/noSecrets: Static HTML fixture contains no credential.
       body: '<html lang="en"><title>Journal fixture</title></html>',
     }),
   );
