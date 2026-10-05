@@ -95,7 +95,7 @@ export const mountUnhydratedDayPage = async (
   page: playwright.Page,
 ): Promise<void> => {
   await page.setContent(
-    `<html lang="en"><head><base href="http://127.0.0.1:3100/"><meta name="viewport" content="${viewportContent}"><title>Writing page fixture</title></head><body><main id="day-page-fixture">${emptyAssets.markup}</main></body></html>`,
+    `<html lang="en"><head><base href="http://127.0.0.1:3130/"><meta name="viewport" content="${viewportContent}"><title>Writing page fixture</title></head><body><main id="day-page-fixture">${emptyAssets.markup}</main></body></html>`,
   );
   await page.addStyleTag({ content: emptyAssets.styles });
 };

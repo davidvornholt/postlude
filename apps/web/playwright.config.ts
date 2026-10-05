@@ -12,7 +12,7 @@ Object.assign(
 process.env.DATABASE_URL = databaseUrl;
 
 const config = createA11yPlaywrightConfig({
-  baseUrl: 'http://127.0.0.1:3100',
+  baseUrl: 'http://127.0.0.1:3130',
   webServerCommand: 'bun --env-file=.env.a11y run start',
 });
 
