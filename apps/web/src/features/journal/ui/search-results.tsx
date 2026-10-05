@@ -18,8 +18,11 @@ import {
 } from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
-import type { SearchHit, SearchHitSource } from '../search-contract.ts';
-import type { ExcerptSegment } from '../search-excerpt.ts';
+import type {
+  ExcerptSegment,
+  SearchHit,
+  SearchHitSource,
+} from '../search-contract.ts';
 import { DayLink } from './day-link.tsx';
 
 const linkClass = [

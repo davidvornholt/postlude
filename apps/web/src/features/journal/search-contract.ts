@@ -26,6 +26,7 @@ const SearchExcerptSegment = Schema.Struct({
   match: Schema.Boolean,
   at: NonNegativeInteger,
 });
+export type ExcerptSegment = Schema.Schema.Type<typeof SearchExcerptSegment>;
 
 export const SearchHitSourceKind = Schema.Literal(
   'evening',
@@ -75,7 +76,7 @@ const excerptOf = (
       end: matchStart + matchLength,
     }))
     .sort((a, b) => a.start - b.start);
-  const segments: Array<{ text: string; match: boolean; at: number }> = [];
+  const segments: Array<ExcerptSegment> = [];
   let cursor = 0;
   let offset = 0;
   const append = (start: number, end: number, match: boolean) => {
