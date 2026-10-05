@@ -71,8 +71,8 @@ const readEntryPages = <E, R>({
 
 const visitEntries = <E, R>(options: EntryTraversal<E, R>) =>
   options.pass.before.pipe(
-    Effect.zipRight(readEntryPages(options)),
-    Effect.zipRight(options.pass.after),
+    Effect.andThen(readEntryPages(options)),
+    Effect.andThen(options.pass.after),
   );
 
 const emitPeriod = <E, R>(
@@ -80,7 +80,7 @@ const emitPeriod = <E, R>(
   period: ExportPeriodMetadata,
 ) =>
   pass.onPeriodStart(period).pipe(
-    Effect.zipRight(
+    Effect.andThen(
       visitEntries({
         pages,
         pass: {
@@ -92,7 +92,7 @@ const emitPeriod = <E, R>(
         range: { from: period.from, to: period.to },
       }),
     ),
-    Effect.zipRight(pass.onPeriodEnd),
+    Effect.andThen(pass.onPeriodEnd),
   );
 
 const advancePeriod = (
@@ -172,8 +172,8 @@ const readPeriodPages = <E, R>(
 
 const visitPeriods = <E, R>(options: PeriodTraversal<E, R>) =>
   options.pass.before.pipe(
-    Effect.zipRight(readPeriodPages(options)),
-    Effect.zipRight(options.pass.after),
+    Effect.andThen(readPeriodPages(options)),
+    Effect.andThen(options.pass.after),
   );
 
 export const runExportVisitor = <E, R>(

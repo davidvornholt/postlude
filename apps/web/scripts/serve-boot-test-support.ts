@@ -8,6 +8,9 @@ import { mkdir, symlink } from 'node:fs/promises';
 /** The body the healthy fixture answers anything but a built asset with. */
 export const ssrMarker = 'ssr-handled';
 
+/** What the healthy fixture prints when the server closes its database. */
+export const databaseClosedMarker = 'database-closed';
+
 export const root = `${Bun.env.TMPDIR ?? '/tmp'}/postlude-boot-${crypto.randomUUID()}`;
 
 const scriptsDir = new URL('.', import.meta.url);
@@ -28,11 +31,14 @@ export default {
     if (pathname === '/boom') throw new Error('ssr entry blew up');
     return new Response(${JSON.stringify(ssrMarker)} + ' ' + pathname);
   },
+  async closeDatabase() {
+    await Bun.write(Bun.stdout, ${JSON.stringify(`${databaseClosedMarker}\n`)});
+  },
 };
 `;
 
 const bundleAnswering = (statement: string) =>
-  `export default { fetch() { ${statement} } };`;
+  `export default { fetch() { ${statement} }, async closeDatabase() {} };`;
 
 /** What a misconfigured deployment did before the boot self-check existed. */
 export const emptyAnswerBundle = bundleAnswering(

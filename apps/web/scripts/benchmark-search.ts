@@ -1,6 +1,5 @@
 import process from 'node:process';
-import { pgClientLayer } from '@postlude/db/effect-client';
-import { createPool } from '@postlude/db/pool';
+import { createPool, pgClientLayer } from '@postlude/db/connections';
 import { Effect, Layer, ManagedRuntime } from 'effect';
 import { EntrySearch } from '../src/features/journal/services/entry-search.ts';
 import { migrateJournalDatabase } from '../src/features/journal/services/journal-migration.ts';
@@ -27,7 +26,7 @@ url.pathname = `/${name}`;
 const admin = createPool(configured);
 const pool = createPool(url.toString());
 const runtime = ManagedRuntime.make(
-  EntrySearch.Default.pipe(Layer.provide(pgClientLayer(pool))),
+  EntrySearch.layer.pipe(Layer.provide(pgClientLayer(url.toString()))),
 );
 
 type Sample = { readonly rows: ReadonlyArray<unknown>; readonly bytes: number };

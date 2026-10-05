@@ -1,4 +1,4 @@
-import { Either, Schema } from 'effect';
+import { Result, Schema } from 'effect';
 import { parseDocument } from 'yaml';
 
 import { isJournalDate } from '../journal-day.ts';
@@ -16,11 +16,9 @@ const quietTimeHeading = /^## Quiet time\s*$/mu;
 const reflectionHeading = /^## Reflection\s*$/mu;
 
 const MetadataSchema = Schema.Struct({
-  date: Schema.propertySignature(Schema.String).pipe(Schema.fromKey('Date')),
-  scripture: Schema.optional(Schema.NullOr(Schema.String)).pipe(
-    Schema.fromKey('Scripture'),
-  ),
-});
+  date: Schema.String,
+  scripture: Schema.optional(Schema.NullOr(Schema.String)),
+}).pipe(Schema.encodeKeys({ date: 'Date', scripture: 'Scripture' }));
 type Metadata = Schema.Schema.Type<typeof MetadataSchema>;
 
 const metadataOf = (
@@ -36,15 +34,15 @@ const metadataOf = (
     });
     return undefined;
   }
-  const decoded = Schema.decodeUnknownEither(MetadataSchema)(document.toJS());
-  if (Either.isLeft(decoded)) {
+  const decoded = Schema.decodeUnknownResult(MetadataSchema)(document.toJS());
+  if (Result.isFailure(decoded)) {
     issues.push({
       source: source.path,
       message: 'Frontmatter Date or Scripture metadata has the wrong shape.',
     });
     return undefined;
   }
-  return decoded.right;
+  return decoded.success;
 };
 
 const parseAnytypeEntry = (

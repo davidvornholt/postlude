@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { Chunk, Effect, Stream } from 'effect';
+import { Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
 
 import { streamingZip } from './streaming-zip.ts';
@@ -31,7 +31,7 @@ it('streams complete UTF-8 ZIP members without collecting the archive', async ()
           text: 'Der frühe Morgen.\n',
         });
       }),
-    ).pipe(Stream.runCollect, Effect.map(Chunk.toReadonlyArray)),
+    ).pipe(Stream.runCollect),
   );
   const files = unzipSync(bytesOf(chunks));
   const decoder = new TextDecoder();
@@ -87,7 +87,7 @@ it('interrupts the ZIP producer when the response body is cancelled', async () =
   const body = Stream.toReadableStream(
     streamingZip((zip) =>
       zip.addFile({ path: 'day.md', text: 'One day.\n' }).pipe(
-        Effect.zipRight(Effect.never),
+        Effect.andThen(Effect.never),
         Effect.ensuring(
           Effect.sync(() => {
             finalized = true;

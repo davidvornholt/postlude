@@ -1,4 +1,4 @@
-import type { SqlClient } from '@effect/sql';
+import type { SqlClient } from 'effect/sql';
 
 /** A row whose current prose or scripture reference counts as archive activity. */
 export const archiveActivityEntry = (sql: SqlClient.SqlClient) =>

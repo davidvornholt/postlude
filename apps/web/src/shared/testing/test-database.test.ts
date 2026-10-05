@@ -43,7 +43,7 @@ it('reads the generated dev env fallback under Node', () => {
       '-e',
       `const { configuredDatabaseUrl } = await import(${JSON.stringify(moduleUrl)});
 const { Effect } = await import('effect');
-process.stdout.write(Effect.runSync(Effect.either(configuredDatabaseUrl()))._tag);`,
+process.stdout.write(Effect.runSync(Effect.result(configuredDatabaseUrl()))._tag);`,
     ],
     {
       cwd: new URL('../../..', import.meta.url).pathname,
@@ -53,5 +53,5 @@ process.stdout.write(Effect.runSync(Effect.either(configuredDatabaseUrl()))._tag
   );
 
   expect(probe.stderr).toBe('');
-  expect(['Left', 'Right']).toContain(probe.stdout);
+  expect(['Failure', 'Success']).toContain(probe.stdout);
 });

@@ -10,8 +10,8 @@
  * disagree with the page that asked for it.
  */
 
-import { SqlClient } from '@effect/sql';
-import { Effect, Schema } from 'effect';
+import { Context, Effect, Layer, Schema } from 'effect';
+import { SqlClient } from 'effect/sql';
 
 import {
   invalidScriptureReferenceError,
@@ -43,22 +43,22 @@ import {
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 import { replaceSearchEvidence } from './search-evidence-write.ts';
 
-const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
+const decodeEntries = Schema.decodeUnknownEffect(Schema.Array(EntryFromRow));
 const exactParseOptions = { onExcessProperty: 'error' } as const;
-const decodeEntryPreviews = Schema.decodeUnknown(
+const decodeEntryPreviews = Schema.decodeUnknownEffect(
   Schema.Array(EntryPreviewFromRow),
   exactParseOptions,
 );
-const decodeEarliestDates = Schema.decodeUnknown(
+const decodeEarliestDates = Schema.decodeUnknownEffect(
   Schema.Array(EarliestDateFromRow),
 );
-const decodeSummaries = Schema.decodeUnknown(Schema.Array(EntrySummaryFromRow));
+const decodeSummaries = Schema.decodeUnknownEffect(
+  Schema.Array(EntrySummaryFromRow),
+);
 const ExportAvailabilityRow = Schema.Struct({
-  available: Schema.propertySignature(Schema.Boolean).pipe(
-    Schema.fromKey('export_available'),
-  ),
-});
-const decodeExportAvailability = Schema.decodeUnknown(
+  available: Schema.Boolean,
+}).pipe(Schema.encodeKeys({ available: 'export_available' }));
+const decodeExportAvailability = Schema.decodeUnknownEffect(
   Schema.Array(ExportAvailabilityRow),
 );
 
@@ -92,10 +92,10 @@ const persistSavedEvidence =
       ? Effect.void
       : replaceSearchEvidence(sql, date, storedSearchEvidence(document));
 
-export class EntryRepository extends Effect.Service<EntryRepository>()(
+export class EntryRepository extends Context.Service<EntryRepository>()(
   'journal/EntryRepository',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
 
       /**
@@ -382,4 +382,6 @@ export class EntryRepository extends Effect.Service<EntryRepository>()(
       } as const;
     }),
   },
-) {}
+) {
+  static readonly layer = Layer.effect(EntryRepository, EntryRepository.make);
+}

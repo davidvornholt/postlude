@@ -1,11 +1,11 @@
 import { Schema } from 'effect';
 
-import { isJournalMonth, type JournalMonth } from '../calendar.ts';
+import { isJournalMonth } from '../calendar.ts';
 import { JournalDateSchema } from './entry.ts';
 
-const JournalMonthSchema = Schema.String.pipe(
-  Schema.filter(isJournalMonth, { message: () => 'Invalid journal month' }),
-) as Schema.Schema<JournalMonth>;
+const JournalMonthSchema = Schema.String.check(
+  Schema.makeFilter(isJournalMonth, { message: 'Invalid journal month' }),
+);
 
 export const CalendarQuery = Schema.Struct({
   day: Schema.optional(JournalDateSchema),

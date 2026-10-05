@@ -8,24 +8,21 @@ import { JournalDateSchema, WordCountSchema } from './entry.ts';
  * — a year of them is a lot of prose to send in order to draw 365 squares.
  */
 export const EntrySummaryFromRow = Schema.Struct({
-  date: Schema.propertySignature(JournalDateSchema).pipe(
-    Schema.fromKey('entry_date'),
-  ),
-  journalWordCount: Schema.propertySignature(WordCountSchema).pipe(
-    Schema.fromKey('journal_word_count'),
-  ),
-  journalFirstUsedAt: Schema.propertySignature(
-    Schema.NullOr(Schema.ValidDateFromSelf),
-  ).pipe(Schema.fromKey('journal_first_used_at')),
-  scriptureWordCount: Schema.propertySignature(WordCountSchema).pipe(
-    Schema.fromKey('scripture_word_count'),
-  ),
-  scriptureFirstUsedAt: Schema.propertySignature(
-    Schema.NullOr(Schema.ValidDateFromSelf),
-  ).pipe(Schema.fromKey('scripture_first_used_at')),
-  hasScriptureReference: Schema.propertySignature(Schema.Boolean).pipe(
-    Schema.fromKey('has_scripture_reference'),
-  ),
-});
+  date: JournalDateSchema,
+  journalWordCount: WordCountSchema,
+  journalFirstUsedAt: Schema.NullOr(Schema.Date),
+  scriptureWordCount: WordCountSchema,
+  scriptureFirstUsedAt: Schema.NullOr(Schema.Date),
+  hasScriptureReference: Schema.Boolean,
+}).pipe(
+  Schema.encodeKeys({
+    date: 'entry_date',
+    journalWordCount: 'journal_word_count',
+    journalFirstUsedAt: 'journal_first_used_at',
+    scriptureWordCount: 'scripture_word_count',
+    scriptureFirstUsedAt: 'scripture_first_used_at',
+    hasScriptureReference: 'has_scripture_reference',
+  }),
+);
 
 export type EntrySummary = Schema.Schema.Type<typeof EntrySummaryFromRow>;

@@ -1,5 +1,5 @@
-import type { createPool } from '@postlude/db/pool';
-import { Data, Effect } from 'effect';
+import type { createPool } from '@postlude/db/connections';
+import { Effect, Schema } from 'effect';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
 import { replaceSearchEvidenceWithClient } from '../services/search-evidence-write.ts';
 
@@ -15,10 +15,10 @@ import {
 
 type ImportPool = ReturnType<typeof createPool>;
 
-export class JournalImportError extends Data.TaggedError('JournalImportError')<{
-  readonly message: string;
-  readonly cause?: unknown;
-}> {}
+export class JournalImportError extends Schema.TaggedError<JournalImportError>()(
+  'JournalImportError',
+  { message: Schema.String, cause: Schema.optionalKey(Schema.Defect()) },
+) {}
 
 export type JournalImportSummary = {
   readonly inserted: number;

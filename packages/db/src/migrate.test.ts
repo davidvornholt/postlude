@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { Effect } from 'effect';
 import type { Pool } from 'pg';
-
+import { createPool } from './connections.ts';
 import {
   migrateDatabase,
   migrateGeneratedThrough,
@@ -12,7 +12,6 @@ import {
   searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
 } from './migrate.ts';
-import { createPool } from './pool.ts';
 
 const latestLegacyMigration = 2;
 const expectedMigrationCount = 9;
@@ -284,10 +283,10 @@ it('refuses ambiguous legacy provider keys and rolls back the complete migration
       values ('one','https://one.example','123','github','one'), ('two','https://two.example','123','github','two');
     `),
         );
-        const result = yield* Effect.either(migrateTestDatabase(pool));
+        const result = yield* Effect.result(migrateTestDatabase(pool));
         expect(result).toMatchObject({
-          _tag: 'Left',
-          left: { _tag: 'DatabaseMigrationError' },
+          _tag: 'Failure',
+          failure: { _tag: 'DatabaseMigrationError' },
         });
         const count = yield* Effect.promise(() =>
           pool.query('select count(*)::integer as count from account'),

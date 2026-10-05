@@ -1,4 +1,4 @@
-import { Data, Effect, Queue, Stream, Take } from 'effect';
+import { Effect, Queue, Schema, Stream } from 'effect';
 import { Zip, ZipDeflate } from 'fflate';
 
 export type ArchiveFile = {
@@ -6,10 +6,10 @@ export type ArchiveFile = {
   readonly text: string;
 };
 
-export class ZipStreamError extends Data.TaggedError('ZipStreamError')<{
-  readonly message: string;
-  readonly cause: unknown;
-}> {}
+export class ZipStreamError extends Schema.TaggedError<ZipStreamError>()(
+  'ZipStreamError',
+  { message: Schema.String, cause: Schema.Defect() },
+) {}
 
 const zipStreamError = (cause: unknown): ZipStreamError =>
   new ZipStreamError({
@@ -55,7 +55,7 @@ const acquireZip = (offer: (chunk: Uint8Array) => Effect.Effect<void>) =>
 
     const mutate = (operation: () => void) =>
       Effect.try({ try: operation, catch: zipStreamError }).pipe(
-        Effect.zipRight(flush),
+        Effect.andThen(flush),
       );
 
     const beginFile = (path: string) =>
@@ -87,7 +87,7 @@ const acquireZip = (offer: (chunk: Uint8Array) => Effect.Effect<void>) =>
       writeText,
       endFile: writeText('', true),
       addFile: (file) =>
-        beginFile(file.path).pipe(Effect.zipRight(writeText(file.text, true))),
+        beginFile(file.path).pipe(Effect.andThen(writeText(file.text, true))),
     };
 
     const finish = mutate(() => {
@@ -106,7 +106,7 @@ const zipProducer = <E, R>(
 ): Effect.Effect<void, E | ZipStreamError, R> =>
   Effect.acquireUseRelease(
     acquireZip(offer),
-    ({ finish, writer }) => produce(writer).pipe(Effect.zipRight(finish)),
+    ({ finish, writer }) => produce(writer).pipe(Effect.andThen(finish)),
     ({ zip }) => Effect.sync(() => zip.terminate()),
   );
 
@@ -117,22 +117,10 @@ const zipProducer = <E, R>(
 export const streamingZip = <E, R>(
   produce: (zip: StreamingZip) => Effect.Effect<void, E, R>,
 ): Stream.Stream<Uint8Array, E | ZipStreamError, R> =>
-  Stream.unwrapScoped(
-    Effect.gen(function* () {
-      const queue = yield* Effect.acquireRelease(
-        Queue.bounded<Take.Take<Uint8Array, E | ZipStreamError>>(1),
-        Queue.shutdown,
-      );
-      const offer = (chunk: Uint8Array) =>
-        Queue.offer(queue, Take.of(chunk)).pipe(Effect.asVoid);
-      yield* zipProducer(produce, offer).pipe(
-        Effect.matchCauseEffect({
-          onFailure: (cause) =>
-            Queue.offer(queue, Take.failCause(cause)).pipe(Effect.asVoid),
-          onSuccess: () => Queue.offer(queue, Take.end).pipe(Effect.asVoid),
-        }),
-        Effect.forkScoped,
-      );
-      return Stream.fromQueue(queue).pipe(Stream.flattenTake);
-    }),
+  Stream.callback<Uint8Array, E | ZipStreamError, R>(
+    (queue) =>
+      zipProducer(produce, (chunk) =>
+        Queue.offer(queue, chunk).pipe(Effect.asVoid),
+      ).pipe(Queue.into(queue)),
+    { bufferSize: 1 },
   );

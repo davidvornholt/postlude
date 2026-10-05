@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { Effect, Either } from 'effect';
+import { Effect, Result } from 'effect';
 
 import { draft, withRepository } from './entry-repository-test-support.ts';
 
@@ -33,7 +33,7 @@ it('allows only one of two saves with the same base revision', async () => {
         ['Alpha.', 'Beta.'].map((prose) =>
           entries
             .save(draft('2026-08-25', prose, '', first.revision))
-            .pipe(Effect.either),
+            .pipe(Effect.result),
         ),
         { concurrency: 'unbounded' },
       );
@@ -41,14 +41,14 @@ it('allows only one of two saves with the same base revision', async () => {
       return { attempts, retained } as const;
     }),
   );
-  const saved = outcome.attempts.filter(Either.isRight);
-  const conflicts = outcome.attempts.filter(Either.isLeft);
+  const saved = outcome.attempts.filter(Result.isSuccess);
+  const conflicts = outcome.attempts.filter(Result.isFailure);
 
   expect(saved).toHaveLength(1);
   expect(conflicts).toHaveLength(1);
-  expect(conflicts[0]?.left._tag).toBe('JournalWriteConflictError');
+  expect(conflicts[0]?.failure._tag).toBe('JournalWriteConflictError');
   expect(outcome.retained?.journalMarkdown).toBe(
-    saved[0]?.right.journalMarkdown,
+    saved[0]?.success.journalMarkdown,
   );
   expect(outcome.retained?.revision).toBe(2);
 });

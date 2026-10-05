@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { Chunk, Effect, Stream } from 'effect';
+import { Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
 import { parseEntriesDocument } from '../export-format.ts';
 import { shiftJournalDate } from '../journal-day.ts';
@@ -29,8 +29,10 @@ const bytesOf = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
   return bytes;
 };
 
-const exportsOf = (entries: ReadonlyArray<ExportEntry>): EntryExport =>
-  EntryExport.make({
+const exportsOf = (
+  entries: ReadonlyArray<ExportEntry>,
+): EntryExport['Service'] =>
+  EntryExport.of({
     visit: (visitor) =>
       Effect.gen(function* () {
         yield* visitor.onSnapshot({
@@ -53,7 +55,7 @@ const visitLeapYearEntries = <E, R>(
   Effect.forEach(
     leapYearIndexes,
     (index) =>
-      Effect.sync(onVisit).pipe(Effect.zipRight(onEntry(entryAt(index)))),
+      Effect.sync(onVisit).pipe(Effect.andThen(onEntry(entryAt(index)))),
     { discard: true },
   );
 
@@ -86,11 +88,7 @@ it('streams a million separated backtick runs without losing source or joining s
       exportsOf([entry]),
       'Europe/Berlin',
       () => undefined,
-    ).pipe(
-      Stream.provideLayer(JournalImages.Default),
-      Stream.runCollect,
-      Effect.map(Chunk.toReadonlyArray),
-    ),
+    ).pipe(Stream.provide(JournalImages.layer), Stream.runCollect),
   );
   const files = unzipSync(bytesOf(chunks));
   const decoder = new TextDecoder();
@@ -116,7 +114,7 @@ it('backpressures a large leap-year period and releases its snapshot on cancella
     createdAt: timestamp,
     updatedAt: timestamp,
   });
-  const exports = EntryExport.make({
+  const exports = EntryExport.of({
     visit: (visitor) =>
       Effect.acquireUseRelease(
         Effect.void,
@@ -155,7 +153,7 @@ it('backpressures a large leap-year period and releases its snapshot on cancella
   });
   const body = Stream.toReadableStream(
     exportArchiveStream(exports, 'Europe/Berlin', () => undefined, 'year').pipe(
-      Stream.provideLayer(JournalImages.Default),
+      Stream.provide(JournalImages.layer),
     ),
   );
   const reader = body.getReader();
@@ -213,7 +211,7 @@ it('includes each referenced private image once and fails an incomplete backup',
   };
   const bytes = new TextEncoder().encode('stored image bytes');
   let reads = 0;
-  const images = JournalImages.make({
+  const images = JournalImages.of({
     upload: () => Effect.die('Export does not upload images.'),
     read: () =>
       Effect.sync(() => {
@@ -230,7 +228,6 @@ it('includes each referenced private image once and fails an incomplete backup',
     stream.pipe(
       Stream.provideService(JournalImages, images),
       Stream.runCollect,
-      Effect.map(Chunk.toReadonlyArray),
     ),
   );
   const files = unzipSync(bytesOf(chunks));
@@ -239,7 +236,7 @@ it('includes each referenced private image once and fails an incomplete backup',
   expect(
     parseEntriesDocument(new TextDecoder().decode(files['entries.ndjson'])),
   ).toEqual([entry]);
-  const missing = JournalImages.make({
+  const missing = JournalImages.of({
     ...images,
     read: () =>
       Effect.fail(new JournalImageError({ message: 'Image missing.' })),
@@ -248,8 +245,8 @@ it('includes each referenced private image once and fails an incomplete backup',
     stream.pipe(
       Stream.provideService(JournalImages, missing),
       Stream.runDrain,
-      Effect.either,
+      Effect.result,
     ),
   );
-  expect(failure._tag).toBe('Left');
+  expect(failure._tag).toBe('Failure');
 });

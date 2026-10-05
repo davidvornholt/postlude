@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { Chunk, Effect, Stream } from 'effect';
+import { Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
 import { parseEntriesDocument } from '../export-format.ts';
 import type { ExportGrouping } from '../export-period.ts';
@@ -50,11 +50,7 @@ const exportFiles = (grouping: ExportGrouping) =>
         'Europe/Berlin',
         () => undefined,
         grouping,
-      ).pipe(
-        Stream.provideLayer(JournalImages.Default),
-        Stream.runCollect,
-        Effect.map(Chunk.toReadonlyArray),
-      );
+      ).pipe(Stream.provide(JournalImages.layer), Stream.runCollect);
       return unzipSync(bytesOf(chunks));
     }),
   );
@@ -140,11 +136,7 @@ describe('production projection streams', () => {
           'Europe/Berlin',
           () => undefined,
           'year',
-        ).pipe(
-          Stream.provideLayer(JournalImages.Default),
-          Stream.runCollect,
-          Effect.map(Chunk.toReadonlyArray),
-        );
+        ).pipe(Stream.provide(JournalImages.layer), Stream.runCollect);
         return unzipSync(bytesOf(chunks));
       }),
     );

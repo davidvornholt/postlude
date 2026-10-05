@@ -16,12 +16,12 @@ export const journalDayStartsAt = journalDayBoundary.clockTime;
 
 const utcTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/u;
 const millisecondTimestampEnd = 23;
-const positiveInteger = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
+const positiveInteger = Schema.Int.check(Schema.isGreaterThan(0));
 const optionalPositiveInteger = Schema.NullOr(positiveInteger);
 
-export const UtcTimestampSchema = Schema.String.pipe(
-  Schema.pattern(utcTimestampPattern),
-  Schema.filter(
+export const UtcTimestampSchema = Schema.String.check(
+  Schema.isPattern(utcTimestampPattern),
+  Schema.makeFilter(
     (value) => {
       const milliseconds = `${value.slice(0, millisecondTimestampEnd)}Z`;
       const instant = new Date(milliseconds);
@@ -37,8 +37,8 @@ export const UtcTimestampSchema = Schema.String.pipe(
   ),
 );
 
-const IanaTimeZoneSchema = Schema.String.pipe(
-  Schema.filter(isTimeZone, {
+const IanaTimeZoneSchema = Schema.String.check(
+  Schema.makeFilter(isTimeZone, {
     identifier: 'TimeZone',
     description: 'an IANA time zone resolvable by the platform',
   }),
@@ -56,17 +56,17 @@ export const ExportManifestSchema = Schema.Struct({
   entries: Schema.Struct({
     path: Schema.Literal(entriesPath),
     mediaType: Schema.Literal(exportEntriesMediaType),
-    count: Schema.Number.pipe(Schema.int(), Schema.greaterThanOrEqualTo(0)),
+    count: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
 });
 
 const ExportScriptureReferenceSchema = Schema.Struct({
-  book: Schema.String.pipe(Schema.minLength(1)),
+  book: Schema.String.check(Schema.isMinLength(1)),
   chapter: positiveInteger,
   verseStart: optionalPositiveInteger,
   verseEnd: optionalPositiveInteger,
-}).pipe(
-  Schema.filter(
+}).check(
+  Schema.makeFilter(
     (reference) =>
       reference.verseEnd === null ||
       (reference.verseStart !== null &&

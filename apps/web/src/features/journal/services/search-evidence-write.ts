@@ -1,5 +1,5 @@
-import type { SqlClient } from '@effect/sql';
 import { Effect } from 'effect';
+import type { SqlClient } from 'effect/sql';
 import type { StoredSearchEvidence } from '../search-stored-evidence.ts';
 
 /** Runs inside the same transaction as its entry update or migration batch. */

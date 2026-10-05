@@ -1,7 +1,7 @@
 import { expect, it } from 'bun:test';
-import { SqlClient } from '@effect/sql';
-import { pgClientLayer } from '@postlude/db/effect-client';
+import { pgClientLayer } from '@postlude/db/connections';
 import { Effect, Layer } from 'effect';
+import { SqlClient } from 'effect/sql';
 
 import {
   openTestDatabase,
@@ -50,7 +50,10 @@ const commitWriterUpdate = (pool: TestPool) =>
     }
   });
 
-const readExport = (exports: EntryExport, writerAfterSnapshot?: TestPool) =>
+const readExport = (
+  exports: EntryExport['Service'],
+  writerAfterSnapshot?: TestPool,
+) =>
   Effect.gen(function* () {
     let exportedAt: string | undefined;
     let writerUpdatedAt: string | undefined;
@@ -77,7 +80,9 @@ const readExport = (exports: EntryExport, writerAfterSnapshot?: TestPool) =>
       ],
     });
     if (exportedAt === undefined) {
-      return yield* Effect.dieMessage('The export instant was not observed.');
+      return yield* Effect.die(
+        new Error('The export instant was not observed.'),
+      );
     }
     return { exportedAt, included, writerUpdatedAt };
   });
@@ -88,11 +93,11 @@ const observeWriterRace = (timing: WriterTiming) =>
   Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const pool = yield* openTestDatabase(migrateJournalDatabase);
-        const clientLayer = pgClientLayer(pool);
+        const { pool, url } = yield* openTestDatabase(migrateJournalDatabase);
+        const clientLayer = pgClientLayer(url);
         const journalLayer = Layer.provideMerge(
           Layer.provide(
-            Layer.merge(EntryRepository.Default, EntryExport.Default),
+            Layer.merge(EntryRepository.layer, EntryExport.layer),
             clientLayer,
           ),
           clientLayer,
@@ -107,7 +112,7 @@ const observeWriterRace = (timing: WriterTiming) =>
             yield* entries.save(draft(testDate, ''));
             const snapshot = yield* sql.withTransaction(
               sql`set transaction isolation level repeatable read read only`.pipe(
-                Effect.zipRight(
+                Effect.andThen(
                   timing === 'before-snapshot'
                     ? commitWriterUpdate(pool).pipe(
                         Effect.flatMap((writerUpdatedAt) =>
@@ -124,8 +129,8 @@ const observeWriterRace = (timing: WriterTiming) =>
               ),
             );
             if (snapshot.writerUpdatedAt === undefined) {
-              return yield* Effect.dieMessage(
-                'The writer update instant was not observed.',
+              return yield* Effect.die(
+                new Error('The writer update instant was not observed.'),
               );
             }
             const committed = yield* entries.read(testDate);

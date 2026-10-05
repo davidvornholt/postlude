@@ -1,5 +1,5 @@
-import type { SqlClient } from '@effect/sql';
 import { Effect, Schema } from 'effect';
+import type { SqlClient } from 'effect/sql';
 
 import { journalReadError } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
@@ -12,11 +12,11 @@ import { exportableStoredEntry } from './entry-content-sql.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
 const exactParseOptions = { onExcessProperty: 'error' } as const;
-const decodeEntries = Schema.decodeUnknown(
+const decodeEntries = Schema.decodeUnknownEffect(
   Schema.Array(EntryPreviewFromRow),
   exactParseOptions,
 );
-const decodeEarliestDates = Schema.decodeUnknown(
+const decodeEarliestDates = Schema.decodeUnknownEffect(
   Schema.Array(EarliestDateFromRow),
 );
 

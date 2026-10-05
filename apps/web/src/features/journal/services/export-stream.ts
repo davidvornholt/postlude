@@ -36,7 +36,7 @@ export const exportContextAt = (
 
 type WriteArchiveOptions = {
   readonly zip: StreamingZip;
-  readonly exports: EntryExport;
+  readonly exports: EntryExport['Service'];
   readonly timeZone: string;
   readonly observeContext: ObserveExportContext;
   readonly grouping: ExportGrouping;
@@ -49,8 +49,8 @@ const writeDailyEntry = (zip: StreamingZip, entry: ExportEntry) =>
   zip
     .beginFile(entryPath(entry.date))
     .pipe(
-      Effect.zipRight(writeChunks(zip, entryDocumentChunks(entry))),
-      Effect.zipRight(zip.endFile),
+      Effect.andThen(writeChunks(zip, entryDocumentChunks(entry))),
+      Effect.andThen(zip.endFile),
     );
 
 const beginPeriod = (
@@ -61,7 +61,7 @@ const beginPeriod = (
   zip
     .beginFile(periodPath(grouping, period.key))
     .pipe(
-      Effect.zipRight(writeChunks(zip, periodHeaderChunks(grouping, period))),
+      Effect.andThen(writeChunks(zip, periodHeaderChunks(grouping, period))),
     );
 
 const writeArchive = ({
@@ -75,7 +75,7 @@ const writeArchive = ({
   let metadata: ExportMetadata | undefined;
   const addReadme = () =>
     metadata === undefined
-      ? Effect.dieMessage('The export snapshot context was not observed.')
+      ? Effect.die(new Error('The export snapshot context was not observed.'))
       : zip.addFile(readmeFile(metadata, grouping));
   const dailyPass =
     grouping === 'day'
@@ -95,7 +95,7 @@ const writeArchive = ({
             beginPeriod(zip, grouping, period),
           onEntry: (entry: ExportEntry) =>
             writeChunks(zip, periodEntryChunks(entry)),
-          onPeriodEnd: zip.writeText('\n').pipe(Effect.zipRight(zip.endFile)),
+          onPeriodEnd: zip.writeText('\n').pipe(Effect.andThen(zip.endFile)),
           after: Effect.void,
         };
   return exports.visit({
@@ -107,8 +107,8 @@ const writeArchive = ({
     onCount: (entryCount) => {
       const observed = context;
       if (observed === undefined) {
-        return Effect.dieMessage(
-          'The export snapshot context was not observed.',
+        return Effect.die(
+          new Error('The export snapshot context was not observed.'),
         );
       }
       metadata = { ...observed, entryCount };
@@ -128,7 +128,7 @@ const writeArchive = ({
 };
 
 export const exportArchiveStream = (
-  exports: EntryExport,
+  exports: EntryExport['Service'],
   timeZone: string,
   observeContext: ObserveExportContext,
   grouping: ExportGrouping = 'day',

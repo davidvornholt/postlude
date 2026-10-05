@@ -14,10 +14,10 @@
 
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { SqlClient } from '@effect/sql';
-import type { SqlError } from '@effect/sql/SqlError';
-import { createPool } from '@postlude/db/pool';
+import { createPool } from '@postlude/db/connections';
 import { Data, Effect, type Exit, type Scope } from 'effect';
+import { SqlClient } from 'effect/sql';
+import type { SqlError } from 'effect/sql/SqlError';
 
 import { TestDatabaseSetupError } from './test-database-errors.ts';
 
@@ -89,6 +89,12 @@ type TestDatabaseDependencies<Pool> = {
   readonly closePool: (pool: Pool) => Promise<unknown>;
 };
 
+/** A migrated test database: a pool on it, and the URL it was opened from. */
+export type TestDatabase<Pool> = {
+  readonly pool: Pool;
+  readonly url: string;
+};
+
 const setupError = (cause: unknown): TestDatabaseSetupError =>
   new TestDatabaseSetupError({
     message: 'The test database could not be prepared.',
@@ -102,7 +108,7 @@ const setupError = (cause: unknown): TestDatabaseSetupError =>
 export const acquireTestDatabase = <Pool>(
   configured: string,
   dependencies: TestDatabaseDependencies<Pool>,
-): Effect.Effect<Pool, TestDatabaseSetupError, Scope.Scope> =>
+): Effect.Effect<TestDatabase<Pool>, TestDatabaseSetupError, Scope.Scope> =>
   Effect.gen(function* () {
     const configuredUrl = yield* Effect.try({
       try: () => new URL(configured),
@@ -130,7 +136,7 @@ export const acquireTestDatabase = <Pool>(
           try: () => dependencies.createDatabase(admin, name),
           catch: (cause) => cause,
         }).pipe(
-          Effect.catchAll((cause) =>
+          Effect.catch((cause) =>
             (cause as { readonly code?: string }).code === duplicateDatabase
               ? Effect.void
               : Effect.fail(cause),
@@ -142,19 +148,21 @@ export const acquireTestDatabase = <Pool>(
 
     const testUrl = new URL(configuredUrl.toString());
     testUrl.pathname = `/${name}`;
-    const pool = yield* acquirePool(testUrl.toString());
+    const url = testUrl.toString();
+    const pool = yield* acquirePool(url);
     yield* dependencies.migrateDatabase(pool).pipe(Effect.mapError(setupError));
-    return pool;
+    return { pool, url };
   });
 
 /**
- * A pool on a migrated test database, created if this is the first run. The
- * name cannot be a bound parameter, so it is quoted instead; it comes from
+ * A pool on a migrated test database, created if this is the first run, and
+ * the database's URL for clients that open their own connections. The name
+ * cannot be a bound parameter, so it is quoted instead; it comes from
  * configuration rather than from input.
  */
 export const openTestDatabase = (
   migrateDatabase: TestDatabaseDependencies<TestPool>['migrateDatabase'],
-): Effect.Effect<TestPool, TestDatabaseSetupError, Scope.Scope> =>
+): Effect.Effect<TestDatabase<TestPool>, TestDatabaseSetupError, Scope.Scope> =>
   configuredDatabaseUrl().pipe(
     Effect.flatMap((configured) =>
       acquireTestDatabase(configured, {

@@ -1,10 +1,10 @@
 /**
- * One database, one pool, one Effect runtime, for whichever test file asks.
+ * One database, one Effect runtime, for whichever test file asks.
  *
  * The journal's database-backed services have their own colocated tests. They
- * share the same setup: create and migrate the test database, open a pool,
- * build a runtime over it, and roll every test body back so the journal is left
- * exactly as it was found.
+ * share the same setup: create and migrate the test database, build a runtime
+ * whose SQL client connects to it, and roll every test body back so the
+ * journal is left exactly as it was found.
  *
  * That setup is a function a test file calls rather than a module that installs
  * itself on import. Bun caches a module across the files that import it, so
@@ -18,9 +18,9 @@
 
 // biome-ignore lint/nursery/noBunModules: This module runs under Bun and uses its runtime or test API.
 import { afterAll, beforeAll } from 'bun:test';
-import { SqlClient } from '@effect/sql';
-import { pgClientLayer } from '@postlude/db/effect-client';
+import { pgClientLayer } from '@postlude/db/connections';
 import { Effect, Exit, Layer, ManagedRuntime, Scope } from 'effect';
+import { SqlClient } from 'effect/sql';
 
 import {
   openTestDatabase,
@@ -53,19 +53,19 @@ export const draft = (
 });
 
 export const journalDatabase = () => {
-  let resourceScope: Scope.CloseableScope | undefined;
+  let resourceScope: Scope.Closeable | undefined;
   let runtime: ManagedRuntime.ManagedRuntime<JournalServices, never>;
 
   const acquireResources = Effect.gen(function* () {
-    const pool = yield* openTestDatabase(migrateJournalDatabase);
-    const clientLayer = pgClientLayer(pool);
+    const { url } = yield* openTestDatabase(migrateJournalDatabase);
+    const clientLayer = pgClientLayer(url);
     const acquiredRuntime = ManagedRuntime.make(
       Layer.provideMerge(
         Layer.provide(
           Layer.mergeAll(
-            EntryRepository.Default,
-            EntrySearch.Default,
-            EntryExport.Default,
+            EntryRepository.layer,
+            EntrySearch.layer,
+            EntryExport.layer,
           ),
           clientLayer,
         ),

@@ -1,6 +1,6 @@
-import { SqlClient } from '@effect/sql';
-import { pgClientLayer } from '@postlude/db/effect-client';
+import { pgClientLayer } from '@postlude/db/connections';
 import { Effect, Layer } from 'effect';
+import { SqlClient } from 'effect/sql';
 
 import {
   openTestDatabase,
@@ -11,15 +11,17 @@ import { EntryRepository } from './entry-repository.ts';
 import { migrateJournalDatabase } from './journal-migration.ts';
 
 const runWithRepository = <A, E>(
-  body: (entries: EntryRepository) => Effect.Effect<A, E, SqlClient.SqlClient>,
+  body: (
+    entries: EntryRepository['Service'],
+  ) => Effect.Effect<A, E, SqlClient.SqlClient>,
 ): Promise<A> =>
   Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const pool = yield* openTestDatabase(migrateJournalDatabase);
-        const clientLayer = pgClientLayer(pool);
+        const { url } = yield* openTestDatabase(migrateJournalDatabase);
+        const clientLayer = pgClientLayer(url);
         const repositoryLayer = Layer.provideMerge(
-          Layer.provide(EntryRepository.Default, clientLayer),
+          Layer.provide(EntryRepository.layer, clientLayer),
           clientLayer,
         ).pipe(Layer.orDie);
         return yield* Effect.flatMap(EntryRepository, body).pipe(
@@ -30,7 +32,9 @@ const runWithRepository = <A, E>(
   );
 
 export const withRepository = <A, E>(
-  body: (entries: EntryRepository) => Effect.Effect<A, E, SqlClient.SqlClient>,
+  body: (
+    entries: EntryRepository['Service'],
+  ) => Effect.Effect<A, E, SqlClient.SqlClient>,
 ): Promise<A> =>
   runWithRepository((entries) =>
     rolledBack(

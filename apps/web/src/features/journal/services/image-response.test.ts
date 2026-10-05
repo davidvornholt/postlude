@@ -51,11 +51,11 @@ it.each([
     });
 
     const result = await Effect.runPromise(
-      readImageUpload(request, publicOrigin).pipe(Effect.either),
+      readImageUpload(request, publicOrigin).pipe(Effect.result),
     );
     expect(result).toMatchObject({
-      _tag: 'Left',
-      left: { _tag: 'JournalValidationError' },
+      _tag: 'Failure',
+      failure: { _tag: 'JournalValidationError' },
     });
     expect(request.bodyUsed).toBeFalse();
   },
