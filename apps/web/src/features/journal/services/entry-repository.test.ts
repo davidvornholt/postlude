@@ -55,6 +55,30 @@ it('replaces a day rather than failing on the second save', async () => {
   expect(entry.journalMarkdown).toBe('Rewritten, and shorter.');
   expect(entry.journalWordCount).toBe(words);
 });
+it('saves and reads back a day whose search vector is long', async () => {
+  // Postgres sends a tsvector in binary, starting with its lexeme count, and
+  // the client decodes a type it has no codec for as UTF-8 text. A count whose
+  // low byte is 128 or more is not valid UTF-8, so such a day failed to save.
+  const prose = Array.from({ length: 200 }, (_, index) => `word${index}`).join(
+    ' ',
+  );
+  const { saved, read, lexemes } = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const stored = yield* entries.save(draft('2026-10-05', prose));
+      const reread = yield* entries.read('2026-10-05');
+      const rows = yield* sql<{ readonly lexemes: number }>`
+        select length(search_vector) as lexemes
+        from entry
+        where entry_date = '2026-10-05'
+      `;
+      return { saved: stored, read: reread, lexemes: rows[0]?.lexemes ?? 0 };
+    }),
+  );
+  expect(lexemes % 256).toBeGreaterThanOrEqual(128);
+  expect(saved.journalMarkdown).toBe(prose);
+  expect(read?.journalMarkdown).toBe(prose);
+});
 
 it('advances the search projection with the same CAS revision', async () => {
   const stored = await withRepository((entries) =>
