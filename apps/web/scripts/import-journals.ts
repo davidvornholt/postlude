@@ -1,6 +1,6 @@
 import { basename } from 'node:path';
 
-import { createPool } from '@postlude/db/pool';
+import { createPool } from '@postlude/db/connections';
 import { Effect, Schema } from 'effect';
 
 import { parseAnytypeJournal } from '../src/features/journal/import/anytype-import.ts';

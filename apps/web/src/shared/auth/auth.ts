@@ -3,7 +3,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { drizzle } from 'drizzle-orm/node-postgres';
 
-import { pool } from '#/shared/db/pool.ts';
+import { pool } from '#/shared/db/database.ts';
 import { env } from '#/shared/env.ts';
 import { createAuthorizedAuthHandler } from './auth-handler.ts';
 import { createAuthOptions } from './auth-options.ts';

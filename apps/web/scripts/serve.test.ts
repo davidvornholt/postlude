@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'bun:test';
 import { rm, symlink } from 'node:fs/promises';
 
-import { bootSelfCheckFailure, createFetchHandler } from './serve.ts';
+import { bootSelfCheckFailure, createFetchHandler, shutdown } from './serve.ts';
 
 const unauthorizedStatus = 401;
 const redirectStatus = 303;
@@ -181,5 +181,63 @@ describe('bootSelfCheckFailure', () => {
     );
 
     expect(failure).toBe(`/api/healthz timed out after ${timeoutMs}ms`);
+  });
+});
+
+describe('shutdown', () => {
+  const serveUntil = (answer: Promise<void>) =>
+    Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch: async () => {
+        await answer;
+        return new Response('answered');
+      },
+    });
+
+  it('closes the database only after the request in flight has answered', async () => {
+    const events: Array<string> = [];
+    const { promise: answer, resolve } = Promise.withResolvers<void>();
+    const server = serveUntil(answer);
+    const inFlight = fetch(server.url).then((response) => response.text());
+    await Bun.sleep(50);
+
+    const stopped = shutdown(
+      server,
+      () => {
+        events.push('database closed');
+        return Promise.resolve();
+      },
+      5000,
+    );
+    await Bun.sleep(50);
+    events.push('answered');
+    resolve();
+
+    expect(await inFlight).toBe('answered');
+    await stopped;
+    expect(events).toEqual(['answered', 'database closed']);
+  });
+
+  it('cuts off a request that outlasts the drain and still closes the database', async () => {
+    let closed = false;
+    const server = serveUntil(new Promise<void>(() => undefined));
+    const inFlight = fetch(server.url).then(
+      () => 'answered',
+      () => 'cut off',
+    );
+    await Bun.sleep(50);
+
+    await shutdown(
+      server,
+      () => {
+        closed = true;
+        return Promise.resolve();
+      },
+      100,
+    );
+
+    expect(await inFlight).toBe('cut off');
+    expect(closed).toBe(true);
   });
 });

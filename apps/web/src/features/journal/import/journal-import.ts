@@ -1,4 +1,4 @@
-import type { createPool } from '@postlude/db/pool';
+import type { createPool } from '@postlude/db/connections';
 import { Effect, Schema } from 'effect';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
 import { replaceSearchEvidenceWithClient } from '../services/search-evidence-write.ts';

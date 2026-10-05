@@ -1,9 +1,9 @@
+import type { createPool } from '@postlude/db/connections';
 import {
   migrateDatabase,
   searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
 } from '@postlude/db/migrate';
-import type { createPool } from '@postlude/db/pool';
 import { Schema } from 'effect';
 
 import { searchDocumentOf } from '../search-document.ts';

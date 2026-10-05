@@ -14,7 +14,7 @@
 
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
-import { createPool } from '@postlude/db/pool';
+import { createPool } from '@postlude/db/connections';
 import { Data, Effect, type Exit, type Scope } from 'effect';
 import { SqlClient } from 'effect/sql';
 import type { SqlError } from 'effect/sql/SqlError';

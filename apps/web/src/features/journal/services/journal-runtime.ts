@@ -8,18 +8,17 @@
  * place so a service never has to be unwrapped twice, and so the layers are
  * built once per process rather than per call.
  *
- * The runtime is created lazily. Building it creates the Effect SQL client's
- * connection pool and reads the validated environment, and neither should
- * happen because a module was imported. The client bundle imports route
- * modules that import services, and a pool opened there would be a pool opened
- * in a browser.
+ * The runtime is created lazily. Building it builds the process's Effect SQL
+ * client from `#/shared/db/database.ts`, which reads the validated environment,
+ * and neither should happen because a module was imported. The client bundle
+ * imports route modules that import services, and a pool opened there would be
+ * a pool opened in a browser.
  */
 
-import { pgClientLayer } from '@postlude/db/effect-client';
 import { Cause, Effect, Layer, ManagedRuntime, Stream } from 'effect';
 import type { SqlError } from 'effect/sql/SqlError';
 
-import { env } from '#/shared/env.ts';
+import { sqlClientLayer } from '#/shared/db/database.ts';
 import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { EntrySearch } from './entry-search.ts';
@@ -32,7 +31,7 @@ const journalLayer = Layer.provide(
     EntryExport.layer,
     JournalImages.layer,
   ),
-  Layer.suspend(() => pgClientLayer(env.DATABASE_URL)),
+  sqlClientLayer,
 );
 
 /**

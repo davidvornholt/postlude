@@ -1,4 +1,4 @@
-import { createPool } from '@postlude/db/pool';
+import { createPool } from '@postlude/db/connections';
 import { Effect } from 'effect';
 import { migrateJournalDatabase } from '../src/features/journal/services/journal-migration.ts';
 

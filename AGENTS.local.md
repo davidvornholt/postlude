@@ -11,7 +11,7 @@ The Effect data layer is in place, adopted with the journal feature (issue #7). 
 
 ## Database access in apps/web
 
-One connection string, two pools. `@postlude/db`'s `createPool` gives better-auth's Drizzle adapter, migrations, and scripts a `pg` pool. `@effect/sql-pg` speaks the PostgreSQL protocol itself, so the Effect SQL client cannot share that pool: `pgClientLayer` opens its own from the same `DATABASE_URL` and closes it with its scope. Both read the one configured URL rather than a second copy of it.
+One connection string, two pools. better-auth's Drizzle adapter, migrations, and scripts use a `pg` pool, and `@effect/sql-pg` cannot adopt one, so the Effect SQL client opens its own. `@postlude/db/connections` is the only place either pool is configured or sized, and it records why there are two and why they stay within ten connections together. In the server, `src/shared/db/database.ts` opens both from `DATABASE_URL`, shares the one Effect client with every feature runtime through `sqlClientLayer`, and closes both in `closeDatabase`, which `scripts/serve.ts` calls on shutdown. Server code takes its pools from there. Scripts and tests open their own through `@postlude/db/connections` and close them.
 
 Tests that need a database use `src/shared/testing/test-database.ts`, which creates and migrates the configured database with `_test` appended and rolls each test body back. They fail rather than skip when `DATABASE_URL` is absent.
 

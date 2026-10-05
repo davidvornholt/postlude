@@ -1,5 +1,5 @@
 import type * as playwright from '@playwright/test';
-import { createPool } from '@postlude/db/pool';
+import { createPool } from '@postlude/db/connections';
 import { makeSignature } from 'better-auth/crypto';
 import { storedSearchEvidence } from '../src/features/journal/search-stored-evidence.ts';
 import { replaceSearchEvidenceWithClient } from '../src/features/journal/services/search-evidence-write.ts';

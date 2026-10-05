@@ -18,7 +18,7 @@
 
 // biome-ignore lint/nursery/noBunModules: This module runs under Bun and uses its runtime or test API.
 import { afterAll, beforeAll } from 'bun:test';
-import { pgClientLayer } from '@postlude/db/effect-client';
+import { pgClientLayer } from '@postlude/db/connections';
 import { Effect, Exit, Layer, ManagedRuntime, Scope } from 'effect';
 import { SqlClient } from 'effect/sql';
 

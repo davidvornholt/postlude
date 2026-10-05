@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { PgDialect } from 'drizzle-orm/pg-core';
 import { Effect } from 'effect';
 import type { Pool } from 'pg';
-
+import { createPool } from './connections.ts';
 import {
   migrateDatabase,
   migrateGeneratedThrough,
@@ -12,7 +12,6 @@ import {
   searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
 } from './migrate.ts';
-import { createPool } from './pool.ts';
 
 const latestLegacyMigration = 2;
 const expectedMigrationCount = 9;

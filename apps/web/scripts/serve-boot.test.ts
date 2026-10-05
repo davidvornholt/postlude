@@ -3,6 +3,7 @@ import { rm, symlink } from 'node:fs/promises';
 
 import {
   createSandbox,
+  databaseClosedMarker,
   emptyAnswerBundle,
   healthyBundle,
   root,
@@ -53,6 +54,10 @@ const readStartup = async (child: SandboxServer): Promise<string | null> => {
   reader.releaseLock();
   return value === undefined ? null : new TextDecoder().decode(value).trim();
 };
+
+/** Everything the server prints after its startup line, until it exits. */
+const readRest = async (child: SandboxServer): Promise<string> =>
+  new Blob(await Array.fromAsync(child.stdout)).text();
 
 /**
  * Another process can take the probed port before the child binds it, so a
@@ -145,6 +150,24 @@ describe('the production server', () => {
 
     expect(body).not.toContain(secretBody);
     expect(body).toContain(ssrMarker);
+  });
+});
+
+describe('stopping', () => {
+  it('closes the database and exits cleanly on SIGTERM', async () => {
+    const { child } = await startServing(
+      await createSandbox(healthyBundle),
+      bindAttempts,
+    );
+
+    child.kill('SIGTERM');
+    const [exitCode, stdout] = await Promise.all([
+      child.exited,
+      readRest(child),
+    ]);
+
+    expect(exitCode).toBe(successExit);
+    expect(stdout).toContain(databaseClosedMarker);
   });
 });
 

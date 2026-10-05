@@ -1,9 +1,9 @@
 import { expect, it } from 'bun:test';
+import { createPool } from '@postlude/db/connections';
 import {
   migrateGeneratedThrough,
   searchProjectionColumnsMigrationTag,
 } from '@postlude/db/migrate';
-import { createPool } from '@postlude/db/pool';
 import { Effect } from 'effect';
 import { configuredDatabaseUrl } from '#/shared/testing/test-database.ts';
 import { searchTerms, searchTsQuery } from '../search-query.ts';

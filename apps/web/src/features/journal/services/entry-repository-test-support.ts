@@ -1,4 +1,4 @@
-import { pgClientLayer } from '@postlude/db/effect-client';
+import { pgClientLayer } from '@postlude/db/connections';
 import { Effect, Layer } from 'effect';
 import { SqlClient } from 'effect/sql';
 
