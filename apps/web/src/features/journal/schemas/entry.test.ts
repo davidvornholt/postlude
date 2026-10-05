@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { Either, Schema } from 'effect';
+import { Result, Schema } from 'effect';
 
 import { EarliestDateFromRow, EntryFromRow } from './entry.ts';
 
@@ -47,7 +47,7 @@ const databaseRow = (columns: Readonly<Record<string, unknown>> = {}) => {
   );
 };
 
-const decodeEntry = Schema.decodeUnknownEither(EntryFromRow);
+const decodeEntry = Schema.decodeUnknownResult(EntryFromRow);
 const decodeEntrySync = Schema.decodeUnknownSync(EntryFromRow);
 
 describe('EntryFromRow', () => {
@@ -140,25 +140,25 @@ describe('EntryFromRow', () => {
       columns: { scriptureWordCount: -1 },
     },
   ])('rejects $name', ({ columns }) => {
-    expect(Either.isLeft(decodeEntry(databaseRow(columns)))).toBe(true);
+    expect(Result.isFailure(decodeEntry(databaseRow(columns)))).toBe(true);
   });
 });
 
 describe('EarliestDateFromRow', () => {
-  const decode = Schema.decodeUnknownEither(EarliestDateFromRow);
+  const decode = Schema.decodeUnknownResult(EarliestDateFromRow);
   const aggregateRow = (date: unknown) => ({ [columnNames.date]: date });
 
   it('decodes a valid minimum and an empty-table null', () => {
     expect(decode(aggregateRow('2025-11-02'))).toEqual(
-      Either.right({ date: '2025-11-02' }),
+      Result.succeed({ date: '2025-11-02' }),
     );
-    expect(decode(aggregateRow(null))).toEqual(Either.right({ date: null }));
+    expect(decode(aggregateRow(null))).toEqual(Result.succeed({ date: null }));
   });
 
   it.each(['not-a-date', '2026-13-01', '2026-08-25T00:00:00Z'])(
     'rejects malformed driver value %s',
     (date) => {
-      expect(Either.isLeft(decode(aggregateRow(date)))).toBe(true);
+      expect(Result.isFailure(decode(aggregateRow(date)))).toBe(true);
     },
   );
 });

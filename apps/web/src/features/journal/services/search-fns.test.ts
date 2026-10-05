@@ -95,9 +95,11 @@ it('attributes canonical dotted I and final sigma matches to original prose', ()
 });
 
 it('keeps the query length contract shared and fail-closed', () => {
-  const decode = Schema.decodeUnknownEither(SearchQuery);
-  expect(decode({ q: 'x'.repeat(searchQueryLengthLimit) })._tag).toBe('Right');
+  const decode = Schema.decodeUnknownResult(SearchQuery);
+  expect(decode({ q: 'x'.repeat(searchQueryLengthLimit) })._tag).toBe(
+    'Success',
+  );
   expect(decode({ q: 'x'.repeat(searchQueryLengthLimit + 1) })._tag).toBe(
-    'Left',
+    'Failure',
   );
 });

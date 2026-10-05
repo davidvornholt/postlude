@@ -1,5 +1,5 @@
-import { SqlClient } from '@effect/sql';
-import { Effect, Schema } from 'effect';
+import { Context, Effect, Layer, Schema } from 'effect';
+import { SqlClient } from 'effect/sql';
 import { journalReadError } from '../errors/journal-errors.ts';
 import { JournalDateSchema } from '../schemas/entry.ts';
 import { searchTsQuery } from '../search-query.ts';
@@ -7,29 +7,27 @@ import { searchTsQuery } from '../search-query.ts';
 /** Every hit returns at most 1,200 UTF-8 bytes, below 64 KiB for 50 hits. */
 export const searchResultByteBudget = 1200;
 export const SearchEvidence = Schema.Struct({
-  kind: Schema.Literal('evening', 'scripture-notes', 'passage-reference'),
+  kind: Schema.Literals(['evening', 'scripture-notes', 'passage-reference']),
   textIndex: Schema.Number,
   termIndex: Schema.Number,
   matchStart: Schema.Number,
   matchLength: Schema.Number,
 });
 const SearchRow = Schema.Struct({
-  date: Schema.propertySignature(JournalDateSchema).pipe(
-    Schema.fromKey('entry_date'),
-  ),
+  date: JournalDateSchema,
   words: Schema.Number,
   texts: Schema.Array(Schema.String),
   evidence: Schema.Array(SearchEvidence),
-});
+}).pipe(Schema.encodeKeys({ date: 'entry_date' }));
 export type SearchMatch = Schema.Schema.Type<typeof SearchRow>;
 // Shared text is capped even for an infeasible internal query: null fails
 // decoding rather than returning blank evidence or exceeding the text budget.
-const decodeRows = Schema.decodeUnknown(Schema.Array(SearchRow));
+const decodeRows = Schema.decodeUnknownEffect(Schema.Array(SearchRow));
 
-export class EntrySearch extends Effect.Service<EntrySearch>()(
+export class EntrySearch extends Context.Service<EntrySearch>()(
   'journal/EntrySearch',
   {
-    effect: Effect.gen(function* () {
+    make: Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
       const search = (
         terms: ReadonlyArray<string>,
@@ -94,4 +92,6 @@ export class EntrySearch extends Effect.Service<EntrySearch>()(
       return { search } as const;
     }),
   },
-) {}
+) {
+  static readonly layer = Layer.effect(EntrySearch, EntrySearch.make);
+}

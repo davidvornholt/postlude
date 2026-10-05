@@ -5,7 +5,7 @@ import { Schema } from 'effect';
 import { type ExportGrouping, exportGroupings } from '../export-period.ts';
 
 const ExportInputSchema = Schema.Struct({
-  grouping: Schema.optional(Schema.Literal(...exportGroupings)),
+  grouping: Schema.optional(Schema.Literals(exportGroupings)),
 });
 
 const decodeInput = Schema.decodeUnknownSync(ExportInputSchema);

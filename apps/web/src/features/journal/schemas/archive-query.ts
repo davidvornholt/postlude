@@ -14,9 +14,8 @@ export const lastArchiveYear = 9998;
  */
 export const ArchiveQuery = Schema.Struct({
   year: Schema.optional(
-    Schema.Number.pipe(
-      Schema.int(),
-      Schema.between(firstArchiveYear, lastArchiveYear),
+    Schema.Int.check(
+      Schema.isBetween({ minimum: firstArchiveYear, maximum: lastArchiveYear }),
     ),
   ),
 });

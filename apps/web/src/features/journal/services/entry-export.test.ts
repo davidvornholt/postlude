@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
-import { SqlClient } from '@effect/sql';
-import { Chunk, Effect, Stream } from 'effect';
+import { Effect, Stream } from 'effect';
+import { SqlClient } from 'effect/sql';
 import { unzipSync } from 'fflate';
 import {
   parseEntriesDocument,
@@ -26,7 +26,7 @@ const bytesOf = (chunks: ReadonlyArray<Uint8Array>): Uint8Array => {
   return bytes;
 };
 
-const collect = (exports: EntryExport, pageSize = 2) =>
+const collect = (exports: EntryExport['Service'], pageSize = 2) =>
   Effect.gen(function* () {
     let count = -1;
     const first: Array<ExportEntry> = [];
@@ -145,11 +145,7 @@ it('streams one exact snapshot instant into every ZIP document', async () => {
         (observed) => {
           context = observed;
         },
-      ).pipe(
-        Stream.provideLayer(JournalImages.Default),
-        Stream.runCollect,
-        Effect.map(Chunk.toReadonlyArray),
-      );
+      ).pipe(Stream.provide(JournalImages.layer), Stream.runCollect);
       return { chunks, context };
     }),
   );

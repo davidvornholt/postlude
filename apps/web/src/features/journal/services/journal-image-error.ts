@@ -1,6 +1,6 @@
-import { Data } from 'effect';
+import { Schema } from 'effect';
 
-export class JournalImageError extends Data.TaggedError('JournalImageError')<{
-  readonly message: string;
-  readonly cause?: unknown;
-}> {}
+export class JournalImageError extends Schema.TaggedError<JournalImageError>()(
+  'JournalImageError',
+  { message: Schema.String, cause: Schema.optionalKey(Schema.Defect()) },
+) {}

@@ -27,7 +27,7 @@ url.pathname = `/${name}`;
 const admin = createPool(configured);
 const pool = createPool(url.toString());
 const runtime = ManagedRuntime.make(
-  EntrySearch.Default.pipe(Layer.provide(pgClientLayer(pool))),
+  EntrySearch.layer.pipe(Layer.provide(pgClientLayer(url.toString()))),
 );
 
 type Sample = { readonly rows: ReadonlyArray<unknown>; readonly bytes: number };

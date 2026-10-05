@@ -1,8 +1,6 @@
-import { Data } from 'effect';
+import { Schema } from 'effect';
 
-export class TestDatabaseSetupError extends Data.TaggedError(
+export class TestDatabaseSetupError extends Schema.TaggedError<TestDatabaseSetupError>()(
   'TestDatabaseSetupError',
-)<{
-  readonly message: string;
-  readonly cause: unknown;
-}> {}
+  { message: Schema.String, cause: Schema.Defect() },
+) {}

@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
-import { SqlClient } from '@effect/sql';
 import { Deferred, Effect, Fiber } from 'effect';
+import { SqlClient } from 'effect/sql';
 import {
   anniversaryLimit,
   anniversaryOf,
@@ -569,7 +569,7 @@ it('holds one snapshot while a concurrent archive-visible row commits', async ()
             const after = yield* rowExists();
             return { before, after };
           }),
-        ).pipe(Effect.fork);
+        ).pipe(Effect.forkChild);
 
         yield* Deferred.await(firstReadDone);
         yield* sql`insert into ${table} (marker) values (1)`;

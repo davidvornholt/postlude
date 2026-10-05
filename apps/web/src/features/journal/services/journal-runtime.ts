@@ -8,17 +8,18 @@
  * place so a service never has to be unwrapped twice, and so the layers are
  * built once per process rather than per call.
  *
- * The runtime is created lazily. Building it opens the database pool and reads
- * the validated environment, and neither should happen because a module was
- * imported. The client bundle imports route modules that import services, and
- * a pool opened there would be a pool opened in a browser.
+ * The runtime is created lazily. Building it creates the Effect SQL client's
+ * connection pool and reads the validated environment, and neither should
+ * happen because a module was imported. The client bundle imports route
+ * modules that import services, and a pool opened there would be a pool opened
+ * in a browser.
  */
 
-import type { SqlError } from '@effect/sql/SqlError';
 import { pgClientLayer } from '@postlude/db/effect-client';
 import { Cause, Effect, Layer, ManagedRuntime, Stream } from 'effect';
+import type { SqlError } from 'effect/sql/SqlError';
 
-import { pool } from '#/shared/db/pool.ts';
+import { env } from '#/shared/env.ts';
 import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { EntrySearch } from './entry-search.ts';
@@ -26,20 +27,18 @@ import { JournalImages } from './journal-images.ts';
 
 const journalLayer = Layer.provide(
   Layer.mergeAll(
-    EntryRepository.Default,
-    EntrySearch.Default,
-    EntryExport.Default,
-    JournalImages.Default,
+    EntryRepository.layer,
+    EntrySearch.layer,
+    EntryExport.layer,
+    JournalImages.layer,
   ),
-  Layer.suspend(() => pgClientLayer(pool)),
+  Layer.suspend(() => pgClientLayer(env.DATABASE_URL)),
 );
 
 /**
- * The layer can fail: acquiring the SQL client is itself an effect, and a pool
- * that cannot answer fails it. That failure surfaces on the first call rather
- * than at import, which is the point of building the runtime lazily. A database
- * that is down should fail the request that needed it, not the module that
- * mentioned it.
+ * The layer can fail: building the SQL client is itself an effect. The client
+ * connects only when a query needs a connection, so a database that is down
+ * fails the request that needed it, not the module that mentioned it.
  */
 type JournalRuntime = ManagedRuntime.ManagedRuntime<
   EntryRepository | EntrySearch | EntryExport | JournalImages,
@@ -68,7 +67,7 @@ const journalRuntime = (): JournalRuntime => {
  * Runs a journal Effect on the server and hands back a promise.
  *
  * A declared failure is logged with its full cause on the server. `runPromise`
- * then rejects with an Effect FiberFailure, and TanStack Start's shallow error
+ * then rejects with that failure itself, and TanStack Start's shallow error
  * serializer exposes only its safe message to the browser. It does not retain
  * the original error's `_tag` or database details. The current UI only branches
  * on success or failure, so that browser contract is sufficient.
@@ -78,7 +77,7 @@ export const runJournalEffect = <A, E>(
 ): Promise<A> =>
   journalRuntime().runPromise(
     effect.pipe(
-      Effect.tapErrorCause((cause) =>
+      Effect.tapCause((cause) =>
         Effect.logError('A journal operation failed.', cause),
       ),
       Effect.tapDefect((defect) =>
@@ -88,20 +87,17 @@ export const runJournalEffect = <A, E>(
   );
 
 /**
- * Gives an Effect stream the journal runtime without ending its scope when the
- * response is created. The runtime adapter drives one chunk per browser pull
- * and interrupts the stream fiber when the response body is cancelled.
+ * Gives an Effect stream the journal runtime's services without ending its
+ * scope when the response is created. The adapter drives one chunk per browser
+ * pull and interrupts the stream fiber when the response body is cancelled.
  */
 export const journalReadableStream = async <E>(
   stream: Stream.Stream<Uint8Array, E, JournalServices>,
 ): Promise<ReadableStream<Uint8Array>> => {
   const logged = stream.pipe(
-    Stream.tapErrorCause((cause) =>
+    Stream.tapCause((cause) =>
       Effect.logError('A journal stream failed.', cause),
     ),
   );
-  return Stream.toReadableStreamRuntime(
-    logged,
-    await journalRuntime().runtime(),
-  );
+  return Stream.toReadableStreamWith(logged, await journalRuntime().context());
 };

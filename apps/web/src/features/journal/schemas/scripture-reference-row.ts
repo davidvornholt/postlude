@@ -2,8 +2,17 @@ import { Schema } from 'effect';
 
 import type { ScriptureReference } from '../scripture-reference.ts';
 
-const VerseNumber = Schema.Number.pipe(Schema.int(), Schema.greaterThan(0));
+const VerseNumber = Schema.Int.check(Schema.isGreaterThan(0));
 const containsLetter = /\p{L}/u;
+
+/** `ScriptureReference` as a schema, for shapes that carry the parsed value. */
+export const ScriptureReferenceSchema: Schema.Codec<ScriptureReference> =
+  Schema.Struct({
+    book: Schema.String,
+    chapter: Schema.Number,
+    verseStart: Schema.optionalKey(Schema.Number),
+    verseEnd: Schema.optionalKey(Schema.Number),
+  });
 
 export type ScriptureReferenceRow = {
   readonly scriptureBook: string | null;
@@ -13,18 +22,18 @@ export type ScriptureReferenceRow = {
 };
 
 export const scriptureReferenceRowFields = {
-  scriptureBook: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
-    Schema.fromKey('scripture_book'),
-  ),
-  scriptureChapter: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
-    Schema.fromKey('scripture_chapter'),
-  ),
-  scriptureVerseStart: Schema.propertySignature(
-    Schema.NullOr(VerseNumber),
-  ).pipe(Schema.fromKey('scripture_verse_start')),
-  scriptureVerseEnd: Schema.propertySignature(Schema.NullOr(VerseNumber)).pipe(
-    Schema.fromKey('scripture_verse_end'),
-  ),
+  scriptureBook: Schema.NullOr(Schema.String),
+  scriptureChapter: Schema.NullOr(VerseNumber),
+  scriptureVerseStart: Schema.NullOr(VerseNumber),
+  scriptureVerseEnd: Schema.NullOr(VerseNumber),
+} as const;
+
+/** The column each of `scriptureReferenceRowFields` is read from. */
+export const scriptureReferenceRowKeys = {
+  scriptureBook: 'scripture_book',
+  scriptureChapter: 'scripture_chapter',
+  scriptureVerseStart: 'scripture_verse_start',
+  scriptureVerseEnd: 'scripture_verse_end',
 } as const;
 
 export const hasCoherentScriptureReference = (

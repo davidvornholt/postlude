@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
-import { SqlClient } from '@effect/sql';
 import { Effect } from 'effect';
+import { SqlClient } from 'effect/sql';
 import { searchHitOf } from '../search-contract.ts';
 import { searchTerms } from '../search-query.ts';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
@@ -85,7 +85,7 @@ it('keeps the entry and its evidence unchanged when evidence persistence fails',
       yield* sql`create trigger reject_test_evidence before insert on entry_search_evidence for each row execute function reject_test_evidence()`;
       const failure = yield* entries
         .save(draft('2026-03-01', 'rejected replacement', '', 1))
-        .pipe(Effect.either);
+        .pipe(Effect.result);
       const original = yield* search.search(['original'], hitCount);
       const replacement = yield* search.search(['replacement'], hitCount);
       const rows =
@@ -93,7 +93,7 @@ it('keeps the entry and its evidence unchanged when evidence persistence fails',
       return { failure, original, replacement, rows };
     }),
   );
-  expect(result.failure._tag).toBe('Left');
+  expect(result.failure._tag).toBe('Failure');
   expect(result.original).toHaveLength(1);
   expect(result.replacement).toEqual([]);
   expect(result.rows).toEqual([
@@ -109,7 +109,7 @@ it('clears evidence when prose is cleared and preserves it after a stale save', 
       yield* entries.save(draft('2026-03-01', 'current needle', '', 1));
       const conflict = yield* entries
         .save(draft('2026-03-01', 'stale replacement', '', 1))
-        .pipe(Effect.either);
+        .pipe(Effect.result);
       const current = yield* search.search(['current'], hitCount);
       yield* entries.save(draft('2026-03-01', '', '', 2));
       const retained =
@@ -117,7 +117,7 @@ it('clears evidence when prose is cleared and preserves it after a stale save', 
       return { conflict, current, retained };
     }),
   );
-  expect(result.conflict._tag).toBe('Left');
+  expect(result.conflict._tag).toBe('Failure');
   expect(result.current).toHaveLength(1);
   expect(result.retained).toEqual([]);
 });

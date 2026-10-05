@@ -1,7 +1,7 @@
 /** Validated, keyset-paged reads used by the journal export snapshot. */
 
-import type { SqlClient } from '@effect/sql';
 import { Effect, Schema } from 'effect';
+import type { SqlClient } from 'effect/sql';
 
 import { journalReadError } from '../errors/journal-errors.ts';
 import { ExportEntrySchema, UtcTimestampSchema } from '../export-format.ts';
@@ -10,43 +10,43 @@ import { EntryFromRow, JournalDateSchema } from '../schemas/entry.ts';
 import { exportableStoredEntry } from './entry-content-sql.ts';
 
 const TimestampTextRow = Schema.Struct({
-  journalFirstUsedAt: Schema.propertySignature(
-    Schema.NullOr(Schema.String),
-  ).pipe(Schema.fromKey('journal_first_used_at_text')),
-  scriptureFirstUsedAt: Schema.propertySignature(
-    Schema.NullOr(Schema.String),
-  ).pipe(Schema.fromKey('scripture_first_used_at_text')),
-  createdAt: Schema.propertySignature(Schema.String).pipe(
-    Schema.fromKey('created_at_text'),
-  ),
-  updatedAt: Schema.propertySignature(Schema.String).pipe(
-    Schema.fromKey('updated_at_text'),
-  ),
-});
+  journalFirstUsedAt: Schema.NullOr(Schema.String),
+  scriptureFirstUsedAt: Schema.NullOr(Schema.String),
+  createdAt: Schema.String,
+  updatedAt: Schema.String,
+}).pipe(
+  Schema.encodeKeys({
+    journalFirstUsedAt: 'journal_first_used_at_text',
+    scriptureFirstUsedAt: 'scripture_first_used_at_text',
+    createdAt: 'created_at_text',
+    updatedAt: 'updated_at_text',
+  }),
+);
 const CountRow = Schema.Struct({
-  count: Schema.NumberFromString.pipe(Schema.int(), Schema.nonNegative()),
+  count: Schema.NumberFromString.check(
+    Schema.isInt(),
+    Schema.isGreaterThanOrEqualTo(0),
+  ),
 });
 const SnapshotRow = Schema.Struct({
-  exportedAt: Schema.propertySignature(UtcTimestampSchema).pipe(
-    Schema.fromKey('exported_at'),
-  ),
-});
+  exportedAt: UtcTimestampSchema,
+}).pipe(Schema.encodeKeys({ exportedAt: 'exported_at' }));
 const DateRow = Schema.Struct({
-  date: Schema.propertySignature(JournalDateSchema).pipe(
-    Schema.fromKey('entry_date'),
-  ),
-});
+  date: JournalDateSchema,
+}).pipe(Schema.encodeKeys({ date: 'entry_date' }));
 
-const decodeEntries = Schema.decodeUnknown(Schema.Array(EntryFromRow));
-const decodeTimestampRows = Schema.decodeUnknown(
+const decodeEntries = Schema.decodeUnknownEffect(Schema.Array(EntryFromRow));
+const decodeTimestampRows = Schema.decodeUnknownEffect(
   Schema.Array(TimestampTextRow),
 );
-const decodeCounts = Schema.decodeUnknown(Schema.Array(CountRow));
-const decodeExportEntries = Schema.decodeUnknown(
+const decodeCounts = Schema.decodeUnknownEffect(Schema.Array(CountRow));
+const decodeExportEntries = Schema.decodeUnknownEffect(
   Schema.Array(ExportEntrySchema),
 );
-const decodeSnapshotRows = Schema.decodeUnknown(Schema.Array(SnapshotRow));
-const decodeDateRows = Schema.decodeUnknown(Schema.Array(DateRow));
+const decodeSnapshotRows = Schema.decodeUnknownEffect(
+  Schema.Array(SnapshotRow),
+);
+const decodeDateRows = Schema.decodeUnknownEffect(Schema.Array(DateRow));
 
 export type ExportSnapshot = { readonly exportedAt: string };
 

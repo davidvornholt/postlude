@@ -1,17 +1,15 @@
 /** Run a multi-query read against one repeatable PostgreSQL snapshot. */
 
-import { SqlClient } from '@effect/sql';
-import { SqlError } from '@effect/sql/SqlError';
 import { Effect, Option } from 'effect';
+import type { SqlClient } from 'effect/sql';
+import { SqlError, UnknownError } from 'effect/sql/SqlError';
 
 export const inRepeatableReadSnapshot = <A, E, R>(
   sql: SqlClient.SqlClient,
   body: Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E | SqlError, R> =>
   Effect.gen(function* () {
-    const transaction = yield* Effect.serviceOption(
-      SqlClient.TransactionConnection,
-    );
+    const transaction = yield* Effect.serviceOption(sql.transactionService);
     // Rollback-based tests already own a transaction. Reuse it only when it
     // gives this read the same snapshot guarantee as production.
     if (Option.isSome(transaction)) {
@@ -22,8 +20,11 @@ export const inRepeatableReadSnapshot = <A, E, R>(
       if (rows[0]?.repeatableRead !== true) {
         return yield* Effect.fail(
           new SqlError({
-            message:
-              'A snapshot read nested inside a transaction requires repeatable-read isolation.',
+            reason: new UnknownError({
+              message:
+                'A snapshot read nested inside a transaction requires repeatable-read isolation.',
+              cause: rows[0],
+            }),
           }),
         );
       }
@@ -31,7 +32,7 @@ export const inRepeatableReadSnapshot = <A, E, R>(
     }
     return yield* sql.withTransaction(
       sql`set transaction isolation level repeatable read read only`.pipe(
-        Effect.zipRight(body),
+        Effect.andThen(body),
       ),
     );
   });

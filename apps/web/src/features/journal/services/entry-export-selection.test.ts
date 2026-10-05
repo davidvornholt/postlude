@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { Chunk, Effect, Stream } from 'effect';
+import { Effect, Stream } from 'effect';
 import { unzipSync } from 'fflate';
 import {
   parseEntriesDocument,
@@ -51,11 +51,7 @@ it('exports every non-empty stored source exactly, even when it has no prose', a
         exports,
         'Europe/Berlin',
         () => undefined,
-      ).pipe(
-        Stream.provideLayer(JournalImages.Default),
-        Stream.runCollect,
-        Effect.map(Chunk.toReadonlyArray),
-      );
+      ).pipe(Stream.provide(JournalImages.layer), Stream.runCollect);
     }),
   );
   const files = unzipSync(bytesOf(result));

@@ -77,7 +77,7 @@ export const createAutosaveCoordinator = ({
     draft: recovered ?? stored.draft,
   };
   let saving = save;
-  let scheduled: Fiber.RuntimeFiber<void, never> | undefined;
+  let scheduled: Fiber.Fiber<void, never> | undefined;
   const listeners = new Set<() => void>();
 
   const publish = (): void => {
@@ -102,7 +102,7 @@ export const createAutosaveCoordinator = ({
     const pending = scheduled;
     scheduled = undefined;
     if (pending !== undefined) {
-      Effect.runFork(Fiber.interruptFork(pending));
+      Effect.runFork(Fiber.interrupt(pending));
     }
   };
 

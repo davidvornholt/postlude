@@ -284,10 +284,10 @@ it('refuses ambiguous legacy provider keys and rolls back the complete migration
       values ('one','https://one.example','123','github','one'), ('two','https://two.example','123','github','two');
     `),
         );
-        const result = yield* Effect.either(migrateTestDatabase(pool));
+        const result = yield* Effect.result(migrateTestDatabase(pool));
         expect(result).toMatchObject({
-          _tag: 'Left',
-          left: { _tag: 'DatabaseMigrationError' },
+          _tag: 'Failure',
+          failure: { _tag: 'DatabaseMigrationError' },
         });
         const count = yield* Effect.promise(() =>
           pool.query('select count(*)::integer as count from account'),

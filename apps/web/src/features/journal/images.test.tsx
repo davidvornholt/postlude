@@ -75,13 +75,13 @@ it('validates image bytes independently of browser content types', async () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const images = yield* JournalImages;
-        return yield* images.upload(bytes).pipe(Effect.either);
-      }).pipe(Effect.provide(JournalImages.Default)),
+        return yield* images.upload(bytes).pipe(Effect.result);
+      }).pipe(Effect.provide(JournalImages.layer)),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
     expect(result).toMatchObject({
-      _tag: 'Left',
-      left: { _tag: 'JournalValidationError' },
+      _tag: 'Failure',
+      failure: { _tag: 'JournalValidationError' },
     });
   }
 });
@@ -113,9 +113,9 @@ it('rejects cross-origin uploads and bounds chunked bodies before buffering', as
           body: bytes,
         }),
         headers.origin,
-      ).pipe(Effect.either),
+      ).pipe(Effect.result),
     );
-    expect(result._tag).toBe('Left');
+    expect(result._tag).toBe('Failure');
   }
   let cancelled = false;
   const body = new ReadableStream<Uint8Array>({
@@ -129,8 +129,8 @@ it('rejects cross-origin uploads and bounds chunked bodies before buffering', as
     readImageUpload(
       new Request(url, { method: 'POST', headers, body }),
       headers.origin,
-    ).pipe(Effect.either),
+    ).pipe(Effect.result),
   );
-  expect(result._tag).toBe('Left');
+  expect(result._tag).toBe('Failure');
   expect(cancelled).toBeTrue();
 });

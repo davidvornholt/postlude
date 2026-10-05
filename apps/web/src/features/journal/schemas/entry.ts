@@ -9,14 +9,16 @@
  * app passes around.
  */
 
-import { Schema } from 'effect';
+import { Schema, SchemaGetter } from 'effect';
 
 import { isJournalDate } from '../journal-day.ts';
 import type { ScriptureReference } from '../scripture-reference.ts';
 import {
   hasCoherentScriptureReference,
+  ScriptureReferenceSchema,
   scriptureReferenceOfRow,
   scriptureReferenceRowFields,
+  scriptureReferenceRowKeys,
 } from './scripture-reference-row.ts';
 
 /**
@@ -24,61 +26,54 @@ import {
  * URL segment and a query, so it is deliberately strict: no instants, no
  * two-digit years, and no date the calendar does not have.
  */
-export const JournalDateSchema = Schema.String.pipe(
-  Schema.filter((value) => isJournalDate(value), {
+export const JournalDateSchema = Schema.String.check(
+  Schema.makeFilter((value: string) => isJournalDate(value), {
     identifier: 'JournalDate',
     description: 'a calendar date as YYYY-MM-DD',
   }),
 );
 
-export const WordCountSchema = Schema.Number.pipe(
-  Schema.int(),
-  Schema.greaterThanOrEqualTo(0),
+export const WordCountSchema = Schema.Int.check(
+  Schema.isGreaterThanOrEqualTo(0),
 );
-export const RevisionSchema = Schema.Number.pipe(
-  Schema.int(),
-  Schema.greaterThanOrEqualTo(0),
+export const RevisionSchema = Schema.Int.check(
+  Schema.isGreaterThanOrEqualTo(0),
 );
 /** A row of `entry`, under the column names Postgres actually returns. */
 const EntryRow = Schema.Struct({
-  date: Schema.propertySignature(JournalDateSchema).pipe(
-    Schema.fromKey('entry_date'),
-  ),
-  journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
-    Schema.fromKey('journal_markdown'),
-  ),
-  journalWordCount: Schema.propertySignature(WordCountSchema).pipe(
-    Schema.fromKey('journal_word_count'),
-  ),
-  journalFirstUsedAt: Schema.propertySignature(
-    Schema.NullOr(Schema.ValidDateFromSelf),
-  ).pipe(Schema.fromKey('journal_first_used_at')),
-  scriptureMarkdown: Schema.propertySignature(
-    Schema.NullOr(Schema.String),
-  ).pipe(Schema.fromKey('scripture_markdown')),
-  scriptureWordCount: Schema.propertySignature(WordCountSchema).pipe(
-    Schema.fromKey('scripture_word_count'),
-  ),
-  scriptureFirstUsedAt: Schema.propertySignature(
-    Schema.NullOr(Schema.ValidDateFromSelf),
-  ).pipe(Schema.fromKey('scripture_first_used_at')),
+  date: JournalDateSchema,
+  journalMarkdown: Schema.NullOr(Schema.String),
+  journalWordCount: WordCountSchema,
+  journalFirstUsedAt: Schema.NullOr(Schema.Date),
+  scriptureMarkdown: Schema.NullOr(Schema.String),
+  scriptureWordCount: WordCountSchema,
+  scriptureFirstUsedAt: Schema.NullOr(Schema.Date),
   ...scriptureReferenceRowFields,
-  revision: Schema.propertySignature(RevisionSchema).pipe(
-    Schema.fromKey('revision'),
-  ),
-  createdAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
-    Schema.fromKey('created_at'),
-  ),
-  updatedAt: Schema.propertySignature(Schema.ValidDateFromSelf).pipe(
-    Schema.fromKey('updated_at'),
-  ),
-}).pipe(
-  Schema.filter(hasCoherentScriptureReference, {
-    identifier: 'CoherentScriptureReferenceColumns',
-    description:
-      'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
-  }),
-);
+  revision: RevisionSchema,
+  createdAt: Schema.Date,
+  updatedAt: Schema.Date,
+})
+  .pipe(
+    Schema.encodeKeys({
+      date: 'entry_date',
+      journalMarkdown: 'journal_markdown',
+      journalWordCount: 'journal_word_count',
+      journalFirstUsedAt: 'journal_first_used_at',
+      scriptureMarkdown: 'scripture_markdown',
+      scriptureWordCount: 'scripture_word_count',
+      scriptureFirstUsedAt: 'scripture_first_used_at',
+      ...scriptureReferenceRowKeys,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    }),
+  )
+  .check(
+    Schema.makeFilter(hasCoherentScriptureReference, {
+      identifier: 'CoherentScriptureReferenceColumns',
+      description:
+        'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
+    }),
+  );
 
 export type JournalEntry = {
   readonly date: string;
@@ -99,6 +94,21 @@ export type JournalEntry = {
   readonly createdAt: Date;
   readonly updatedAt: Date;
 };
+
+/** What a decoded row has become, held to `JournalEntry` by its annotation. */
+const JournalEntrySchema: Schema.Codec<JournalEntry> = Schema.Struct({
+  date: Schema.String,
+  journalMarkdown: Schema.String,
+  journalWordCount: Schema.Number,
+  journalFirstUsedAt: Schema.NullOr(Schema.Date),
+  scriptureMarkdown: Schema.String,
+  scriptureWordCount: Schema.Number,
+  scriptureFirstUsedAt: Schema.NullOr(Schema.Date),
+  scriptureReference: Schema.optionalKey(ScriptureReferenceSchema),
+  revision: Schema.Number,
+  createdAt: Schema.Date,
+  updatedAt: Schema.Date,
+});
 
 /**
  * The four reference columns as the one value the app passes around. The
@@ -124,18 +134,18 @@ const entryOf = (row: Schema.Schema.Type<typeof EntryRow>): JournalEntry => {
   };
 };
 
-export const EntryFromRow = Schema.transform(
-  EntryRow,
-  Schema.Any as Schema.Schema<JournalEntry>,
-  { strict: false, decode: entryOf, encode: (entry) => entry },
+/** Decode-only: nothing writes an entry back through this shape. */
+export const EntryFromRow = EntryRow.pipe(
+  Schema.decodeTo(JournalEntrySchema, {
+    decode: SchemaGetter.transform(entryOf),
+    encode: SchemaGetter.forbiddenEncoding,
+  }),
 );
 
 /** The nullable aggregate row returned by `min(entry_date)`. */
 export const EarliestDateFromRow = Schema.Struct({
-  date: Schema.propertySignature(Schema.NullOr(JournalDateSchema)).pipe(
-    Schema.fromKey('entry_date'),
-  ),
-});
+  date: Schema.NullOr(JournalDateSchema),
+}).pipe(Schema.encodeKeys({ date: 'entry_date' }));
 
 /**
  * What a day looks like before it has ever been written. The writing page opens

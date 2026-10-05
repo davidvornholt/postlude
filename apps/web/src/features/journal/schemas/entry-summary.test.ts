@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { Either, Schema } from 'effect';
+import { Result, Schema } from 'effect';
 import { EntrySummaryFromRow } from './entry-summary.ts';
 
 const summary = Object.fromEntries([
@@ -11,10 +11,10 @@ const summary = Object.fromEntries([
   ['has_scripture_reference', false],
 ]);
 const fractionalCount = 1.5;
-const decode = Schema.decodeUnknownEither(EntrySummaryFromRow);
+const decode = Schema.decodeUnknownResult(EntrySummaryFromRow);
 
 it('accepts zero and positive whole word counts', () => {
-  expect(Either.isRight(decode(summary))).toBe(true);
+  expect(Result.isSuccess(decode(summary))).toBe(true);
 });
 
 for (const field of ['journal_word_count', 'scripture_word_count']) {
@@ -25,6 +25,6 @@ for (const field of ['journal_word_count', 'scripture_word_count']) {
     Number.POSITIVE_INFINITY,
     Number.NEGATIVE_INFINITY,
   ])(`rejects an impossible ${field}: %s`, (count) => {
-    expect(Either.isLeft(decode({ ...summary, [field]: count }))).toBe(true);
+    expect(Result.isFailure(decode({ ...summary, [field]: count }))).toBe(true);
   });
 }

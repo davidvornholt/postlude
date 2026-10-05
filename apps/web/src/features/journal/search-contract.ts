@@ -10,16 +10,13 @@ export const searchAuthenticationMessage =
 
 export const SearchQuery = Schema.Struct({
   q: Schema.optional(
-    Schema.String.pipe(Schema.maxLength(searchQueryLengthLimit)),
+    Schema.String.check(Schema.isMaxLength(searchQueryLengthLimit)),
   ),
 });
 
 export type SearchQueryParams = Schema.Schema.Type<typeof SearchQuery>;
 
-const NonNegativeInteger = Schema.Number.pipe(
-  Schema.int(),
-  Schema.greaterThanOrEqualTo(0),
-);
+const NonNegativeInteger = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
 const SearchExcerptSegment = Schema.Struct({
   text: Schema.String,
@@ -28,11 +25,11 @@ const SearchExcerptSegment = Schema.Struct({
 });
 export type ExcerptSegment = Schema.Schema.Type<typeof SearchExcerptSegment>;
 
-export const SearchHitSourceKind = Schema.Literal(
+export const SearchHitSourceKind = Schema.Literals([
   'evening',
   'passage-reference',
   'scripture-notes',
-);
+]);
 export type SearchHitSourceKind = Schema.Schema.Type<
   typeof SearchHitSourceKind
 >;

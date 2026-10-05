@@ -4,8 +4,9 @@ import pg from 'pg';
 import { preservePostgresDates } from './postgres-date.ts';
 
 /**
- * One process, one pool: every consumer shares the pool the app creates from
- * this factory, which today is better-auth's Drizzle adapter.
+ * Every `pg` consumer shares the pool the app creates from this factory, which
+ * today is better-auth's Drizzle adapter. The Effect SQL client is not one of
+ * them: `pgClientLayer` opens its own connections.
  *
  * An idle pooled connection can fail long after the query that opened it
  * returned — the database restarts, or a proxy times the socket out. pg emits

@@ -3,7 +3,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { Effect } from 'effect';
+import { Context, Effect, Layer } from 'effect';
 import { JournalValidationError } from '../errors/journal-errors.ts';
 import {
   imageContentType,
@@ -14,10 +14,10 @@ import {
 } from '../images.ts';
 import { JournalImageError } from './journal-image-error.ts';
 
-export class JournalImages extends Effect.Service<JournalImages>()(
+export class JournalImages extends Context.Service<JournalImages>()(
   'JournalImages',
   {
-    sync: () => {
+    make: Effect.sync(() => {
       // Lazy configuration keeps text-only journaling and isolated PR previews usable.
       // A partially configured store fails here instead of falling back to another bucket.
       const client = async () => {
@@ -126,6 +126,8 @@ export class JournalImages extends Effect.Service<JournalImages>()(
             });
           }),
       };
-    },
+    }),
   },
-) {}
+) {
+  static readonly layer = Layer.effect(JournalImages, JournalImages.make);
+}

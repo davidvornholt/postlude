@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 
 import { createPool } from '@postlude/db/pool';
-import { Data, Effect } from 'effect';
+import { Effect, Schema } from 'effect';
 
 import { parseAnytypeJournal } from '../src/features/journal/import/anytype-import.ts';
 import type {
@@ -18,9 +18,10 @@ import {
 } from '../src/features/journal/import/obsidian-import.ts';
 import { countJournalWords } from '../src/features/journal/word-count.ts';
 
-class JournalImportSourceError extends Data.TaggedError(
+class JournalImportSourceError extends Schema.TaggedError<JournalImportSourceError>()(
   'JournalImportSourceError',
-)<{ readonly message: string; readonly cause?: unknown }> {}
+  { message: Schema.String, cause: Schema.optionalKey(Schema.Defect()) },
+) {}
 
 const expected = {
   records: 676,

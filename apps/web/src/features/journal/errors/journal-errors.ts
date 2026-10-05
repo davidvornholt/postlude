@@ -11,7 +11,7 @@
  * response, so the cause is logged and the message is not built from it.
  */
 
-import { Data } from 'effect';
+import { Schema } from 'effect';
 
 export const journalWriteMessage =
   'This entry could not be saved. Your words are still here; check your connection.';
@@ -21,28 +21,25 @@ export const journalWriteConflictMessage =
 export const invalidScriptureReferenceMessage =
   'Check the scripture reference and use a form such as Proverbs 12:5-13.';
 
-export class JournalReadError extends Data.TaggedError('JournalReadError')<{
-  readonly message: string;
-  readonly cause: unknown;
-}> {}
+export class JournalReadError extends Schema.TaggedError<JournalReadError>()(
+  'JournalReadError',
+  { message: Schema.String, cause: Schema.Defect() },
+) {}
 
-export class JournalWriteError extends Data.TaggedError('JournalWriteError')<{
-  readonly message: string;
-  readonly cause: unknown;
-}> {}
+export class JournalWriteError extends Schema.TaggedError<JournalWriteError>()(
+  'JournalWriteError',
+  { message: Schema.String, cause: Schema.Defect() },
+) {}
 
-export class JournalWriteConflictError extends Data.TaggedError(
+export class JournalWriteConflictError extends Schema.TaggedError<JournalWriteConflictError>()(
   'JournalWriteConflictError',
-)<{
-  readonly message: string;
-}> {}
+  { message: Schema.String },
+) {}
 
-export class JournalValidationError extends Data.TaggedError(
+export class JournalValidationError extends Schema.TaggedError<JournalValidationError>()(
   'JournalValidationError',
-)<{
-  readonly message: string;
-  readonly cause?: unknown;
-}> {}
+  { message: Schema.String, cause: Schema.optionalKey(Schema.Defect()) },
+) {}
 
 export const journalReadError = (cause: unknown): JournalReadError =>
   new JournalReadError({

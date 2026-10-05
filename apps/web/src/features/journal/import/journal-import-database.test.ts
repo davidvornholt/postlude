@@ -24,7 +24,7 @@ it('commits once, accepts an exact rerun, and refuses the whole conflicting batc
   const result = await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const pool = yield* openTestDatabase(migrateJournalDatabase);
+        const { pool } = yield* openTestDatabase(migrateJournalDatabase);
         const clean = Effect.promise(() =>
           pool.query('delete from entry where entry_date = any($1::date[])', [
             [firstDate, secondDate],
@@ -140,7 +140,7 @@ it('holds matching rows against concurrent edits until the import commits', asyn
   const result = await Effect.runPromise(
     Effect.scoped(
       Effect.gen(function* () {
-        const pool = yield* openTestDatabase(migrateJournalDatabase);
+        const { pool } = yield* openTestDatabase(migrateJournalDatabase);
         const clean = Effect.promise(() =>
           pool.query('delete from entry where entry_date = any($1::date[])', [
             [firstDate, secondDate],

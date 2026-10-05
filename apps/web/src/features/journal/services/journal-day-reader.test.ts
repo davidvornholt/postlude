@@ -44,7 +44,7 @@ describe('dated journal day service boundary', () => {
 
   it('reads only the requested past day', async () => {
     const readDates: Array<string> = [];
-    const repository = EntryRepository.make({
+    const repository = EntryRepository.of({
       read: (date) => {
         readDates.push(date);
         return Effect.succeed(entryOn(date));

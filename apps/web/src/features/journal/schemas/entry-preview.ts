@@ -1,12 +1,14 @@
-import { Schema } from 'effect';
+import { Schema, SchemaGetter } from 'effect';
 
 import type { JournalDate } from '../journal-day.ts';
 import type { ScriptureReference } from '../scripture-reference.ts';
 import { JournalDateSchema, RevisionSchema, WordCountSchema } from './entry.ts';
 import {
   hasCoherentScriptureReference,
+  ScriptureReferenceSchema,
   scriptureReferenceOfRow,
   scriptureReferenceRowFields,
+  scriptureReferenceRowKeys,
 } from './scripture-reference-row.ts';
 
 export type EntryPreview = {
@@ -20,39 +22,48 @@ export type EntryPreview = {
 };
 
 const EntryPreviewRow = Schema.Struct({
-  date: Schema.propertySignature(JournalDateSchema).pipe(
-    Schema.fromKey('entry_date'),
-  ),
-  journalMarkdown: Schema.propertySignature(Schema.NullOr(Schema.String)).pipe(
-    Schema.fromKey('journal_markdown'),
-  ),
-  journalWordCount: Schema.propertySignature(WordCountSchema).pipe(
-    Schema.fromKey('journal_word_count'),
-  ),
-  revision: Schema.propertySignature(RevisionSchema).pipe(
-    Schema.fromKey('revision'),
-  ),
-  scriptureMarkdown: Schema.propertySignature(
-    Schema.NullOr(Schema.String),
-  ).pipe(Schema.fromKey('scripture_markdown')),
-  scriptureWordCount: Schema.propertySignature(WordCountSchema).pipe(
-    Schema.fromKey('scripture_word_count'),
-  ),
+  date: JournalDateSchema,
+  journalMarkdown: Schema.NullOr(Schema.String),
+  journalWordCount: WordCountSchema,
+  revision: RevisionSchema,
+  scriptureMarkdown: Schema.NullOr(Schema.String),
+  scriptureWordCount: WordCountSchema,
   ...scriptureReferenceRowFields,
-}).pipe(
-  Schema.filter(hasCoherentScriptureReference, {
-    identifier: 'CoherentScriptureReferenceColumns',
-    description:
-      'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
-  }),
-);
+})
+  .pipe(
+    Schema.encodeKeys({
+      date: 'entry_date',
+      journalMarkdown: 'journal_markdown',
+      journalWordCount: 'journal_word_count',
+      revision: 'revision',
+      scriptureMarkdown: 'scripture_markdown',
+      scriptureWordCount: 'scripture_word_count',
+      ...scriptureReferenceRowKeys,
+    }),
+  )
+  .check(
+    Schema.makeFilter(hasCoherentScriptureReference, {
+      identifier: 'CoherentScriptureReferenceColumns',
+      description:
+        'scripture reference columns that form an empty, chapter, verse, or verse-range reference',
+    }),
+  );
 
-export const EntryPreviewFromRow = Schema.transform(
-  EntryPreviewRow,
-  Schema.Any as Schema.Schema<EntryPreview>,
-  {
-    strict: false,
-    decode: (row) => {
+/** What a decoded row has become, held to `EntryPreview` by its annotation. */
+const EntryPreviewSchema: Schema.Codec<EntryPreview> = Schema.Struct({
+  date: Schema.String,
+  journalMarkdown: Schema.String,
+  journalWordCount: Schema.Number,
+  revision: Schema.Number,
+  scriptureMarkdown: Schema.String,
+  scriptureReference: Schema.optionalKey(ScriptureReferenceSchema),
+  scriptureWordCount: Schema.Number,
+});
+
+/** Decode-only: nothing writes a preview back through this shape. */
+export const EntryPreviewFromRow = EntryPreviewRow.pipe(
+  Schema.decodeTo(EntryPreviewSchema, {
+    decode: SchemaGetter.transform((row) => {
       const scriptureReference = scriptureReferenceOfRow(row);
       return {
         date: row.date,
@@ -63,7 +74,7 @@ export const EntryPreviewFromRow = Schema.transform(
         ...(scriptureReference === undefined ? {} : { scriptureReference }),
         scriptureWordCount: row.scriptureWordCount,
       };
-    },
-    encode: (entry) => entry,
-  },
+    }),
+    encode: SchemaGetter.forbiddenEncoding,
+  }),
 );
