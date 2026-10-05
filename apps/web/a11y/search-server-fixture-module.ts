@@ -2,7 +2,6 @@ import type {
   SearchHit,
   SearchResults,
 } from '../src/features/journal/search-contract.ts';
-import { searchExcerpt } from '../src/features/journal/search-excerpt.ts';
 import { searchTerms } from '../src/features/journal/search-query.ts';
 import { searchHitFixture } from '../src/features/journal/testing/search-hit-fixture.ts';
 import type { SearchPageView } from '../src/features/journal/ui/search-page.tsx';
@@ -17,40 +16,23 @@ const words = 42;
 const longTokenRepeat = 45;
 const longToken = `rain${'water'.repeat(longTokenRepeat)}`;
 
-const hit = (query: string): SearchHit => ({
-  date: '2026-03-01',
-  words,
-  sources: [
-    {
-      kind: 'evening',
-      excerpts: [
-        searchExcerpt(
-          `The private ${longToken} returned after dusk.`,
-          searchTerms(query),
-        ),
-      ],
-    },
-  ],
-});
+const hit = (query: string): SearchHit =>
+  searchHitFixture(searchTerms(query))({
+    date: '2026-03-01',
+    journalText: `The private ${longToken} returned after dusk.`,
+    scriptureText: '',
+    scriptureReferenceText: '',
+    words,
+  });
 
-const multiSourceHit = (): SearchHit => ({
-  date: '2026-03-01',
-  words,
-  sources: [
-    {
-      kind: 'evening',
-      excerpts: [searchExcerpt('Rain returned after dusk.', ['rain'])],
-    },
-    {
-      kind: 'scripture-notes',
-      excerpts: [searchExcerpt('Mercy met the morning.', ['mercy'])],
-    },
-    {
-      kind: 'passage-reference',
-      excerpts: [searchExcerpt('Sprüche 12:5', ['sprüche'])],
-    },
-  ],
-});
+const multiSourceHit = (query: string): SearchHit =>
+  searchHitFixture(searchTerms(query))({
+    date: '2026-03-01',
+    journalText: 'Rain returned after dusk.',
+    scriptureText: 'Mercy met the morning.',
+    scriptureReferenceText: 'Sprüche 12:5',
+    words,
+  });
 
 const unicodeHit = (query: string): SearchHit =>
   searchHitFixture(searchTerms(query))({
@@ -69,7 +51,7 @@ export const searchFixtureAnswer = (
   query,
   today,
   terms: searchTerms(query),
-  hits: [multiSource ? multiSourceHit() : hit(query)],
+  hits: [multiSource ? multiSourceHit(query) : hit(query)],
   limited,
 });
 

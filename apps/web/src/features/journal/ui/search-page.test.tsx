@@ -18,13 +18,9 @@ import {
   openingTag,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
-import type {
-  SearchHit,
-  SearchHitSourceKind,
-  SearchResults,
-} from '../search-contract.ts';
-import { searchExcerpt } from '../search-excerpt.ts';
+import type { SearchHit, SearchResults } from '../search-contract.ts';
 import { searchTerms } from '../search-query.ts';
+import { searchHitFixture } from '../testing/search-hit-fixture.ts';
 import { SearchPage, type SearchPageView } from './search-page.tsx';
 
 const today = '2026-08-26';
@@ -39,12 +35,14 @@ const hit = (
   date: string,
   prose: string,
   terms: ReadonlyArray<string>,
-  kind: SearchHitSourceKind = 'evening',
-): SearchHit => ({
-  date,
-  words,
-  sources: [{ kind, excerpts: [searchExcerpt(prose, terms)] }],
-});
+): SearchHit =>
+  searchHitFixture(terms)({
+    date,
+    words,
+    journalText: prose,
+    scriptureText: '',
+    scriptureReferenceText: '',
+  });
 
 const answered = (
   query: string,
@@ -133,7 +131,9 @@ it('lists a found day as a link to the day it was written on', async () => {
  */
 it('marks the found words as marks rather than as a colour', async () => {
   const html = await render(
-    answered('rain', [hit('2026-03-01', 'Rain, and more rain.', rain)]),
+    answered('rain more', [
+      hit('2026-03-01', 'Rain, and more rain.', searchTerms('rain more')),
+    ]),
   );
   expect(html.match(marks)?.length).toBe(two);
   expect(html).toContain('font-medium');
