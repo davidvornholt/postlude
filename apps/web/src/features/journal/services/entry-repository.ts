@@ -55,6 +55,35 @@ const decodeEarliestDates = Schema.decodeUnknownEffect(
 const decodeSummaries = Schema.decodeUnknownEffect(
   Schema.Array(EntrySummaryFromRow),
 );
+/**
+ * The columns a stored entry decodes from, which `EntryFromRow` names.
+ *
+ * Never `*`: that includes `search_vector`, a `tsvector` the client has no
+ * codec for, so it decodes the binary value as UTF-8 text. A vector of 128 or
+ * more lexemes starts with bytes that are not valid UTF-8, and every save or
+ * read of that day failed.
+ */
+const storedEntryColumns = (sql: SqlClient.SqlClient) =>
+  sql.literal(
+    [
+      'entry_date',
+      'journal_markdown',
+      'journal_word_count',
+      'journal_first_used_at',
+      'scripture_markdown',
+      'scripture_word_count',
+      'scripture_first_used_at',
+      'scripture_book',
+      'scripture_chapter',
+      'scripture_verse_start',
+      'scripture_verse_end',
+      'revision',
+      'created_at',
+      'updated_at',
+    ]
+      .map((column) => `entry.${column}`)
+      .join(', '),
+  );
 const ExportAvailabilityRow = Schema.Struct({
   available: Schema.Boolean,
 }).pipe(Schema.encodeKeys({ available: 'export_available' }));
@@ -111,7 +140,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         ReturnType<typeof journalReadError>
       > =>
         sql`
-          select *
+          select ${storedEntryColumns(sql)}
           from entry
           where entry_date = ${date}
         `.pipe(
@@ -221,7 +250,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             from candidate
             where entry.entry_date = candidate.entry_date
               and entry.revision = candidate.base_revision
-            returning entry.*
+            returning ${storedEntryColumns(sql)}
           ), inserted as (
             insert into entry (
               entry_date,
@@ -262,7 +291,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             from candidate
             where base_revision = 0
             on conflict (entry_date) do nothing
-            returning entry.*
+            returning ${storedEntryColumns(sql)}
           )
           select * from updated
           union all
