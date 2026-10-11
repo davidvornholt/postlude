@@ -336,7 +336,10 @@ jobs:
     needs:
       - gate
       - build
-    if: needs.gate.outputs.gated-sha == github.sha
+    if: >-
+      github.repository == 'davidvornholt/postlude' &&
+      github.ref == 'refs/heads/main' &&
+      needs.gate.outputs.gated-sha == github.sha
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
