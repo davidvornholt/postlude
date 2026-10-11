@@ -1,11 +1,12 @@
 # actionlint v1.7.12 does not yet recognize GitHub's documented FIFO queue
-# key. Keep the exception to workflows that serialize publication or preview
-# host mutations, and remove it once the pinned parser supports the key.
+# key. Keep the exception to workflows that serialize preview builds,
+# production releases, or preview host mutations, and remove it once the
+# pinned parser supports the key.
 paths:
-  .github/workflows/announce-container.yml:
+  .github/workflows/publish-container.yml:
     ignore:
       - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'
-  .github/workflows/publish-container.yml:
+  .github/workflows/roll-back.yml:
     ignore:
       - '^unexpected key "queue" for "concurrency" section\. expected one of "cancel-in-progress", "group"$'
   .github/workflows/pr-preview-deploy.yml:
