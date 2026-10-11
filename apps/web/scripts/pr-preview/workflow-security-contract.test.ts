@@ -4,6 +4,7 @@ import { extractRunScript, readWorkflow } from './workflow-test-helpers';
 const producer = await readWorkflow('publish-container.yml');
 const consumer = await readWorkflow('pr-preview-deploy.yml');
 const hostCommand = await readWorkflow('pr-preview-host-command.yml');
+const rollBack = await readWorkflow('roll-back.yml');
 const githubExpression = (expression: string): string =>
   `\${{ ${expression} }}`;
 
@@ -60,9 +61,23 @@ describe('preview producer trust boundary', () => {
     );
   });
 
-  it('keeps every workflow run in the FIFO queue without cancellation', () => {
-    expect(producer).toContain('  cancel-in-progress: false');
+  it('keeps every preview build in its pull request FIFO queue without cancellation', () => {
+    expect(pullRequestJob).toContain(
+      [
+        '    concurrency:',
+        `      group: ${githubExpression('github.workflow')}-pr-${githubExpression('github.event.pull_request.number')}`,
+        '      cancel-in-progress: false',
+        '      queue: max',
+      ].join('\n'),
+    );
     expect(producer).not.toContain('cancel-in-progress: true');
+  });
+
+  it('reads the main layer cache without writing it', () => {
+    expect(pullRequestJob).toContain(
+      'cache-from: type=registry,ref=ghcr.io/davidvornholt/postlude:buildcache',
+    );
+    expect(pullRequestJob).not.toContain('cache-to:');
   });
 
   it('uses the host-owned preview label on every image boundary', () => {
@@ -196,5 +211,89 @@ describe('preview host authorization and secret boundary', () => {
     expect(hostCommand).toContain(
       'failed-build|failed-publication|failed-deploy',
     );
+  });
+});
+
+describe('production release boundary', () => {
+  const buildJob = producer.slice(
+    producer.indexOf('  build:'),
+    producer.indexOf('  release:'),
+  );
+  const releaseJob = producer.slice(producer.indexOf('  release:'));
+  const releaseQueue = [
+    '    concurrency:',
+    '      group: app-release-postlude',
+    '      cancel-in-progress: false',
+    '      queue: max',
+  ].join('\n');
+  const releasePermissions = [
+    '    permissions:',
+    '      contents: read',
+    '      id-token: write',
+    '      packages: write',
+  ].join('\n');
+  const knownHost =
+    'known-host: prod-1.vornholt.online ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFkom7Y24gnBa9X+gUDBZvlCnXiuKTo87ROOtlMpgNH5';
+
+  it('builds the pushed commit beside the gate with its revision bound', () => {
+    expect(buildJob).toContain("    if: github.event_name == 'push'");
+    expect(buildJob).not.toContain('needs:');
+    expect(buildJob).toContain(
+      `org.opencontainers.image.revision=${githubExpression('github.sha')}`,
+    );
+    expect(buildJob).toContain('provenance: false');
+    expect(buildJob).toContain(
+      'cache-to: type=registry,ref=ghcr.io/davidvornholt/postlude:buildcache,mode=max,image-manifest=true,oci-mediatypes=true',
+    );
+    expect(buildJob).not.toContain('id-token');
+  });
+
+  it('releases only the gated exact commit digest through the queued host action', () => {
+    expect(releaseJob).toContain('    needs:\n      - gate\n      - build');
+    expect(releaseJob).toContain(
+      '    if: needs.gate.outputs.gated-sha == github.sha',
+    );
+    expect(releaseJob).toContain(releasePermissions);
+    expect(releaseJob).toContain(releaseQueue);
+    expect(releaseJob).toContain('          persist-credentials: false');
+    expect(releaseJob).toContain(`ref: ${githubExpression('github.sha')}`);
+    expect(releaseJob).toContain('uses: ./.github/actions/app-release');
+    expect(releaseJob).toContain('          unit: postlude');
+    expect(releaseJob).toContain(knownHost);
+    expect(releaseJob).toContain(
+      `images: postlude@${githubExpression('needs.build.outputs.digest')}`,
+    );
+    expect(releaseJob).not.toContain('buildcache');
+  });
+
+  it('moves main only to a digest the host reports as live', () => {
+    const moveMain = extractRunScript(
+      producer,
+      'Point the main tag at the released image',
+    );
+
+    expect(releaseJob).toContain(
+      "if: steps.release.outputs.result == 'released' || steps.release.outputs.result == 'unchanged'",
+    );
+    expect(moveMain).toContain(
+      'test "$(jq -er .postlude.digest <<<"$APPS_JSON")" = "$BUILD_DIGEST"',
+    );
+    expect(moveMain).toContain('test "$resolved" = "$BUILD_DIGEST"');
+  });
+
+  it('no longer announces images to an infrastructure repository', () => {
+    expect(producer).not.toContain('IMAGE_PROMOTION');
+    expect(producer).not.toContain('image-bump');
+    expect(producer).not.toContain('create-github-app-token');
+  });
+
+  it('rolls back from main in the same queue as releases', () => {
+    expect(rollBack).toContain('name: Roll back');
+    expect(rollBack).toContain('on:\n  workflow_dispatch:\n\npermissions: {}');
+    expect(rollBack).toContain(releasePermissions);
+    expect(rollBack).toContain(releaseQueue);
+    expect(rollBack).toContain('          ref: main');
+    expect(rollBack).toContain('          command: rollback');
+    expect(rollBack).toContain(knownHost);
   });
 });

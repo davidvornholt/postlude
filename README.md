@@ -20,7 +20,9 @@ Run `bun run check:fix` for the full gate. Generate schema migrations with `bun 
 
 ## Deployment and recovery
 
-[personal-infra](https://github.com/davidvornholt/personal-infra) owns `https://postlude.vornholt.online`. Images are private and stored in EU-jurisdiction R2 buckets. Removing an image reference retains the object for undo and older database backups.
+[personal-infra](https://github.com/davidvornholt/personal-infra) owns the host, configuration, and secrets for `https://postlude.vornholt.online`. Merging to `main` deploys: once Standards passes on the merge commit, the Publish container workflow releases that exact image to production. To return to the release before the current one, run the Roll back workflow; running it again returns to the newer release.
+
+Uploaded images are private and stored in EU-jurisdiction R2 buckets. Removing an image reference retains the object for undo and older database backups.
 
 ZIP exports include referenced originals under `images/` and fail if an original cannot be read. When restoring a database, restore these files to the private bucket using their filenames as object keys; `entries.ndjson` retains the original private URLs. Exports omit unreferenced uploads.
 
