@@ -1,24 +1,22 @@
 # Project-specific rules
 
-## Effect posture in apps/web
+## Effect in apps/web
 
-The Effect data layer is in place, adopted with the journal feature (issue #7). The posture is per surface:
-
-- Route and feature code: feature services own the async work with typed error and requirement channels; route components stay plain React and consume those services at the boundary. `src/features/journal/services/entry-repository.ts` is the pattern to follow — a `Context.Service` over `SqlClient`, with `Schema.TaggedError` failures in its error channel and no clock of its own.
-- Each feature owns its runtime composition beside its services. For the journal, `src/features/journal/services/journal-runtime.ts` holds one lazily built `ManagedRuntime`, and `runJournalEffect` is the only place a journal Effect becomes a promise. Add a journal service to the layer there rather than running it ad hoc, so the layers are built once per process and a service is never unwrapped twice. Shared code remains feature-agnostic and may provide infrastructure such as the database configuration to feature runtimes.
-- better-auth glue in `src/shared/auth/*`: stays plain promises. better-auth calls these functions itself and awaits what they return, so it owns the calling convention, and an Effect signature would only be wrapped and unwrapped again at every call site.
-- `scripts/serve.ts`: stays plain. It is the production entrypoint — it reads `PORT`, loads the built SSR bundle, serves the static client files, and boots the server — and the architecture boundaries in `AGENTS.md` scope entrypoints to routing, parsing initial inputs, wiring layers, and bridging to the runtime, not to owning service logic.
+- `src/features/journal/services/entry-repository.ts` is the pattern for a feature service.
+- Each feature composes its services into one runtime beside them. For the journal that is `journal-runtime.ts`, and its `runJournalEffect` is the only place a journal Effect becomes a promise. Add a new service to that runtime's layer instead of running it ad hoc.
+- The better-auth glue in `src/shared/auth/*` keeps plain promise signatures, because better-auth calls those functions itself and awaits them, so an Effect signature would only be unwrapped again at every call.
+- `scripts/serve.ts`, the production entrypoint, stays plain. It boots and stops the server and owns no service logic.
 
 ## Database access in apps/web
 
-One connection string, two pools. better-auth's Drizzle adapter, migrations, and scripts use a `pg` pool, and `@effect/sql-pg` cannot adopt one, so the Effect SQL client opens its own. `@postlude/db/connections` is the only place either pool is configured or sized, and it records why there are two and why they stay within ten connections together. In the server, `src/shared/db/database.ts` opens both from `DATABASE_URL`, shares the one Effect client with every feature runtime through `sqlClientLayer`, and closes both in `closeDatabase`, which `scripts/serve.ts` calls on shutdown. Server code takes its pools from there. Scripts and tests open their own through `@postlude/db/connections` and close them.
+`@postlude/db/connections` is the only place a pool is configured or sized. Server code takes both pools from `src/shared/db/database.ts`. Scripts and tests open their own through `@postlude/db/connections` and close them.
 
-Tests that need a database use `src/shared/testing/test-database.ts`, which creates and migrates the configured database with `_test` appended and rolls each test body back. They fail rather than skip when `DATABASE_URL` is absent.
+Tests that need a database use `src/shared/testing/test-database.ts`. They fail rather than skip when `DATABASE_URL` is absent.
 
-## Corner geometry
+## Corners
 
-Corners must be square (0 px) or fully rounded. The shared UI theme owns radius declarations and disables Tailwind's intermediate radius scale. App components may use only `rounded-none` or `rounded-full`; do not declare CSS or inline corner radii in app code.
+Corners are square or fully rounded. App code uses only `rounded-none` and `rounded-full` and declares no corner radius in CSS or inline styles. Radius declarations belong to the shared UI theme.
 
 ## Styling
 
-Use Tailwind utilities in components for layout, spacing, sizing, colors, states, and responsive behavior. Keep shared tokens in the UI theme. Reserve application CSS for global defaults, generated editor content, and behavior such as native dialog transitions that is clearer as a small CSS rule. Share repeated controls and layout through components with explicit variants, not exported class bundles. Small typography and focus utilities may stay shared across unrelated elements. Do not create parallel component styling in `styles.css`.
+Style components with Tailwind utilities and keep shared tokens in the UI theme. Application CSS is only for global defaults, generated editor content, and small behavior rules such as native dialog transitions. Share repeated controls and layouts through components with explicit variants, not exported class bundles. Small typography and focus utilities may be shared across unrelated elements.
