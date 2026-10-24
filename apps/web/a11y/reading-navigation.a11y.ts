@@ -7,7 +7,7 @@ const currentCalendarDay = /day=2026-08-19/u;
 const currentCalendarMonth = /month=2026-08/u;
 const nextCalendarMonth = /\/calendar\?month=2026-09$/u;
 const onThisDayUrl = /\/on-this-day(?:\?.*)?$/u;
-const selectedCalendarDay = /2026-08-19, entry available/u;
+const selectedCalendarDay = /Wednesday, August 19, 2026, entry available/u;
 const previousOnThisDay = /date=2026-08-25/u;
 const onThisDayToday = /\/on-this-day$/u;
 

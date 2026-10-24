@@ -6,6 +6,7 @@ import {
   datesInMonth,
   type JournalMonth,
 } from '../calendar.ts';
+import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import type { CalendarDay } from '../services/calendar-fns.ts';
 
@@ -64,7 +65,7 @@ const CalendarCell = ({
     <td className="border-border border-x align-top">
       <Link
         aria-current={date === selected ? 'date' : undefined}
-        aria-label={`${date}${date === today ? ', today' : dateStatus}${hasEntry ? ', entry available' : ', no entry'}`}
+        aria-label={`${journalDateLabel(date)}${date === today ? ', today' : dateStatus}${hasEntry ? ', entry available' : ', no entry'}`}
         className={dayLinkClass}
         search={{ day: date, month }}
         to="/calendar"
@@ -83,7 +84,6 @@ const CalendarCell = ({
               aria-hidden="true"
               className="size-1.5 rounded-full bg-primary"
             />
-            <span className="sr-only">Entry available</span>
           </span>
         ) : null}
         {date === selected ? (

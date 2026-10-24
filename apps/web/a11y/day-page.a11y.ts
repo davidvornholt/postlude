@@ -15,8 +15,23 @@ const authenticationMessage =
 
 const colorSchemes = ['light', 'dark'] as const;
 const dayFieldName = 'Wednesday, August 26, 2026. Go to another day.';
+
+// On desktop a native date field is a tab stop for each of its segments. Under
+// mobile emulation Chromium draws it as one control that opens the system
+// picker, so the whole field is a single stop.
+const tabPastDayField = async (
+  page: Parameters<typeof scan>[0],
+  isMobile: boolean,
+): Promise<void> => {
+  const stops = isMobile ? 1 : 4;
+  for (let stop = 0; stop < stops; stop += 1) {
+    await page.keyboard.press('Tab');
+  }
+};
+
 for (const colorScheme of colorSchemes) {
   test(`the hydrated writing page works by keyboard in ${colorScheme} mode`, async ({
+    isMobile,
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
@@ -25,10 +40,7 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('Tab');
     const dayField = page.getByLabel(dayFieldName);
     await expect(dayField).toBeFocused();
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
+    await tabPastDayField(page, isMobile);
     await expect(page.getByRole('button', { name: 'Open' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(

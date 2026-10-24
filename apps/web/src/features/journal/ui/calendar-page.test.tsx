@@ -63,7 +63,9 @@ it('previews a stored future day and keeps it linked to its writing page', async
   expect(plainText(html)).toContain('A day I am looking forward to.');
   expect(plainText(html)).toContain('Thursday, August 27, 2026');
   expect(html).toContain('href="/day/2026-08-27"');
-  expect(html).toContain('2026-08-27, future day, entry available');
+  expect(html).toContain(
+    'Thursday, August 27, 2026, future day, entry available',
+  );
 });
 
 it('lets a blank future day open as a draft', async () => {
@@ -73,7 +75,7 @@ it('lets a blank future day open as a draft', async () => {
 
   expect(plainText(html)).toContain('Nothing was written on this day.');
   expect(html).toContain('href="/day/2026-08-28"');
-  expect(html).toContain('2026-08-28, future day, no entry');
+  expect(html).toContain('Friday, August 28, 2026, future day, no entry');
 });
 
 it('distinguishes stored Markdown from an unwritten day', async () => {
