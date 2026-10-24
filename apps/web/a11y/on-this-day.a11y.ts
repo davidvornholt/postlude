@@ -2,11 +2,13 @@ import { expect, test } from '@playwright/test';
 
 import {
   mountReadingPage,
+  mountUnhydratedReadingPage,
   readingPageFixtureConfigs,
   scanReadingPage,
 } from './reading-page-test-support.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
+const nativeDateUrl = /\/on-this-day\?date=2026-12-24$/u;
 const newestMemoryName = /1 year ago/u;
 const olderMemoryName = /2 years ago/u;
 const scriptureLinkName = /Read James 5:7-8/u;
@@ -53,5 +55,33 @@ for (const colorScheme of colorSchemes) {
       ),
     ).toBe(true);
     await scanReadingPage(page);
+  });
+
+  test(`the heading opens the native no-script form in ${colorScheme} mode`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+    await page.route('**/on-this-day?date=2026-12-24', (route) =>
+      route.fulfill({
+        body: '<!doctype html><title>Opened date</title><p>Native date opened</p>',
+        contentType: 'text/html',
+      }),
+    );
+    await mountUnhydratedReadingPage(page, readingPageFixtureConfigs.onThisDay);
+    const field = page.getByLabel(
+      'Wednesday, August 26, 2026. Go to another date.',
+    );
+
+    await page
+      .getByRole('heading', { level: 1, name: 'Wednesday, August 26, 2026' })
+      .click();
+    await expect(field).toBeFocused();
+    await expect(field).toBeVisible();
+    await field.fill('2026-12-24');
+    await scanReadingPage(page);
+    await page.getByRole('button', { name: 'Open' }).click();
+
+    await expect(page).toHaveURL(nativeDateUrl);
+    await expect(page.getByText('Native date opened')).toBeVisible();
   });
 }

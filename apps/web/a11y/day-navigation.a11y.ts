@@ -145,3 +145,23 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByText('Native day opened')).toBeVisible();
   });
 }
+
+test('pressing the date heading opens the browser date picker', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mountDayPage(page, ['stored']);
+  const field = page.getByLabel(dayFieldName);
+  const pickerOpen = () =>
+    field.evaluate((element) => element.matches(':open'));
+
+  await page
+    .getByRole('heading', { name: 'Wednesday, August 26, 2026' })
+    .click();
+  await expect(field).toBeFocused();
+  await expect.poll(pickerOpen).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(pickerOpen).toBe(false);
+  await expect(field).toBeFocused();
+  await scan(page);
+});

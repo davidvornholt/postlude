@@ -1,14 +1,19 @@
-import { ActionLink } from '#/shared/ui/action-link.tsx';
+import { useNavigate } from '@tanstack/react-router';
+import { UnmarkedActionLink } from '#/shared/ui/action-link.tsx';
 import {
   eyebrowClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { onThisDayBounds } from '../anniversary.ts';
-import { journalDateLabel } from '../day-label.ts';
-import { shiftJournalDate } from '../journal-day.ts';
+import { type JournalDate, shiftJournalDate } from '../journal-day.ts';
 import type { OnThisDayView } from '../services/on-this-day-fns.ts';
+import { DateHeading } from './date-heading.tsx';
 import { OnThisDay } from './on-this-day.tsx';
+
+// Today's retrospective keeps the plain address the main navigation opens.
+const searchFor = (date: JournalDate, today: JournalDate) =>
+  date === today ? {} : { date };
 
 export const OnThisDayPage = ({
   view: { anniversaries, date, today },
@@ -18,47 +23,57 @@ export const OnThisDayPage = ({
   const bounds = onThisDayBounds(today);
   const previous = date > bounds.first ? shiftJournalDate(date, -1) : undefined;
   const next = date < bounds.last ? shiftJournalDate(date, 1) : undefined;
+  const navigate = useNavigate();
 
   return (
     <PageFrame>
       <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>On this day</p>
       <header>
-        <h1 className="mt-3 text-balance font-display text-4xl text-ink sm:text-5xl">
-          {journalDateLabel(date)}
-        </h1>
+        <DateHeading
+          action="/on-this-day"
+          date={date}
+          max={bounds.last}
+          min={bounds.first}
+          noun="date"
+          onChoose={(chosen) =>
+            navigate({ search: searchFor(chosen, today), to: '/on-this-day' })
+          }
+        />
+        {/* The links step the date rather than name a page, so none of them is
+            marked as the current one, even when its address is this page's. */}
         <nav
           aria-label="Nearby retrospective dates"
           className="mt-6 -ml-3 flex flex-wrap items-center gap-x-1 gap-y-3"
         >
           {previous === undefined ? null : (
-            <ActionLink
+            <UnmarkedActionLink
               aria-label="Previous date"
               variant="icon"
-              search={{ date: previous }}
+              search={searchFor(previous, today)}
               to="/on-this-day"
             >
               ←
-            </ActionLink>
+            </UnmarkedActionLink>
           )}
           {next === undefined ? null : (
-            <ActionLink
+            <UnmarkedActionLink
               aria-label="Next date"
               variant="icon"
-              search={next === today ? {} : { date: next }}
+              search={searchFor(next, today)}
               to="/on-this-day"
             >
               →
-            </ActionLink>
+            </UnmarkedActionLink>
           )}
           {date === today ? null : (
-            <ActionLink
+            <UnmarkedActionLink
               variant="quiet"
               className="ml-2"
               search={{}}
               to="/on-this-day"
             >
               Today
-            </ActionLink>
+            </UnmarkedActionLink>
           )}
         </nav>
       </header>

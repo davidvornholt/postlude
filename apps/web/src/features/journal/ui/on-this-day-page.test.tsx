@@ -1,7 +1,12 @@
 import { expect, it } from 'bun:test';
 
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
-import { plainText } from '#/shared/testing/rendered-html.ts';
+import {
+  attributeValue,
+  elementAttributes,
+  openingTag,
+  plainText,
+} from '#/shared/testing/rendered-html.ts';
 import { OnThisDayPage } from './on-this-day-page.tsx';
 
 const today = '2026-08-26';
@@ -138,6 +143,37 @@ it('moves through retrospective dates and offers a direct return to today', asyn
   expect(html).toContain('aria-label="Next date"');
   expect(html).toContain('href="/on-this-day"');
   expect(plainText(html)).toContain('Today');
+});
+
+it('opens any date of the current year from its heading, with or without script', async () => {
+  const html = await renderInRouter(
+    <OnThisDayPage view={{ ...view, date: '2026-08-25' }} />,
+  );
+  const form = openingTag(html, 'form');
+  const field = openingTag(html, 'input');
+
+  expect(attributeValue(form, 'action')).toBe('/on-this-day');
+  expect(attributeValue(form, 'method')).toBe('get');
+  expect(attributeValue(field, 'type')).toBe('date');
+  expect(attributeValue(field, 'name')).toBe('date');
+  expect(attributeValue(field, 'value')).toBe('2026-08-25');
+  expect(attributeValue(field, 'min')).toBe('2026-01-01');
+  expect(attributeValue(field, 'max')).toBe('2026-12-31');
+  expect(attributeValue(field, 'aria-label')).toBe(
+    'Tuesday, August 25, 2026. Go to another date.',
+  );
+  expect(plainText(html)).toContain('Go to a date');
+});
+
+it('returns to the plain address when a step lands on today', async () => {
+  const html = await renderInRouter(
+    <OnThisDayPage view={{ ...view, date: '2026-08-27' }} />,
+  );
+
+  expect(elementAttributes(html, 'a', '←')).toContain('href="/on-this-day"');
+  expect(elementAttributes(html, 'a', '→')).toContain(
+    'href="/on-this-day?date=2026-08-28"',
+  );
 });
 
 it('stops adjacent-date navigation at the current year boundaries', async () => {

@@ -12,10 +12,11 @@
  * differs.
  *
  * The date at the top is the way to another day as well as the name of this
- * one: `day-heading.tsx` makes it the field, and the two arrows under it step
+ * one: `date-heading.tsx` makes it the field, and the two arrows under it step
  * to the day before and the day after.
  */
 
+import { useNavigate } from '@tanstack/react-router';
 import { useId, useRef } from 'react';
 import {
   eyebrowClass,
@@ -34,7 +35,7 @@ import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
 import type { EveningActions, EveningView } from '../services/evening-fns.ts';
 import { CopyDayControl } from './copy-day-control.tsx';
-import { DayHeading } from './day-heading.tsx';
+import { DateHeading } from './date-heading.tsx';
 import { DayLink } from './day-link.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { EveningFlow } from './evening-flow.tsx';
@@ -99,6 +100,12 @@ const DayBody = ({
       ? autosave.failure.message
       : undefined;
   const eveningId = useId();
+  const navigate = useNavigate();
+  // Today keeps its canonical plain URL, as it does in `DayLink`.
+  const openDay = (date: JournalDate) =>
+    date === today
+      ? navigate({ to: '/' })
+      : navigate({ params: { date }, to: '/day/$date' });
   const previous =
     entry.date === earliestJournalDate
       ? undefined
@@ -114,7 +121,14 @@ const DayBody = ({
         <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           {journalDayRelation(entry.date, today)}
         </p>
-        <DayHeading date={entry.date} today={today} />
+        <DateHeading
+          action="/day"
+          date={entry.date}
+          max={latestJournalDate}
+          min={earliestJournalDate}
+          noun="day"
+          onChoose={openDay}
+        />
         {/* Two arrows rather than two labels. The heading above them already
             names the day they step from, so spelling out "previous day" beside
             it is the page saying the same thing a third time — and the pair
