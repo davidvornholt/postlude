@@ -21,7 +21,6 @@ const confirmLeaving = (event: Event): void => {
   event.preventDefault();
 };
 
-/** Returns a wrapper that makes each day's recovery calls guard the tab. */
 export const createLeaveGuard = (
   target: () => LeaveTarget,
 ): ((recovery: DraftRecovery) => DraftRecovery) => {

@@ -5,7 +5,7 @@ const validationMessage =
   'Check the scripture reference and use a form such as Proverbs 12:5-13.';
 
 // Tests running at the same time share one database, so each worker slot
-// opens its own day. The invalid passage means nothing is ever stored.
+// opens its own day.
 const dayFor = (parallelIndex: number): string =>
   `2026-06-${String(parallelIndex + 1).padStart(2, '0')}`;
 
