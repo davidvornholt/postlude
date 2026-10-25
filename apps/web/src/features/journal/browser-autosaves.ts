@@ -7,9 +7,13 @@ import {
   createAutosaveRegistry,
 } from './autosave-registry.ts';
 import type { JournalDate } from './journal-day.ts';
+import { createLeaveGuard } from './leave-guard.ts';
 import { browserDraftRecovery } from './recoverable-draft.ts';
 
-const registry = createAutosaveRegistry(browserDraftRecovery);
+const guardLeaving = createLeaveGuard(() => globalThis.window);
+const registry = createAutosaveRegistry(() =>
+  guardLeaving(browserDraftRecovery()),
+);
 
 export const acquireBrowserAutosave = (
   stored: ConfirmedDraft,

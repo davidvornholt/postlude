@@ -3,8 +3,8 @@
  *
  * The hook subscribes the component and translates visibility, page exit, and
  * unmount signals. The coordinator owns requests and timers. The registry,
- * draft recovery, and confirmed-revision tracker own state that outlives a
- * component.
+ * draft recovery, leave guard, and confirmed-revision tracker own state that
+ * outlives a component.
  */
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
@@ -122,21 +122,8 @@ export const useAutosave = (
     };
   }, [coordinator]);
 
-  const status = saveStatus(state);
-  useEffect(() => {
-    if (status === 'saved') {
-      return;
-    }
-    const confirmLeaving = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    globalThis.window.addEventListener('beforeunload', confirmLeaving);
-    return () =>
-      globalThis.window.removeEventListener('beforeunload', confirmLeaving);
-  }, [status]);
-
   return {
-    status,
+    status: saveStatus(state),
     failure: state.failure,
     draft: state.draft,
     edit: coordinator?.edit ?? doNothing,
