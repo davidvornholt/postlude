@@ -21,7 +21,7 @@ import { JournalImage } from '../journal-image-extension.ts';
 
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 
 import {
   journalMarkdownExtensions,
@@ -34,7 +34,10 @@ import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 type MarkdownEditorProps = {
   /** Names the writing area, which carries no visible label of its own. */
   readonly label: string;
-  /** The entry as it was loaded. Later changes are the editor's own. */
+  /**
+   * The entry as the autosave holds it. The editor's own edits come back here
+   * unchanged; any other change replaces what the editor shows.
+   */
   readonly initialMarkdown: string;
   readonly onChange: (markdown: string) => void;
   /** Saves without waiting for the quiet period when the writer leaves. */
@@ -64,10 +67,6 @@ export const MarkdownEditor = ({
   proseClass,
   focusClass,
 }: MarkdownEditorProps) => {
-  // The handlers are read through refs because Tiptap binds them once, when
-  // the editor is created. Passing them straight in would freeze the first
-  // render's closures into the editor and post the draft as it was when the
-  // page opened, every time.
   const changedRef = useRef(onChange);
   const leftRef = useRef(onLeave);
   const pasteImagesRef = useRef<(files: ReadonlyArray<File>) => void>(
@@ -125,6 +124,32 @@ export const MarkdownEditor = ({
       changedRef.current(updated.getMarkdown()),
     onBlur: () => leftRef.current(),
   });
+
+  // Tiptap builds its document once, from the first markdown it was given, and
+  // later options never replace it. The autosave's draft can still change
+  // without the writer typing: hydration starts from the server's copy and then
+  // takes the draft this tab kept from a failed save, and a newer server
+  // revision replaces a draft with no unsaved edits. The editor follows such a
+  // change before the writer can type, because the next keystroke saves the
+  // editor's whole document over the draft. It stays out of the undo history,
+  // since the writer did not make it.
+  useLayoutEffect(() => {
+    if (
+      editor === null ||
+      editor.isDestroyed ||
+      editor.getMarkdown() === initialMarkdown
+    ) {
+      return;
+    }
+    editor
+      .chain()
+      .setMeta('addToHistory', false)
+      .setContent(initialMarkdown, {
+        contentType: 'markdown',
+        emitUpdate: false,
+      })
+      .run();
+  }, [editor, initialMarkdown]);
 
   if (editor === null) {
     return (

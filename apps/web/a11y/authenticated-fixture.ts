@@ -32,12 +32,15 @@ export const signInToRealJournal = async (
   const pool = createPool(databaseUrl);
   const token = crypto.randomUUID();
   try {
+    // Parallel tests can both insert the owner into a fresh database. With no
+    // conflict target, the loser skips on whichever unique index it meets
+    // first instead of failing on the one not named.
     await pool.query(
-      'insert into "user" (id,name,email) values ($1,$2,$3) on conflict (id) do nothing',
+      'insert into "user" (id,name,email) values ($1,$2,$3) on conflict do nothing',
       [ownerId, 'Browser fixture', 'browser@example.test'],
     );
     await pool.query(
-      'insert into account (id,issuer,account_id,provider_id,user_id) values ($1,$2,$3,$4,$5) on conflict (id) do nothing',
+      'insert into account (id,issuer,account_id,provider_id,user_id) values ($1,$2,$3,$4,$5) on conflict do nothing',
       [ownerId, 'https://github.com', allowedId, 'github', ownerId],
     );
     await pool.query(
