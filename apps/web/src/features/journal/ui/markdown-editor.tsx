@@ -1,7 +1,27 @@
+import { JournalImage } from '../journal-image-extension.ts';
+/**
+ * The surface an entry is written on.
+ *
+ * Markdown is typed and set in place: `## ` becomes a heading as the space is
+ * pressed, `**word**` becomes bold as the second star lands. There is no
+ * preview pane and no toggle, because a journal is read on the page it is
+ * written on, and a writer who has to switch modes to see what they wrote is
+ * being asked to proofread rather than to write.
+ *
+ * What leaves this component is still markdown. The editor is a way of setting
+ * the text, not a second format: the table holds the same characters an export
+ * or an importer does, so the years already written in Obsidian and the years
+ * written here are one corpus.
+ *
+ * The editor only ever exists in a browser. ProseMirror needs a live document
+ * to attach to, so the server first renders safe semantic Markdown and the
+ * editor takes over on hydration. The entry keeps its readable structure
+ * before any of this loads and is never absent while it does.
+ */
+
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import { useEffect, useLayoutEffect, useRef } from 'react';
-import { JournalImage } from '../journal-image-extension.ts';
 
 import {
   journalMarkdownExtensions,
@@ -28,7 +48,13 @@ type MarkdownEditorProps = {
   readonly focusClass: string;
 };
 
-/** Share dimensions with the server-rendered fallback to prevent a layout shift during hydration. */
+/**
+ * The shape of the writing area, worn by the editor and by what stands in for
+ * it before hydration alike. An empty day is mostly this: a tall area with a
+ * rule under it, which is what says there is somewhere to write before there is
+ * anything written. Both wear it so the page does not resize when ProseMirror
+ * arrives and the read-only surface becomes an editor.
+ */
 const writingAreaClass =
   'min-h-48 cursor-text scroll-mt-24 border-(--journal-rule) border-b pb-6 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';
 
