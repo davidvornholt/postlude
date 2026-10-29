@@ -76,6 +76,23 @@
     margin-block-start: 0.35em;
   }
 
+  /* A checklist trades its bullet for the box, which sits on the first line. */
+  .journal-prose ul[data-type="taskList"] {
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  .journal-prose ul[data-type="taskList"] > li {
+    display: flex;
+    gap: 0.6em;
+    align-items: baseline;
+  }
+
+  .journal-prose ul[data-type="taskList"] > li > div {
+    flex: 1;
+    min-inline-size: 0;
+  }
+
   .journal-prose blockquote {
     border-inline-start: 1px solid var(--journal-rule);
     padding-inline-start: 1.1em;

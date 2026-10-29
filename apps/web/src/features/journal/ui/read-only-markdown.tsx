@@ -3,7 +3,9 @@ import { createElement, type ReactNode } from 'react';
 
 import { imageKeyOf } from '../images.ts';
 import {
+  checklistItemLabel,
   journalHeadingTag,
+  journalNodeText,
   parseJournalMarkdown,
 } from '../journal-markdown.ts';
 import { ImageViewer } from './image-viewer.tsx';
@@ -132,6 +134,32 @@ const renderNode = (node: JSONContent, key: string): ReactNode => {
       );
     case 'listItem':
       return <li key={key}>{children}</li>;
+    case 'taskList':
+      return (
+        <ul data-type="taskList" key={key}>
+          {children}
+        </ul>
+      );
+    case 'taskItem': {
+      // The same shape the editor draws, so the page doesn't shift once it loads.
+      const checked = node.attrs?.checked === true;
+      return (
+        <li data-checked={checked} key={key}>
+          <label>
+            <input
+              aria-label={checklistItemLabel(
+                node.content?.[0] && journalNodeText(node.content[0]),
+              )}
+              checked={checked}
+              disabled={true}
+              readOnly={true}
+              type="checkbox"
+            />
+          </label>
+          <div>{children}</div>
+        </li>
+      );
+    }
     case 'blockquote':
       return <blockquote key={key}>{children}</blockquote>;
     case 'codeBlock':

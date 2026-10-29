@@ -1,4 +1,5 @@
 import type { AnyExtension, JSONContent, NodeConfig } from '@tiptap/core';
+import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Markdown, MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 
@@ -61,11 +62,24 @@ const JournalStarterKit = StarterKit.extend({
   },
 });
 
+/** Names a checklist box after its item, in the editor and on the read-only page. */
+export const checklistItemLabel = (text: string | undefined): string =>
+  text?.trim() || 'Empty checklist item';
+
 /** The Markdown vocabulary shared by the editor, server rendering and search. */
 export const journalMarkdownExtensions = () => [
   // Underline has no Markdown spelling. Leaving it in would let a keyboard
   // shortcut produce formatting that the next save silently discards.
   JournalStarterKit.configure({ underline: false }),
+  // `- [ ]` and `- [x]` items. Without these the parser reads them as plain
+  // bullets and the next save drops whether each item was done.
+  TaskList,
+  TaskItem.configure({
+    a11y: {
+      checkboxLabel: (node) => checklistItemLabel(node.firstChild?.textContent),
+    },
+    nested: true,
+  }),
   JournalImage,
   JournalTableKit,
   Markdown,
@@ -92,6 +106,8 @@ const childSeparators = new Map([
   ['orderedList', '\n'],
   ['table', '\n'],
   ['tableRow', ' '],
+  ['taskItem', '\n'],
+  ['taskList', '\n'],
 ]);
 
 const visibleTextOf = (node: JSONContent): string => {
@@ -108,6 +124,9 @@ const visibleTextOf = (node: JSONContent): string => {
     .map(visibleTextOf)
     .join(childSeparators.get(node.type ?? '') ?? '');
 };
+
+/** The text a parsed node puts on the page. */
+export const journalNodeText = visibleTextOf;
 
 /** The text the read-only Markdown model puts on the page. */
 export const journalMarkdownText = (markdown: string): string =>

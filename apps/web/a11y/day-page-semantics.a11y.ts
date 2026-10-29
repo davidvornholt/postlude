@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import {
+  markdownSemanticsChecklist,
   markdownSemanticsFixture,
   markdownSemanticsLinks,
 } from '../src/features/journal/ui/markdown-semantics.fixture.ts';
@@ -77,6 +78,13 @@ test('the hydrated editor keeps the production viewport and Markdown setting', a
   await expect(table.getByRole('cell', { name: 'Tired' })).toHaveCSS(
     'text-align',
     'right',
+  );
+  await Promise.all(
+    markdownSemanticsChecklist.map((item) =>
+      expect(evening.getByRole('checkbox', { name: item.name })).toBeChecked({
+        checked: item.checked,
+      }),
+    ),
   );
   await scan(page);
 });
