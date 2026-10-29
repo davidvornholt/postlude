@@ -23,6 +23,16 @@ describe('journal checklists', () => {
     expect(roundTrip(markdown)).toBe(markdown);
   });
 
+  it('keeps a line break inside its item', () => {
+    expect(roundTrip('- [x] call  \nBob')).toBe('- [x] call  \nBob');
+  });
+
+  it('leaves an indented code block as code', () => {
+    expect(parseJournalMarkdown('    - [x] code').content?.[0]?.type).toBe(
+      'codeBlock',
+    );
+  });
+
   it('reads each item as its own line', () => {
     expect(journalMarkdownText('- [x] finished\n- [ ] waiting')).toBe(
       'finished\nwaiting',

@@ -76,7 +76,6 @@
     margin-block-start: 0.35em;
   }
 
-  /* A checklist trades its bullet for the box, which sits on the first line. */
   .journal-prose ul[data-type="taskList"] {
     padding-inline-start: 0;
     list-style: none;
