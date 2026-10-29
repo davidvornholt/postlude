@@ -85,7 +85,14 @@
   .journal-prose ul[data-type="taskList"] > li {
     display: flex;
     gap: 0.6em;
-    align-items: baseline;
+    align-items: flex-start;
+  }
+
+  /* 1.5rem keeps the box a 24px touch target (WCAG 2.2 target size). */
+  .journal-prose ul[data-type="taskList"] input {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    margin: 0;
   }
 
   .journal-prose ul[data-type="taskList"] > li > div {
