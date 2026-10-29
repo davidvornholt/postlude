@@ -33,6 +33,42 @@ describe('journal checklists', () => {
     );
   });
 
+  it('keeps a new empty item a checklist item', () => {
+    const markdown = serializeJournalMarkdown({
+      type: 'doc',
+      content: [
+        {
+          type: 'taskList',
+          content: [
+            {
+              type: 'taskItem',
+              attrs: { checked: true },
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'done' }],
+                },
+              ],
+            },
+            {
+              type: 'taskItem',
+              attrs: { checked: false },
+              content: [{ type: 'paragraph' }],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(roundTrip(markdown)).toBe(markdown);
+  });
+
+  it('keeps a rule inside an item through repeated edits', () => {
+    const once = roundTrip('- [x] hello\n\n  ---');
+
+    expect(roundTrip(once)).toBe(once);
+  });
+
   it('reads each item as its own line', () => {
     expect(journalMarkdownText('- [x] finished\n- [ ] waiting')).toBe(
       'finished\nwaiting',

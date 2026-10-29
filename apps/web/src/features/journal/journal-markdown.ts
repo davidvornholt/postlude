@@ -4,6 +4,7 @@ import type {
   MarkdownParseHelpers,
   MarkdownToken,
   NodeConfig,
+  RenderContext,
 } from '@tiptap/core';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Markdown, MarkdownManager } from '@tiptap/markdown';
@@ -45,8 +46,12 @@ const readHtmlLineBreaks = {
 } as const;
 
 // Marked's list tokenizer already reads `- [ ]` and `- [x]` items, so it keeps
-// indented code as code and a line break inside its item. A bullet list splits
-// into runs of checklist and plain items.
+// indented code as code and a line break inside its item. It leaves out an
+// item with nothing after the box, which pressing Enter in a checklist makes.
+// A bullet list splits into runs of checklist and plain items.
+const emptyChecklistMark = /^\[(?<mark>[ xX])\]$/u;
+const textTokenTypes = new Set(['paragraph', 'text']);
+
 const withoutCheckbox = (
   tokens: Array<MarkdownToken> = [],
 ): Array<MarkdownToken> =>
@@ -58,16 +63,46 @@ const withoutCheckbox = (
         : token,
     );
 
+type ChecklistItem = {
+  readonly checked: boolean;
+  readonly item: MarkdownToken;
+};
+
+type ChecklistReading = {
+  readonly checklist: ChecklistItem | undefined;
+  readonly item: MarkdownToken;
+};
+
+const checklistItemOf = (item: MarkdownToken): ChecklistItem | undefined => {
+  if (item.task === true) {
+    return {
+      checked: item.checked === true,
+      item: { ...item, tokens: withoutCheckbox(item.tokens) },
+    };
+  }
+  const [first, ...rest] = item.tokens ?? [];
+  const firstLine = textTokenTypes.has(first?.type ?? '') ? first?.text : '';
+  const mark = emptyChecklistMark.exec(firstLine?.trim() ?? '')?.groups?.mark;
+  return mark === undefined
+    ? undefined
+    : { checked: mark !== ' ', item: { ...item, tokens: rest } };
+};
+
 const parseTaskItem = (
-  item: MarkdownToken,
+  { checked, item }: ChecklistItem,
   helpers: MarkdownParseHelpers,
-): JSONContent => ({
-  type: 'taskItem',
-  attrs: { checked: item.checked === true },
-  content: helpers.parseChildren([
-    { ...item, tokens: withoutCheckbox(item.tokens) },
-  ])[0]?.content,
-});
+): JSONContent => {
+  const content: Array<JSONContent> =
+    helpers.parseChildren([item])[0]?.content ?? [];
+  return {
+    type: 'taskItem',
+    attrs: { checked },
+    content:
+      content[0]?.type === 'paragraph'
+        ? content
+        : [{ type: 'paragraph' }, ...content],
+  };
+};
 
 const parseBulletList = (
   token: MarkdownToken,
@@ -76,24 +111,37 @@ const parseBulletList = (
   if (token.type !== 'list' || token.ordered) {
     return [];
   }
-  const runs: Array<Array<MarkdownToken>> = [];
+  const runs: Array<Array<ChecklistReading>> = [];
   for (const item of token.items ?? []) {
+    const reading = { item, checklist: checklistItemOf(item) };
     const run = runs.at(-1);
-    if (run !== undefined && run[0]?.task === item.task) {
-      run.push(item);
+    if (
+      run?.[0] !== undefined &&
+      (run[0].checklist === undefined) === (reading.checklist === undefined)
+    ) {
+      run.push(reading);
     } else {
-      runs.push([item]);
+      runs.push([reading]);
     }
   }
-  return runs.map((items) =>
-    items[0]?.task === true
+  return runs.map((run) =>
+    run[0]?.checklist === undefined
       ? {
-          type: 'taskList',
-          content: items.map((item) => parseTaskItem(item, helpers)),
+          type: 'bulletList',
+          content: helpers.parseChildren(run.map(({ item }) => item)),
         }
-      : { type: 'bulletList', content: helpers.parseChildren(items) },
+      : {
+          type: 'taskList',
+          content: run.flatMap(({ checklist }) =>
+            checklist === undefined ? [] : [parseTaskItem(checklist, helpers)],
+          ),
+        },
   );
 };
+
+// Inside a list item blocks sit on consecutive lines, where `---` under a
+// paragraph would make it a heading.
+const listItemTypes = new Set(['listItem', 'taskItem']);
 
 // Tiptap reads a `null` field as switched off, though its types only offer a
 // replacement.
@@ -118,6 +166,14 @@ const remapStarterExtension = (extension: AnyExtension): AnyExtension => {
       return extension.extend({ parseMarkdown: parseBulletList });
     case 'hardBreak':
       return extension.extend(readHtmlLineBreaks);
+    case 'horizontalRule':
+      return extension.extend({
+        renderMarkdown: (
+          _node: JSONContent,
+          _helpers: unknown,
+          context: RenderContext,
+        ) => (listItemTypes.has(context.parentType ?? '') ? '***' : '---'),
+      });
     default:
       return extension;
   }
