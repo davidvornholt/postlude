@@ -62,6 +62,12 @@ it('stores the same punctuation-delimited token stream a query uses', () => {
   expect(searchTokenText(source)).toBe('mail name example com notes 1 john');
 });
 
+it('cuts an overlong token at a whole character within the index limit', () => {
+  const [token] = searchTerms(`a${'ü'.repeat(1100)}`);
+  expect(new TextEncoder().encode(token).length).toBe(2045);
+  expect(token).toBe(`a${'ü'.repeat(1022)}`);
+});
+
 it('asks for every term, each as a prefix', () => {
   expect(searchTsQuery(['rain', 'fell'])).toBe('rain:* & fell:*');
 });
