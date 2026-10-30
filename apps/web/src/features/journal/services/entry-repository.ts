@@ -84,7 +84,6 @@ const storedEntryColumns = (sql: SqlClient.SqlClient) =>
       .map((column) => `entry.${column}`)
       .join(', '),
   );
-/** The columns a memory decodes from, which `EntryPreviewFromRow` names. */
 const anniversaryColumns = (sql: SqlClient.SqlClient) =>
   sql.literal(
     [

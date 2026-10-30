@@ -30,10 +30,6 @@ export type Anniversary = {
   readonly journalMarkdown: string;
   readonly scriptureMarkdown: string;
   readonly scriptureReference?: ScriptureReference;
-  /**
-   * Set on a leap day read on February 28 because the year being read has no
-   * February 29. Its date then differs from the page's, so the page says why.
-   */
   readonly leapDayOnFebruary28?: true;
   readonly yearsAgo: number;
   readonly words: number;
@@ -56,10 +52,6 @@ const leapDay = '02-29';
 const hasLeapDay = (year: number): boolean =>
   isJournalDate(formatJournalDate({ year, month: 2, day: 29 }));
 
-/**
- * The `MM-DD` days whose earlier entries are memories of `on`. Only February 28
- * of a year without a February 29 reads two, its own and the missing leap day.
- */
 export const anniversaryMonthDays = (
   on: JournalDate,
 ): ReadonlyArray<string> => {
