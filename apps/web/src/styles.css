@@ -17,6 +17,7 @@
     --journal-rule: var(--pl-border);
     --journal-quiet: var(--pl-ink-muted);
     --journal-prompt: var(--pl-ink-faint);
+    --journal-control: var(--pl-primary);
 
     hyphens: auto;
   }
@@ -25,6 +26,8 @@
     --journal-rule: var(--pl-deep-rule);
     --journal-quiet: var(--pl-deep-ink-muted);
     --journal-prompt: var(--pl-deep-ink-muted);
+    /* Primary falls under 3:1 on the light scheme's deep ground. */
+    --journal-control: var(--pl-deep-ink);
   }
 
   .journal-prose > * + * {
@@ -74,6 +77,35 @@
      exception. */
   .journal-prose li + li {
     margin-block-start: 0.35em;
+  }
+
+  .journal-prose ul[data-type="taskList"] {
+    padding-inline-start: 0;
+    list-style: none;
+  }
+
+  .journal-prose ul[data-type="taskList"] > li {
+    display: flex;
+    gap: 0.6em;
+    align-items: flex-start;
+  }
+
+  /* 1.5rem keeps the box a 24px touch target (WCAG 2.2 target size). */
+  .journal-prose ul[data-type="taskList"] input {
+    inline-size: 1.5rem;
+    block-size: 1.5rem;
+    margin: 0;
+  }
+
+  @supports (accent-color: auto) {
+    .journal-prose ul[data-type="taskList"] input {
+      accent-color: var(--journal-control);
+    }
+  }
+
+  .journal-prose ul[data-type="taskList"] > li > div {
+    flex: 1;
+    min-inline-size: 0;
   }
 
   .journal-prose blockquote {

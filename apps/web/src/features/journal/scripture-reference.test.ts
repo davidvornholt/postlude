@@ -98,6 +98,10 @@ describe('parseScriptureReference', () => {
     // Chapter and verse are counted from one.
     expect(parseScriptureReference('Proverbs 0:5')).toBeUndefined();
     expect(parseScriptureReference('Proverbs 12:0')).toBeUndefined();
+    // A number the integer columns cannot store would fail the save instead.
+    expect(parseScriptureReference('Proverbs 2147483648')).toBeUndefined();
+    expect(parseScriptureReference('Proverbs 12:2147483648')).toBeUndefined();
+    expect(parseScriptureReference('Proverbs 12:5-2147483648')).toBeUndefined();
   });
 });
 
