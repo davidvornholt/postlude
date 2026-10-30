@@ -119,6 +119,16 @@ const EveningMemory = ({
     </div>
   );
 
+const LeapDayNote = ({ id }: { readonly id: string }) => (
+  <p
+    className={[readingMeasureClass, 'mt-3 text-ink-muted text-sm'].join(' ')}
+    id={id}
+  >
+    Written on a leap day, and shown on February 28 because this year has no
+    February 29.
+  </p>
+);
+
 const hasScriptureMemory = (anniversary: Anniversary): boolean =>
   anniversary.scriptureReference !== undefined ||
   anniversary.scriptureMarkdown.trim() !== '';
@@ -127,9 +137,13 @@ export const OnThisDay = ({ anniversaries, today }: OnThisDayProps) => (
   <div>
     {anniversaries.map((anniversary) => {
       const headingId = `anniversary-${anniversary.date}`;
+      const noteId = `anniversary-${anniversary.date}-note`;
       const hasScripture = hasScriptureMemory(anniversary);
       return (
         <article
+          aria-describedby={
+            anniversary.leapDayOnFebruary28 ? noteId : undefined
+          }
           aria-labelledby={headingId}
           className={memoryClass}
           key={anniversary.date}
@@ -139,6 +153,7 @@ export const OnThisDay = ({ anniversaries, today }: OnThisDayProps) => (
               {`${journalCountLabel(anniversary.yearsAgo, 'year')} ago · ${journalDateLabel(anniversary.date)}`}
             </DayLink>
           </h2>
+          {anniversary.leapDayOnFebruary28 ? <LeapDayNote id={noteId} /> : null}
           <ScriptureMemory anniversary={anniversary} />
           <EveningMemory
             hasScripture={hasScripture}

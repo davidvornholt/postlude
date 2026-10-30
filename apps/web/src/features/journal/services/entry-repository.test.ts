@@ -3,8 +3,8 @@ import { Deferred, Effect, Fiber } from 'effect';
 import { SqlClient } from 'effect/sql';
 import {
   anniversaryLimit,
+  anniversaryMonthDays,
   anniversaryOf,
-  isoMonthStart,
 } from '../anniversary.ts';
 import { countJournalWords } from '../word-count.ts';
 import {
@@ -302,7 +302,7 @@ it('finds the same day of the month in earlier years, newest first', async () =>
       yield* entries.save(draft('2025-08-25', 'The day before, once.'));
       yield* entries.save(draft('2026-08-26', 'Today itself.'));
       return yield* entries.readAnniversaries(
-        '08-26',
+        ['08-26'],
         '2026-08-26',
         anniversaryLimit,
       );
@@ -311,6 +311,58 @@ it('finds the same day of the month in earlier years, newest first', async () =>
   expect(anniversaries.map((entry) => entry.date)).toEqual([
     '2025-08-26',
     '2024-08-26',
+  ]);
+});
+it('reads February 28 of a year without a leap day together with earlier leap days', async () => {
+  const anniversaries = await withRepository((entries) =>
+    Effect.gen(function* () {
+      for (const date of [
+        '2022-02-28',
+        '2023-02-28',
+        '2024-02-28',
+        '2024-02-29',
+        '2025-02-28',
+        '2026-02-28',
+        '2026-03-01',
+      ]) {
+        yield* entries.save(draft(date, `Written on ${date}.`));
+      }
+      const before = '2027-02-28';
+      return yield* entries.readAnniversaries(
+        anniversaryMonthDays(before),
+        before,
+        anniversaryLimit,
+      );
+    }),
+  );
+
+  // The leap day shares 2024's place, so the fourth year back still comes.
+  expect(anniversaries.map((entry) => entry.date)).toEqual([
+    '2026-02-28',
+    '2025-02-28',
+    '2024-02-29',
+    '2024-02-28',
+    '2023-02-28',
+  ]);
+});
+it('keeps leap days off February 28 of a leap year', async () => {
+  const anniversaries = await withRepository((entries) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2024-02-28', 'The day before the leap day.'));
+      yield* entries.save(draft('2024-02-29', 'The leap day.'));
+      yield* entries.save(draft('2027-02-28', 'The last day of February.'));
+      const before = '2028-02-28';
+      return yield* entries.readAnniversaries(
+        anniversaryMonthDays(before),
+        before,
+        anniversaryLimit,
+      );
+    }),
+  );
+
+  expect(anniversaries.map((entry) => entry.date)).toEqual([
+    '2027-02-28',
+    '2024-02-28',
   ]);
 });
 it('limits leap-day anniversaries with the shared page limit', async () => {
@@ -322,7 +374,7 @@ it('limits leap-day anniversaries with the shared page limit', async () => {
       yield* entries.save(draft('2020-02-28', 'The day before.'));
       const before = '2024-02-29';
       return yield* entries.readAnniversaries(
-        before.slice(isoMonthStart),
+        anniversaryMonthDays(before),
         before,
         anniversaryLimit,
       );
@@ -360,7 +412,7 @@ it('reads only the bounded memory projection from rows with large search data', 
         from entry
       `;
       const rows = yield* entries.readAnniversaries(
-        before.slice(isoMonthStart),
+        anniversaryMonthDays(before),
         before,
         anniversaryLimit,
       );
@@ -414,7 +466,7 @@ it('includes scripture notes and a reference-only anniversary', async () => {
         baseRevision: 0,
       });
       return yield* entries.readAnniversaries(
-        '08-26',
+        ['08-26'],
         '2026-08-26',
         anniversaryLimit,
       );

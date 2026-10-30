@@ -5,8 +5,8 @@ import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import {
   type Anniversary,
   anniversaryLimit,
+  anniversaryMonthDays,
   anniversaryOf,
-  isoMonthStart,
   onThisDayDate,
 } from '../anniversary.ts';
 import type { JournalDate } from '../journal-day.ts';
@@ -31,7 +31,7 @@ export const readOnThisDayFn = createServerFn({ method: 'GET' })
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const earlier = yield* entries.readAnniversaries(
-          date.slice(isoMonthStart),
+          anniversaryMonthDays(date),
           date,
           anniversaryLimit,
         );

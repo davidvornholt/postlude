@@ -84,6 +84,21 @@ const storedEntryColumns = (sql: SqlClient.SqlClient) =>
       .map((column) => `entry.${column}`)
       .join(', '),
   );
+const anniversaryColumns = (sql: SqlClient.SqlClient) =>
+  sql.literal(
+    [
+      'entry_date',
+      'journal_markdown',
+      'journal_word_count',
+      'revision',
+      'scripture_markdown',
+      'scripture_word_count',
+      'scripture_book',
+      'scripture_chapter',
+      'scripture_verse_start',
+      'scripture_verse_end',
+    ].join(', '),
+  );
 const ExportAvailabilityRow = Schema.Struct({
   available: Schema.Boolean,
 }).pipe(Schema.encodeKeys({ available: 'export_available' }));
@@ -332,38 +347,37 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         `.pipe(Effect.flatMap(decodeSummaries));
 
       /**
-       * The same day of the month in earlier years, newest first. Only days
-       * with a visible section come back. A passage reference is part of the
-       * morning record even when it has no notes. The upper bound is exclusive,
-       * so the day being read is never its own memory.
+       * Earlier days on any of the given `MM-DD` days, newest first, from the
+       * nearest `limit` years that have one. The limit counts years rather than
+       * rows, because February 28 can also read a leap day from the same year.
+       * Only days with a visible section come back. A passage reference is part
+       * of the morning record even when it has no notes. The upper bound is
+       * exclusive, so the day being read is never its own memory.
        */
       const readAnniversaries = (
-        monthDay: string,
+        monthDays: ReadonlyArray<string>,
         before: JournalDate,
         limit: number,
       ) =>
         sql`
-          select
-            entry_date,
-            journal_markdown,
-            journal_word_count,
-            revision,
-            scripture_markdown,
-            scripture_word_count,
-            scripture_book,
-            scripture_chapter,
-            scripture_verse_start,
-            scripture_verse_end
-          from entry
-          where to_char(entry_date, 'MM-DD') = ${monthDay}
-            and entry_date < ${before}
-            and (
-              journal_word_count > 0
-              or scripture_word_count > 0
-              or scripture_book is not null
-            )
+          select ${anniversaryColumns(sql)}
+          from (
+            select
+              ${anniversaryColumns(sql)},
+              dense_rank() over (
+                order by extract(year from entry_date) desc
+              ) as year_rank
+            from entry
+            where to_char(entry_date, 'MM-DD') in ${sql.in(monthDays)}
+              and entry_date < ${before}
+              and (
+                journal_word_count > 0
+                or scripture_word_count > 0
+                or scripture_book is not null
+              )
+          ) as matching
+          where year_rank <= ${limit}
           order by entry_date desc
-          limit ${limit}
         `.pipe(
           Effect.flatMap(decodeEntryPreviews),
           Effect.mapError(journalReadError),
