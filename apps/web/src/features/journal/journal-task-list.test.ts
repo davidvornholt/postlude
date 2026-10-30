@@ -9,7 +9,7 @@ import {
 const roundTrip = (markdown: string): string =>
   serializeJournalMarkdown(parseJournalMarkdown(markdown));
 
-const endsWithAfter = /\safter$/u;
+const afterAsWord = /\bafter\b/u;
 
 const saveFiveTimes = (markdown: string): Array<string> =>
   Array.from({ length: 5 }).reduce<Array<string>>(
@@ -88,14 +88,19 @@ describe('journal checklists', () => {
     );
   });
 
-  it('keeps the text after a rule in a numbered item', () => {
-    const saves = saveFiveTimes('1. hello\n\n   ---\n\n   after');
+  it('keeps the text beside a rule in a numbered item', () => {
+    for (const markdown of [
+      '1. hello\n\n   ---\n\n   after',
+      '1. parent\n   - alpha\n\n     after\n\n     ---',
+    ]) {
+      const saves = saveFiveTimes(markdown);
 
-    expect(saves.map((save) => journalMarkdownText(save).trim())).toEqual(
-      Array.from({ length: 5 }, () => expect.stringMatching(endsWithAfter)),
-    );
-    const fifth = saves.at(-1) ?? '';
-    expect(roundTrip(fifth)).toBe(fifth);
+      expect(saves.map(journalMarkdownText)).toEqual(
+        Array.from({ length: 5 }, () => expect.stringMatching(afterAsWord)),
+      );
+      const fifth = saves.at(-1) ?? '';
+      expect(roundTrip(fifth)).toBe(fifth);
+    }
   });
 
   it('reads each item as its own line', () => {
