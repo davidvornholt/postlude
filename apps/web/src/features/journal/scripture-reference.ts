@@ -103,6 +103,17 @@ const referencePattern =
   /^\s*(?<book>\d?\s*[^\d]+?)\s*(?<chapter>\d+)\s*(?:[:,]\s*(?<verseStart>\d+)\s*(?:[-–—]\s*(?<verseEnd>\d+))?)?\s*$/u;
 
 /**
+ * Chapter and verse are stored in PostgreSQL `integer` columns. A larger number
+ * would fail the whole day's save as if the connection had dropped, so it is a
+ * reference the writer has to correct instead.
+ */
+const largestStoredNumber = 2_147_483_647;
+
+/** A chapter or verse number is counted from one and fits its column. */
+const isReferenceNumber = (value: number): boolean =>
+  value >= 1 && value <= largestStoredNumber;
+
+/**
  * Reads a typed reference, or returns undefined when it is not one. Undefined
  * rather than a thrown error because the writer is mid-sentence for most of the
  * keystrokes it takes to type one, and being partway through is not a failure.
@@ -117,7 +128,7 @@ export const parseScriptureReference = (
 
   const book = findScriptureBook(parts.book);
   const chapter = Number(parts.chapter);
-  if (book === undefined || chapter < 1) {
+  if (book === undefined || !isReferenceNumber(chapter)) {
     return undefined;
   }
 
@@ -126,7 +137,7 @@ export const parseScriptureReference = (
   }
 
   const verseStart = Number(parts.verseStart);
-  if (verseStart < 1) {
+  if (!isReferenceNumber(verseStart)) {
     return undefined;
   }
   if (parts.verseEnd === undefined) {
@@ -136,7 +147,7 @@ export const parseScriptureReference = (
   const verseEnd = Number(parts.verseEnd);
   // A range that ends before it starts is a typo, not a reference. A range that
   // ends where it starts is the single verse it names.
-  if (verseEnd < verseStart) {
+  if (verseEnd < verseStart || !isReferenceNumber(verseEnd)) {
     return undefined;
   }
   return verseEnd === verseStart

@@ -1,4 +1,4 @@
-import { foldSearchText } from './search-query.ts';
+import { boundedSearchToken, foldSearchText } from './search-query.ts';
 
 const asciiProse = /^[\x20-\x7e\t\r\n]*$/u;
 const searchTokenRuns = /[\p{L}\p{N}]+/gu;
@@ -110,11 +110,12 @@ const foldedSource = (text: string) => {
 export const searchSourceTokens = function* (text: string) {
   const source = foldedSource(text);
   for (const token of source.folded.matchAll(searchTokenRuns)) {
+    const bounded = boundedSearchToken(token[0]);
     yield {
-      token: token[0],
+      token: bounded,
       ...source.visibleSpan({
         start: token.index,
-        end: token.index + token[0].length,
+        end: token.index + bounded.length,
       }),
     };
   }
