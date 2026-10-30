@@ -19,7 +19,15 @@ export const markdownSemanticsFixture = `# Entry heading
 | Dawn | Calm<br>then busy |
 | Dusk | Tired             |
 
+- [x] Watered the plants
+- [ ] Call the landlord
+
 A closing line after the table.`;
+
+export const markdownSemanticsChecklist = [
+  { checked: true, name: 'Watered the plants' },
+  { checked: false, name: 'Call the landlord' },
+] as const;
 
 export const markdownSemanticsLinks = [
   { href: 'HTTPS://Example.com/Upper', name: 'Secure uppercase' },

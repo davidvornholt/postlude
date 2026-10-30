@@ -87,3 +87,14 @@ it('renders a pipe table with column headers and alignment', () => {
     '<td class="text-right"><p><strong>calm</strong><br/>then busy</p></td>',
   );
 });
+
+it('shows each checklist item ticked or open, like the editor', () => {
+  const html = render('- [x] Watered the plants\n- [ ] Call the landlord');
+
+  expect(html).toBe(
+    '<div class="journal-prose"><ul data-type="taskList">' +
+      '<li data-checked="true"><label><input aria-label="Watered the plants" disabled="" readOnly="" type="checkbox" checked=""/></label><div><p>Watered the plants</p></div></li>' +
+      '<li data-checked="false"><label><input aria-label="Call the landlord" disabled="" readOnly="" type="checkbox"/></label><div><p>Call the landlord</p></div></li>' +
+      '</ul></div>',
+  );
+});
