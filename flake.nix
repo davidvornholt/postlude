@@ -14,6 +14,19 @@
       manifest = builtins.fromJSON (builtins.readFile ./package.json);
     in
     {
+      packages = forAllSystems (
+        system:
+        let
+          agent-skills = nixpkgs.legacyPackages.${system}.callPackage ./nix/agent-skills.nix {
+            inherit (manifest) version;
+          };
+        in
+        {
+          inherit agent-skills;
+          default = agent-skills;
+        }
+      );
+
       devShells = forAllSystems (
         system:
         let
