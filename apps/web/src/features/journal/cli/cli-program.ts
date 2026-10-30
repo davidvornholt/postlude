@@ -67,7 +67,6 @@ export const cliFailureOf = (error: unknown): CliFailure => {
   return failure('internal', 'The command failed unexpectedly.');
 };
 
-/** What the commands read and write through. */
 export type CliServices =
   | EntryRepository
   | EntrySearch

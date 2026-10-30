@@ -53,7 +53,6 @@ export const emptyDayRating: DayRating = {
   closedAt: null,
 };
 
-/** A day can close once its energy and progress are rated. */
 export const canCloseDay = (rating: DayRating): boolean =>
   rating.energy !== null && rating.progress !== null;
 
@@ -70,5 +69,4 @@ export const DayRatingChangeSchema = Schema.Struct({
 
 export type DayRatingChange = Schema.Schema.Type<typeof DayRatingChangeSchema>;
 
-/** The input of the actions that name only a day. */
 export const DayInputSchema = Schema.Struct({ date: JournalDateSchema });
