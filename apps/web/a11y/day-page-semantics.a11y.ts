@@ -17,6 +17,7 @@ const headingLevelThreeSize = 25.6;
 const headingLevelFourSize = 21.6;
 const headingLevelFiveSize = 18.4;
 const headingLevelSixSize = 16;
+const colorSchemes = ['light', 'dark'] as const;
 const displayTypeface = 'Fraunces Variable';
 const levelSixWeight = '600';
 const subordinateHeadingSizes = [
@@ -86,7 +87,25 @@ test('the hydrated editor keeps the production viewport and Markdown setting', a
       }),
     ),
   );
-  await scan(page);
+  for (const colorScheme of colorSchemes) {
+    await page.emulateMedia({ colorScheme });
+    const accents = await evening
+      .getByRole('checkbox')
+      .evaluateAll((boxes) =>
+        boxes.map((box) => getComputedStyle(box).accentColor),
+      );
+    // A probe resolves the token to the same serialization as `accentColor`.
+    const primary = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--pl-primary)';
+      document.body.append(probe);
+      const { color } = getComputedStyle(probe);
+      probe.remove();
+      return color;
+    });
+    expect(accents).toEqual(markdownSemanticsChecklist.map(() => primary));
+    await scan(page);
+  }
 });
 
 test('editor copy keeps Markdown in plain text and rendered HTML for rich destinations', async ({
