@@ -15,7 +15,7 @@
  * The zone is configuration rather than the device's own, so the same evening is
  * one journal day from every device, and a trip abroad does not split a night in
  * two or hide the day just written. See `JOURNAL_TIME_ZONE` in
- * `apps/web/README.md`.
+ * `src/shared/env.ts`.
  */
 
 /** A Common Era calendar date as `YYYY-MM-DD`, from 0001 through 9999. */
