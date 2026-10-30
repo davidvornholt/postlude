@@ -2,6 +2,7 @@ import type {
   AnyExtension,
   JSONContent,
   MarkdownParseHelpers,
+  MarkdownRendererHelpers,
   MarkdownToken,
   NodeConfig,
   RenderContext,
@@ -47,10 +48,16 @@ const readHtmlLineBreaks = {
 
 // Marked's list tokenizer already reads `- [ ]` and `- [x]` items, so it keeps
 // indented code as code and a line break inside its item. It leaves out an
-// item with nothing after the box, which pressing Enter in a checklist makes.
+// item with nothing after the box, which pressing Enter in a checklist makes,
+// unless a link definition turns that `[x]` into a link.
 // A bullet list splits into runs of checklist and plain items.
 const emptyChecklistMark = /^\[(?<mark>[ xX])\]$/u;
 const textTokenTypes = new Set(['paragraph', 'text']);
+
+const isPlainText = (token: MarkdownToken | undefined): boolean =>
+  token !== undefined &&
+  textTokenTypes.has(token.type ?? '') &&
+  (token.tokens ?? []).every((inline) => inline.type === 'text');
 
 const withoutCheckbox = (
   tokens: Array<MarkdownToken> = [],
@@ -81,7 +88,7 @@ const checklistItemOf = (item: MarkdownToken): ChecklistItem | undefined => {
     };
   }
   const [first, ...rest] = item.tokens ?? [];
-  const firstLine = textTokenTypes.has(first?.type ?? '') ? first?.text : '';
+  const firstLine = isPlainText(first) ? first?.text : '';
   const mark = emptyChecklistMark.exec(firstLine?.trim() ?? '')?.groups?.mark;
   return mark === undefined
     ? undefined
@@ -139,9 +146,20 @@ const parseBulletList = (
   );
 };
 
-// Inside a list item blocks sit on consecutive lines, where `---` under a
-// paragraph would make it a heading.
-const listItemTypes = new Set(['listItem', 'taskItem']);
+// Inside a bullet or checklist item blocks sit on consecutive lines, where
+// `---` under a paragraph would make it a heading. A numbered item keeps
+// `---`: the list serializer shifts the lines after a rule there on each save,
+// and after `***` that shift would turn them into code and then drop them.
+const bulletRule = 'bulletRule';
+
+const withBulletRules = (item: JSONContent): JSONContent => ({
+  ...item,
+  content: item.content?.map((child) =>
+    child.type === 'horizontalRule'
+      ? { ...child, attrs: { ...child.attrs, [bulletRule]: true } }
+      : child,
+  ),
+});
 
 // Tiptap reads a `null` field as switched off, though its types only offer a
 // replacement.
@@ -166,13 +184,31 @@ const remapStarterExtension = (extension: AnyExtension): AnyExtension => {
       return extension.extend({ parseMarkdown: parseBulletList });
     case 'hardBreak':
       return extension.extend(readHtmlLineBreaks);
+    case 'listItem':
+      return extension.extend({
+        renderMarkdown(
+          node: JSONContent,
+          helpers: MarkdownRendererHelpers,
+          context: RenderContext,
+        ) {
+          // biome-ignore lint/nursery/noThisOutsideOfClass: Tiptap binds the extension context as this when invoking renderMarkdown.
+          return this.parent?.(
+            context.parentType === 'bulletList' ? withBulletRules(node) : node,
+            helpers,
+            context,
+          );
+        },
+      });
     case 'horizontalRule':
       return extension.extend({
         renderMarkdown: (
-          _node: JSONContent,
+          node: JSONContent,
           _helpers: unknown,
           context: RenderContext,
-        ) => (listItemTypes.has(context.parentType ?? '') ? '***' : '---'),
+        ) =>
+          context.parentType === 'taskItem' || node.attrs?.[bulletRule] === true
+            ? '***'
+            : '---',
       });
     default:
       return extension;

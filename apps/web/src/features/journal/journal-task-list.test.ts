@@ -9,6 +9,14 @@ import {
 const roundTrip = (markdown: string): string =>
   serializeJournalMarkdown(parseJournalMarkdown(markdown));
 
+const endsWithAfter = /\safter$/u;
+
+const saveFiveTimes = (markdown: string): Array<string> =>
+  Array.from({ length: 5 }).reduce<Array<string>>(
+    (saves) => [...saves, roundTrip(saves.at(-1) ?? markdown)],
+    [],
+  );
+
 describe('journal checklists', () => {
   it('keeps each item ticked or open through an edit', () => {
     expect(roundTrip('Intro\n\n- [x] finished\n- [ ] waiting')).toBe(
@@ -64,9 +72,30 @@ describe('journal checklists', () => {
   });
 
   it('keeps a rule inside an item through repeated edits', () => {
-    const once = roundTrip('- [x] hello\n\n  ---');
+    for (const markdown of ['- [x] hello\n\n  ---', '- hello\n\n  ---']) {
+      const saves = saveFiveTimes(markdown);
 
-    expect(roundTrip(once)).toBe(once);
+      expect(saves).toEqual(saves.map(() => saves[0]));
+      expect(
+        JSON.stringify(parseJournalMarkdown(saves[0] ?? '')),
+      ).not.toContain('heading');
+    }
+  });
+
+  it('keeps a bullet that is only a reference link a link', () => {
+    expect(saveFiveTimes('- [x]\n\n[x]: https://example.com')).toEqual(
+      Array.from({ length: 5 }, () => '- [x](https://example.com)'),
+    );
+  });
+
+  it('keeps the text after a rule in a numbered item', () => {
+    const saves = saveFiveTimes('1. hello\n\n   ---\n\n   after');
+
+    expect(saves.map((save) => journalMarkdownText(save).trim())).toEqual(
+      Array.from({ length: 5 }, () => expect.stringMatching(endsWithAfter)),
+    );
+    const fifth = saves.at(-1) ?? '';
+    expect(roundTrip(fifth)).toBe(fifth);
   });
 
   it('reads each item as its own line', () => {
