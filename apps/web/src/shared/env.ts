@@ -6,7 +6,7 @@ import { isTimeZone } from './time-zone.ts';
 /**
  * Server-side configuration. Public development values live in config/dev.yaml,
  * secrets come from secrets/dev.yaml — `just dev-env-generate` composes both
- * into .env.local (see apps/web/README.md).
+ * into .env.local (see the repository README).
  */
 const minSecretLength = 32;
 

@@ -2,9 +2,8 @@ import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import { expect, test } from '@playwright/test';
 
 /**
- * Only the unauthenticated surface is scannable: sign-in runs exclusively
- * through GitHub OAuth, so there is (yet) no way to reach the signed-in pages
- * in the test. "/" is listed anyway because the redirect to /login should be
+ * The signed-out surface. `authenticated-routes.a11y.ts` signs in to scan the
+ * journal itself. "/" is listed because the redirect to /login should be
  * covered too.
  *
  * Every route carries the status, the landing path, and the heading that

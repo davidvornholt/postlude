@@ -127,7 +127,7 @@ const loadSsrBundle = async (entryUrl: URL): Promise<SsrBundle> => {
     return bundle;
   } catch (error) {
     return abortBoot(
-      `loading the SSR bundle ${entryUrl.pathname} failed: ${describeError(error)}. Either it has not been built (\`bun run build\`) or an environment value it validates as it loads is missing or malformed (see apps/web/README.md).`,
+      `loading the SSR bundle ${entryUrl.pathname} failed: ${describeError(error)}. Either it has not been built (\`bun run build\`) or an environment value it validates as it loads is missing or malformed (see apps/web/src/shared/env.ts).`,
     );
   }
 };
@@ -221,7 +221,7 @@ if (import.meta.main) {
   const failure = await bootSelfCheckFailure(handler, port, selfCheckTimeout);
   if (failure !== null) {
     await abortBoot(
-      `the boot self-check request to ${failure}. Check the environment values documented in apps/web/README.md.`,
+      `the boot self-check request to ${failure}. Check the environment values documented in apps/web/src/shared/env.ts.`,
     );
   }
 

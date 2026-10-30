@@ -81,6 +81,22 @@ it('reaches a longer word from the start of it', async () => {
   expect(dates).toEqual(['2026-03-01']);
 });
 
+/*
+ * Postgres refuses a lexeme over 2046 bytes, and the refusal failed the whole
+ * save. The run is indexed as its longest prefix the index accepts instead.
+ */
+it('saves and finds a run of letters longer than the index accepts', async () => {
+  const run = 'a'.repeat(2100);
+  const dates = await withJournal(({ entries, search }) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft('2026-03-01', `Before ${run} after.`));
+      const matches = yield* search.search(asked(run), plenty);
+      return matches.map((match) => match.date);
+    }),
+  );
+  expect(dates).toEqual(['2026-03-01']);
+});
+
 it('does not reach a word from the middle of it', async () => {
   const dates = await withJournal(({ entries, search }) =>
     Effect.gen(function* () {

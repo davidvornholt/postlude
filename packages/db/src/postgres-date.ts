@@ -10,9 +10,9 @@ const postgresDateOid = 1082;
  * This guard only covers raw `pool.query` reads. Drizzle never relies on it,
  * because its node-postgres session attaches a per-query `types.getTypeParser`
  * that already returns DATE, TIMESTAMP, and TIMESTAMPTZ as text, and a
- * per-query parser wins over the global one. The app reads exclusively through
- * Drizzle today, so nothing currently depends on this; it stays so the first
- * raw query added later is correct by default rather than subtly off by a day.
+ * per-query parser wins over the global one. The web app's migration backfills
+ * and journal import read `entry_date` through raw queries and decode it as
+ * text, so they depend on this parser.
  */
 export const preservePostgresDates = (): void => {
   pg.types.setTypeParser(postgresDateOid, (value) => value);

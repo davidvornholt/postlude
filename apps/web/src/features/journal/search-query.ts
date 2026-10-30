@@ -37,9 +37,39 @@ export const foldSearchText = (text: string): string =>
     .replace(finalGreekSigma, '\u03c3')
     .normalize('NFC');
 
+/**
+ * The longest lexeme PostgreSQL accepts in a `tsvector` or `tsquery`. A longer
+ * one fails the generated `search_vector`, and with it the whole save.
+ */
+const maximumTokenBytes = 2046;
+/** No UTF-16 code unit takes more than three bytes in UTF-8. */
+const maximumBytesPerCodeUnit = 3;
+const utf8 = new TextEncoder();
+
+/**
+ * A token cut to the longest whole-character prefix PostgreSQL can index.
+ * Every term is matched as a prefix, so the start of an overlong run of letters
+ * stays findable, and the stored and queried forms are cut the same way.
+ */
+export const boundedSearchToken = (token: string): string => {
+  if (token.length * maximumBytesPerCodeUnit <= maximumTokenBytes) {
+    return token;
+  }
+  let bytes = 0;
+  let end = 0;
+  for (const character of token) {
+    bytes += utf8.encode(character).length;
+    if (bytes > maximumTokenBytes) {
+      break;
+    }
+    end += character.length;
+  }
+  return token.slice(0, end);
+};
+
 /** The canonical token stream persisted for indexing and used for queries. */
 export const searchTokens = (text: string): ReadonlyArray<string> =>
-  foldSearchText(text).match(searchTokenRuns) ?? [];
+  (foldSearchText(text).match(searchTokenRuns) ?? []).map(boundedSearchToken);
 
 export const searchTokenText = (text: string): string =>
   searchTokens(text).join(' ');
