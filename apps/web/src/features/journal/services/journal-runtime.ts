@@ -19,17 +19,32 @@ import { Cause, Effect, Layer, ManagedRuntime, Stream } from 'effect';
 import type { SqlError } from 'effect/sql/SqlError';
 
 import { sqlClientLayer } from '#/shared/db/database.ts';
+import { AgentAreaRepository } from './agent-area-repository.ts';
+import { AgentNoteGenerator } from './agent-note-generator.ts';
+import { AgentNotes } from './agent-notes.ts';
+import { DayRatingRepository } from './day-rating-repository.ts';
 import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { EntrySearch } from './entry-search.ts';
 import { JournalImages } from './journal-images.ts';
 
+const repositoriesLayer = Layer.mergeAll(
+  EntryRepository.layer,
+  EntrySearch.layer,
+  EntryExport.layer,
+  JournalImages.layer,
+  DayRatingRepository.layer,
+  AgentAreaRepository.layer,
+);
+
+/**
+ * `AgentNoteGenerator.notConfigured` is the seam the agent note generator
+ * replaces; `agent-note-generator.ts` says what a replacement provides.
+ */
 const journalLayer = Layer.provide(
-  Layer.mergeAll(
-    EntryRepository.layer,
-    EntrySearch.layer,
-    EntryExport.layer,
-    JournalImages.layer,
+  Layer.provideMerge(
+    AgentNotes.layer,
+    Layer.merge(repositoriesLayer, AgentNoteGenerator.notConfigured),
   ),
   sqlClientLayer,
 );
@@ -39,16 +54,17 @@ const journalLayer = Layer.provide(
  * connects only when a query needs a connection, so a database that is down
  * fails the request that needed it, not the module that mentioned it.
  */
-type JournalRuntime = ManagedRuntime.ManagedRuntime<
-  EntryRepository | EntrySearch | EntryExport | JournalImages,
-  SqlError
->;
-
 type JournalServices =
   | EntryRepository
   | EntrySearch
   | EntryExport
-  | JournalImages;
+  | JournalImages
+  | DayRatingRepository
+  | AgentAreaRepository
+  | AgentNoteGenerator
+  | AgentNotes;
+
+type JournalRuntime = ManagedRuntime.ManagedRuntime<JournalServices, SqlError>;
 
 let runtime: JournalRuntime | undefined;
 

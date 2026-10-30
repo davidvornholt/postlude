@@ -13,6 +13,7 @@
     "db:migrate": "bun --env-file=.env.local run scripts/migrate.ts",
     "db:migrate:deploy": "bun run scripts/migrate.ts",
     "import:journals": "bun run scripts/import-journals.ts",
+    "cli": "bun scripts/cli.ts",
     "check-types": "tsc --noEmit",
     "test": "bun test",
     "test:a11y": "playwright test --config playwright.config.ts",

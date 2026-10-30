@@ -57,12 +57,16 @@ export const createPool = (connectionString: string): pg.Pool => {
  * The Effect SQL client and its pool. Building the layer opens no connection,
  * and closing the scope it was built in closes the pool, so build it once per
  * process and share the result: every build opens another pool.
+ *
+ * A short-lived process that runs one command at a time, such as the `postlude`
+ * CLI, passes a smaller `maxConnections`.
  */
 export const pgClientLayer = (
   connectionString: string,
+  options: { readonly maxConnections?: number } = {},
 ): Layer.Layer<PgClient.PgClient | SqlClient, SqlError> =>
   PgClient.layer({
     url: Redacted.make(connectionString),
-    maxConnections: sqlClientPoolSize,
+    maxConnections: options.maxConnections ?? sqlClientPoolSize,
     idleTimeout,
   });
