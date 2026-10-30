@@ -5,6 +5,7 @@ import {
   date,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -170,6 +171,129 @@ export const entrySearchEvidence = pgTable(
     check(
       'entry_search_evidence_range',
       sql`${table.matchStart} >= 0 and ${table.matchLength} >= 1 and ${table.anchorLength} >= 1 and ${table.anchorLength} <= ${table.matchLength} and ${table.matchStart} + ${table.matchLength} <= char_length(${table.excerpt})`,
+    ),
+  ],
+);
+
+/**
+ * David's ratings for a journal day, and whether he closed it. The ratings sit
+ * beside `entry` rather than on it: a rating is not a journal save, so it
+ * leaves the entry's revision, its search projection, and its first save alone,
+ * and a day can be rated before or without any prose.
+ *
+ * Every rating may be empty, and the database refuses any value outside its
+ * scale. `rating_version` names the scales a row was rated on, so a later
+ * change of scale can tell old rows apart. A day closes only once its energy
+ * and progress are rated, which the database checks too.
+ */
+export const dayRating = pgTable(
+  'day_rating',
+  {
+    entryDate: date('entry_date').primaryKey(),
+    energy: text('energy'),
+    progress: text('progress'),
+    repeatDay: text('repeat_day'),
+    ratingVersion: integer('rating_version').notNull(),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    check(
+      'day_rating_energy_scale',
+      sql`${table.energy} in ('drained', 'okay', 'fresh')`,
+    ),
+    check(
+      'day_rating_progress_scale',
+      sql`${table.progress} in ('little', 'solid', 'a_lot')`,
+    ),
+    check(
+      'day_rating_repeat_day_scale',
+      sql`${table.repeatDay} in ('yes', 'partly', 'no')`,
+    ),
+    check('day_rating_version_positive', sql`${table.ratingVersion} >= 1`),
+    check(
+      'day_rating_closed_when_rated',
+      sql`${table.closedAt} is null or (${table.energy} is not null and ${table.progress} is not null)`,
+    ),
+  ],
+);
+
+/**
+ * What agents add to a journal day, keyed by the day alone because /wrap may
+ * write a day before David has written anything in it.
+ *
+ * Two writers own separate columns. /wrap writes the day's metrics and its
+ * report through the CLI, as the `postlude_agent` role, whose grants reach only
+ * those columns; re-running /wrap replaces them together. The Postlude server
+ * alone writes the agent note. `agent_note_revision` is the entry revision the
+ * note was written from, so a newer entry revision makes the note stale.
+ *
+ * The checks keep each group whole: metrics never arrive without their version
+ * or their report, and a note's status always comes with what that status
+ * needs to be shown. A note that is being rewritten, or whose rewrite failed,
+ * keeps the previous note and the revision that note was written from.
+ */
+export const agentArea = pgTable(
+  'agent_area',
+  {
+    entryDate: date('entry_date').primaryKey(),
+    dayMetrics: jsonb('day_metrics'),
+    metricsVersion: integer('metrics_version'),
+    reportHtml: text('report_html'),
+    reportModel: text('report_model'),
+    reportGeneratedAt: timestamp('report_generated_at', {
+      withTimezone: true,
+    }),
+    agentNote: text('agent_note'),
+    agentNoteModel: text('agent_note_model'),
+    agentNoteRevision: integer('agent_note_revision'),
+    agentNoteStatus: text('agent_note_status'),
+    agentNoteError: text('agent_note_error'),
+    agentNoteRequestedAt: timestamp('agent_note_requested_at', {
+      withTimezone: true,
+    }),
+    agentNoteGeneratedAt: timestamp('agent_note_generated_at', {
+      withTimezone: true,
+    }),
+  },
+  (table) => [
+    check(
+      'agent_area_wrap_complete',
+      sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, ${table.reportHtml}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 5)`,
+    ),
+    check(
+      'agent_area_day_metrics_object',
+      sql`${table.dayMetrics} is null or jsonb_typeof(${table.dayMetrics}) = 'object'`,
+    ),
+    check(
+      'agent_area_metrics_version_positive',
+      sql`${table.metricsVersion} is null or ${table.metricsVersion} >= 1`,
+    ),
+    check(
+      'agent_area_note_status',
+      sql`${table.agentNoteStatus} in ('pending', 'ready', 'failed')`,
+    ),
+    check(
+      'agent_area_note_revision_non_negative',
+      sql`${table.agentNoteRevision} is null or ${table.agentNoteRevision} >= 0`,
+    ),
+    check(
+      'agent_area_note_without_status',
+      sql`${table.agentNoteStatus} is not null or num_nonnulls(${table.agentNote}, ${table.agentNoteModel}, ${table.agentNoteRevision}, ${table.agentNoteError}, ${table.agentNoteRequestedAt}, ${table.agentNoteGeneratedAt}) = 0`,
+    ),
+    check(
+      'agent_area_note_pending',
+      sql`${table.agentNoteStatus} is distinct from 'pending' or ${table.agentNoteRequestedAt} is not null`,
+    ),
+    check(
+      'agent_area_note_ready',
+      sql`${table.agentNoteStatus} is distinct from 'ready' or num_nonnulls(${table.agentNote}, ${table.agentNoteModel}, ${table.agentNoteRevision}, ${table.agentNoteGeneratedAt}) = 4`,
+    ),
+    check(
+      'agent_area_note_failed',
+      sql`${table.agentNoteStatus} is distinct from 'failed' or ${table.agentNoteError} is not null`,
     ),
   ],
 );

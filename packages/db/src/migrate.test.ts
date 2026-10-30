@@ -14,7 +14,7 @@ import {
 } from './migrate.ts';
 
 const latestLegacyMigration = 2;
-const expectedMigrationCount = 9;
+const expectedMigrationCount = 11;
 const testTimeoutMilliseconds = 30_000;
 const generatedEnvFile = new URL('../.env.local', import.meta.url).pathname;
 
