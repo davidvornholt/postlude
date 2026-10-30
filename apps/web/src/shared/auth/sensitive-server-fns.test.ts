@@ -61,6 +61,11 @@ const publicServerFunctions = [
 const privateServerFunctions = [
   ['archive-fns.ts', 'readArchiveFn'],
   ['calendar-fns.ts', 'readCalendarFn'],
+  ['evening-fns.ts', 'closeDayFn'],
+  ['evening-fns.ts', 'readEveningFn'],
+  ['evening-fns.ts', 'regenerateAgentNoteFn'],
+  ['evening-fns.ts', 'reopenDayFn'],
+  ['evening-fns.ts', 'saveDayRatingFn'],
   ['journal-fns.ts', 'readDatedJournalDayFn'],
   ['journal-fns.ts', 'readTodayJournalDayFn'],
   ['journal-fns.ts', 'saveEntryFn'],

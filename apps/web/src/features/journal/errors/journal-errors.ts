@@ -62,3 +62,12 @@ export const invalidScriptureReferenceError = (): JournalValidationError =>
   new JournalValidationError({
     message: invalidScriptureReferenceMessage,
   });
+
+/**
+ * Why an agent note wasn't written. The message is stored and shown on the
+ * day's page, so it must not carry credentials, prompts, or journal text.
+ */
+export class AgentNoteGenerationError extends Schema.TaggedError<AgentNoteGenerationError>()(
+  'AgentNoteGenerationError',
+  { message: Schema.String, cause: Schema.optionalKey(Schema.Defect()) },
+) {}

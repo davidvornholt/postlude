@@ -27,6 +27,8 @@ import {
   rolledBack,
 } from '#/shared/testing/test-database.ts';
 import type { EntryDraft } from '../schemas/entry.ts';
+import { AgentAreaRepository } from '../services/agent-area-repository.ts';
+import { DayRatingRepository } from '../services/day-rating-repository.ts';
 import { EntryExport } from '../services/entry-export.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
 import { EntrySearch } from '../services/entry-search.ts';
@@ -36,6 +38,8 @@ type JournalServices =
   | EntryRepository
   | EntrySearch
   | EntryExport
+  | DayRatingRepository
+  | AgentAreaRepository
   | SqlClient.SqlClient;
 
 /** A day to store, with the parts a test does not care about left empty. */
@@ -66,6 +70,8 @@ export const journalDatabase = () => {
             EntryRepository.layer,
             EntrySearch.layer,
             EntryExport.layer,
+            DayRatingRepository.layer,
+            AgentAreaRepository.layer,
           ),
           clientLayer,
         ),
@@ -106,7 +112,7 @@ export const journalDatabase = () => {
   const withService =
     <S>(tag: Effect.Effect<S, never, JournalServices>) =>
     <A, E>(
-      body: (service: S) => Effect.Effect<A, E, SqlClient.SqlClient>,
+      body: (service: S) => Effect.Effect<A, E, JournalServices>,
     ): Promise<A> =>
       runtime.runPromise(
         rolledBack(
@@ -129,6 +135,15 @@ export const journalDatabase = () => {
         entries: EntryRepository,
         search: EntrySearch,
         exports: EntryExport,
+      }),
+    ),
+    // The evening's tables, with the entries their notes and staleness read.
+    withEvening: withService(
+      Effect.all({
+        sql: SqlClient.SqlClient,
+        entries: EntryRepository,
+        ratings: DayRatingRepository,
+        areas: AgentAreaRepository,
       }),
     ),
   } as const;
