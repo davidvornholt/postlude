@@ -159,3 +159,54 @@ test('the step at the end of a day opens the next one at its top', async ({
   await expectDay(page, '/day/2026-08-24', 'Monday, August 24, 2026');
   await expectMainFocusInViewport(page);
 });
+
+const tidiedAddress = /\?from=address$/u;
+
+type FixtureRouter = {
+  readonly navigate: (options: {
+    readonly params: { readonly date: string };
+    readonly replace: boolean;
+    readonly search: Record<string, string>;
+    readonly to: string;
+  }) => Promise<void>;
+};
+
+/** A navigation the page makes on its own, with no control behind it. */
+const tidyQuery = async (
+  page: Parameters<typeof mountDayNavigation>[0],
+): Promise<void> => {
+  await page.evaluate(async () => {
+    const { dayNavigationRouter } = globalThis as unknown as {
+      readonly dayNavigationRouter: FixtureRouter;
+    };
+    await dayNavigationRouter.navigate({
+      params: { date: '2026-08-25' },
+      replace: true,
+      search: { from: 'address' },
+      to: '/day/$date',
+    });
+  });
+  await expect(page).toHaveURL(tidiedAddress);
+};
+
+test('a query a page tidies as it opens leaves focus where the load left it', async ({
+  page,
+}) => {
+  await mountDayNavigation(page);
+  await tidyQuery(page);
+  await expect(page.locator('main')).not.toBeFocused();
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(true);
+});
+
+test('a query change after focus was lost brings focus to the page', async ({
+  page,
+}) => {
+  await mountDayNavigation(page);
+  const copy = page.getByRole('button', { name: 'Copy day as Markdown' });
+  await copy.focus();
+  await copy.evaluate((element) => (element as HTMLElement).blur());
+  await tidyQuery(page);
+  await expect(page.locator('main')).toBeFocused();
+});

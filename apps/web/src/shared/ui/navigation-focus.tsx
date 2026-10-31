@@ -3,8 +3,14 @@ import { useEffect, useRef } from 'react';
 
 type Place = { readonly pathname: string; readonly search: string };
 
-const focusIsLost = (): boolean =>
-  document.activeElement === null || document.activeElement === document.body;
+/**
+ * Focus was somewhere in the page and is not any longer. Before anything has
+ * been focused, the document holds focus because nothing took it yet, which
+ * is where a page that has just loaded keeps it.
+ */
+const focusIsLost = (focusWasTaken: boolean): boolean =>
+  focusWasTaken &&
+  (document.activeElement === null || document.activeElement === document.body);
 
 /** A link that asked to be followed, and where it leads. */
 type Armed = { readonly focusKey: string; readonly destination: string };
@@ -52,10 +58,11 @@ const land = (
   previous: Place,
   current: Place,
   focusKey: string | undefined,
+  focusWasTaken: boolean,
 ): void => {
   const pageChanged = previous.pathname !== current.pathname;
   const queryChanged = previous.search !== current.search;
-  if (!(pageChanged || (queryChanged && focusIsLost()))) {
+  if (!(pageChanged || (queryChanged && focusIsLost(focusWasTaken)))) {
     return;
   }
   const main = document.querySelector('main');
@@ -80,7 +87,9 @@ const land = (
  * on the control that made it. That control can go away with the old state,
  * like a "Today" link on the page it leads to, and the browser then drops focus
  * to the document. Focus goes to the main landmark instead, so a keyboard
- * stays in the page rather than starting again from the top.
+ * stays in the page rather than starting again from the top. A page that has
+ * only just loaded has not lost focus, though, so a query it tidies away as it
+ * opens, like a search address's words, leaves the page as it was.
  *
  * A link can ask to be followed instead, by carrying a `data-focus-key`. A
  * navigation made by pressing it lands on the link with the same key on the
@@ -98,7 +107,12 @@ export const NavigationFocus = () => {
   });
   const previousRef = useRef<Place | undefined>(undefined);
   const focusKeyRef = useRef<string | undefined>(undefined);
+  const focusWasTakenRef = useRef(false);
   useEffect(() => {
+    const noteFocus = () => {
+      focusWasTakenRef.current = true;
+    };
+    document.addEventListener('focusin', noteFocus);
     // The press is seen before the link's own handler starts the navigation,
     // which then takes the key only if it is going where the link pointed.
     let armed: Armed | undefined;
@@ -117,6 +131,7 @@ export const NavigationFocus = () => {
       },
     );
     return () => {
+      document.removeEventListener('focusin', noteFocus);
       document.removeEventListener('click', arm, { capture: true });
       stopListening();
     };
@@ -133,7 +148,7 @@ export const NavigationFocus = () => {
     if (previous === undefined) {
       return;
     }
-    land(previous, current, focusKey);
+    land(previous, current, focusKey, focusWasTakenRef.current);
   }, [location]);
   return null;
 };
