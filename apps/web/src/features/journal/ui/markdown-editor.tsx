@@ -62,12 +62,10 @@ type MarkdownEditorProps = {
  * anything written. Both wear it so the page does not resize when ProseMirror
  * arrives and the read-only surface becomes an editor.
  *
- * The type matches what the reading views set entries in, so a day reads the
- * same where it is written as where it is remembered. Spaces wrap as they do in
- * any paragraph: ProseMirror's own `break-spaces` lets the space before a word
- * that no longer fits begin the next line, which leaves a ragged left edge
- * every few lines of a long entry. Its stylesheet is injected outside the
- * cascade layers, so only an important utility can override it.
+ * Spaces wrap as they do in any paragraph: ProseMirror's own `break-spaces` lets
+ * the space before a word that no longer fits begin the next line, which leaves
+ * a ragged left edge every few lines of a long entry. Its stylesheet is injected
+ * outside the cascade layers, so only an important utility can override it.
  */
 const writingAreaClass =
   'cursor-text scroll-mt-24 whitespace-pre-wrap! border-(--journal-rule) border-b pb-6 text-lg leading-7 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';

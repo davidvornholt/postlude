@@ -13,8 +13,6 @@ const cssViewportByProject: Record<string, number> = {
   'desktop-chromium': desktopViewportWidth,
   'mobile-chromium': mobileViewportWidth,
 };
-// Entry headings are sized in em from the 18px the writing is set in, the same
-// as wherever an entry is read.
 const headingLevelThreeSize = 28.8;
 const headingLevelFourSize = 24.3;
 const headingLevelFiveSize = 20.7;
