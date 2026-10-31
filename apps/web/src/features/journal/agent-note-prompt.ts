@@ -207,11 +207,12 @@ const blocksTextOf = (
  * Code and HTML can hold images, links and definitions as text, so their
  * content is read as Markdown too, but only once: that reading can find code
  * or HTML again, even the same unclosed HTML block, so what it finds there is
- * left out.
+ * left out. That reading has GFM off, so it finds no tables: a table row
+ * splits at `|` before links are read, which can leave part of a link target.
  */
 const leaveOut: ContentReader = () => '';
 const readOnce: ContentReader = (markdown) =>
-  blocksTextOf(Lexer.lex(markdown), paragraphBreak, leaveOut);
+  blocksTextOf(Lexer.lex(markdown, { gfm: false }), paragraphBreak, leaveOut);
 
 /**
  * The journal text as the model reads it. Image addresses point at Postlude's

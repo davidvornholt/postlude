@@ -226,6 +226,17 @@ const addressCases = [
     ].join('\n'),
     journalText: 'Unser Garten:\n\n![p][photo]\n[photo]: [image]\n\nIm Herbst.',
   },
+  {
+    name: 'a link with a pipe in its target, in a table in an imported HTML block',
+    markdown: [
+      '<div>',
+      'Konto | Stand',
+      '--- | ---',
+      '[Öffnen](https://secret.test/konto?scope=read|token=SECRET-TOKEN) | erledigt',
+      '</div>',
+    ].join('\n'),
+    journalText: 'Konto | Stand\n--- | ---\nÖffnen | erledigt',
+  },
 ];
 
 describe('the journal text as the model reads it', () => {
