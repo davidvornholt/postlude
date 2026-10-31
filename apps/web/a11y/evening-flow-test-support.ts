@@ -16,7 +16,10 @@ import type {
   FixtureEvening,
 } from './day-page-fixture-contract.ts';
 import { fixtureConfig, mountFixture, today } from './day-page-mount.ts';
-import { syntheticReportHtml } from './synthetic-report.ts';
+import {
+  earlyScriptReportHtml,
+  syntheticReportHtml,
+} from './synthetic-report.ts';
 
 const closedAt = '2026-08-26T21:00:00.000Z';
 const entryRevision = 1;
@@ -102,6 +105,12 @@ const configs = {
     wrap: withReport,
     agentNote: noNote,
     settledNote: readyNote,
+  }),
+  /** The same, with a report that tries to run a script before its policy. */
+  earlyScriptReport: withEvening({
+    rating: openRating,
+    wrap: { ...withReport, reportHtml: earlyScriptReportHtml },
+    agentNote: noNote,
   }),
   /** Closed while no note generator is set up. */
   notConfigured: withEvening({

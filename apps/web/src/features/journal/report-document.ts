@@ -3,9 +3,9 @@
  *
  * /wrap writes the report as a whole page and Postlude shows it in a sandboxed
  * frame without `allow-same-origin`, so the report runs in an opaque origin of
- * its own. The policy below is added to every report whether or not it carries
- * one already: a page that sets its own policy is still held to this one,
- * because a browser enforces every policy a document has.
+ * its own. The policy below goes in front of every report, whether or not it
+ * carries one already: a page that sets its own policy is still held to this
+ * one, because a browser enforces every policy a document has.
  *
  * The page never carries numbers. They reach it after it has loaded, in one
  * message, and it fills them in itself.
@@ -16,29 +16,17 @@ import type { DayMetrics } from './schemas/day-metrics.ts';
 export const reportContentSecurityPolicy =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:";
 
-const policyElement = `<meta http-equiv="Content-Security-Policy" content="${reportContentSecurityPolicy}">`;
-
 /**
- * A doctype, with any comments before it. Anything else ahead of the doctype
- * would put the page into quirks mode, so the policy goes right after it.
+ * The report as the frame's `srcdoc`, behind a doctype and the policy. None of
+ * the report's own markup goes before them, so no part of it is parsed before
+ * the policy is in force. The doctype puts the page in standards mode, and the
+ * parser ignores any doctype the report has of its own. The meta element opens
+ * `<html>` and `<head>` implicitly, and the report's own `<html>` and `<head>`
+ * tags then join them rather than starting new ones, so the policy lands in
+ * the head where a browser reads it.
  */
-const leadingDoctype = /^﻿?\s*(?:<!--[\s\S]*?-->\s*)*<!doctype[^>]*>/iu;
-
-/**
- * The report as the frame's `srcdoc`: the policy first, ahead of anything the
- * report's own markup could load. A meta element before `<html>` and `<head>`
- * opens both implicitly, and the report's own `<html>` and `<head>` tags then
- * join them rather than starting new ones, so the policy lands in the head
- * where a browser reads it.
- */
-export const reportDocumentOf = (reportHtml: string): string => {
-  const doctype = leadingDoctype.exec(reportHtml);
-  if (doctype === null) {
-    return `${policyElement}${reportHtml}`;
-  }
-  const end = doctype[0].length;
-  return `${reportHtml.slice(0, end)}${policyElement}${reportHtml.slice(end)}`;
-};
+export const reportDocumentOf = (reportHtml: string): string =>
+  `<!doctype html><meta http-equiv="Content-Security-Policy" content="${reportContentSecurityPolicy}">${reportHtml}`;
 
 export type ReportTheme = 'light' | 'dark';
 

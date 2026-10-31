@@ -11,6 +11,7 @@ import {
   reportMetrics,
   scanPage,
 } from './evening-flow-test-support.ts';
+import { leakHost } from './synthetic-report.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
 const frameSelector = 'iframe[title="Day report"]';
@@ -30,6 +31,21 @@ const openReport = async (page: playwright.Page): Promise<void> => {
 
 const frameHeight = (page: playwright.Page): Promise<string> =>
   page.locator(frameSelector).evaluate((frame) => frame.style.height);
+
+/** Every request to the made-up outside host, each one refused. */
+const leakedRequests = async (
+  page: playwright.Page,
+): Promise<ReadonlyArray<string>> => {
+  const leaked: Array<string> = [];
+  await page.route(
+    (url) => url.hostname === leakHost,
+    (route) => {
+      leaked.push(route.request().url());
+      return route.abort();
+    },
+  );
+  return leaked;
+};
 
 for (const colorScheme of colorSchemes) {
   const otherScheme = colorScheme === 'light' ? 'dark' : 'light';
@@ -112,6 +128,21 @@ test('the open report leads straight back to the writing', async ({ page }) => {
   await expect(
     page.getByRole('textbox', { name: 'Evening journal' }),
   ).toBeFocused();
+});
+
+test('a report runs nothing before its policy, even behind a comment that ends early', async ({
+  page,
+}) => {
+  const leaked = await leakedRequests(page);
+  await mountEvening(page, 'earlyScriptReport');
+  await openReport(page);
+
+  const report = page.frameLocator(frameSelector);
+  await expect(report.locator('html')).toHaveAttribute('data-messages', '1');
+  await expect(
+    report.locator('head > meta[http-equiv="Content-Security-Policy"]'),
+  ).toHaveAttribute('content', reportContentSecurityPolicy);
+  expect(leaked).toEqual([]);
 });
 
 test('a report that navigates its frame away is taken down', async ({
