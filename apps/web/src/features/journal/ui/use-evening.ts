@@ -107,9 +107,13 @@ const usePendingNote = (
   readEvening: EveningActions['readEvening'],
   update: (note: AgentNoteView) => void,
 ) => {
-  const { status } = note;
+  // Asking for a new note keeps the status pending, so each poll is tied to one
+  // request by its time. A new request ends the old poll, and an answer still
+  // on its way to that poll is dropped.
+  const request =
+    note.status === 'pending' ? (note.requestedAt?.getTime() ?? 0) : undefined;
   useEffect(() => {
-    if (status !== 'pending') {
+    if (request === undefined) {
       return;
     }
     let stopped = false;
@@ -146,7 +150,7 @@ const usePendingNote = (
       stopped = true;
       clearTimeout(timer);
     };
-  }, [status, date, readEvening, update]);
+  }, [request, date, readEvening, update]);
 };
 
 export const useEvening = (

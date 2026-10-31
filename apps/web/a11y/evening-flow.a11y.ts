@@ -149,3 +149,30 @@ test('a rating chosen after coming back to the day outlasts the ones before it',
   await revisitDay(page);
   await expect(page.getByRole('radio', { name: 'Drained' })).toBeChecked();
 });
+
+test('a late answer about an earlier note does not replace the one asked for since', async ({
+  page,
+}) => {
+  await mountEvening(page, 'report');
+  await choose(page, 'Energy', 'Okay');
+  await choose(page, 'Progress', 'Solid');
+  await holdEveningCalls(page, 'read');
+  await page.getByRole('button', { name: 'Close the day' }).click();
+
+  // The page looks at the note once it is written, but the answer is slow,
+  // and meanwhile the day is reopened and closed, which asks for a new note.
+  await expect
+    .poll(() => eveningCalls(page), { timeout: 8000 })
+    .toBe('rate:energy=okay rate:progress=solid close read');
+  await page.getByRole('button', { name: 'Reopen the day' }).click();
+  await page.getByRole('button', { name: 'Close the day' }).click();
+  await expect(page.getByText('This day is closed.')).toBeVisible();
+  await releaseEveningCalls(page, 'read');
+
+  await expect
+    .poll(() => eveningCalls(page), { timeout: 8000 })
+    .toBe('rate:energy=okay rate:progress=solid close read reopen close read');
+  await expect(
+    page.getByText(`Written by an agent, ${noteModel}`, { exact: true }),
+  ).toBeVisible();
+});

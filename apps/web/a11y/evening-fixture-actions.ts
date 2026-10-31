@@ -32,6 +32,7 @@ import {
 /** What `fetch` throws when the connection drops. */
 const connectionFailure = 'Failed to fetch';
 const closedAt = new Date('2026-08-26T21:00:00.000Z');
+const minuteMs = 60_000;
 
 const changeText = (change: DayRatingChange): string =>
   Object.entries(change)
@@ -85,12 +86,17 @@ export const eveningFixtureActions = (
           waiting.push(() => resolve(value));
         });
   };
-  const pending = (): AgentNoteView => ({
-    ...agentNote,
-    status: 'pending',
-    error: null,
-    requestedAt: closedAt,
-  });
+  let requests = 0;
+  /** A new note request, a minute after the one before, as the server never repeats a request's time. */
+  const pending = (): AgentNoteView => {
+    requests += 1;
+    return {
+      ...agentNote,
+      status: 'pending',
+      error: null,
+      requestedAt: new Date(closedAt.getTime() + requests * minuteMs),
+    };
+  };
   const view = (): EveningView => ({ ...initial, rating, agentNote });
 
   return {
