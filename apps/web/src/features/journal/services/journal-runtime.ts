@@ -7,12 +7,6 @@
  * and components stay on plain promises. The two are joined in exactly one
  * place so a service never has to be unwrapped twice, and so the layers are
  * built once per process rather than per call.
- *
- * The runtime is created lazily. Building it builds the process's Effect SQL
- * client from `#/shared/db/database.ts`, which reads the validated environment,
- * and neither should happen because a module was imported. The client bundle
- * imports route modules that import services, and a pool opened there would be
- * a pool opened in a browser.
  */
 
 import { Cause, Effect, Layer, ManagedRuntime, Stream } from 'effect';
@@ -20,8 +14,9 @@ import type { SqlError } from 'effect/sql/SqlError';
 
 import { sqlClientLayer } from '#/shared/db/database.ts';
 import { AgentAreaRepository } from './agent-area-repository.ts';
-import { AgentNoteGenerator } from './agent-note-generator.ts';
+import type { AgentNoteGenerator } from './agent-note-generator.ts';
 import { AgentNotes } from './agent-notes.ts';
+import { agentNoteGeneratorLayer } from './bedrock-agent-note-generator.ts';
 import { DayRatingRepository } from './day-rating-repository.ts';
 import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
@@ -37,14 +32,10 @@ const repositoriesLayer = Layer.mergeAll(
   AgentAreaRepository.layer,
 );
 
-/**
- * `AgentNoteGenerator.notConfigured` is the seam the agent note generator
- * replaces; `agent-note-generator.ts` says what a replacement provides.
- */
 const journalLayer = Layer.provide(
   Layer.provideMerge(
     AgentNotes.layer,
-    Layer.merge(repositoriesLayer, AgentNoteGenerator.notConfigured),
+    Layer.merge(repositoriesLayer, agentNoteGeneratorLayer),
   ),
   sqlClientLayer,
 );
