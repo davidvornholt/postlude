@@ -10,6 +10,7 @@ import { type JournalDate, shiftJournalDate } from '../journal-day.ts';
 import type { OnThisDayView } from '../services/on-this-day-fns.ts';
 import { DateHeading } from './date-heading.tsx';
 import { OnThisDay } from './on-this-day.tsx';
+import { useStepKeys } from './use-step-keys.ts';
 
 // Today's retrospective keeps the plain address the main navigation opens.
 const searchFor = (date: JournalDate, today: JournalDate) =>
@@ -24,6 +25,21 @@ export const OnThisDayPage = ({
   const previous = date > bounds.first ? shiftJournalDate(date, -1) : undefined;
   const next = date < bounds.last ? shiftJournalDate(date, 1) : undefined;
   const navigate = useNavigate();
+  const goTo = (chosen: JournalDate) =>
+    navigate({ search: searchFor(chosen, today), to: '/on-this-day' });
+  // A key has no link to fall back on, so a move the router can't make loads
+  // the date as a page instead.
+  const stepTo = (step: JournalDate | undefined) =>
+    step === undefined
+      ? undefined
+      : () => {
+          goTo(step).catch(() =>
+            globalThis.location.assign(
+              step === today ? '/on-this-day' : `/on-this-day?date=${step}`,
+            ),
+          );
+        };
+  useStepKeys({ previous: stepTo(previous), next: stepTo(next) });
 
   return (
     <PageFrame>
@@ -35,9 +51,7 @@ export const OnThisDayPage = ({
           max={bounds.last}
           min={bounds.first}
           noun="date"
-          onChoose={(chosen) =>
-            navigate({ search: searchFor(chosen, today), to: '/on-this-day' })
-          }
+          onChoose={goTo}
         />
         {/* The links step the date rather than name a page, so none of them is
             marked as the current one, even when its address is this page's. */}
@@ -47,7 +61,9 @@ export const OnThisDayPage = ({
         >
           {previous === undefined ? null : (
             <UnmarkedActionLink
+              aria-keyshortcuts="ArrowLeft"
               aria-label="Previous date"
+              title="Previous date (←)"
               variant="icon"
               search={searchFor(previous, today)}
               to="/on-this-day"
@@ -57,7 +73,9 @@ export const OnThisDayPage = ({
           )}
           {next === undefined ? null : (
             <UnmarkedActionLink
+              aria-keyshortcuts="ArrowRight"
               aria-label="Next date"
+              title="Next date (→)"
               variant="icon"
               search={searchFor(next, today)}
               to="/on-this-day"

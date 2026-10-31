@@ -65,6 +65,8 @@ for (const colorScheme of colorSchemes) {
     expect(
       await field.evaluate((element) => element.getBoundingClientRect().width),
     ).toBeLessThanOrEqual(1);
+    // The field is the next stop after the controls on the line above it.
+    await page.getByLabel('Copy day as Markdown').focus();
     await page.keyboard.press('Tab');
     await expect(field).toBeFocused();
     expect(

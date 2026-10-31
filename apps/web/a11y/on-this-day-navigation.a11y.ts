@@ -121,3 +121,24 @@ test('On this day steps in place and says which date it reached', async ({
   await expect(next).toHaveCount(0);
   await expect(page.locator('main')).toBeFocused();
 });
+
+test('On this day steps with the arrow keys outside its date field', async ({
+  page,
+}) => {
+  await openOnThisDay(page);
+  await expect(
+    nearbyDates(page).getByRole('link', { name: 'Previous date' }),
+  ).toHaveAttribute('aria-keyshortcuts', 'ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await expect(page).toHaveURL(previousDateUrl);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Tuesday, August 25, 2026' }),
+  ).toBeVisible();
+  await page.keyboard.press('ArrowRight');
+  await expect(page).toHaveURL(onThisDayToday);
+
+  const field = dateField(page, 'Wednesday, August 26, 2026');
+  await field.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page).toHaveURL(onThisDayToday);
+});

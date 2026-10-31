@@ -73,15 +73,14 @@ const archive = await renderInRouter(
 );
 
 /*
- * Four frames: the day's heading, the persistent toolbar,
- * the deep register's own frame inside its edge-to-edge ground, and the
- * evening's writing. The register sets its own rather than sharing the page's,
- * which is the whole reason the shell sets none — a ground that has to reach
- * the viewport edges cannot do it from inside a frame.
+ * Six frames: the day's heading, the persistent toolbar, the deep register's
+ * own frame inside its edge-to-edge ground, the evening's writing, the evening
+ * flow below it, and the steps to the days either side at the end. The
+ * register sets its own rather than sharing the page's, which is the whole
+ * reason the shell sets none — a ground that has to reach the viewport edges
+ * cannot do it from inside a frame.
  */
-// Date navigation, persistent writing toolbar, scripture, evening, and looking
-// back share the frame.
-const writingPageFrames = 5;
+const writingPageFrames = 6;
 
 it('wraps the writing page in the shared frame', () => {
   expect(countRecipe(today, expectedPageFrame)).toBe(writingPageFrames);

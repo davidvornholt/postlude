@@ -41,6 +41,8 @@ import { isJournalDate, type JournalDate } from '../journal-day.ts';
 type DateHeadingProps = {
   /** The date the page is about, which the heading names and the field opens on. */
   readonly date: JournalDate;
+  /** Lets the controls that step from this date say which date that is. */
+  readonly headingId?: string;
   /** The route a browser without script submits `?date=` to. */
   readonly action: '/day' | '/on-this-day';
   /** What the page calls the thing it moves between, in the field's labels. */
@@ -78,6 +80,7 @@ const fallbackControlsClass = [
 
 export const DateHeading = ({
   date,
+  headingId,
   action,
   noun,
   min,
@@ -156,6 +159,7 @@ export const DateHeading = ({
       <h1
         aria-atomic="true"
         aria-live="polite"
+        id={headingId}
         className={[
           'text-balance font-display text-4xl text-ink sm:text-5xl',
           active ? 'sr-only' : 'group-focus-within:sr-only',
