@@ -32,16 +32,16 @@ const renderDay = (changes: Partial<DayMetrics>) => {
         Number(match.groups?.hours),
       ),
     ) * minutesPerHour;
-  // The column under the day in focus is the one rect that is not a bar.
+  // The column under the day in focus is the one rect that is not a bar, and
+  // SVG paints no rect without height.
   const bars = Array.from(html.matchAll(rectPattern), (match) => {
     const attributes = match.groups?.attributes ?? '';
-    const y = Number(attributeValue(attributes, 'y'));
     return {
       className: attributeValue(attributes, 'class'),
-      top: y,
-      bottom: y + Number(attributeValue(attributes, 'height')),
+      top: Number(attributeValue(attributes, 'y')),
+      height: Number(attributeValue(attributes, 'height')),
     };
-  }).filter((bar) => bar.className !== 'fill-surface-sunken');
+  }).filter((bar) => bar.className !== 'fill-surface-sunken' && bar.height > 0);
   const top = Math.min(...bars.map((bar) => bar.top));
   return {
     html,
@@ -65,5 +65,19 @@ describe('ScreenTimeChart', () => {
     const overSplit = renderDay({ scatteredMinutes: 300 });
     expect(overSplit.extentInMinutes).toBeCloseTo(412);
     expect(overSplit.parts).toEqual(['fill-none stroke-primary']);
+
+    // A part shorter than the gap between parts is still painted.
+    const wholeDay = renderDay({
+      activeMinutes: 1440,
+      focusMinutes: 700,
+      scatteredMinutes: 720,
+    });
+    expect(wholeDay.extentInMinutes).toBeCloseTo(1440);
+    expect(wholeDay.parts).toEqual([
+      'fill-primary',
+      'fill-heat-q1',
+      'fill-none stroke-primary',
+    ]);
+    expect(wholeDay.html).toContain('20 min not split');
   });
 });

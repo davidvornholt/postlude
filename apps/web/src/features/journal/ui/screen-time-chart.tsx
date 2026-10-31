@@ -116,13 +116,13 @@ const DayBar = ({
     const below = parts
       .slice(0, position)
       .reduce((sum, { minutes }) => sum + minutes, 0);
-    const bottom = heightOf(below);
     const top = heightOf(below + part.minutes);
-    const gap = position === 0 ? 0 : segmentGap;
+    const height = top - heightOf(below);
+    const gap = position === 0 ? 0 : Math.min(segmentGap, height / 2);
     return (
       <rect
         className={part.className}
-        height={Math.max(0, top - bottom - gap)}
+        height={height - gap}
         key={part.className}
         vectorEffect="non-scaling-stroke"
         width={barWidth}
