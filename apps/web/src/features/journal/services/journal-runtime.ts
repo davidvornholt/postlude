@@ -20,8 +20,9 @@ import type { SqlError } from 'effect/sql/SqlError';
 
 import { sqlClientLayer } from '#/shared/db/database.ts';
 import { AgentAreaRepository } from './agent-area-repository.ts';
-import { AgentNoteGenerator } from './agent-note-generator.ts';
+import type { AgentNoteGenerator } from './agent-note-generator.ts';
 import { AgentNotes } from './agent-notes.ts';
+import { agentNoteGeneratorLayer } from './bedrock-agent-note-generator.ts';
 import { DayRatingRepository } from './day-rating-repository.ts';
 import { EntryExport } from './entry-export.ts';
 import { EntryRepository } from './entry-repository.ts';
@@ -37,14 +38,10 @@ const repositoriesLayer = Layer.mergeAll(
   AgentAreaRepository.layer,
 );
 
-/**
- * `AgentNoteGenerator.notConfigured` is the seam the agent note generator
- * replaces; `agent-note-generator.ts` says what a replacement provides.
- */
 const journalLayer = Layer.provide(
   Layer.provideMerge(
     AgentNotes.layer,
-    Layer.merge(repositoriesLayer, AgentNoteGenerator.notConfigured),
+    Layer.merge(repositoriesLayer, agentNoteGeneratorLayer),
   ),
   sqlClientLayer,
 );

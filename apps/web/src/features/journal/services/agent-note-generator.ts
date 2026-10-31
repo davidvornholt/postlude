@@ -7,15 +7,15 @@
  * Writing it, with whichever model and prompt, belongs to the implementation
  * behind this service and to nothing else.
  *
- * Until an implementation exists, `notConfigured` stands in. It fails every
- * request with a message the page can show, so a closed day says plainly that
- * no note was written rather than waiting forever for one.
+ * `bedrock-agent-note-generator.ts` is the implementation the journal runtime
+ * provides. Where it has no credentials, it fails like `notConfigured`, which
+ * fails every request with a message the page can show, so a closed day says
+ * plainly that no note was written rather than waiting forever for one.
  *
  * An implementation:
  *
- * - provides a layer for `AgentNoteGenerator` and replaces `notConfigured` in
- *   `journal-runtime.ts`;
- * - returns the note as Markdown and names the model that wrote it;
+ * - provides a layer for `AgentNoteGenerator`;
+ * - returns the note as plain text and names the model that wrote it;
  * - fails with `AgentNoteGenerationError`, whose message is shown to David, so
  *   it says what went wrong without credentials, prompts, or journal text;
  * - finishes within `agentNoteTimeout`, after which the request is recorded as
@@ -55,7 +55,7 @@ export type AgentNoteInput = {
 };
 
 export type AgentNoteDraft = {
-  /** Markdown. */
+  /** Plain text: the page shows it as written, without rendering markup. */
   readonly note: string;
   /** The model that wrote it, as the page should name it. */
   readonly model: string;

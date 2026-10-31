@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { Effect, Layer } from 'effect';
+import { Effect, Layer, Logger } from 'effect';
 import { AgentNoteGenerationError } from '../errors/journal-errors.ts';
 import {
   abandonedNoteMessage,
@@ -19,6 +19,10 @@ import {
   closedDayNeededMessage,
   unexpectedFailureMessage,
 } from './agent-notes.ts';
+import {
+  bedrockAgentNoteGenerator,
+  requestFailedMessage,
+} from './bedrock-agent-note-generator.ts';
 
 const { withEvening } = journalDatabase();
 
@@ -161,6 +165,41 @@ describe('a failed note', () => {
     );
     expect(note.status).toBe('failed');
     expect(note.error).toBe(unexpectedFailureMessage);
+  });
+});
+
+describe('what a failed note leaves behind', () => {
+  it('logs and stores none of the journal text a service error echoes', async () => {
+    const journalText = 'PRIVATE-JOURNAL-TEXT Heute war ich müde.';
+    const logged: Array<string> = [];
+    const capture = Logger.make((options) => {
+      logged.push(Logger.formatSimple.log(options));
+      logged.push(JSON.stringify(Logger.formatStructured.log(options)));
+    });
+    const echoing = bedrockAgentNoteGenerator((request) =>
+      Promise.reject(
+        Object.assign(
+          new Error(`Malformed input: ${JSON.stringify(request.messages)}`),
+          {
+            name: 'ValidationException',
+            $metadata: { httpStatusCode: 400, requestId: 'request-1' },
+          },
+        ),
+      ),
+    );
+    const note = await withEvening(({ entries, ratings }) =>
+      Effect.gen(function* () {
+        const notes = yield* notesWith(echoing.generate);
+        yield* entries.save(draft(day, journalText));
+        yield* ratings.save({ date: day, energy: 'okay', progress: 'solid' });
+        return (yield* notes.closeDay(day)).agentNote;
+      }).pipe(Effect.provide(Logger.layer([capture]))),
+    );
+    expect(note.status).toBe('failed');
+    expect(note.error).toBe(requestFailedMessage);
+    expect(logged.join('\n')).toContain('request-1');
+    expect(logged.join('\n')).not.toContain('PRIVATE-JOURNAL-TEXT');
+    expect(logged.join('\n')).not.toContain('day_data');
   });
 });
 

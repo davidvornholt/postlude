@@ -19,6 +19,13 @@ export const env = createEnv({
     R2_BUCKET: z.string().min(1).optional(),
     R2_ACCESS_KEY_ID: z.string().min(1).optional(),
     R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    /**
+     * The key pair of the `PostludeProduction` AWS identity, which may only
+     * invoke the agent note's model. Without both, closing a day stores a
+     * failed note that says no generator is set up.
+     */
+    BEDROCK_ACCESS_KEY_ID: z.string().min(1).optional(),
+    BEDROCK_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     DATABASE_URL: z.url(),
     BETTER_AUTH_SECRET: z.string().min(minSecretLength),
     BETTER_AUTH_URL: z.url(),
