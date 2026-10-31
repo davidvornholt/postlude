@@ -22,7 +22,13 @@ import { journalLanguage } from '../journal-language.ts';
 
 import { Placeholder } from '@tiptap/extensions';
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import {
+  type Ref,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from 'react';
 
 import {
   journalMarkdownExtensions,
@@ -31,6 +37,12 @@ import {
 import { ImageNodeView } from './image-node-view.tsx';
 import { ImageUploadControl } from './image-upload-control.tsx';
 import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
+
+/** What the page may ask of an editor from outside it. */
+export type EditorFocus = {
+  /** Puts the caret after the last word, scrolled into view. */
+  readonly focusEnd: () => void;
+};
 
 type MarkdownEditorProps = {
   /** Names the writing area, which carries no visible label of its own. */
@@ -53,6 +65,7 @@ type MarkdownEditorProps = {
    * push the evening down the page.
    */
   readonly size: 'entry' | 'notes';
+  readonly focusHandle?: Ref<EditorFocus>;
 };
 
 /**
@@ -93,6 +106,7 @@ export const MarkdownEditor = ({
   proseClass,
   focusClass,
   size,
+  focusHandle,
 }: MarkdownEditorProps) => {
   const areaClass = [proseClass, writingAreaClass, sizeClass[size]].join(' ');
   const changedRef = useRef(onChange);
@@ -155,6 +169,18 @@ export const MarkdownEditor = ({
       changedRef.current(updated.getMarkdown()),
     onBlur: () => leftRef.current(),
   });
+
+  useImperativeHandle(
+    focusHandle,
+    () => ({
+      focusEnd: () => {
+        if (editor !== null && !editor.isDestroyed) {
+          editor.commands.focus('end');
+        }
+      },
+    }),
+    [editor],
+  );
 
   // Tiptap builds its document once, from the first markdown it was given, and
   // later options never replace it. The autosave's draft can still change

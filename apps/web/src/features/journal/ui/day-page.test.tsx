@@ -111,6 +111,9 @@ it('keeps entry headings below the page and section headings', async () => {
     'h2: Evening',
     'h3: Evening thought',
     'h4: What stayed',
+    'h2: Looking back',
+    'h3: Day report',
+    'h3: Agent note',
   ]);
   expect(html).toContain('<strong>clear</strong>');
   expect(html).toContain('<a href="https://example.com">A source</a>');

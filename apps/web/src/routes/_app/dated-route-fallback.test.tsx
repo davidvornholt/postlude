@@ -21,6 +21,10 @@ const isFallbackProbeProcess = isIsolatedBunTestProcess(import.meta.dir);
 let reads = 0;
 
 if (isFallbackProbeProcess) {
+  mock.module('#/features/journal/services/evening-fns.ts', () => ({
+    eveningActions: {},
+    readEveningWithDay: () => Promise.resolve(undefined),
+  }));
   mock.module('#/features/journal/services/journal-fns.ts', () => ({
     readDatedJournalDay: () => {
       reads += 1;

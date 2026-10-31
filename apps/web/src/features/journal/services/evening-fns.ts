@@ -12,10 +12,13 @@ import { Effect, Schema } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { JournalValidationError } from '../errors/journal-errors.ts';
+import { rejectFailedResponse } from '../evening-failure.ts';
+import { futureDayMessage } from '../evening-messages.ts';
 import type { AgentNoteView, WrapArea } from '../schemas/agent-area.ts';
 import {
   DayInputSchema,
   type DayRating,
+  type DayRatingChange,
   DayRatingChangeSchema,
 } from '../schemas/day-rating.ts';
 import { AgentAreaRepository } from './agent-area-repository.ts';
@@ -23,9 +26,6 @@ import { AgentNotes } from './agent-notes.ts';
 import { DayRatingRepository } from './day-rating-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
 import { runJournalEffect } from './journal-runtime.ts';
-
-export const futureDayMessage =
-  'This day has not begun yet, so it cannot be rated or closed.';
 
 const decodeDay = Schema.decodeUnknownSync(DayInputSchema);
 const decodeChange = Schema.decodeUnknownSync(DayRatingChangeSchema);
@@ -128,3 +128,38 @@ export const regenerateAgentNoteFn = createServerFn({ method: 'POST' })
         AgentNotes.pipe(Effect.flatMap((notes) => notes.regenerate(data.date))),
       ),
   );
+
+/**
+ * The evening's server functions as the plain calls the day page takes, the
+ * way `saveDraft` is for the writing. A function that answers with a failed
+ * response rejects, so the page handles every failure in one place.
+ */
+export type EveningActions = {
+  readonly readEvening: (date: string) => Promise<EveningView>;
+  readonly saveRating: (change: DayRatingChange) => Promise<DayRating>;
+  readonly closeDay: (date: string) => Promise<DayClosed>;
+  readonly reopenDay: (date: string) => Promise<DayRating>;
+  readonly regenerateNote: (date: string) => Promise<AgentNoteView>;
+};
+
+export const eveningActions: EveningActions = {
+  readEvening: (date) =>
+    readEveningFn({ data: { date } }).then(rejectFailedResponse),
+  saveRating: (change) =>
+    saveDayRatingFn({ data: change }).then(rejectFailedResponse),
+  closeDay: (date) => closeDayFn({ data: { date } }).then(rejectFailedResponse),
+  reopenDay: (date) =>
+    reopenDayFn({ data: { date } }).then(rejectFailedResponse),
+  regenerateNote: (date) =>
+    regenerateAgentNoteFn({ data: { date } }).then(rejectFailedResponse),
+};
+
+/**
+ * The evening as a day's page loads it. A failure leaves the evening out
+ * rather than failing the page, because the writing must open even when the
+ * ratings or the report can't be read.
+ */
+export const readEveningWithDay = (
+  date: string,
+): Promise<EveningView | undefined> =>
+  eveningActions.readEvening(date).catch(() => undefined);

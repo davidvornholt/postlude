@@ -1,12 +1,8 @@
 import { expect, it } from 'bun:test';
 import { Effect } from 'effect';
-
+import { dayClosedMessage, ratingsNeededMessage } from '../evening-messages.ts';
 import { journalDatabase } from '../testing/database-harness.ts';
 import { refusalOf } from '../testing/sql-refusal.ts';
-import {
-  dayClosedMessage,
-  ratingsNeededMessage,
-} from './day-rating-repository.ts';
 
 const { withEvening } = journalDatabase();
 

@@ -24,6 +24,10 @@ import {
   sampleArchiveView,
   sampleJournal,
 } from '#/features/journal/testing/archive-view.ts';
+import {
+  emptyEvening,
+  unansweredEveningActions,
+} from '#/features/journal/testing/evening-view.ts';
 import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
@@ -48,7 +52,13 @@ const emptyDay: JournalEntry = {
 const neverSaves = () => new Promise<never>(() => undefined);
 
 const today = await renderInRouter(
-  <DayPage entry={emptyDay} save={neverSaves} today={emptyDay.date} />,
+  <DayPage
+    entry={emptyDay}
+    evening={emptyEvening(emptyDay.date)}
+    eveningActions={unansweredEveningActions}
+    save={neverSaves}
+    today={emptyDay.date}
+  />,
 );
 const archiveSeed = 20_260_826;
 const sampleDays = 400;
@@ -69,8 +79,9 @@ const archive = await renderInRouter(
  * which is the whole reason the shell sets none — a ground that has to reach
  * the viewport edges cannot do it from inside a frame.
  */
-// Date navigation, persistent writing toolbar, scripture, and evening share the frame.
-const writingPageFrames = 4;
+// Date navigation, persistent writing toolbar, scripture, evening, and looking
+// back share the frame.
+const writingPageFrames = 5;
 
 it('wraps the writing page in the shared frame', () => {
   expect(countRecipe(today, expectedPageFrame)).toBe(writingPageFrames);

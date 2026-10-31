@@ -2,6 +2,11 @@ import { afterAll, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { isNotFound, isRedirect } from '@tanstack/react-router';
 
 import type { JournalEntry } from '#/features/journal/schemas/entry.ts';
+import type { EveningView } from '#/features/journal/services/evening-fns.ts';
+import {
+  emptyEvening,
+  unansweredEveningActions,
+} from '#/features/journal/testing/evening-view.ts';
 import {
   isIsolatedBunTestProcess,
   runIsolatedBunTest,
@@ -29,7 +34,17 @@ let loadedDay: JournalDay = { entry: entryOn(today), today };
 let datedDisposition: 'readable' | 'today' = 'readable';
 let datedReadInputs: ReadonlyArray<unknown> = [];
 let todayReadCount = 0;
+let eveningReads: ReadonlyArray<string> = [];
+let eveningReadable = true;
+const eveningOn = (date: string): EveningView => emptyEvening(date);
 if (isRouteProbeProcess) {
+  mock.module('#/features/journal/services/evening-fns.ts', () => ({
+    eveningActions: unansweredEveningActions,
+    readEveningWithDay: (date: string) => {
+      eveningReads = [...eveningReads, date];
+      return Promise.resolve(eveningReadable ? eveningOn(date) : undefined);
+    },
+  }));
   mock.module('#/features/journal/services/journal-fns.ts', () => ({
     readDatedJournalDay: (input: unknown) => {
       datedReadInputs = [...datedReadInputs, input];
@@ -52,6 +67,8 @@ if (isRouteProbeProcess) {
     datedDisposition = 'readable';
     datedReadInputs = [];
     todayReadCount = 0;
+    eveningReads = [];
+    eveningReadable = true;
   });
 
   afterAll(() => {
@@ -128,8 +145,12 @@ if (isRouteProbeProcess) {
         loadedDay = { entry: entryOn(past), today };
 
         expect(parseDay({ date: past })).toEqual({ date: past });
-        await expect(loadDay(past)).resolves.toEqual(loadedDay);
+        await expect(loadDay(past)).resolves.toEqual({
+          ...loadedDay,
+          evening: eveningOn(past),
+        });
         expect(datedReadInputs).toEqual([{ data: { date: past } }]);
+        expect(eveningReads).toEqual([past]);
         type HeadInput = Parameters<typeof dayHead>[0];
         const metadata = await dayHead({
           loaderData: loadedDay,
@@ -151,8 +172,22 @@ if (isRouteProbeProcess) {
         const future = '2026-08-27';
         loadedDay = { entry: entryOn(future), today };
 
-        await expect(loadDay(future)).resolves.toEqual(loadedDay);
+        await expect(loadDay(future)).resolves.toEqual({
+          ...loadedDay,
+          evening: eveningOn(future),
+        });
         expect(datedReadInputs).toEqual([{ data: { date: future } }]);
+      });
+
+      it('still loads the day when its evening could not be read', async () => {
+        const past = '2026-08-25';
+        loadedDay = { entry: entryOn(past), today };
+        eveningReadable = false;
+
+        await expect(loadDay(past)).resolves.toEqual({
+          ...loadedDay,
+          evening: undefined,
+        });
       });
     });
 
@@ -161,10 +196,12 @@ if (isRouteProbeProcess) {
       it('loads the day selected by the server and keeps Today metadata', async () => {
         type LoaderInput = NonNullable<Parameters<typeof indexLoader>[0]>;
 
-        await expect(indexLoader({} as LoaderInput)).resolves.toEqual(
-          loadedDay,
-        );
+        await expect(indexLoader({} as LoaderInput)).resolves.toEqual({
+          ...loadedDay,
+          evening: eveningOn(today),
+        });
         expect(todayReadCount).toBe(1);
+        expect(eveningReads).toEqual([today]);
         expect(datedReadInputs).toEqual([]);
         type HeadInput = Parameters<typeof indexHead>[0];
         const metadata = await indexHead({

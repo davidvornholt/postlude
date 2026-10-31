@@ -84,10 +84,10 @@ export const buildBrowserFixture = async ({
   return { script, styles: asText(stylesheet.source) };
 };
 
-const renderFixture = async (
-  config: unknown,
+const renderFixtures = async (
+  configs: ReadonlyArray<unknown>,
   options: HydratedFixtureOptions,
-): Promise<string> => {
+): Promise<ReadonlyArray<string>> => {
   const server = await createServer({
     appType: 'custom',
     configFile: false,
@@ -102,7 +102,11 @@ const renderFixture = async (
     if (typeof render !== 'function') {
       throw new Error('The hydrated fixture has no server renderer.');
     }
-    return await render(config);
+    const markup: Array<string> = [];
+    for (const config of configs) {
+      markup.push(await render(config));
+    }
+    return markup;
   } finally {
     await server.close();
   }
@@ -112,12 +116,25 @@ export const buildHydratedFixture = async (
   config: unknown,
   options: HydratedFixtureOptions,
 ): Promise<FixtureAssets> => {
+  const [assets] = await buildHydratedFixtures([config], options);
+  if (assets === undefined) {
+    throw new Error('The hydrated fixture rendered nothing.');
+  }
+  return assets;
+};
+
+/**
+ * Several server renderings that share one browser bundle, for fixtures whose
+ * configurations differ only in what the server renders first.
+ */
+export const buildHydratedFixtures = async (
+  configs: ReadonlyArray<unknown>,
+  options: HydratedFixtureOptions,
+): Promise<ReadonlyArray<FixtureAssets>> => {
   const browserAssets = await buildBrowserFixture({
     clientEntryPath: options.clientEntryPath,
     plugins: [fixtureModules(options.replacements)],
   });
-  return {
-    markup: await renderFixture(config, options),
-    ...browserAssets,
-  };
+  const markup = await renderFixtures(configs, options);
+  return markup.map((rendered) => ({ markup: rendered, ...browserAssets }));
 };

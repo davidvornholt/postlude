@@ -9,12 +9,12 @@
 
 import { Context, Effect, Layer, Schema } from 'effect';
 import { SqlClient } from 'effect/sql';
-
 import {
   JournalValidationError,
   journalReadError,
   journalWriteError,
 } from '../errors/journal-errors.ts';
+import { dayClosedMessage, ratingsNeededMessage } from '../evening-messages.ts';
 import {
   currentRatingVersion,
   type DayRating,
@@ -26,11 +26,6 @@ import {
 const decodeRatings = Schema.decodeUnknownEffect(
   Schema.Array(DayRatingFromRow),
 );
-
-export const dayClosedMessage =
-  'This day is closed. Reopen it to change its ratings.';
-export const ratingsNeededMessage =
-  'Rate energy and progress before closing the day.';
 
 /** What `close` did: closed the day now, or found it closed already. */
 export type DayClosing = {

@@ -6,12 +6,11 @@ import type {
 import { env } from 'bun';
 import { Cause, type Duration, Effect, Exit, Fiber } from 'effect';
 import { TestClock } from 'effect/testing';
-
+import { notConfiguredMessage } from '../evening-messages.ts';
 import {
   agentNoteInput,
   excludedMarkers,
 } from '../testing/agent-note-input.ts';
-import { notConfiguredMessage } from './agent-note-generator.ts';
 import {
   accessDeniedMessage,
   agentNoteGeneratorFor,

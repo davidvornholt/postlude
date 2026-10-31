@@ -2,6 +2,10 @@ import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
 import { journalDateLabel } from '#/features/journal/day-label.ts';
 import { isJournalDate } from '#/features/journal/journal-day.ts';
 import {
+  eveningActions,
+  readEveningWithDay,
+} from '#/features/journal/services/evening-fns.ts';
+import {
   readDatedJournalDay,
   saveDraft,
 } from '#/features/journal/services/journal-fns.ts';
@@ -24,8 +28,16 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * that drift apart in a bookmark or a browser's history.
  */
 const DayRoute = () => {
-  const { entry, today } = Route.useLoaderData();
-  return <DayPage entry={entry} save={saveDraft} today={today} />;
+  const { entry, today, evening } = Route.useLoaderData();
+  return (
+    <DayPage
+      entry={entry}
+      evening={evening}
+      eveningActions={eveningActions}
+      save={saveDraft}
+      today={today}
+    />
+  );
 };
 
 export const Route = createFileRoute('/_app/day/$date')({
@@ -39,11 +51,14 @@ export const Route = createFileRoute('/_app/day/$date')({
     stringify: ({ date }) => ({ date }),
   },
   loader: async ({ params }) => {
-    const result = await readDatedJournalDay({ data: { date: params.date } });
+    const [result, evening] = await Promise.all([
+      readDatedJournalDay({ data: { date: params.date } }),
+      readEveningWithDay(params.date),
+    ]);
     if (result.disposition === 'today') {
       throw redirect({ to: '/' });
     }
-    return result.view;
+    return { ...result.view, evening };
   },
   component: DayRoute,
   head: ({ loaderData, match }) => {

@@ -21,10 +21,10 @@ import { Data, Duration, Effect, Layer, Schedule } from 'effect';
 import { agentNotePromptOf } from '../agent-note-prompt.ts';
 import { agentNoteTextOf } from '../agent-note-text.ts';
 import { AgentNoteGenerationError } from '../errors/journal-errors.ts';
+import { notConfiguredMessage } from '../evening-messages.ts';
 import {
   AgentNoteGenerator,
   type AgentNoteInput,
-  notConfiguredMessage,
 } from './agent-note-generator.ts';
 
 export const bedrockRegion = 'eu-central-1';
