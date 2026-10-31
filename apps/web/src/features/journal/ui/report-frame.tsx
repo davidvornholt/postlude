@@ -2,17 +2,21 @@
  * The day's /wrap report, in a frame that keeps it apart from the journal.
  *
  * The frame is sandboxed with scripts allowed and nothing else: no same
- * origin, so the report can't read the page, its cookies or its storage; no
- * forms, popups or navigation of the page; and the policy `reportDocumentOf`
- * adds blocks every request, so nothing in the report reaches the network.
+ * origin, so the report can't read the page, its cookies or its storage; and
+ * no forms, popups or navigation of the page. The policy `reportDocumentOf`
+ * adds refuses the requests the report's document makes, such as a fetch, an
+ * image or a stylesheet. It can't refuse a navigation of the frame itself,
+ * which a sandbox always allows, so the page gets `frame-src 'none'` of its own
+ * before the frame mounts. The report's `srcdoc` still loads under that, but
+ * the frame can't be navigated to any address that has to be fetched.
  *
  * Its numbers arrive in one message after it has loaded, together with the
  * page's colour scheme, and again whenever the scheme changes. The frame grows
  * to the height the report asks for, but only when the request comes from this
  * frame's own window, and only within bounds.
  *
- * A report that navigates its frame somewhere else has stopped being the
- * report, so the frame is taken down and nothing more is sent to it.
+ * A report that navigates its frame anyway has stopped being the report, so
+ * the frame is taken down when it loads again and nothing more is sent to it.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -34,6 +38,23 @@ type ReportFrameProps = {
 
 const darkScheme = '(prefers-color-scheme: dark)';
 
+const framePolicy = "frame-src 'none'";
+
+/**
+ * A policy is enforced from the moment its meta element is in the head until
+ * the page is gone, even if the element is removed, so it is added only once.
+ */
+const addFramePolicy = (): void => {
+  const selector = `meta[http-equiv="Content-Security-Policy"][content="${framePolicy}"]`;
+  if (document.head.querySelector(selector) !== null) {
+    return;
+  }
+  const meta = document.createElement('meta');
+  meta.httpEquiv = 'Content-Security-Policy';
+  meta.content = framePolicy;
+  document.head.append(meta);
+};
+
 const pageTheme = (): ReportTheme =>
   globalThis.matchMedia?.(darkScheme).matches === true ? 'dark' : 'light';
 
@@ -46,6 +67,7 @@ export const ReportFrame = ({
   const loadsRef = useRef(0);
   const [height, setHeight] = useState<number>(reportHeightBounds.initial);
   const [navigatedAway, setNavigatedAway] = useState(false);
+  const [framePolicyAdded, setFramePolicyAdded] = useState(false);
   const srcDoc = useMemo(() => reportDocumentOf(reportHtml), [reportHtml]);
 
   /** Sends the numbers, only ever to the report's first document. */
@@ -62,6 +84,11 @@ export const ReportFrame = ({
       '*',
     );
   }, [dayMetrics, metricsVersion]);
+
+  useEffect(() => {
+    addFramePolicy();
+    setFramePolicyAdded(true);
+  }, []);
 
   useEffect(() => {
     const resize = (event: MessageEvent): void => {
@@ -103,6 +130,10 @@ export const ReportFrame = ({
         closed. Hide the report and show it again to reload it.
       </p>
     );
+  }
+
+  if (!framePolicyAdded) {
+    return null;
   }
 
   return (

