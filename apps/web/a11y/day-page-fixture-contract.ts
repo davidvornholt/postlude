@@ -106,4 +106,10 @@ export const eveningFromFixture = (
 
 export type DayPageFixtureWindow = Window & {
   postludeDayPageFixture: DayPageFixtureConfig;
+  /** Holds back the answers to evening calls recorded under this name. */
+  postludeHoldEveningCalls: (call: string) => void;
+  /** Sends the answers held back under this name, and holds no more. */
+  postludeReleaseEveningCalls: (call: string) => void;
+  /** Leaves the day and opens it again, reading its evening anew. */
+  postludeRevisitDay: () => Promise<void>;
 };

@@ -3,9 +3,15 @@
  * note, kept in step with the server.
  *
  * A rating shows as chosen at once and is saved behind it. Every call goes
- * through one queue, in the order it was made, so two quick choices can't
- * land in the wrong order and closing the day waits for the ratings before it.
- * A rating whose save failed falls back to the stored one and says why.
+ * through one queue for its day, in the order it was made, so two quick
+ * choices can't land in the wrong order and closing the day waits for the
+ * ratings before it. A rating whose save failed falls back to the stored one
+ * and says why.
+ *
+ * The queue outlives the page, so leaving the day and coming back keeps that
+ * order. A page that comes back while earlier calls are still on their way
+ * loaded the evening before they landed, so it reads the evening again once
+ * they have.
  *
  * Closing the day and asking for a new note first wait for the writing to be
  * saved, because the note is written from the stored entry: closing a moment
@@ -13,7 +19,7 @@
  * few seconds earlier.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 import {
@@ -52,6 +58,20 @@ const longestPollDelayMs = 15_000;
 
 const pollDelayMs = (attempt: number): number =>
   Math.min(firstPollDelayMs * pollDelayGrowth ** attempt, longestPollDelayMs);
+
+/** Each day's queue, dropped once it runs dry. */
+const queues = new Map<string, Promise<void>>();
+
+const enqueue = (date: string, task: () => Promise<void>): void => {
+  const queue: Promise<void> = (queues.get(date) ?? Promise.resolve())
+    .then(task)
+    .then(() => {
+      if (queues.get(date) === queue) {
+        queues.delete(date);
+      }
+    });
+  queues.set(date, queue);
+};
 
 const withoutSettled = (
   overlay: Partial<RatingValues>,
@@ -140,18 +160,30 @@ export const useEvening = (
   const [agentNote, setAgentNote] = useState(initial.agentNote);
   const [busy, setBusy] = useState<EveningBusy | undefined>();
   const [failure, setFailure] = useState<string | undefined>();
-  const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const { readEvening } = actions;
 
-  const enqueue = useCallback((task: () => Promise<void>) => {
-    queueRef.current = queueRef.current.then(task);
-  }, []);
+  // Calls queued on an earlier visit to the day are still on their way.
+  useEffect(() => {
+    if (!queues.has(date)) {
+      return;
+    }
+    enqueue(date, async () => {
+      try {
+        const evening = await readEvening(date);
+        setStored(evening.rating);
+        setAgentNote(evening.agentNote);
+      } catch (error) {
+        setFailure(eveningFailureMessageOf(error));
+      }
+    });
+  }, [date, readEvening]);
 
-  usePendingNote(agentNote, date, actions.readEvening, setAgentNote);
+  usePendingNote(agentNote, date, readEvening, setAgentNote);
 
   const rate = (change: Partial<RatingValues>): void => {
     setFailure(undefined);
     setOverlay((current) => ({ ...current, ...change }));
-    enqueue(async () => {
+    enqueue(date, async () => {
       try {
         setStored(await actions.saveRating({ date, ...change }));
       } catch (error) {
@@ -170,7 +202,7 @@ export const useEvening = (
   ): void => {
     setFailure(undefined);
     setBusy(kind);
-    enqueue(async () => {
+    enqueue(date, async () => {
       try {
         if (afterWriting) {
           try {

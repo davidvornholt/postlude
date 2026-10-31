@@ -4,9 +4,12 @@ import { eveningConnectionMessage } from '../src/features/journal/evening-failur
 import {
   choose,
   eveningCalls,
+  holdEveningCalls,
   mountEvening,
   noteModel,
   readyNoteText,
+  releaseEveningCalls,
+  revisitDay,
   scanPage,
 } from './evening-flow-test-support.ts';
 
@@ -126,3 +129,23 @@ for (const colorScheme of colorSchemes) {
     await scanPage(page);
   });
 }
+
+test('a rating chosen after coming back to the day outlasts the ones before it', async ({
+  page,
+}) => {
+  await mountEvening(page, 'report');
+  await holdEveningCalls(page, 'rate:energy=okay');
+  await choose(page, 'Energy', 'Okay');
+  await choose(page, 'Energy', 'Fresh');
+  await revisitDay(page);
+  await choose(page, 'Energy', 'Drained');
+  await releaseEveningCalls(page, 'rate:energy=okay');
+
+  // The page that came back reads the evening once the earlier choices have
+  // landed, and its own choice follows them.
+  await expect
+    .poll(() => eveningCalls(page))
+    .toBe('rate:energy=okay read rate:energy=fresh read rate:energy=drained');
+  await revisitDay(page);
+  await expect(page.getByRole('radio', { name: 'Drained' })).toBeChecked();
+});

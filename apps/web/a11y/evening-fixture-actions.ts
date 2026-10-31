@@ -2,6 +2,9 @@
  * Evening actions held in memory for the day-page fixture, answering as the
  * server functions do. Every call is recorded on the root element, so a test
  * can see what the page asked for and in which order.
+ *
+ * A test can hold back the answers to a call, as a slow connection would. The
+ * call still takes effect when it is made, and only its answer waits.
  */
 
 import {
@@ -22,6 +25,7 @@ import { unansweredEveningActions } from '../src/features/journal/testing/evenin
 import {
   agentNoteFromFixture,
   type DayPageFixtureConfig,
+  type DayPageFixtureWindow,
   eveningFromFixture,
 } from './day-page-fixture-contract.ts';
 
@@ -55,9 +59,31 @@ export const eveningFixtureActions = (
   let rating: DayRating = initial.rating;
   let agentNote: AgentNoteView = initial.agentNote;
 
+  /** The answers each held call is waiting to send. */
+  const holds = new Map<string, Array<() => void>>();
+  const fixtureWindow = globalThis as unknown as DayPageFixtureWindow;
+  fixtureWindow.postludeHoldEveningCalls = (call) => {
+    holds.set(call, []);
+  };
+  fixtureWindow.postludeReleaseEveningCalls = (call) => {
+    const waiting = holds.get(call) ?? [];
+    holds.delete(call);
+    for (const send of waiting) {
+      send();
+    }
+  };
+
   const record = (call: string): void => {
     calls.push(call);
     document.documentElement.dataset.eveningCalls = calls.join(' ');
+  };
+  const answer = <A>(call: string, value: A): Promise<A> => {
+    const waiting = holds.get(call);
+    return waiting === undefined
+      ? Promise.resolve(value)
+      : new Promise((resolve) => {
+          waiting.push(() => resolve(value));
+        });
   };
   const pending = (): AgentNoteView => ({
     ...agentNote,
@@ -73,10 +99,11 @@ export const eveningFixtureActions = (
       if (agentNote.status === 'pending' && settled !== undefined) {
         agentNote = settled;
       }
-      return Promise.resolve(view());
+      return answer('read', view());
     },
     saveRating: (change) => {
-      record(`rate:${changeText(change)}`);
+      const call = `rate:${changeText(change)}`;
+      record(call);
       if (rating.closedAt !== null) {
         return Promise.reject(new Error(dayClosedMessage));
       }
@@ -85,7 +112,7 @@ export const eveningFixtureActions = (
       }
       const { date: _date, ...values } = change;
       rating = { ...rating, ...values, ratingVersion: 1 };
-      return Promise.resolve(rating);
+      return answer(call, rating);
     },
     closeDay: () => {
       record('close');
@@ -94,17 +121,17 @@ export const eveningFixtureActions = (
       }
       rating = { ...rating, closedAt };
       agentNote = pending();
-      return Promise.resolve({ rating, agentNote });
+      return answer('close', { rating, agentNote });
     },
     reopenDay: () => {
       record('reopen');
       rating = { ...rating, closedAt: null };
-      return Promise.resolve(rating);
+      return answer('reopen', rating);
     },
     regenerateNote: () => {
       record('regenerate');
       agentNote = pending();
-      return Promise.resolve(agentNote);
+      return answer('regenerate', agentNote);
     },
   };
 };

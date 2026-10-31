@@ -12,6 +12,7 @@ import { sampleDayMetrics } from '../src/features/journal/testing/evening-view.t
 import { buildDayPageFixtures } from './day-page-fixture-build.ts';
 import type {
   DayPageFixtureConfig,
+  DayPageFixtureWindow,
   FixtureAgentNote,
   FixtureEvening,
 } from './day-page-fixture-contract.ts';
@@ -170,6 +171,33 @@ export const scanPage = async (page: playwright.Page): Promise<void> => {
 
 export const eveningCalls = (page: playwright.Page) =>
   page.locator('html').getAttribute('data-evening-calls');
+
+/** Holds back the answers to an evening call, such as `read`, until released. */
+export const holdEveningCalls = (
+  page: playwright.Page,
+  call: string,
+): Promise<void> =>
+  page.evaluate((name) => {
+    (globalThis as unknown as DayPageFixtureWindow).postludeHoldEveningCalls(
+      name,
+    );
+  }, call);
+
+export const releaseEveningCalls = (
+  page: playwright.Page,
+  call: string,
+): Promise<void> =>
+  page.evaluate((name) => {
+    (globalThis as unknown as DayPageFixtureWindow).postludeReleaseEveningCalls(
+      name,
+    );
+  }, call);
+
+/** Leaves the day and comes back to it, as following a link away and back does. */
+export const revisitDay = (page: playwright.Page): Promise<void> =>
+  page.evaluate(() =>
+    (globalThis as unknown as DayPageFixtureWindow).postludeRevisitDay(),
+  );
 
 export const choose = (
   page: playwright.Page,

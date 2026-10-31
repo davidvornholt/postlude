@@ -1,4 +1,5 @@
 import { RouterProvider } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { journalWriteConflictMessage } from '../src/features/journal/errors/journal-errors.ts';
 import { createRenderingRouter } from '../src/shared/testing/render-in-router.tsx';
@@ -51,15 +52,36 @@ const save = (): Promise<unknown> => {
   return Promise.reject(new Error(message));
 };
 
-const router = createRenderingRouter(
-  <DayPage
-    entry={entry}
-    evening={eveningFromFixture(config)}
-    eveningActions={eveningFixtureActions(config)}
-    save={save}
-    today={config.today}
-  />,
-);
+const eveningActions = eveningFixtureActions(config);
+
+/**
+ * The page as a route shows it. Leaving the day and coming back mounts it
+ * anew, with the evening read again as the route's loader reads it.
+ */
+export const VisitedDayPage = () => {
+  const [visit, setVisit] = useState({
+    count: 0,
+    evening: eveningFromFixture(config),
+  });
+  useEffect(() => {
+    fixtureWindow.postludeRevisitDay = async () => {
+      const evening = await eveningActions.readEvening(entry.date);
+      setVisit(({ count }) => ({ count: count + 1, evening }));
+    };
+  }, []);
+  return (
+    <DayPage
+      entry={entry}
+      evening={visit.evening}
+      eveningActions={eveningActions}
+      key={visit.count}
+      save={save}
+      today={config.today}
+    />
+  );
+};
+
+const router = createRenderingRouter(<VisitedDayPage />);
 await router.load();
 const recordRoute = (pathname: string) => {
   document.documentElement.dataset.route = pathname;
