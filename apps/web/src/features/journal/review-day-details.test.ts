@@ -1,5 +1,3 @@
-/** The words the review charts give a screen reader for the day in focus. */
-
 import { describe, expect, it } from 'bun:test';
 
 import { ratingDetails, screenTimeDetails } from './review-day-details.ts';

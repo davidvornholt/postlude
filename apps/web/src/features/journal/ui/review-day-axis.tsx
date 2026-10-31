@@ -12,10 +12,6 @@ import { dayColumnsClass } from './review-day-columns.ts';
 
 const daysPerWeek = 7;
 
-/**
- * The left margin the charts keep for their scale, so their day columns line
- * up with each other.
- */
 export const ChartRow = ({
   scale,
   children,
@@ -35,8 +31,8 @@ export const ChartRow = ({
 );
 
 /**
- * The days under a chart. A week has room to name each one. A month on a
- * narrow screen keeps only its Mondays, which still say where each week starts.
+ * A week has room to name each day. A month on a narrow screen keeps only its
+ * Mondays, which still say where each week starts.
  */
 export const DayAxis = ({
   dates,

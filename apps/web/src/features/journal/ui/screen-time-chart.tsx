@@ -1,6 +1,4 @@
 /**
- * Time at the screen each day, as a bar split into focused and scattered time.
- *
  * Focused and scattered are two parts of one amount rather than two things to
  * tell apart, so they are two steps of the journal's one green, the deeper step
  * for focus, with a sliver of page between them. Screen time that is neither,

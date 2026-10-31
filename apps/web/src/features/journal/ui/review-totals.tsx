@@ -1,11 +1,3 @@
-/**
- * The period's numbers added up, each with the days it covers.
- *
- * A total over three measured days and one over seven are different claims, so
- * every figure says how many days went into it and how many had nothing to
- * read. Only days measured under the same metrics version are added together.
- */
-
 import type { ReactNode } from 'react';
 
 import { journalCountLabel, journalNumberLabel } from '../journal-labels.ts';

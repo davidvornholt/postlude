@@ -15,7 +15,6 @@ import { AgentAreaRepository } from './agent-area-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
 import { runJournalEffect } from './journal-runtime.ts';
 
-/** The ratings and the numbers, leaving the word counts behind. */
 const reviewDayOf = (day: DayOverview): ReviewDay => ({
   date: day.date,
   energy: day.rating.energy,

@@ -11,7 +11,6 @@ const minutesPerHour = 60;
 const rectPattern = /<rect\b(?<attributes>[^>]*)>/gu;
 const hourLabelPattern = />(?<hours>\d+) h</gu;
 
-/** One day's chart, as the bars it draws and the minutes its scale reaches. */
 const renderDay = (changes: Partial<DayMetrics>) => {
   const html = renderToStaticMarkup(
     <ScreenTimeChart

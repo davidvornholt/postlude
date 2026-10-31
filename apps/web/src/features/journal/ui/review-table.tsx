@@ -1,10 +1,6 @@
 /**
- * Every day of the period as a row, with every value written out. It is the
- * charts' table view, and the one place a single day's numbers sit together.
- *
- * A value that was not measured is a dash, and a day /wrap stored nothing for
- * says so across its whole row, so neither can be read as zero. Where the
- * metrics version changes, a row says so, as the chart's dotted line does.
+ * The table is the charts' text alternative and the one place where a single
+ * day's numbers sit together.
  */
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';

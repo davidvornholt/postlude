@@ -1,6 +1,4 @@
 /**
- * How each day was rated, as three small meters per day.
- *
  * The scales are short and ordered, so a meter of three steps says a rating at
  * a glance: one step for the low end, three for the high end, and the same
  * green throughout, because more of it means more and not something else. A day

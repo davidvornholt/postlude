@@ -37,7 +37,6 @@ const stepOf = <Value extends string>(
     ? null
     : options.findIndex((option) => option.value === value) + 1;
 
-/** The three ratings, each read as steps from the low end to the high end. */
 export const ratingScales: ReadonlyArray<RatingScale> = [
   {
     name: 'Energy',
@@ -69,7 +68,6 @@ export const ratingScales: ReadonlyArray<RatingScale> = [
   },
 ];
 
-/** What the ratings chart's details line says about one day. */
 export const ratingDetails = (day: ReviewDay, today: JournalDate): string => {
   if (day.date > today) {
     return 'Still to come';
@@ -80,7 +78,6 @@ export const ratingDetails = (day: ReviewDay, today: JournalDate): string => {
   return [...ratings, day.closed ? 'Closed' : 'Not closed'].join(' · ');
 };
 
-/** What the screen time chart's details line says about one day. */
 export const screenTimeDetails = (
   day: ReviewDay,
   today: JournalDate,

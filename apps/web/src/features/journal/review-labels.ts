@@ -1,5 +1,3 @@
-/** How the review pages say a duration, a weekday and a rating. */
-
 import {
   energyOptions,
   progressOptions,
@@ -12,7 +10,6 @@ import type { Energy, Progress, RepeatDay } from './schemas/day-rating.ts';
 const minutesPerHour = 60;
 const weekdayAbbreviationLength = 3;
 
-/** "0 min", "45 min", "3 h", "3 h 5 min". */
 export const durationLabel = (minutes: number): string => {
   const hours = Math.floor(minutes / minutesPerHour);
   const rest = minutes % minutesPerHour;
@@ -23,7 +20,6 @@ export const durationLabel = (minutes: number): string => {
   return rest === 0 ? hourText : `${hourText} ${rest} min`;
 };
 
-/** "Mon" for a Monday. */
 export const weekdayAbbreviation = (date: JournalDate): string =>
   journalWeekdayLabel(journalDateWeekday(date)).slice(
     0,

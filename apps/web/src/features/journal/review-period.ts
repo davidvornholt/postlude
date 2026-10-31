@@ -1,6 +1,4 @@
 /**
- * The weeks and months the review pages look back over, and their names.
- *
  * A week runs Monday to Sunday, as the calendar's rows do, and its address is
  * its Monday. Its number is the ISO week's, the one German calendars print.
  * The journal's range starts on a Monday and ends on a Friday, so every week
@@ -33,7 +31,6 @@ export type ReviewPeriod =
 const daysPerWeek = 7;
 const thursdayIndex = 3;
 
-/** The Monday of the week a date falls in. */
 export const weekStartOf = (date: JournalDate): JournalDate =>
   shiftJournalDate(date, -calendarWeekdayIndex(date));
 
@@ -50,7 +47,6 @@ const weekDates = (start: JournalDate): ReadonlyArray<JournalDate> => {
   return dates;
 };
 
-/** Every day of the period, in order. */
 export const periodDates = (
   period: ReviewPeriod,
 ): ReadonlyArray<JournalDate> =>
@@ -79,7 +75,6 @@ export const shiftPeriod = (
   };
 };
 
-/** The period that holds a day: its week, or its month. */
 export const periodHolding = (
   kind: ReviewPeriod['kind'],
   date: JournalDate,
@@ -88,7 +83,6 @@ export const periodHolding = (
     ? { kind, start: weekStartOf(date) }
     : { kind, month: journalMonthOf(date) };
 
-/** Whether a day falls inside the period. */
 export const periodIncludes = (
   period: ReviewPeriod,
   date: JournalDate,

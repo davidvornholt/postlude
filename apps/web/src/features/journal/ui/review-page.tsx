@@ -1,16 +1,7 @@
 /**
- * A week or a month looked back on: how the days felt, then what the day
- * metrics measured, then every day as a row.
- *
- * Only ratings and day metrics are read here, never the writing. The feeling
- * comes first for the same reason the day page asks for energy before it shows
- * the report: the numbers are there to set beside how the days felt, not to
- * tell it.
- *
- * Contract 4 holds throughout. Totals add up only days measured under one
- * metrics version and say how many days they cover, a change of version is
- * drawn where it happens, a value that was not measured is shown as missing,
- * and the categories are called estimates.
+ * How the days felt comes before what the day metrics measured, for the same
+ * reason the day page asks for energy before it shows the report: the numbers
+ * are there to set beside how the days felt, not to tell it.
  */
 
 import type { ReactNode } from 'react';
@@ -60,7 +51,6 @@ const Section = ({
   </section>
 );
 
-/** A link to another period, on whichever of the two pages shows it. */
 const PeriodLink = ({
   period,
   children,

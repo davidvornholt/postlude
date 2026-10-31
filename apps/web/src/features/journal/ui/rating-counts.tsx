@@ -1,9 +1,3 @@
-/**
- * How many days of the period got each answer, as words. It is the period's
- * ratings read across rather than day by day, and it counts the days without a
- * rating instead of quietly leaving them out.
- */
-
 import {
   energyOptions,
   progressOptions,

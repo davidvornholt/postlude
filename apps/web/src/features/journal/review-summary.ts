@@ -1,6 +1,4 @@
 /**
- * What the review pages add up, and what they refuse to.
- *
  * Contract 4 of the personal-systems plan: a day measured under one metrics
  * version is not compared with a day measured under another, and a number that
  * was not measured is missing, never zero. So every total here is taken over
@@ -12,7 +10,6 @@ import type { JournalDate } from './journal-day.ts';
 import type { ReviewDay } from './review-view.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 
-/** Where a day stands for the numbers. */
 export type MetricsState =
   /** After today, so nothing can be stored yet. */
   | 'upcoming'
@@ -40,7 +37,6 @@ export const comparisonVersion = (
   return versions.length === 0 ? undefined : Math.max(...versions);
 };
 
-/** The days whose numbers can be added up together. */
 export const comparableDays = (
   days: ReadonlyArray<ReviewDay>,
 ): ReadonlyArray<DayMetrics> => {
@@ -52,7 +48,6 @@ export const comparableDays = (
   );
 };
 
-/** The days measured under some other version, which totals leave out. */
 export const otherVersionDays = (
   days: ReadonlyArray<ReviewDay>,
 ): ReadonlyArray<ReviewDay> => {

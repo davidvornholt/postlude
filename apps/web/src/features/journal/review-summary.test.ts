@@ -1,9 +1,3 @@
-/**
- * Contract 4 in numbers: only days of one metrics version are added up, a
- * value that was not measured is counted as missing and never as zero, and
- * days still to come count for nothing.
- */
-
 import { describe, expect, it } from 'bun:test';
 
 import {

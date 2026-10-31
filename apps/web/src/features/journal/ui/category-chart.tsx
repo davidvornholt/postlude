@@ -1,9 +1,6 @@
 /**
- * Where the screen time went, by /wrap's categories, added up over the period.
- *
- * Each category is one row with its name and its time written out, so the bar
- * is there to compare lengths and nothing has to be read off it. One series,
- * so one colour. The categories are estimates, and the heading says so.
+ * Each category's time is written out beside its bar, so the bar is there to
+ * compare lengths and nothing has to be read off it. One series, so one colour.
  */
 
 import { journalCountLabel } from '../journal-labels.ts';
