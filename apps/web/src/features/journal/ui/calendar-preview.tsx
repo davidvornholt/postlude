@@ -9,9 +9,45 @@ import { journalLanguage } from '../journal-language.ts';
 import type { CalendarDay } from '../services/calendar-fns.ts';
 import { DayLink } from './day-link.tsx';
 
-const PreviewWords = ({ day }: { readonly day: CalendarDay | undefined }) => {
+/**
+ * An unwritten day reads by where it falls: today is still being lived and a
+ * day ahead has not come yet, so only a past day can have gone unwritten.
+ */
+const unwrittenWording = (
+  selected: JournalDate,
+  today: JournalDate,
+): string => {
+  if (selected === today) {
+    return 'Nothing written yet today.';
+  }
+  return selected > today
+    ? 'Nothing written for this day yet.'
+    : 'Nothing was written on this day.';
+};
+
+/** An unwritten day is opened to be written, so the link says that. */
+const linkWording = (
+  day: CalendarDay | undefined,
+  selected: JournalDate,
+  today: JournalDate,
+): string => {
+  const verb = day === undefined ? 'Write' : 'Open';
+  return selected === today ? `${verb} today` : `${verb} this day`;
+};
+
+const PreviewWords = ({
+  day,
+  selected,
+  today,
+}: {
+  readonly day: CalendarDay | undefined;
+  readonly selected: JournalDate;
+  readonly today: JournalDate;
+}) => {
   if (day === undefined) {
-    return <p className="text-ink-muted">Nothing was written on this day.</p>;
+    return (
+      <p className="text-ink-muted">{unwrittenWording(selected, today)}</p>
+    );
   }
   if (day.snippet === '') {
     return (
@@ -49,14 +85,14 @@ export const CalendarPreview = ({
       {journalDateLabel(selected)}
     </h2>
     <div className={[readingMeasureClass, 'mt-6'].join(' ')}>
-      <PreviewWords day={day} />
+      <PreviewWords day={day} selected={selected} today={today} />
       {day === undefined ? null : (
         <p className={[eyebrowClass, 'mt-5 text-ink-faint'].join(' ')}>
           {journalCountLabel(day.words, 'word')}
         </p>
       )}
       <DayLink variant="quiet" className="mt-7" date={selected} today={today}>
-        {selected === today ? 'Open today' : 'Open day'}
+        {linkWording(day, selected, today)}
       </DayLink>
     </div>
   </aside>
