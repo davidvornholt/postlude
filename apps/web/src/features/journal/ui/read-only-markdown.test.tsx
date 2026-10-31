@@ -50,9 +50,13 @@ it("keeps the controls around an image in the page's language and its descriptio
     `![Regen am See](${imageRoute}12345678-1234-4234-8234-123456789abc.png)\n\n![](/missing.png)`,
   );
 
-  expect(attributeValue(openingTag(html, 'button'), 'lang')).toBe(
-    interfaceLanguage,
-  );
+  const button = openingTag(html, 'button');
+  expect(attributeValue(button, 'aria-label')).not.toContain('Regen am See');
+  expect(attributeValue(button, 'lang')).not.toBe(interfaceLanguage);
+  expect(
+    attributeValue(elementAttributes(html, 'span', 'Enlarge image:'), 'lang'),
+  ).toBe(interfaceLanguage);
+  expect(attributeValue(openingTag(html, 'img'), 'lang')).toBe(journalLanguage);
   expect(
     attributeValue(
       elementAttributes(html, 'span', 'Image unavailable'),

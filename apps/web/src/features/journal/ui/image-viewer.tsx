@@ -14,13 +14,14 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
   return (
     <>
       <button
-        aria-label={`Enlarge image${alt ? `: ${alt}` : ''}`}
         className={`${focusRingClass} block min-h-11 min-w-11 max-w-full cursor-zoom-in`}
-        lang={interfaceLanguage}
         onClick={() => dialogRef.current?.showModal()}
         ref={triggerRef}
         type="button"
       >
+        <span className="sr-only" lang={interfaceLanguage}>
+          {alt ? 'Enlarge image: ' : 'Enlarge image'}
+        </span>
         <img alt={alt} lang={journalLanguage} loading="lazy" src={src} />
       </button>
       <dialog
