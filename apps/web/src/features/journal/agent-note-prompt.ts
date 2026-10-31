@@ -27,6 +27,8 @@
  * the text can close the tag the document sits in.
  */
 
+import { Lexer, type Token, type Tokens } from 'marked';
+
 import { journalDateWeekday } from './journal-day.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 import type { DayOverview } from './schemas/day-overview.ts';
@@ -127,20 +129,89 @@ const earlierDayOf = (day: DayOverview, version: number | null) => {
     : { date: day.date, weekday: weekdayOf(day.date), ratings, metrics };
 };
 
-/** Matches a Markdown image, with its alternative text and address. */
-const markdownImage = /!\[[^\]]*\]\([^)]*\)/gu;
-/** Matches a Markdown link, with its text as the `text` group. */
-const markdownLink = /\[(?<text>[^\]]*)\]\([^)]*\)/gu;
-const bareAddress = /\bhttps?:\/\/\S+/gu;
+const bareAddress = /\b(?:[a-z][\d+.a-z-]*:\/\/|www\.)\S+/giu;
+const htmlLineBreak = /^<br\s*\/?>$/iu;
+const lineBreak = '\n';
+const paragraphBreak = '\n\n';
+
+/** The words of inline Markdown: a link's text without its target, no tags. */
+const inlineTextOf = (tokens: ReadonlyArray<Token>): string =>
+  tokens
+    .map((token) => {
+      switch (token.type) {
+        case 'image':
+          return '[image]';
+        case 'br':
+          return lineBreak;
+        case 'html':
+          return htmlLineBreak.test(token.raw) ? lineBreak : '';
+        case 'checkbox':
+          return '';
+        case 'link':
+        case 'strong':
+        case 'em':
+        case 'del':
+          return inlineTextOf(token.tokens ?? []);
+        case 'text':
+        case 'escape':
+        case 'codespan':
+          return token.text;
+        default:
+          return token.raw;
+      }
+    })
+    .join('');
+
+const blocksTextOf = (
+  tokens: ReadonlyArray<Token>,
+  separator: string,
+): string =>
+  tokens
+    .map((token) => {
+      switch (token.type) {
+        case 'space':
+        case 'def':
+        case 'hr':
+        case 'checkbox':
+          return '';
+        case 'code':
+          return token.text;
+        // The tags go; the text between them is still the entry.
+        case 'html':
+          return inlineTextOf(Lexer.lexInline(token.raw)).trim();
+        case 'blockquote':
+          return blocksTextOf(token.tokens ?? [], paragraphBreak);
+        case 'list':
+          return token.items
+            .map((item: Tokens.ListItem) =>
+              blocksTextOf(item.tokens, lineBreak),
+            )
+            .join(lineBreak);
+        case 'table':
+          return [token.header, ...token.rows]
+            .map((row: Array<Tokens.TableCell>) =>
+              row.map((cell) => inlineTextOf(cell.tokens)).join(' '),
+            )
+            .join(lineBreak);
+        case 'paragraph':
+        case 'heading':
+        case 'text':
+          return inlineTextOf(token.tokens ?? [token]);
+        default:
+          return inlineTextOf([token]);
+      }
+    })
+    .filter((text) => text !== '')
+    .join(separator);
 
 /**
  * The journal text as the model reads it. Image addresses point at Postlude's
- * own storage and link targets can carry tokens; neither helps the note.
+ * own storage and link targets can carry tokens; neither helps the note. The
+ * Markdown is read with the grammar the editor uses, so a destination with
+ * brackets, parentheses or a reference definition is still recognized.
  */
 const journalTextOf = (markdown: string) => {
-  const text = markdown
-    .replace(markdownImage, '[image]')
-    .replace(markdownLink, '$<text>')
+  const text = blocksTextOf(Lexer.lex(markdown), paragraphBreak)
     .replace(bareAddress, '[link]')
     .trim();
   return text.length > journalTextLimit

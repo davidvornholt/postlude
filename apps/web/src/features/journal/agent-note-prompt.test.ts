@@ -12,6 +12,8 @@ import {
 
 const dataOpening = /^<day_data>\n/u;
 const dataClosing = /\n<\/day_data>$/u;
+// The image addresses and link targets below carry these, in any letter case.
+const privatePart = /secret|api\/journal/iu;
 
 /** The JSON document the model is given, read back. */
 const dataOf = (prompt: ReturnType<typeof agentNotePromptOf>) =>
@@ -129,6 +131,69 @@ describe('the journal text as the model reads it', () => {
     expect(data.journalText).toContain('Ich habe den Plan fertig.');
     expect(data.journalText).not.toContain('https://');
   });
+
+  it.each([
+    {
+      name: 'an image whose alt text has escaped brackets, as the editor writes it',
+      markdown:
+        'Unser Garten ![Foto \\[Haus\\]](</api/journal-images/SECRET-KEY.png>) im Herbst.',
+      journalText: 'Unser Garten [image] im Herbst.',
+    },
+    {
+      name: 'a link whose target has parentheses and a token',
+      markdown:
+        'Ich habe mein [Konto](https://secret.test/a(b)?token=SECRET-TOKEN) geprüft.',
+      journalText: 'Ich habe mein Konto geprüft.',
+    },
+    {
+      name: 'a reference-style link and image',
+      markdown: [
+        'Ich habe [den Plan][plan] fertig. ![Foto][foto]',
+        '',
+        '[plan]: https://secret.test/?token=SECRET-TOKEN',
+        '[foto]: /api/journal-images/SECRET-KEY.png',
+      ].join('\n'),
+      journalText: 'Ich habe den Plan fertig. [image]',
+    },
+    {
+      name: 'an uppercase bare address',
+      markdown: 'Gelesen: HTTPS://SECRET.TEST/?token=SECRET-TOKEN heute.',
+      journalText: 'Gelesen: [link] heute.',
+    },
+    {
+      name: 'an autolink',
+      markdown: 'Gelesen: <https://secret.test/?token=SECRET-TOKEN> heute.',
+      journalText: 'Gelesen: [link] heute.',
+    },
+    {
+      name: 'a www address',
+      markdown: 'Gelesen: www.secret.test/?token=SECRET-TOKEN heute.',
+      journalText: 'Gelesen: [link] heute.',
+    },
+    {
+      // Imported notes keep their HTML; the editor escapes typed HTML.
+      name: 'imported HTML',
+      markdown: [
+        'Unser Garten <img src="/api/journal-images/SECRET-KEY.png" alt="Garten"> und mein <a href="https://secret.test/?token=SECRET-TOKEN">Konto</a>.',
+        '',
+        '<img src="/api/journal-images/SECRET-KEY.png">',
+        '',
+        'Im Herbst.',
+      ].join('\n'),
+      journalText: 'Unser Garten  und mein Konto.\n\nIm Herbst.',
+    },
+  ])(
+    'keeps the words and drops the address of $name',
+    ({ markdown, journalText }) => {
+      const prompt = agentNotePromptOf(
+        agentNoteInput({
+          entry: { ...emptyJournalEntry(noteDay), journalMarkdown: markdown },
+        }),
+      );
+      expect(dataOf(prompt).journalText).toBe(journalText);
+      expect(everythingSent(prompt)).not.toMatch(privatePart);
+    },
+  );
 
   it('is cut when it is long, and says so', () => {
     const long = 'Wort '.repeat(journalTextLimit);

@@ -25,7 +25,7 @@ export const excludedMarkers = {
 
 export const journalText = `Heute war ein langer, guter Tag.
 
-![Foto](/api/journal/images/${excludedMarkers.imageKey})
+![Foto](/api/journal-images/${excludedMarkers.imageKey})
 Ich habe [den Plan](https://example.test/${excludedMarkers.linkTarget}) fertig.`;
 
 export const dayMetricsFor = (
