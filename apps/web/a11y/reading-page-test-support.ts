@@ -2,6 +2,10 @@ import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
+import {
+  sampleReviewMonth,
+  sampleReviewWeek,
+} from '../src/features/journal/testing/review-view.ts';
 import { viewportContent } from '../src/shared/ui/viewport.ts';
 import { buildReadingPageFixture } from './reading-page-fixture-build.ts';
 import type {
@@ -61,6 +65,8 @@ export const readingPageFixtureConfigs = {
       today,
     },
   },
+  reviewWeek: { kind: 'review', view: sampleReviewWeek },
+  reviewMonth: { kind: 'review', view: sampleReviewMonth },
 } satisfies Record<string, ReadingPageFixtureConfig>;
 
 const assets = new Map<

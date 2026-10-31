@@ -3,7 +3,7 @@ import { Schema } from 'effect';
 import { isJournalMonth } from '../calendar.ts';
 import { JournalDateSchema } from './entry.ts';
 
-const JournalMonthSchema = Schema.String.check(
+export const JournalMonthSchema = Schema.String.check(
   Schema.makeFilter(isJournalMonth, { message: 'Invalid journal month' }),
 );
 

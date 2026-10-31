@@ -35,5 +35,16 @@ export const buildReadingPageFixture = (
         ).pathname,
         exportNames: ['OnThisDayPage'],
       },
+      {
+        fixtureModulePath: new URL(
+          './review-page-fixture-module.ts',
+          import.meta.url,
+        ).pathname,
+        productionModulePath: new URL(
+          '../src/features/journal/ui/review-page.tsx',
+          import.meta.url,
+        ).pathname,
+        exportNames: ['ReviewPage'],
+      },
     ],
   });

@@ -1,6 +1,10 @@
-import { type KeyboardEvent, type PointerEvent, useState } from 'react';
+/**
+ * Which day of a chart is being inspected, by pointer or by keyboard. A chart
+ * is one tab stop: Left and Right step through its days, and Home and End jump
+ * to the first and the last.
+ */
 
-import type { EntrySizePoint } from '../entry-size.ts';
+import { type KeyboardEvent, type PointerEvent, useState } from 'react';
 
 const destinationFor = (key: string, active: number, last: number) => {
   switch (key) {
@@ -17,10 +21,11 @@ const destinationFor = (key: string, active: number, last: number) => {
   }
 };
 
-export const useEntrySizeSelection = (
-  points: ReadonlyArray<EntrySizePoint>,
+export const useDaySelection = <Point extends { readonly date: string }>(
+  points: ReadonlyArray<Point>,
+  initialDate: string | undefined = points.at(-1)?.date,
 ) => {
-  const [activeDate, setActiveDate] = useState(points.at(-1)?.date);
+  const [activeDate, setActiveDate] = useState(initialDate);
   const foundIndex = points.findIndex((point) => point.date === activeDate);
   const activeIndex =
     foundIndex < 0 ? Math.max(0, points.length - 1) : foundIndex;

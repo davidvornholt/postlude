@@ -37,6 +37,9 @@ const appPaths = [
   '/calendar',
   '/day/$date',
   '/on-this-day',
+  '/review',
+  '/review/month',
+  '/review/week',
 ] as const;
 
 const emptyComponent = () => null;
