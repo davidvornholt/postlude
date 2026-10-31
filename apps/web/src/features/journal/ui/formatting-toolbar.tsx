@@ -67,7 +67,10 @@ export const FormattingToolbar = () => {
       data-formatting-toolbar=""
     >
       <PageFrame className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        <span className="min-h-5 text-ink-muted text-xs">
+        {/* Which area the tools act on. On a phone the caret already says
+            so, and a second row would make the pinned bar cover more of the
+            writing; the toolbar's own name still carries it. */}
+        <span className="hidden min-h-5 text-ink-muted text-xs sm:block">
           {active?.label ?? 'Writing tools'}
         </span>
         <div

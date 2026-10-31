@@ -13,10 +13,12 @@ const cssViewportByProject: Record<string, number> = {
   'desktop-chromium': desktopViewportWidth,
   'mobile-chromium': mobileViewportWidth,
 };
-const headingLevelThreeSize = 25.6;
-const headingLevelFourSize = 21.6;
-const headingLevelFiveSize = 18.4;
-const headingLevelSixSize = 16;
+// Entry headings are sized in em from the 18px the writing is set in, the same
+// as wherever an entry is read.
+const headingLevelThreeSize = 28.8;
+const headingLevelFourSize = 24.3;
+const headingLevelFiveSize = 20.7;
+const headingLevelSixSize = 18;
 const colorSchemes = ['light', 'dark'] as const;
 const displayTypeface = 'Fraunces Variable';
 const levelSixWeight = '600';

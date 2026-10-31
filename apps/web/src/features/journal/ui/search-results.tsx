@@ -18,6 +18,7 @@ import {
 } from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
+import { journalLanguage } from '../journal-language.ts';
 import type {
   ExcerptSegment,
   SearchHit,
@@ -52,6 +53,7 @@ const Excerpt = ({
       readingMeasureClass,
       'mt-3 block min-w-0 break-words text-ink text-lg',
     ].join(' ')}
+    lang={journalLanguage}
   >
     {segments.map((segment) =>
       segment.match ? (

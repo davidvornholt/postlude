@@ -61,8 +61,10 @@ export const MainNavigation = ({
   onOpenArchive,
   onPrepareArchive,
 }: MainNavigationProps) => (
-  <nav aria-label="Main" className="max-w-full overflow-x-auto">
-    <ul className="flex w-max items-center gap-6 pb-1">
+  // The places wrap onto a second line on a phone rather than scroll sideways,
+  // where the last of them would sit past the edge with nothing to say so.
+  <nav aria-label="Main" className="max-w-full">
+    <ul className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-1">
       {navItems.map((item) => (
         <NavigationItem
           archivePending={archivePending}

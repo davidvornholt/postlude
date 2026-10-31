@@ -1,6 +1,7 @@
 import { expect, it } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 
+import { journalLanguage } from '../journal-language.ts';
 import {
   markdownSemanticsFixture,
   markdownSemanticsLinks,
@@ -30,6 +31,12 @@ it('server-renders the Markdown structure a reader uses', () => {
   );
   expect(html).toContain('Rain over the lake');
   expect(html).not.toContain('<img');
+});
+
+it("sets the writing in the journal's language rather than the page's", () => {
+  expect(render('Ein ruhiger Abend.')).toStartWith(
+    `<div class="journal-prose" lang="${journalLanguage}">`,
+  );
 });
 
 it('keeps safe mixed-case web links and every subordinate heading level', () => {
@@ -92,7 +99,7 @@ it('shows each checklist item ticked or open, like the editor', () => {
   const html = render('- [x] Watered the plants\n- [ ] Call the landlord');
 
   expect(html).toBe(
-    '<div class="journal-prose"><ul data-type="taskList">' +
+    `<div class="journal-prose" lang="${journalLanguage}"><ul data-type="taskList">` +
       '<li data-checked="true"><label><input aria-label="Watered the plants" disabled="" readOnly="" type="checkbox" checked=""/></label><div><p>Watered the plants</p></div></li>' +
       '<li data-checked="false"><label><input aria-label="Call the landlord" disabled="" readOnly="" type="checkbox"/></label><div><p>Call the landlord</p></div></li>' +
       '</ul></div>',

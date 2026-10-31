@@ -18,6 +18,7 @@ import {
   openingTag,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
+import { journalLanguage } from '../journal-language.ts';
 import type { SearchHit, SearchResults } from '../search-contract.ts';
 import { searchTerms } from '../search-query.ts';
 import { searchHitFixture } from '../testing/search-hit-fixture.ts';
@@ -29,6 +30,7 @@ const one = 1;
 const two = 2;
 const overLimitLength = 201;
 const marks = /<mark\b/gu;
+const languageAttribute = / lang="/gu;
 const search = () => Promise.reject(new Error('SSR does not submit a search.'));
 
 const hit = (
@@ -137,6 +139,15 @@ it('marks the found words as marks rather than as a colour', async () => {
   );
   expect(html.match(marks)?.length).toBe(two);
   expect(html).toContain('font-medium');
+});
+
+it("sets the found writing in the journal's language and its labels in the page's", async () => {
+  const html = await render(
+    answered('rain', [hit('2026-03-01', 'The rain fell.', rain)]),
+  );
+  const [, excerpt = ''] = html.split(`lang="${journalLanguage}">`);
+  expect(plainText(excerpt)).toStartWith('The rain fell.');
+  expect(html.match(languageAttribute)?.length).toBe(one);
 });
 
 it('counts one day as a day', async () => {

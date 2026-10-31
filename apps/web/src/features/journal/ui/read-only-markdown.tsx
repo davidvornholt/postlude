@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import { createElement, type ReactNode } from 'react';
 
 import { imageKeyOf } from '../images.ts';
+import { journalLanguage } from '../journal-language.ts';
 import {
   checklistItemLabel,
   journalHeadingTag,
@@ -202,7 +203,7 @@ export const ReadOnlyMarkdown = ({
   className,
   markdown,
 }: ReadOnlyMarkdownProps) => (
-  <div className={className}>
+  <div className={className} lang={journalLanguage}>
     {renderNode(parseJournalMarkdown(markdown), 'doc')}
   </div>
 );
