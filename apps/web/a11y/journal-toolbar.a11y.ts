@@ -33,7 +33,9 @@ const scrollToWritingEnd = (element: Element) =>
 test('writing tools fit a narrow screen, preserve selection, and support keyboard navigation', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: narrowWidth, height: 800 });
+  // The smallest phone screen still in use, where the evening's writing runs
+  // past the bottom and the tools have to hold their place over a scroll.
+  await page.setViewportSize({ width: narrowWidth, height: 568 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route('**/toolbar-fixture', (route) =>
     route.fulfill({

@@ -14,7 +14,7 @@ const authenticationMessage =
   'Your sign-in ended before this entry could be saved. Your words are kept in this tab.';
 
 const colorSchemes = ['light', 'dark'] as const;
-const dayFieldName = 'Wednesday, August 26, 2026. Go to another day.';
+const dayFieldName = 'Go to a day. Showing Wednesday, August 26, 2026.';
 
 // On desktop a native date field is a tab stop for each of its segments. Under
 // mobile emulation Chromium draws it as one control that opens the system
@@ -37,11 +37,7 @@ for (const colorScheme of colorSchemes) {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountDayPage(page, ['stored']);
 
-    await page.keyboard.press('Tab');
-    const dayField = page.getByLabel(dayFieldName);
-    await expect(dayField).toBeFocused();
-    await tabPastDayField(page, isMobile);
-    await expect(page.getByRole('button', { name: 'Open' })).toBeFocused();
+    // The steps and the copy share the line above the date, so they come first.
     await page.keyboard.press('Tab');
     await expect(
       page.getByRole('link', { name: 'Previous day' }),
@@ -50,6 +46,11 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByRole('link', { name: 'Next day' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('Copy day as Markdown')).toBeFocused();
+    await page.keyboard.press('Tab');
+    const dayField = page.getByLabel(dayFieldName);
+    await expect(dayField).toBeFocused();
+    await tabPastDayField(page, isMobile);
+    await expect(page.getByRole('button', { name: 'Open' })).toBeFocused();
     await page.keyboard.press('Tab');
     const passage = page.getByRole('textbox', { name: 'Passage' });
     await expect(passage).toBeFocused();

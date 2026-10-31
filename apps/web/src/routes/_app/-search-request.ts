@@ -55,10 +55,27 @@ export const handleSearchPost = async <Result>(
     context: { searchView: await searchView(await queryFrom(request), search) },
   });
 
+/**
+ * The words a `/search?q=` address asks for. The router reads a query value as
+ * JSON where it can, so `?q=1914` arrives as a number; it is still the words.
+ */
+export const searchAddressQuery = (
+  search: Record<string, unknown>,
+): { readonly q?: string } => {
+  const { q } = search;
+  if (typeof q === 'string') {
+    return { q };
+  }
+  return typeof q === 'number' || typeof q === 'boolean'
+    ? { q: String(q) }
+    : {};
+};
+
 export const loadSearchView = (
   serverContext: unknown,
   search: SearchCall,
+  addressQuery = '',
 ): SearchPageView | Promise<SearchPageView> => {
   const context = serverContext as SearchServerContext | undefined;
-  return context?.searchView ?? searchView('', search);
+  return context?.searchView ?? searchView(addressQuery, search);
 };

@@ -119,6 +119,9 @@ const router = createRouter({
   ]),
 });
 await router.load();
+// The browser tests make the navigations a route makes on its own, like the
+// search page tidying its address, through the same router.
+Object.assign(globalThis, { dayNavigationRouter: router });
 
 const root = document.querySelector('#day-navigation-fixture');
 if (root === null) {

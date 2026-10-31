@@ -61,6 +61,7 @@ describe('createFetchHandler', () => {
     );
     expect(response.headers.get('pragma')).toBe('no-cache');
     expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('referrer-policy')).toBe('strict-origin');
     expect(response.headers.get('x-tss-serialized')).toBe('true');
     expect(response.headers.getSetCookie()).toEqual([
       'first=fixture; HttpOnly',

@@ -75,7 +75,7 @@ it('lets a blank future day open as a draft', async () => {
     <CalendarPage requestedDay="2026-08-28" view={view} />,
   );
 
-  expect(plainText(html)).toContain('Nothing was written on this day.');
+  expect(plainText(html)).toContain('Nothing written for this day yet.');
   expect(html).toContain('href="/day/2026-08-28"');
   expect(html).toContain('Friday, August 28, 2026, future day, no entry');
 });
@@ -97,6 +97,16 @@ it('shows the selected empty day and still offers its writing page', async () =>
 
   expect(plainText(html)).toContain('Nothing was written on this day.');
   expect(html).toContain('href="/day/2026-08-24"');
+});
+
+it('says today is still unwritten rather than that nothing was written', async () => {
+  const html = await renderInRouter(
+    <CalendarPage requestedDay={today} view={view} />,
+  );
+
+  expect(plainText(html)).toContain('Nothing written yet today.');
+  expect(plainText(html)).not.toContain('Nothing was written on this day.');
+  expect(html).toContain('href="/"');
 });
 
 it('completes the first and last calendar weeks with inert ruled cells', async () => {

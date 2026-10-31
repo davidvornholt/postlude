@@ -12,8 +12,9 @@
  * differs.
  *
  * The date at the top is the way to another day as well as the name of this
- * one: `day-heading.tsx` makes it the field, and the two arrows under it step
- * to the day before and the day after.
+ * one: `date-heading.tsx` makes it the field, and the two arrows above it step
+ * to the day before and the day after, as the arrow keys do. The page ends on
+ * the same two steps (`day-steps.tsx`).
  */
 
 import { useId, useRef } from 'react';
@@ -28,14 +29,13 @@ import {
   earliestJournalDate,
   type JournalDate,
   latestJournalDate,
-  shiftJournalDate,
 } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
 import type { EveningActions, EveningView } from '../services/evening-fns.ts';
 import { CopyDayControl } from './copy-day-control.tsx';
-import { DayHeading } from './day-heading.tsx';
-import { DayLink } from './day-link.tsx';
+import { DateHeading } from './date-heading.tsx';
+import { DayTurns, NearbyDays } from './day-steps.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { EveningFlow } from './evening-flow.tsx';
 import {
@@ -46,6 +46,7 @@ import { type EditorFocus, MarkdownEditor } from './markdown-editor.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
 import { type SaveDraft, useAutosave } from './use-autosave.ts';
+import { useDaySteps } from './use-day-steps.ts';
 
 type DayPageProps = {
   readonly entry: JournalEntry;
@@ -99,57 +100,39 @@ const DayBody = ({
       ? autosave.failure.message
       : undefined;
   const eveningId = useId();
-  const previous =
-    entry.date === earliestJournalDate
-      ? undefined
-      : shiftJournalDate(entry.date, -1);
-  const next =
-    entry.date === latestJournalDate
-      ? undefined
-      : shiftJournalDate(entry.date, 1);
+  const headingId = useId();
+  const { next, openDay, previous } = useDaySteps(entry.date, today);
 
   return (
     <>
       <PageFrame as="header">
-        <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
-          {journalDayRelation(entry.date, today)}
-        </p>
-        <DayHeading date={entry.date} today={today} />
-        {/* Two arrows rather than two labels. The heading above them already
-            names the day they step from, so spelling out "previous day" beside
-            it is the page saying the same thing a third time — and the pair
-            reads as one stepper at a glance, which two lines of small capitals
-            never did. Each one still says where it goes in `aria-label`, and
-            the arrow sits in a target wider than the arrow. */}
-        <div
-          className={[readingMeasureClass, 'mt-6 flex items-center gap-2'].join(
-            ' ',
-          )}
-        >
-          <nav aria-label="Nearby days" className="-ml-3 flex gap-1">
-            {previous === undefined ? null : (
-              <DayLink
-                variant="icon"
-                date={previous}
-                label="Previous day"
-                today={today}
-              >
-                ←
-              </DayLink>
-            )}
-            {next === undefined ? null : (
-              <DayLink
-                variant="icon"
-                date={next}
-                label="Next day"
-                today={today}
-              >
-                →
-              </DayLink>
-            )}
-          </nav>
-          <CopyDayControl day={autosave.draft} />
+        {/* The steps share the line above the date with the day's place in
+            time, which they move through, and lend it no height: the targets
+            reach into the space around the line rather than push the writing
+            further down. */}
+        <div className="flex items-center justify-between gap-4">
+          <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
+            {journalDayRelation(entry.date, today)}
+          </p>
+          <div className="-my-3 -mr-3 flex items-center gap-2">
+            <NearbyDays
+              headingId={headingId}
+              next={next}
+              previous={previous}
+              today={today}
+            />
+            <CopyDayControl day={autosave.draft} />
+          </div>
         </div>
+        <DateHeading
+          action="/day"
+          date={entry.date}
+          headingId={headingId}
+          max={latestJournalDate}
+          min={earliestJournalDate}
+          noun="day"
+          onChoose={openDay}
+        />
       </PageFrame>
 
       {/* The toolbar sticks only while the writing is on screen. It acts on the
@@ -158,7 +141,7 @@ const DayBody = ({
       <div>
         <FormattingToolbar />
 
-        <div className="mt-10 sm:mt-14">
+        <div className="mt-6 sm:mt-8">
           <ScriptureRegister
             initialMarkdown={autosave.draft.scriptureMarkdown}
             onLeave={autosave.flush}
@@ -173,11 +156,7 @@ const DayBody = ({
           />
         </div>
 
-        <PageFrame
-          aria-labelledby={eveningId}
-          as="section"
-          className="mt-10 sm:mt-14"
-        >
+        <PageFrame aria-labelledby={eveningId} as="section" className="mt-10">
           <h2
             className={[eyebrowClass, 'text-ink-muted'].join(' ')}
             id={eveningId}
@@ -187,7 +166,7 @@ const DayBody = ({
           {/* The frame is the archive's now, which is wider than anyone wants to
             write a paragraph across, so the writing keeps its own measure
             inside it and starts on the same line as everything above it. */}
-          <div className={[readingMeasureClass, 'mt-6'].join(' ')}>
+          <div className={[readingMeasureClass, 'mt-4'].join(' ')}>
             <MarkdownEditor
               focusClass={focusRingClass}
               focusHandle={eveningEditorRef}
@@ -230,6 +209,8 @@ const DayBody = ({
         onBackToWriting={() => eveningEditorRef.current?.focusEnd()}
         today={today}
       />
+
+      <DayTurns next={next} previous={previous} today={today} />
     </>
   );
 };

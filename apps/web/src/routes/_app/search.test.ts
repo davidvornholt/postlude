@@ -54,7 +54,7 @@ beforeEach(() => {
   responseStatus = undefined;
 });
 
-const { handleSearchPost, loadSearchView } = await import(
+const { handleSearchPost, loadSearchView, searchAddressQuery } = await import(
   './-search-request.ts'
 );
 
@@ -97,6 +97,21 @@ it('passes a native POST search to the normal page loader without a URL query', 
     state: 'answered',
     results: { query: 'private rain' },
   });
+});
+
+it('answers the words of a ?q= address when no POST came in', async () => {
+  await expect(
+    loadSearchView(undefined, search, 'rain'),
+  ).resolves.toMatchObject({ state: 'answered', results: { query: 'rain' } });
+  expect(searches).toEqual([{ data: { q: 'rain' } }]);
+});
+
+it('reads a ?q= value the router took for a number or a flag as words', () => {
+  expect(searchAddressQuery({ q: 'rain' })).toEqual({ q: 'rain' });
+  expect(searchAddressQuery({ q: 1914 })).toEqual({ q: '1914' });
+  expect(searchAddressQuery({ q: true })).toEqual({ q: 'true' });
+  expect(searchAddressQuery({ q: ['rain'] })).toEqual({});
+  expect(searchAddressQuery({})).toEqual({});
 });
 
 it('renders an overlong native query as a field error without sending it', async () => {

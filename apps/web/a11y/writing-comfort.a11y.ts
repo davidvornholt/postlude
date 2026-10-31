@@ -15,7 +15,7 @@ const readingSize = '18px';
 const readingLeading = '28px';
 // In page order, which is the order their settings are read in.
 const writingAreas = [
-  { label: 'Morning scripture notes', minHeight: '96px' },
+  { label: 'Morning scripture notes', minHeight: '64px' },
   { label: 'Evening journal', minHeight: '192px' },
 ] as const;
 
@@ -113,9 +113,10 @@ test('the writing is set in its own language, at reading size, before and after 
   page,
 }) => {
   await mountUnhydratedDayPage(page);
-  expect(await writingSettings(page.locator('.journal-prose'))).toEqual(
-    expectedSettings,
-  );
+  // The prompts wear the prose recipe too, but stand beside the writing.
+  expect(
+    await writingSettings(page.locator('.journal-prose:not([aria-hidden])')),
+  ).toEqual(expectedSettings);
 
   await mountDayPage(page, ['stored']);
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');

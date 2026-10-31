@@ -20,11 +20,18 @@ import { journalLanguage } from '../journal-language.ts';
  * before any of this loads and is never absent while it does.
  */
 
-import { Placeholder } from '@tiptap/extensions';
-import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import {
+  type Editor,
+  EditorContent,
+  ReactNodeViewRenderer,
+  useEditor,
+  useEditorState,
+} from '@tiptap/react';
 import {
   type Ref,
   useEffect,
+  useId,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
@@ -55,6 +62,11 @@ type MarkdownEditorProps = {
   readonly onChange: (markdown: string) => void;
   /** Saves without waiting for the quiet period when the writer leaves. */
   readonly onLeave: () => void;
+  /**
+   * The prompt an empty area shows. It is English while the writing is marked
+   * German, so it stands beside the editor rather than inside it, where it
+   * would be read and hyphenated as German.
+   */
   readonly placeholder: string;
   /** The prose recipe plus whichever register this editor sits in. */
   readonly proseClass: string;
@@ -85,8 +97,85 @@ const writingAreaClass =
 
 const sizeClass = {
   entry: 'min-h-48',
-  notes: 'min-h-24',
+  notes: 'min-h-16',
 } as const;
+
+/** Set over the first line of the area, in the type that line is written in. */
+const promptClass =
+  'pointer-events-none absolute inset-x-0 top-0 text-(--journal-prompt) text-lg italic leading-7';
+
+/**
+ * An area holding nothing but the one empty paragraph a blank document has. A
+ * writer who has begun with a heading or a picture needs no prompt.
+ */
+const isBlank = (doc: ProseMirrorNode): boolean =>
+  doc.childCount === 1 &&
+  doc.firstChild?.type.name === 'paragraph' &&
+  doc.firstChild.childCount === 0;
+
+// Tiptap builds its document once, from the first markdown it was given, and
+// later options never replace it. The autosave's draft can still change
+// without the writer typing: hydration starts from the server's copy and then
+// takes the draft this tab kept from a failed save, and a newer server
+// revision replaces a draft with no unsaved edits. The editor follows such a
+// change before the writer can type, because the next keystroke saves the
+// editor's whole document over the draft. It stays out of the undo history,
+// since the writer did not make it.
+const useFollowedMarkdown = (editor: Editor | null, markdown: string) => {
+  useLayoutEffect(() => {
+    if (
+      editor === null ||
+      editor.isDestroyed ||
+      editor.getMarkdown() === markdown
+    ) {
+      return;
+    }
+    editor
+      .chain()
+      .setMeta('addToHistory', false)
+      .setContent(markdown, {
+        contentType: 'markdown',
+        emitUpdate: false,
+      })
+      .run();
+  }, [editor, markdown]);
+};
+
+/**
+ * The prompt over an empty area. It is hidden from reading, since it sits
+ * beside the area rather than in it, and reaches a screen reader as the empty
+ * area's description instead.
+ */
+const WritingPrompt = ({
+  editor,
+  id,
+  initialMarkdown,
+  proseClass,
+  text,
+}: {
+  readonly editor: Editor | null;
+  readonly id: string;
+  readonly initialMarkdown: string;
+  readonly proseClass: string;
+  readonly text: string;
+}) => {
+  const blank = useEditorState({
+    editor,
+    selector: ({ editor: current }) =>
+      current === null
+        ? initialMarkdown.trim() === ''
+        : isBlank(current.state.doc),
+  });
+  return blank ? (
+    <p
+      aria-hidden="true"
+      className={[proseClass, promptClass].join(' ')}
+      id={id}
+    >
+      {text}
+    </p>
+  ) : null;
+};
 
 /**
  * The room ProseMirror keeps between the caret and the edges of the window when
@@ -109,6 +198,7 @@ export const MarkdownEditor = ({
   focusHandle,
 }: MarkdownEditorProps) => {
   const areaClass = [proseClass, writingAreaClass, sizeClass[size]].join(' ');
+  const promptId = useId();
   const changedRef = useRef(onChange);
   const leftRef = useRef(onLeave);
   const pasteImagesRef = useRef<(files: ReadonlyArray<File>) => void>(
@@ -131,7 +221,6 @@ export const MarkdownEditor = ({
             })
           : extension,
       ),
-      Placeholder.configure({ placeholder }),
     ],
     content: initialMarkdown,
     contentType: 'markdown',
@@ -147,13 +236,14 @@ export const MarkdownEditor = ({
         pasteImagesRef.current(files);
         return true;
       },
-      attributes: {
+      attributes: (state) => ({
         'aria-label': label,
         'aria-multiline': 'true',
         class: [areaClass, focusClass].join(' '),
         lang: journalLanguage,
         role: 'textbox',
-      },
+        ...(isBlank(state.doc) ? { 'aria-describedby': promptId } : {}),
+      }),
       scrollMargin: caretClearance,
       scrollThreshold: caretClearance,
       // Rich destinations still receive ProseMirror's HTML clipboard flavor.
@@ -182,41 +272,33 @@ export const MarkdownEditor = ({
     [editor],
   );
 
-  // Tiptap builds its document once, from the first markdown it was given, and
-  // later options never replace it. The autosave's draft can still change
-  // without the writer typing: hydration starts from the server's copy and then
-  // takes the draft this tab kept from a failed save, and a newer server
-  // revision replaces a draft with no unsaved edits. The editor follows such a
-  // change before the writer can type, because the next keystroke saves the
-  // editor's whole document over the draft. It stays out of the undo history,
-  // since the writer did not make it.
-  useLayoutEffect(() => {
-    if (
-      editor === null ||
-      editor.isDestroyed ||
-      editor.getMarkdown() === initialMarkdown
-    ) {
-      return;
-    }
-    editor
-      .chain()
-      .setMeta('addToHistory', false)
-      .setContent(initialMarkdown, {
-        contentType: 'markdown',
-        emitUpdate: false,
-      })
-      .run();
-  }, [editor, initialMarkdown]);
+  useFollowedMarkdown(editor, initialMarkdown);
+
+  const prompt = (
+    <WritingPrompt
+      editor={editor}
+      id={promptId}
+      initialMarkdown={initialMarkdown}
+      proseClass={proseClass}
+      text={placeholder}
+    />
+  );
 
   if (editor === null) {
     return (
-      <ReadOnlyMarkdown className={areaClass} markdown={initialMarkdown} />
+      <div className="relative">
+        <ReadOnlyMarkdown className={areaClass} markdown={initialMarkdown} />
+        {prompt}
+      </div>
     );
   }
 
   return (
     <>
-      <EditorContent editor={editor} />
+      <div className="relative">
+        <EditorContent editor={editor} />
+        {prompt}
+      </div>
       <ImageUploadControl
         editor={editor}
         label={label}

@@ -54,7 +54,7 @@ export const ScriptureRegister = ({
   return (
     <section
       aria-labelledby={headingId}
-      className="bg-deep-ground py-10 text-deep-ink sm:py-12"
+      className="bg-deep-ground py-10 text-deep-ink"
     >
       <PageFrame>
         <h2
@@ -65,7 +65,7 @@ export const ScriptureRegister = ({
         </h2>
 
         <label
-          className={[eyebrowClass, 'mt-8 block text-deep-ink-muted'].join(' ')}
+          className={[eyebrowClass, 'mt-6 block text-deep-ink-muted'].join(' ')}
           htmlFor={fieldId}
         >
           Passage
@@ -117,7 +117,7 @@ export const ScriptureRegister = ({
           </p>
         )}
 
-        <div className={[readingMeasureClass, 'mt-8'].join(' ')}>
+        <div className={[readingMeasureClass, 'mt-6'].join(' ')}>
           <MarkdownEditor
             focusClass={deepFocusRingClass}
             initialMarkdown={initialMarkdown}

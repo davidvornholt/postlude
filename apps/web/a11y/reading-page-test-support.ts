@@ -2,6 +2,7 @@ import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
+import { viewportContent } from '../src/shared/ui/viewport.ts';
 import { buildReadingPageFixture } from './reading-page-fixture-build.ts';
 import type {
   ReadingPageFixtureConfig,
@@ -67,13 +68,18 @@ const assets = new Map<
   Awaited<ReturnType<typeof buildReadingPageFixture>>
 >();
 
+const assetsFor = async (config: ReadingPageFixtureConfig) => {
+  const fixtureAssets =
+    assets.get(config) ?? (await buildReadingPageFixture(config));
+  assets.set(config, fixtureAssets);
+  return fixtureAssets;
+};
+
 export const mountReadingPage = async (
   page: playwright.Page,
   config: ReadingPageFixtureConfig,
 ): Promise<void> => {
-  const fixtureAssets =
-    assets.get(config) ?? (await buildReadingPageFixture(config));
-  assets.set(config, fixtureAssets);
+  const fixtureAssets = await assetsFor(config);
   const browserErrors: Array<string> = [];
   page.on('pageerror', (error) => browserErrors.push(error.message));
   await page.setContent(
@@ -93,6 +99,18 @@ export const mountReadingPage = async (
       { cause: error },
     );
   }
+};
+
+/** The server markup alone, as a browser that ran no script would have it. */
+export const mountUnhydratedReadingPage = async (
+  page: playwright.Page,
+  config: ReadingPageFixtureConfig,
+): Promise<void> => {
+  const fixtureAssets = await assetsFor(config);
+  await page.setContent(
+    `<html lang="en"><head><base href="http://127.0.0.1:3130/"><meta name="viewport" content="${viewportContent}"><title>Reading page fixture</title></head><body><main id="reading-page-fixture">${fixtureAssets.markup}</main></body></html>`,
+  );
+  await page.addStyleTag({ content: fixtureAssets.styles });
 };
 
 export const scanReadingPage = async (page: playwright.Page): Promise<void> => {

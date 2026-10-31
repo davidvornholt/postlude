@@ -63,7 +63,7 @@ export const FormattingToolbar = () => {
   const disabled = !active?.editor.isEditable || active.editor.isDestroyed;
   return (
     <div
-      className="sticky top-0 z-30 mt-8 border-border border-y bg-background text-ink"
+      className="sticky top-0 z-30 mt-6 border-border border-y bg-background text-ink"
       data-formatting-toolbar=""
     >
       <PageFrame className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">

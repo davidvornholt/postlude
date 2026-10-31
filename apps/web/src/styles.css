@@ -213,14 +213,4 @@
   .journal-prose em {
     font-style: italic;
   }
-
-  /* TipTap supplies the placeholder attribute; keep it out of the text flow. */
-  .journal-prose p.is-empty:first-child::before {
-    content: attr(data-placeholder);
-    float: left;
-    block-size: 0;
-    color: var(--journal-prompt);
-    font-style: italic;
-    pointer-events: none;
-  }
 }

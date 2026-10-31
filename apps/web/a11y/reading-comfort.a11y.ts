@@ -48,7 +48,9 @@ for (const colorScheme of colorSchemes) {
     const date = page.getByRole('heading', { level: 1 });
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
     await expectPageFrameGeometry(date.locator('xpath=ancestor::header'));
-    await expectReadingMeasureGeometry(page, evening.locator('xpath=../..'));
+    // The area, the editor's mount, the frame it shares with its prompt, and
+    // then the measure.
+    await expectReadingMeasureGeometry(page, evening.locator('xpath=../../..'));
     await expectKeyboardFocus(
       page,
       page.getByRole('link', { name: 'Previous day' }),

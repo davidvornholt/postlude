@@ -3,9 +3,10 @@
  *
  * The field owns the query in memory after hydration. A native form submits
  * the same words in a POST body, so neither path puts journal language in the
- * address or syncable URL history. A local browser can retain a POST body for
- * navigation recovery. Results never replace the field, which keeps the
- * writer's input and focus in place while the answer below it changes.
+ * address or syncable URL history. Only an address someone wrote with `?q=`
+ * carries words in. A local browser can retain a POST body for navigation
+ * recovery. Results never replace the field, which keeps the writer's input
+ * and focus in place while the answer below it changes.
  */
 
 import {
