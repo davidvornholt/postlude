@@ -27,15 +27,20 @@ const plainLineOf = (line: string) =>
     .replace(/[ \t]+/gu, ' ')
     .trim();
 
-/** The text up to the last sentence end within the limit, if it is long enough. */
+/**
+ * The text up to the last sentence end within the limit, if it is long enough.
+ * Sentence ends are found in the whole text, so a cut through `3.14` at the
+ * limit isn't mistaken for one.
+ */
 const cutAtSentenceEnd = (text: string) => {
-  const head = text.slice(0, agentNoteCharacterLimit);
-  const last = [...head.matchAll(sentenceEnd)].at(-1);
-  if (last === undefined) {
+  const end = [...text.matchAll(sentenceEnd)]
+    .map((match) => match.index + match[0].length)
+    .filter((matchEnd) => matchEnd <= agentNoteCharacterLimit)
+    .at(-1);
+  if (end === undefined) {
     return;
   }
-  const end = last.index + last[0].length;
-  return end >= agentNoteCharacterLimit / 2 ? head.slice(0, end) : undefined;
+  return end >= agentNoteCharacterLimit / 2 ? text.slice(0, end) : undefined;
 };
 
 /** The note, or undefined when the answer can't be one. */

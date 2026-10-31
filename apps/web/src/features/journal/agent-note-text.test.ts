@@ -44,6 +44,20 @@ describe('the note as stored', () => {
     expect(note?.endsWith('Inhalt.')).toBe(true);
   });
 
+  it('cuts a long answer before a decimal that straddles the limit', () => {
+    const sentence = 'Das ist ein Satz mit etwas Inhalt. ';
+    const opening = sentence.repeat(
+      Math.ceil(agentNoteCharacterLimit / 2 / sentence.length),
+    );
+    const decimal = '3.14';
+    const beforeDecimal = opening.padEnd(
+      agentNoteCharacterLimit - decimal.indexOf('.') - 1,
+      'Wort ',
+    );
+    const answer = `${beforeDecimal}${decimal} ist ungefähr Pi.`;
+    expect(agentNoteTextOf(answer)).toBe(opening.trimEnd());
+  });
+
   it('is no note when nothing is left or no sentence ends early enough', () => {
     expect(agentNoteTextOf('')).toBeUndefined();
     expect(agentNoteTextOf('**  **\n\n`` ``')).toBeUndefined();
