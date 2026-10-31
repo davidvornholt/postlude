@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/core';
 import { createElement, type ReactNode } from 'react';
 
 import { imageKeyOf } from '../images.ts';
+import { interfaceLanguage, journalLanguage } from '../journal-language.ts';
 import {
   checklistItemLabel,
   journalHeadingTag,
@@ -110,7 +111,9 @@ const renderNode = (node: JSONContent, key: string): ReactNode => {
     case 'image': {
       const alt = typeof node.attrs?.alt === 'string' ? node.attrs.alt : '';
       return imageKeyOf(node.attrs?.src) === undefined ? (
-        <span key={key}>{alt || 'Image unavailable'}</span>
+        <span key={key} lang={alt ? undefined : interfaceLanguage}>
+          {alt || 'Image unavailable'}
+        </span>
       ) : (
         <ImageViewer alt={alt} key={key} src={String(node.attrs?.src)} />
       );
@@ -202,7 +205,7 @@ export const ReadOnlyMarkdown = ({
   className,
   markdown,
 }: ReadOnlyMarkdownProps) => (
-  <div className={className}>
+  <div className={className} lang={journalLanguage}>
     {renderNode(parseJournalMarkdown(markdown), 'doc')}
   </div>
 );

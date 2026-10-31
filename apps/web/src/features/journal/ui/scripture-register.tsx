@@ -126,6 +126,7 @@ export const ScriptureRegister = ({
             onLeave={onLeave}
             placeholder="What did the passage say this morning?"
             proseClass="journal-prose journal-prose-deep"
+            size="notes"
           />
         </div>
       </PageFrame>

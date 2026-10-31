@@ -2,6 +2,7 @@ import { expect, it } from 'bun:test';
 
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import { plainText } from '#/shared/testing/rendered-html.ts';
+import { journalLanguage } from '../journal-language.ts';
 import type { CalendarView } from '../services/calendar-fns.ts';
 import { CalendarPage } from './calendar-page.tsx';
 
@@ -51,6 +52,7 @@ it('selects a day in the URL-backed month and previews its writing', async () =>
   expect(plainText(html)).toContain('August 2026');
   expect(plainText(html)).toContain('Wednesday, August 19, 2026');
   expect(plainText(html)).toContain('A quiet kind of progress.');
+  expect(html).toContain(`lang="${journalLanguage}">A quiet kind of progress.`);
   expect(html).toContain('aria-current="date"');
   expect(html).toContain('href="/day/2026-08-19"');
 });

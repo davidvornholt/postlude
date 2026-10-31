@@ -1,4 +1,5 @@
 import { JournalImage } from '../journal-image-extension.ts';
+import { journalLanguage } from '../journal-language.ts';
 /**
  * The surface an entry is written on.
  *
@@ -46,6 +47,12 @@ type MarkdownEditorProps = {
   /** The prose recipe plus whichever register this editor sits in. */
   readonly proseClass: string;
   readonly focusClass: string;
+  /**
+   * How much room an empty area offers. The evening is where most of a day is
+   * written; morning notes are a few lines, and an empty notes area should not
+   * push the evening down the page.
+   */
+  readonly size: 'entry' | 'notes';
 };
 
 /**
@@ -54,9 +61,28 @@ type MarkdownEditorProps = {
  * rule under it, which is what says there is somewhere to write before there is
  * anything written. Both wear it so the page does not resize when ProseMirror
  * arrives and the read-only surface becomes an editor.
+ *
+ * Spaces wrap as they do in any paragraph: ProseMirror's own `break-spaces` lets
+ * the space before a word that no longer fits begin the next line, which leaves
+ * a ragged left edge every few lines of a long entry. Its stylesheet is injected
+ * outside the cascade layers, so only an important utility can override it.
  */
 const writingAreaClass =
-  'min-h-48 cursor-text scroll-mt-24 border-(--journal-rule) border-b pb-6 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';
+  'cursor-text scroll-mt-24 whitespace-pre-wrap! border-(--journal-rule) border-b pb-6 text-lg leading-7 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';
+
+const sizeClass = {
+  entry: 'min-h-48',
+  notes: 'min-h-24',
+} as const;
+
+/**
+ * The room ProseMirror keeps between the caret and the edges of the window when
+ * it scrolls to follow typing or arrow keys. The formatting toolbar is pinned
+ * to the top of the window over the writing, so the top keeps clear of it: the
+ * same 6rem as `scroll-mt-24`, which clears the toolbar with a line to spare.
+ * The bottom keeps a line or so of air below the line being typed.
+ */
+const caretClearance = { top: 96, right: 0, bottom: 48, left: 0 };
 
 export const MarkdownEditor = ({
   label,
@@ -66,7 +92,9 @@ export const MarkdownEditor = ({
   placeholder,
   proseClass,
   focusClass,
+  size,
 }: MarkdownEditorProps) => {
+  const areaClass = [proseClass, writingAreaClass, sizeClass[size]].join(' ');
   const changedRef = useRef(onChange);
   const leftRef = useRef(onLeave);
   const pasteImagesRef = useRef<(files: ReadonlyArray<File>) => void>(
@@ -108,9 +136,12 @@ export const MarkdownEditor = ({
       attributes: {
         'aria-label': label,
         'aria-multiline': 'true',
-        class: [proseClass, focusClass, writingAreaClass].join(' '),
+        class: [areaClass, focusClass].join(' '),
+        lang: journalLanguage,
         role: 'textbox',
       },
+      scrollMargin: caretClearance,
+      scrollThreshold: caretClearance,
       // Rich destinations still receive ProseMirror's HTML clipboard flavor.
       // Plain-text destinations receive the canonical Markdown rather than the
       // words stripped of the structure the writer entered.
@@ -153,10 +184,7 @@ export const MarkdownEditor = ({
 
   if (editor === null) {
     return (
-      <ReadOnlyMarkdown
-        className={[proseClass, writingAreaClass].join(' ')}
-        markdown={initialMarkdown}
-      />
+      <ReadOnlyMarkdown className={areaClass} markdown={initialMarkdown} />
     );
   }
 
