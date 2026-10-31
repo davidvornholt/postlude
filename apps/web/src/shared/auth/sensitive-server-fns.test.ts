@@ -70,6 +70,7 @@ const privateServerFunctions = [
   ['journal-fns.ts', 'readTodayJournalDayFn'],
   ['journal-fns.ts', 'saveEntryFn'],
   ['on-this-day-fns.ts', 'readOnThisDayFn'],
+  ['review-fns.ts', 'readReviewFn'],
   ['search-fns.ts', 'searchJournalFn'],
 ].map(([path, name]) => ({ path: `features/journal/services/${path}`, name }));
 

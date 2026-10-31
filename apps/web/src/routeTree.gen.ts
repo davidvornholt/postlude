@@ -20,6 +20,9 @@ import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
 import { Route as AppArchiveExportRouteImport } from './routes/_app/archive_.export'
 import { Route as AppDayIndexRouteImport } from './routes/_app/day.index'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
+import { Route as AppReviewIndexRouteImport } from './routes/_app/review.index'
+import { Route as AppReviewMonthRouteImport } from './routes/_app/review.month'
+import { Route as AppReviewWeekRouteImport } from './routes/_app/review.week'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiJournalImagesIndexRouteImport } from './routes/api/journal-images/index'
 import { Route as ApiJournalImagesKeyRouteImport } from './routes/api/journal-images/$key'
@@ -78,6 +81,21 @@ const AppDayDateRoute = AppDayDateRouteImport.update({
   path: '/day/$date',
   getParentRoute: () => AppRoute,
 } as any)
+const AppReviewIndexRoute = AppReviewIndexRouteImport.update({
+  id: '/review/',
+  path: '/review/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReviewMonthRoute = AppReviewMonthRouteImport.update({
+  id: '/review/month',
+  path: '/review/month',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReviewWeekRoute = AppReviewWeekRouteImport.update({
+  id: '/review/week',
+  path: '/review/week',
+  getParentRoute: () => AppRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -104,9 +122,12 @@ export interface FileRoutesByFullPath {
   '/api/healthz': typeof ApiHealthzRoute
   '/archive/export': typeof AppArchiveExportRoute
   '/day/$date': typeof AppDayDateRoute
+  '/review/month': typeof AppReviewMonthRoute
+  '/review/week': typeof AppReviewWeekRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
   '/day/': typeof AppDayIndexRoute
+  '/review/': typeof AppReviewIndexRoute
   '/api/journal-images/': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -119,9 +140,12 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/archive/export': typeof AppArchiveExportRoute
   '/day/$date': typeof AppDayDateRoute
+  '/review/month': typeof AppReviewMonthRoute
+  '/review/week': typeof AppReviewWeekRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
   '/day': typeof AppDayIndexRoute
+  '/review': typeof AppReviewIndexRoute
   '/api/journal-images': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRoutesById {
@@ -136,9 +160,12 @@ export interface FileRoutesById {
   '/_app/': typeof AppIndexRoute
   '/_app/archive_/export': typeof AppArchiveExportRoute
   '/_app/day/$date': typeof AppDayDateRoute
+  '/_app/review/month': typeof AppReviewMonthRoute
+  '/_app/review/week': typeof AppReviewWeekRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
   '/_app/day/': typeof AppDayIndexRoute
+  '/_app/review/': typeof AppReviewIndexRoute
   '/api/journal-images/': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRouteTypes {
@@ -153,9 +180,12 @@ export interface FileRouteTypes {
     | '/api/healthz'
     | '/archive/export'
     | '/day/$date'
+    | '/review/month'
+    | '/review/week'
     | '/api/auth/$'
     | '/api/journal-images/$key'
     | '/day/'
+    | '/review/'
     | '/api/journal-images/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -168,9 +198,12 @@ export interface FileRouteTypes {
     | '/'
     | '/archive/export'
     | '/day/$date'
+    | '/review/month'
+    | '/review/week'
     | '/api/auth/$'
     | '/api/journal-images/$key'
     | '/day'
+    | '/review'
     | '/api/journal-images'
   id:
     | '__root__'
@@ -184,9 +217,12 @@ export interface FileRouteTypes {
     | '/_app/'
     | '/_app/archive_/export'
     | '/_app/day/$date'
+    | '/_app/review/month'
+    | '/_app/review/week'
     | '/api/auth/$'
     | '/api/journal-images/$key'
     | '/_app/day/'
+    | '/_app/review/'
     | '/api/journal-images/'
   fileRoutesById: FileRoutesById
 }
@@ -278,6 +314,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDayDateRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/review/': {
+      id: '/_app/review/'
+      path: '/review'
+      fullPath: '/review/'
+      preLoaderRoute: typeof AppReviewIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/review/month': {
+      id: '/_app/review/month'
+      path: '/review/month'
+      fullPath: '/review/month'
+      preLoaderRoute: typeof AppReviewMonthRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/review/week': {
+      id: '/_app/review/week'
+      path: '/review/week'
+      fullPath: '/review/week'
+      preLoaderRoute: typeof AppReviewWeekRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -310,7 +367,10 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppArchiveExportRoute: typeof AppArchiveExportRoute
   AppDayDateRoute: typeof AppDayDateRoute
+  AppReviewMonthRoute: typeof AppReviewMonthRoute
+  AppReviewWeekRoute: typeof AppReviewWeekRoute
   AppDayIndexRoute: typeof AppDayIndexRoute
+  AppReviewIndexRoute: typeof AppReviewIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -321,7 +381,10 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppArchiveExportRoute: AppArchiveExportRoute,
   AppDayDateRoute: AppDayDateRoute,
+  AppReviewMonthRoute: AppReviewMonthRoute,
+  AppReviewWeekRoute: AppReviewWeekRoute,
   AppDayIndexRoute: AppDayIndexRoute,
+  AppReviewIndexRoute: AppReviewIndexRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

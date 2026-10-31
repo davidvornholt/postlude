@@ -6,7 +6,7 @@ import { journalDateLabel } from '../day-label.ts';
 import { averageWrittenDayWords, entrySizeSeries } from '../entry-size.ts';
 import { journalCountLabel } from '../journal-labels.ts';
 import { EntrySizeLegend, EntrySizePlot } from './entry-size-plot.tsx';
-import { useEntrySizeSelection } from './use-entry-size-selection.ts';
+import { useDaySelection } from './use-day-selection.ts';
 
 export const EntrySizeChart = ({
   cells,
@@ -26,7 +26,7 @@ export const EntrySizeChart = ({
     selectAtPointer,
     selectLatest,
     selectWithKeyboard,
-  } = useEntrySizeSelection(points);
+  } = useDaySelection(points);
 
   if (active === undefined) {
     return null;
