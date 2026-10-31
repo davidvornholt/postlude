@@ -95,6 +95,10 @@ export const createFetchHandler = async (
     headers.set('cache-control', 'private, no-store, max-age=0');
     headers.set('pragma', 'no-cache');
     headers.set('x-content-type-options', 'nosniff');
+    // `strict-origin` keeps journal words in an address such as `/search?q=`
+    // out of the Referer. `no-referrer` would also send `Origin: null` on a
+    // same-origin form POST, which an origin check reads as another site.
+    headers.set('referrer-policy', 'strict-origin');
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
