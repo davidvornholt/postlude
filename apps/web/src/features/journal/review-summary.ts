@@ -123,6 +123,37 @@ export const sentMailCount = (metrics: DayMetrics): number | null => {
   return total;
 };
 
+export type ScreenTimeSplit = {
+  readonly focus: number;
+  readonly scattered: number;
+  /** Screen time counted as neither focused nor scattered. */
+  readonly rest: number;
+};
+
+/**
+ * A day's screen time divided into its parts, or undefined when a part was not
+ * measured or the parts come to more than the screen time. Nothing in the
+ * metrics makes the parts add up, so the screen time stays the total either way.
+ */
+export const screenTimeSplit = (
+  metrics: DayMetrics,
+): ScreenTimeSplit | undefined => {
+  const {
+    activeMinutes: active,
+    focusMinutes: focus,
+    scatteredMinutes: scattered,
+  } = metrics;
+  if (
+    active === null ||
+    focus === null ||
+    scattered === null ||
+    focus + scattered > active
+  ) {
+    return;
+  }
+  return { focus, scattered, rest: active - focus - scattered };
+};
+
 export type CategoryTotal = {
   readonly id: string;
   readonly label: string;

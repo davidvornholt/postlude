@@ -16,7 +16,7 @@ import {
   progressLabel,
   repeatDayLabel,
 } from './review-labels.ts';
-import { metricsStateOf } from './review-summary.ts';
+import { metricsStateOf, screenTimeSplit } from './review-summary.ts';
 import type { ReviewDay } from './review-view.ts';
 
 export type RatingScale = {
@@ -93,12 +93,26 @@ export const screenTimeDetails = (
   if (metrics === null) {
     return 'No report';
   }
-  if (metrics.activeMinutes === null) {
+  const {
+    activeMinutes: active,
+    focusMinutes: focus,
+    scatteredMinutes: scattered,
+  } = metrics;
+  if (active === null) {
     return 'Screen time not measured';
   }
-  const split =
-    metrics.focusMinutes === null || metrics.scatteredMinutes === null
-      ? 'focus not measured'
-      : `${durationLabel(metrics.focusMinutes)} focused · ${durationLabel(metrics.scatteredMinutes)} scattered`;
-  return `${durationLabel(metrics.activeMinutes)} at the screen · ${split}`;
+  const total = `${durationLabel(active)} at the screen`;
+  if (focus === null || scattered === null) {
+    return `${total} · focus not measured`;
+  }
+  const split = screenTimeSplit(metrics);
+  if (split === undefined) {
+    return `${total} · ${durationLabel(focus)} focused and ${durationLabel(scattered)} scattered, more than the screen time`;
+  }
+  return [
+    total,
+    `${durationLabel(focus)} focused`,
+    `${durationLabel(scattered)} scattered`,
+    ...(split.rest === 0 ? [] : [`${durationLabel(split.rest)} not split`]),
+  ].join(' · ');
 };

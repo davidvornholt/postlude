@@ -31,8 +31,24 @@ describe('ratingDetails', () => {
 
 describe('screenTimeDetails', () => {
   it('reads out the screen time and its split', () => {
-    expect(screenTimeDetails(day('2026-10-27'), today)).toBe(
-      '6 h 52 min at the screen · 3 h 56 min focused · 1 h 28 min scattered',
+    expect(screenTimeDetails(day('2026-10-26'), today)).toBe(
+      '6 h 20 min at the screen · 4 h 10 min focused · 2 h 10 min scattered',
+    );
+    const underSplit = day('2026-10-27');
+    expect(screenTimeDetails(underSplit, today)).toBe(
+      '6 h 52 min at the screen · 3 h 56 min focused · 1 h 28 min scattered · 1 h 28 min not split',
+    );
+    const { metrics } = underSplit;
+    expect(
+      screenTimeDetails(
+        {
+          ...underSplit,
+          metrics: metrics === null ? null : { ...metrics, focusMinutes: 400 },
+        },
+        today,
+      ),
+    ).toBe(
+      '6 h 52 min at the screen · 6 h 40 min focused and 1 h 28 min scattered, more than the screen time',
     );
   });
 

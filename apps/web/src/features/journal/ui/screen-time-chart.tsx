@@ -3,7 +3,9 @@
  *
  * Focused and scattered are two parts of one amount rather than two things to
  * tell apart, so they are two steps of the journal's one green, the deeper step
- * for focus, with a sliver of page between them. A day with no measurement is
+ * for focus, with a sliver of page between them. Screen time that is neither,
+ * or a whole day whose split is unknown, is an outline of the same green, so
+ * every bar is as tall as the day's screen time. A day with no measurement is
  * a dashed outline the height of the chart: an empty slot, which a short bar
  * could be mistaken for zero and an absent one for a gap in the axis.
  */
@@ -14,8 +16,13 @@ import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { screenTimeDetails } from '../review-day-details.ts';
-import { metricsStateOf, versionChanges } from '../review-summary.ts';
+import {
+  metricsStateOf,
+  screenTimeSplit,
+  versionChanges,
+} from '../review-summary.ts';
 import type { ReviewDay } from '../review-view.ts';
+import type { DayMetrics } from '../schemas/day-metrics.ts';
 import { ChartRow, DayAxis } from './review-day-axis.tsx';
 import { useDaySelection } from './use-day-selection.ts';
 
@@ -26,6 +33,7 @@ const plotHeight = 100;
 const segmentGap = 1.5;
 const missingInset = 1;
 const dash = '4 3';
+const unsplitClass = 'fill-none stroke-primary';
 const minutesPerHour = 60;
 const gridSteps = 4;
 const hoursPerDay = 24;
@@ -56,6 +64,14 @@ const scaleMinutes = (days: ReadonlyArray<ReviewDay>): number => {
     hourSteps.at(-1) ??
     1;
   return step * minutesPerHour * gridSteps;
+};
+
+const hasUnsplitTime = (metrics: DayMetrics): boolean => {
+  if (metrics.activeMinutes === null || metrics.activeMinutes === 0) {
+    return false;
+  }
+  const split = screenTimeSplit(metrics);
+  return split === undefined || split.rest > 0;
 };
 
 const DayBar = ({
@@ -89,41 +105,34 @@ const DayBar = ({
       />
     );
   }
-  const focus = day.metrics?.focusMinutes ?? null;
-  const scattered = day.metrics?.scatteredMinutes ?? null;
-  if (focus === null || scattered === null) {
+  const split = day.metrics === null ? undefined : screenTimeSplit(day.metrics);
+  const parts =
+    split === undefined
+      ? [{ className: unsplitClass, minutes: active }]
+      : [
+          { className: 'fill-primary', minutes: split.focus },
+          { className: 'fill-heat-q1', minutes: split.scattered },
+          { className: unsplitClass, minutes: split.rest },
+        ].filter((part) => part.minutes > 0);
+  return parts.map((part, position) => {
+    const below = parts
+      .slice(0, position)
+      .reduce((sum, { minutes }) => sum + minutes, 0);
+    const bottom = heightOf(below);
+    const top = heightOf(below + part.minutes);
+    const gap = position === 0 ? 0 : segmentGap;
     return (
       <rect
-        className="fill-none stroke-primary"
-        height={heightOf(active)}
+        className={part.className}
+        height={Math.max(0, top - bottom - gap)}
+        key={part.className}
         vectorEffect="non-scaling-stroke"
         width={barWidth}
         x={x}
-        y={plotHeight - heightOf(active)}
+        y={plotHeight - top}
       />
     );
-  }
-  const focusHeight = heightOf(focus);
-  const gap = focus > 0 && scattered > 0 ? segmentGap : 0;
-  const scatteredHeight = Math.max(0, heightOf(scattered) - gap);
-  return (
-    <>
-      <rect
-        className="fill-primary"
-        height={focusHeight}
-        width={barWidth}
-        x={x}
-        y={plotHeight - focusHeight}
-      />
-      <rect
-        className="fill-heat-q1"
-        height={scatteredHeight}
-        width={barWidth}
-        x={x}
-        y={plotHeight - focusHeight - gap - scatteredHeight}
-      />
-    </>
-  );
+  });
 };
 
 const HourScale = ({ minutes }: { readonly minutes: number }) => (
@@ -176,7 +185,7 @@ const ScreenTimeLegend = ({
     {showsUnsplit ? (
       <span className="flex items-center gap-2">
         <LegendSwatch className="border border-primary" />
-        Split not measured
+        Not split
       </span>
     ) : null}
     {showsVersionChange ? (
@@ -275,9 +284,9 @@ export const ScreenTimeChart = ({
         </section>
       </ChartRow>
       <p hidden={true} id={summaryId}>
-        Time at the screen each day, split into focused and scattered time. Days
-        without a measurement are drawn as dashed outlines, and a day whose
-        split was not measured as an outlined bar.
+        Time at the screen each day, split into focused and scattered time.
+        Screen time that is not split into either is drawn as an outline, and a
+        day without a measurement as a dashed outline.
       </p>
       <p hidden={true} id={instructionsId}>
         Use Left and Right to inspect days. Home and End move to the first and
@@ -294,11 +303,7 @@ export const ScreenTimeChart = ({
       </p>
       <ScreenTimeLegend
         showsUnsplit={days.some(
-          ({ metrics }) =>
-            metrics !== null &&
-            metrics.activeMinutes !== null &&
-            (metrics.focusMinutes === null ||
-              metrics.scatteredMinutes === null),
+          ({ metrics }) => metrics !== null && hasUnsplitTime(metrics),
         )}
         showsVersionChange={changes.length > 0}
       />
