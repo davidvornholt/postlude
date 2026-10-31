@@ -186,7 +186,7 @@ export const DateHeading = ({
             {`Go to a ${noun}`}
           </label>
           <TextField
-            aria-label={`${label}. Go to another ${noun}.`}
+            aria-label={`Go to a ${noun}. Showing ${label}.`}
             className="mt-2"
             defaultValue={date}
             id={fieldId}

@@ -160,7 +160,7 @@ it('opens any date of the current year from its heading, with or without script'
   expect(attributeValue(field, 'min')).toBe('2026-01-01');
   expect(attributeValue(field, 'max')).toBe('2026-12-31');
   expect(attributeValue(field, 'aria-label')).toBe(
-    'Tuesday, August 25, 2026. Go to another date.',
+    'Go to a date. Showing Tuesday, August 25, 2026.',
   );
   expect(plainText(html)).toContain('Go to a date');
 });

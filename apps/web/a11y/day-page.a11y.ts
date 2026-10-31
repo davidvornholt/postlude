@@ -14,7 +14,7 @@ const authenticationMessage =
   'Your sign-in ended before this entry could be saved. Your words are kept in this tab.';
 
 const colorSchemes = ['light', 'dark'] as const;
-const dayFieldName = 'Wednesday, August 26, 2026. Go to another day.';
+const dayFieldName = 'Go to a day. Showing Wednesday, August 26, 2026.';
 
 // On desktop a native date field is a tab stop for each of its segments. Under
 // mobile emulation Chromium draws it as one control that opens the system

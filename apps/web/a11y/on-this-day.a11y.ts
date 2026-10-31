@@ -69,7 +69,7 @@ for (const colorScheme of colorSchemes) {
     );
     await mountUnhydratedReadingPage(page, readingPageFixtureConfigs.onThisDay);
     const field = page.getByLabel(
-      'Wednesday, August 26, 2026. Go to another date.',
+      'Go to a date. Showing Wednesday, August 26, 2026.',
     );
 
     await page

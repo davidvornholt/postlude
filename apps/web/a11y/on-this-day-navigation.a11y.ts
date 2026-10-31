@@ -23,7 +23,7 @@ const openOnThisDay = async (page: playwright.Page): Promise<void> => {
 };
 
 const dateField = (page: playwright.Page, label: string) =>
-  page.getByLabel(`${label}. Go to another date.`);
+  page.getByLabel(`Go to a date. Showing ${label}.`);
 
 const isPickerOpen = (page: playwright.Page, label: string): Promise<boolean> =>
   dateField(page, label).evaluate((element) => element.matches(':open'));

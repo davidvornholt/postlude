@@ -7,7 +7,8 @@ import {
   scan,
 } from './day-page-test-support.ts';
 
-const dayFieldName = 'Wednesday, August 26, 2026. Go to another day.';
+const visibleFieldLabel = 'Go to a day';
+const dayFieldName = `${visibleFieldLabel}. Showing Wednesday, August 26, 2026.`;
 const nativeDayUrl = /\/day\?date=2026-08-25$/u;
 const colorSchemes = ['light', 'dark'] as const;
 
@@ -77,6 +78,16 @@ for (const colorScheme of colorSchemes) {
     expect(
       await field.evaluate((element) => element.getBoundingClientRect().width),
     ).toBeGreaterThan(1);
+    // Speech input reaches a field by saying the words it shows (WCAG 2.5.3),
+    // so the label drawn over the focused field starts its accessible name.
+    expect(
+      await page
+        .getByText(visibleFieldLabel, { exact: true })
+        .evaluate((element) => element.getBoundingClientRect().width),
+    ).toBeGreaterThan(1);
+    await expect(field).toHaveAccessibleName(
+      new RegExp(`^${visibleFieldLabel}\\b`, 'u'),
+    );
 
     await changeDay(page, {
       isMobile,
