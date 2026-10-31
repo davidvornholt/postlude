@@ -176,6 +176,7 @@ const DayBody = ({ entry, today, save }: DayPageProps) => {
             onLeave={autosave.flush}
             placeholder="How did the day go?"
             proseClass="journal-prose"
+            size="entry"
           />
         </div>
         {/* The count and the save state sit below the writing rather than beside

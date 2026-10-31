@@ -1,6 +1,7 @@
 import { type NodeViewProps, NodeViewWrapper } from '@tiptap/react';
 
 import { imageKeyOf } from '../images.ts';
+import { interfaceLanguage } from '../journal-language.ts';
 import { ImageViewer } from './image-viewer.tsx';
 
 export const ImageNodeView = ({ node }: NodeViewProps) => {
@@ -11,7 +12,9 @@ export const ImageNodeView = ({ node }: NodeViewProps) => {
       {typeof src === 'string' && imageKeyOf(src) !== undefined ? (
         <ImageViewer alt={alt} src={src} />
       ) : (
-        <span>{alt || 'Image unavailable'}</span>
+        <span lang={alt ? undefined : interfaceLanguage}>
+          {alt || 'Image unavailable'}
+        </span>
       )}
     </NodeViewWrapper>
   );

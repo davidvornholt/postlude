@@ -18,6 +18,7 @@ import {
 } from '#/shared/ui/design-classes.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
+import { journalLanguage } from '../journal-language.ts';
 import type {
   ExcerptSegment,
   SearchHit,
@@ -43,8 +44,10 @@ const excerptKey = (segments: ReadonlyArray<ExcerptSegment>): string =>
   segments.map(({ match, text }) => `${match ? '1' : '0'}:${text}`).join();
 
 const Excerpt = ({
+  lang,
   segments,
 }: {
+  readonly lang: string | undefined;
   readonly segments: ReadonlyArray<ExcerptSegment>;
 }) => (
   <span
@@ -52,6 +55,7 @@ const Excerpt = ({
       readingMeasureClass,
       'mt-3 block min-w-0 break-words text-ink text-lg',
     ].join(' ')}
+    lang={lang}
   >
     {segments.map((segment) =>
       segment.match ? (
@@ -71,7 +75,12 @@ const SourceEvidence = ({ source }: { readonly source: SearchHitSource }) => (
       {sourceLabels[source.kind]}
     </span>
     {source.excerpts.map((excerpt) => (
-      <Excerpt key={excerptKey(excerpt)} segments={excerpt} />
+      <Excerpt
+        key={excerptKey(excerpt)}
+        // A passage reference is shown in the app's English house style.
+        lang={source.kind === 'passage-reference' ? undefined : journalLanguage}
+        segments={excerpt}
+      />
     ))}
   </span>
 );

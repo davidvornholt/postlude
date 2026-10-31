@@ -5,6 +5,7 @@ import {
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalCountLabel } from '../journal-labels.ts';
+import { journalLanguage } from '../journal-language.ts';
 import type { CalendarDay } from '../services/calendar-fns.ts';
 import { DayLink } from './day-link.tsx';
 
@@ -21,7 +22,11 @@ const PreviewWords = ({ day }: { readonly day: CalendarDay | undefined }) => {
       </p>
     );
   }
-  return <p className="hyphens-auto text-ink leading-7">{day.snippet}</p>;
+  return (
+    <p className="hyphens-auto text-ink leading-7" lang={journalLanguage}>
+      {day.snippet}
+    </p>
+  );
 };
 
 export const CalendarPreview = ({

@@ -2,6 +2,13 @@ import { expect, it } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import {
+  attributeValue,
+  elementAttributes,
+  openingTag,
+} from '#/shared/testing/rendered-html.ts';
+import { imageRoute } from '../images.ts';
+import { interfaceLanguage, journalLanguage } from '../journal-language.ts';
+import {
   markdownSemanticsFixture,
   markdownSemanticsLinks,
 } from './markdown-semantics.fixture.ts';
@@ -30,6 +37,35 @@ it('server-renders the Markdown structure a reader uses', () => {
   );
   expect(html).toContain('Rain over the lake');
   expect(html).not.toContain('<img');
+});
+
+it("sets the writing in the journal's language rather than the page's", () => {
+  expect(render('Ein ruhiger Abend.')).toStartWith(
+    `<div class="journal-prose" lang="${journalLanguage}">`,
+  );
+});
+
+it("keeps the controls around an image in the page's language and its description in the journal's", () => {
+  const html = render(
+    `![Regen am See](${imageRoute}12345678-1234-4234-8234-123456789abc.png)\n\n![](/missing.png)`,
+  );
+
+  const button = openingTag(html, 'button');
+  expect(attributeValue(button, 'aria-label')).not.toContain('Regen am See');
+  expect(attributeValue(button, 'lang')).not.toBe(interfaceLanguage);
+  expect(
+    attributeValue(elementAttributes(html, 'span', 'Enlarge image:'), 'lang'),
+  ).toBe(interfaceLanguage);
+  expect(attributeValue(openingTag(html, 'img'), 'lang')).toBe(journalLanguage);
+  expect(
+    attributeValue(
+      elementAttributes(html, 'span', 'Image unavailable'),
+      'lang',
+    ),
+  ).toBe(interfaceLanguage);
+  expect(
+    attributeValue(elementAttributes(html, 'p', 'Regen am See'), 'lang'),
+  ).toBe(journalLanguage);
 });
 
 it('keeps safe mixed-case web links and every subordinate heading level', () => {
@@ -92,7 +128,7 @@ it('shows each checklist item ticked or open, like the editor', () => {
   const html = render('- [x] Watered the plants\n- [ ] Call the landlord');
 
   expect(html).toBe(
-    '<div class="journal-prose"><ul data-type="taskList">' +
+    `<div class="journal-prose" lang="${journalLanguage}"><ul data-type="taskList">` +
       '<li data-checked="true"><label><input aria-label="Watered the plants" disabled="" readOnly="" type="checkbox" checked=""/></label><div><p>Watered the plants</p></div></li>' +
       '<li data-checked="false"><label><input aria-label="Call the landlord" disabled="" readOnly="" type="checkbox"/></label><div><p>Call the landlord</p></div></li>' +
       '</ul></div>',
