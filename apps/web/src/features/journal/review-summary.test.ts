@@ -17,6 +17,7 @@ import {
   tally,
   versionChanges,
 } from './review-summary.ts';
+import type { DayMetrics } from './schemas/day-metrics.ts';
 import { sampleDayMetrics } from './testing/evening-view.ts';
 import { sampleReviewWeek, unratedDay } from './testing/review-view.ts';
 
@@ -105,11 +106,33 @@ describe('sentMailCount', () => {
 });
 
 describe('categoryTotals', () => {
-  it('adds each category over the days whose screen time was measured', () => {
+  it('keeps a category nobody measured apart from a measured zero', () => {
     expect(categoryTotals(comparableDays(days))).toEqual([
       { id: 'writing', label: 'Writing', minutes: 280, missing: 0 },
       { id: 'reading', label: 'Reading', minutes: 192, missing: 0 },
-      { id: 'admin', label: 'Admin', minutes: 0, missing: 2 },
+      { id: 'admin', label: 'Admin', minutes: null, missing: 2 },
+    ]);
+    const withCategories = (
+      date: string,
+      categories: DayMetrics['categories'],
+    ): DayMetrics => ({ ...sampleDayMetrics(date), categories });
+    expect(
+      categoryTotals([
+        withCategories('2026-10-27', [
+          { id: 'admin', label: 'Admin', minutes: null },
+          { id: 'calls', label: 'Calls', minutes: 0 },
+          { id: 'reading', label: 'Reading', minutes: 30 },
+        ]),
+        withCategories('2026-10-28', [
+          { id: 'admin', label: 'Admin', minutes: null },
+          { id: 'calls', label: 'Calls', minutes: 0 },
+          { id: 'reading', label: 'Reading', minutes: null },
+        ]),
+      ]),
+    ).toEqual([
+      { id: 'reading', label: 'Reading', minutes: 30, missing: 1 },
+      { id: 'calls', label: 'Calls', minutes: 0, missing: 0 },
+      { id: 'admin', label: 'Admin', minutes: null, missing: 2 },
     ]);
   });
 });

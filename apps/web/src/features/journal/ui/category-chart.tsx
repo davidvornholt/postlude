@@ -19,7 +19,7 @@ export const CategoryChart = ({
 }) => {
   const largest = Math.max(
     1,
-    ...categories.map((category) => category.minutes),
+    ...categories.map((category) => category.minutes ?? 0),
   );
   if (categories.length === 0) {
     return (
@@ -40,23 +40,27 @@ export const CategoryChart = ({
           <span className="truncate text-ink" title={category.label}>
             {category.label}
           </span>
-          <svg
-            aria-hidden="true"
-            className="col-span-2 row-start-2 block h-3 w-full sm:col-span-1 sm:col-start-2 sm:row-start-1"
-            preserveAspectRatio="none"
-            viewBox={`0 0 ${barScale} 1`}
-          >
-            <rect
-              className="fill-primary"
-              height={1}
-              width={(category.minutes / largest) * barScale}
-              x={0}
-              y={0}
-            />
-          </svg>
+          {category.minutes === null ? null : (
+            <svg
+              aria-hidden="true"
+              className="col-span-2 row-start-2 block h-3 w-full sm:col-span-1 sm:col-start-2 sm:row-start-1"
+              preserveAspectRatio="none"
+              viewBox={`0 0 ${barScale} 1`}
+            >
+              <rect
+                className="fill-primary"
+                height={1}
+                width={(category.minutes / largest) * barScale}
+                x={0}
+                y={0}
+              />
+            </svg>
+          )}
           <span className="col-start-2 row-start-1 text-right text-ink-muted tabular-nums sm:col-start-3">
-            {durationLabel(category.minutes)}
-            {category.missing === 0
+            {category.minutes === null
+              ? 'Not measured'
+              : durationLabel(category.minutes)}
+            {category.minutes === null || category.missing === 0
               ? null
               : `, not measured on ${journalCountLabel(category.missing, 'day')}`}
           </span>

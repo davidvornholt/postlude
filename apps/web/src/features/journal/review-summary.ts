@@ -126,16 +126,24 @@ export const sentMailCount = (metrics: DayMetrics): number | null => {
 export type CategoryTotal = {
   readonly id: string;
   readonly label: string;
-  readonly minutes: number;
+  /** Null when no day measured the category. */
+  readonly minutes: number | null;
   /** Days that listed the category without being able to measure it. */
   readonly missing: number;
 };
 
+const addMinutes = (
+  total: number | null | undefined,
+  minutes: number | null,
+): number | null =>
+  minutes === null ? (total ?? null) : (total ?? 0) + minutes;
+
 /**
- * Each category's minutes over the comparable days, largest first. Categories
- * are /wrap's estimates of active time, so a day whose active time was not
- * measured adds nothing to any of them. The label is the latest day's, in case
- * a category was renamed inside one version.
+ * Each category's minutes over the comparable days, largest first, and the
+ * categories no day measured after them. Categories are /wrap's estimates of
+ * active time, so a day whose active time was not measured adds nothing to any
+ * of them. The label is the latest day's, in case a category was renamed inside
+ * one version.
  */
 export const categoryTotals = (
   metrics: ReadonlyArray<DayMetrics>,
@@ -148,14 +156,15 @@ export const categoryTotals = (
       totals.set(category.id, {
         id: category.id,
         label: category.label,
-        minutes: (current?.minutes ?? 0) + (category.minutes ?? 0),
+        minutes: addMinutes(current?.minutes, category.minutes),
         missing: (current?.missing ?? 0) + (category.minutes === null ? 1 : 0),
       });
     }
   }
   return [...totals.values()].sort(
     (first, second) =>
-      second.minutes - first.minutes || first.label.localeCompare(second.label),
+      (second.minutes ?? -1) - (first.minutes ?? -1) ||
+      first.label.localeCompare(second.label),
   );
 };
 
