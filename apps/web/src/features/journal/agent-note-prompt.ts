@@ -1,30 +1,10 @@
 /**
- * What the model is told and given when it writes an agent note.
- *
- * The note sets David's ratings beside what /wrap measured and points out
- * patterns across the days before. The model is given what that needs and
- * nothing more, because the journal text leaves the server for it:
- *
- * - the day's ratings, and the ratings of the earlier days;
- * - the day's metrics, and those earlier days' metrics that were measured
- *   under the same `metricsVersion`, so every number given can be compared
- *   with every other;
- * - the journal text, with image addresses and link targets removed and its
- *   length capped.
- *
- * Left out on purpose:
- *
- * - /wrap's report HTML. It is built from window titles, so anyone who can name
- *   a window can put text in it.
- * - The scripture text and reference. The note is about the day, not the
- *   reading.
- * - Word counts. The note never comments on how much David wrote.
- * - Mailbox names. Only the total of sent mails is given.
- * - When the day was closed, and who wrote /wrap's report.
- *
- * Only the system prompt is instruction. Everything from the day goes in one
- * JSON document the system prompt calls data, with `<` escaped so nothing in
- * the text can close the tag the document sits in.
+ * The day's data leaves the server for the model, so the model is given only
+ * what the note needs. /wrap's report HTML stays out because it is built from
+ * window titles, and anyone who can name a window can put text in it. Mailbox
+ * names, the closing time and the report's author are personal and don't help
+ * the note. The scripture and word counts stay out because the note is about
+ * the day and never comments on how much David wrote.
  */
 
 import { Lexer, type Token, type Tokens } from 'marked';
@@ -239,7 +219,6 @@ Rules:
 - Address David directly; in German, use du.
 - Write plain text: no Markdown, headings, lists, bold, links or emoji. Stay under ${agentNoteCharacterLimit} characters.`;
 
-/** The language rule, which depends on whether the day has any journal text. */
 const languageRuleOf = (journalText: string) =>
   journalText === ''
     ? 'The journal text is empty, so write the note in English.'
@@ -271,6 +250,7 @@ export const agentNotePromptOf = (input: AgentNoteInput): AgentNotePrompt => {
     journalText,
     journalTextCut,
   };
+  // Nothing in the text may close the tag the document sits in.
   const json = JSON.stringify(document).replaceAll('<', '\\u003c');
   return {
     system: [systemPrompt, languageRuleOf(journalText)],

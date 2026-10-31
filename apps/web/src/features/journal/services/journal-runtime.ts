@@ -7,12 +7,6 @@
  * and components stay on plain promises. The two are joined in exactly one
  * place so a service never has to be unwrapped twice, and so the layers are
  * built once per process rather than per call.
- *
- * The runtime is created lazily. Building it builds the process's Effect SQL
- * client from `#/shared/db/database.ts`, which reads the validated environment,
- * and neither should happen because a module was imported. The client bundle
- * imports route modules that import services, and a pool opened there would be
- * a pool opened in a browser.
  */
 
 import { Cause, Effect, Layer, ManagedRuntime, Stream } from 'effect';

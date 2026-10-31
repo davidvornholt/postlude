@@ -1,14 +1,3 @@
-/**
- * The model's answer as a note Postlude stores: plain text within
- * `agentNoteCharacterLimit`.
- *
- * The prompt asks for plain text, and this holds the answer to it whatever came
- * back. Markdown marks are taken out rather than rendered, web addresses are
- * dropped because a note never needs one, and an answer that runs long is cut
- * at the last sentence that fits. An answer with nothing left, or with no
- * sentence end in the first half of the limit, isn't a note.
- */
-
 import { agentNoteCharacterLimit } from './agent-note-prompt.ts';
 
 /** Control characters other than the line feed, which separates paragraphs. */
@@ -43,7 +32,11 @@ const cutAtSentenceEnd = (text: string) => {
   return end >= agentNoteCharacterLimit / 2 ? text.slice(0, end) : undefined;
 };
 
-/** The note, or undefined when the answer can't be one. */
+/**
+ * The answer as the note Postlude stores: plain text within
+ * `agentNoteCharacterLimit`, whatever the model sent back. It is undefined when
+ * the answer can't be a note.
+ */
 export const agentNoteTextOf = (answer: string): string | undefined => {
   const text = answer
     .replace(/\r\n?/gu, '\n')

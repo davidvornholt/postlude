@@ -1,21 +1,12 @@
 /**
  * Writes the agent note with Claude Sonnet 5.5 on Amazon Bedrock.
  *
- * Requests go through the EU cross-region inference profile from
- * `eu-central-1`, so the journal text is processed only in EU regions. Both are
- * fixed here rather than configured, because a global profile would send the
- * text outside the EU and nothing about that should be one setting away. The
- * dedicated `PostludeProduction` identity in personal-infra may invoke only
- * this profile, and its spending limit is enforced there.
+ * The region and the EU inference profile are fixed here rather than
+ * configured, because the journal text must be processed only in EU regions
+ * and a global profile must never be one setting away.
  *
- * Without credentials, the generator fails every request with
- * `notConfiguredMessage`, as `AgentNoteGenerator.notConfigured` does, so a
- * deployment without them keeps working and says why no note was written.
- *
- * Nothing that reaches the log or the page carries the prompt, the journal
- * text, the answer, or a credential. Every failure becomes one of the fixed
- * messages below, and its cause is reduced to the error's name, HTTP status
- * and request ID, which are enough to find the request in AWS.
+ * No failure that reaches the log or the page carries the prompt, the journal
+ * text, the answer, or a credential.
  */
 
 import {
@@ -41,7 +32,6 @@ export const bedrockRegion = 'eu-central-1';
 /** The EU geographic profile. Never a global one; see the module comment. */
 export const agentNoteInferenceProfile = 'eu.anthropic.claude-sonnet-5-5';
 
-/** The model as the page names it. */
 export const agentNoteModelName = 'Claude Sonnet 5.5 (Amazon Bedrock, EU)';
 
 /**
@@ -53,7 +43,6 @@ const outputTokens = 2048;
 /** One attempt; with the retries this stays inside `agentNoteTimeout`. */
 const attemptTimeout = Duration.minutes(2);
 
-/** Throttling and server errors are tried twice more, with growing waits. */
 const retrySchedule = Schedule.max([
   Schedule.exponential(Duration.seconds(2)),
   Schedule.recurs(2),
@@ -74,7 +63,11 @@ export type Converse = (
   signal: AbortSignal,
 ) => Promise<ConverseCommandOutput>;
 
-/** What of a failed request may be logged: never its message or body. */
+/**
+ * What of a failed request may be logged. An SDK error can echo the request,
+ * so only its name, HTTP status and request ID are kept, which are enough to
+ * find the request in AWS.
+ */
 type FailureSummary = {
   readonly name: string;
   readonly status: number | null;
@@ -157,7 +150,6 @@ const requestOf = (input: AgentNoteInput): ConverseCommandInput => {
   };
 };
 
-/** The note from a finished answer, or the unusable-answer failure. */
 const noteOf = (response: ConverseCommandOutput) => {
   const answer =
     response.output?.message?.content
@@ -175,7 +167,6 @@ const noteOf = (response: ConverseCommandOutput) => {
     : Effect.succeed({ note, model: agentNoteModelName });
 };
 
-/** The generator that writes notes through `converse`. */
 export const bedrockAgentNoteGenerator = (converse: Converse) =>
   AgentNoteGenerator.of({
     generate: (input) =>
@@ -212,10 +203,6 @@ export type BedrockCredentials = {
   readonly secretAccessKey: string | undefined;
 };
 
-/**
- * The generator for the configured credentials: Bedrock with both, the
- * not-configured failure with neither, and a failure of its own with one.
- */
 export const agentNoteGeneratorFor = (
   { accessKeyId, secretAccessKey }: BedrockCredentials,
   converseWith: (credentials: {
