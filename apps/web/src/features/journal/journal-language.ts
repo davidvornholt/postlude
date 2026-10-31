@@ -6,3 +6,6 @@
  * interface text such as labels, dates, and counts keeps the page's language.
  */
 export const journalLanguage = 'de';
+
+/** The page's language, for the interface text that sits inside the writing. */
+export const interfaceLanguage = 'en';

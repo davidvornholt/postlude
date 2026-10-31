@@ -1,6 +1,7 @@
 import { useId, useRef } from 'react';
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
+import { interfaceLanguage, journalLanguage } from '../journal-language.ts';
 import { JournalIconButton } from './journal-icon-button.tsx';
 
 type ImageViewerProps = { readonly src: string; readonly alt: string };
@@ -15,11 +16,12 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
       <button
         aria-label={`Enlarge image${alt ? `: ${alt}` : ''}`}
         className={`${focusRingClass} block min-h-11 min-w-11 max-w-full cursor-zoom-in`}
+        lang={interfaceLanguage}
         onClick={() => dialogRef.current?.showModal()}
         ref={triggerRef}
         type="button"
       >
-        <img alt={alt} loading="lazy" src={src} />
+        <img alt={alt} lang={journalLanguage} loading="lazy" src={src} />
       </button>
       <dialog
         aria-labelledby={titleId}
@@ -27,8 +29,15 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
         ref={dialogRef}
         onClose={() => triggerRef.current?.focus()}
       >
-        <div className="flex items-center justify-between gap-6 pb-3">
-          <p className="text-sm" id={titleId}>
+        <div
+          className="flex items-center justify-between gap-6 pb-3"
+          lang={interfaceLanguage}
+        >
+          <p
+            className="text-sm"
+            id={titleId}
+            lang={alt ? journalLanguage : undefined}
+          >
             {alt || 'Image'}
           </p>
           <JournalIconButton

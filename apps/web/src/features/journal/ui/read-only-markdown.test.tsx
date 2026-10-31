@@ -1,7 +1,13 @@
 import { expect, it } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 
-import { journalLanguage } from '../journal-language.ts';
+import {
+  attributeValue,
+  elementAttributes,
+  openingTag,
+} from '#/shared/testing/rendered-html.ts';
+import { imageRoute } from '../images.ts';
+import { interfaceLanguage, journalLanguage } from '../journal-language.ts';
 import {
   markdownSemanticsFixture,
   markdownSemanticsLinks,
@@ -37,6 +43,25 @@ it("sets the writing in the journal's language rather than the page's", () => {
   expect(render('Ein ruhiger Abend.')).toStartWith(
     `<div class="journal-prose" lang="${journalLanguage}">`,
   );
+});
+
+it("keeps the controls around an image in the page's language and its description in the journal's", () => {
+  const html = render(
+    `![Regen am See](${imageRoute}12345678-1234-4234-8234-123456789abc.png)\n\n![](/missing.png)`,
+  );
+
+  expect(attributeValue(openingTag(html, 'button'), 'lang')).toBe(
+    interfaceLanguage,
+  );
+  expect(
+    attributeValue(
+      elementAttributes(html, 'span', 'Image unavailable'),
+      'lang',
+    ),
+  ).toBe(interfaceLanguage);
+  expect(
+    attributeValue(elementAttributes(html, 'p', 'Regen am See'), 'lang'),
+  ).toBe(journalLanguage);
 });
 
 it('keeps safe mixed-case web links and every subordinate heading level', () => {
