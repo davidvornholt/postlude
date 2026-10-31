@@ -13,7 +13,11 @@ const paragraphs = 30;
 const stepsUp = 20;
 const readingSize = '18px';
 const readingLeading = '28px';
-const writingAreas = ['Evening journal', 'Morning scripture notes'] as const;
+// In page order, which is the order their settings are read in.
+const writingAreas = [
+  { label: 'Morning scripture notes', minHeight: '96px' },
+  { label: 'Evening journal', minHeight: '192px' },
+] as const;
 
 const caretGeometry = (page: playwright.Page) =>
   page.evaluate(() => {
@@ -91,15 +95,17 @@ const writingSettings = (areas: playwright.Locator) =>
         fontSize: style.fontSize,
         lang: element.getAttribute('lang'),
         lineHeight: style.lineHeight,
+        minHeight: style.minHeight,
         whiteSpace: style.whiteSpace,
       };
     }),
   );
 
-const expectedSettings = writingAreas.map(() => ({
+const expectedSettings = writingAreas.map(({ minHeight }) => ({
   fontSize: readingSize,
   lang: journalLanguage,
   lineHeight: readingLeading,
+  minHeight,
   whiteSpace: 'pre-wrap',
 }));
 
@@ -115,7 +121,7 @@ test('the writing is set in its own language, at reading size, before and after 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   const editors = page.locator(
     writingAreas
-      .map((label) => `[role="textbox"][aria-label="${label}"]`)
+      .map(({ label }) => `[role="textbox"][aria-label="${label}"]`)
       .join(', '),
   );
   await expect(editors).toHaveCount(writingAreas.length);
