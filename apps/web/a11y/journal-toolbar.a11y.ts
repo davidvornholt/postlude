@@ -18,6 +18,18 @@ const nonSquareControls = (elements: Array<Element>) =>
     })
     .map((element) => element.outerHTML);
 
+/**
+ * Scrolls to where the evening's writing ends, with the evening section below
+ * it still on the page.
+ */
+const scrollToWritingEnd = (element: Element) =>
+  window.scrollTo(
+    0,
+    element.getBoundingClientRect().bottom +
+      window.scrollY -
+      window.innerHeight,
+  );
+
 test('writing tools fit a narrow screen, preserve selection, and support keyboard navigation', async ({
   page,
 }) => {
@@ -99,9 +111,7 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
     await toolbar.evaluate((element) => element.clientWidth),
   );
   await page.keyboard.press('ArrowRight');
-  await page.evaluate(() =>
-    window.scrollTo(0, document.documentElement.scrollHeight),
-  );
+  await evening.evaluate(scrollToWritingEnd);
   const bottomGeometry = await geometry();
   expect(bottomGeometry.scrollY).toBeGreaterThan(0);
   await addImage.click();
@@ -122,6 +132,23 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await expect(evening).toBeFocused();
   await expect(evening).toHaveText('Keep these words.');
   await expect.poll(geometry).toEqual(bottomGeometry);
+});
+
+test('the writing tools scroll away once the writing ends', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: narrowWidth, height: 800 });
+  await mountDayPage(page, ['stored']);
+  const toolbar = page.getByRole('toolbar');
+  const evening = page.getByRole('textbox', { name: 'Evening journal' });
+
+  await evening.scrollIntoViewIfNeeded();
+  await expect(toolbar).toBeInViewport();
+  // Past the writing it no longer covers the evening's ratings.
+  await page
+    .getByRole('button', { name: 'Close the day' })
+    .scrollIntoViewIfNeeded();
+  await expect(toolbar).not.toBeInViewport();
 });
 
 test('tooltips dismiss with Escape and return on a new keyboard or pointer visit', async ({

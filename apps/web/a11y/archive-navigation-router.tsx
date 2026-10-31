@@ -14,6 +14,10 @@ import type { JournalDate } from '../src/features/journal/journal-day.ts';
 import { decodeArchiveQuery } from '../src/features/journal/schemas/archive-query.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
+import {
+  emptyEvening,
+  unansweredEveningActions,
+} from '../src/features/journal/testing/evening-view.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
 import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
@@ -72,6 +76,10 @@ export const createArchiveNavigationRouter = ({
     }
     return entry;
   };
+  const loadDayOn = (date: JournalDate) => {
+    const entry = loadEntryOn(date);
+    return { entry, evening: emptyEvening(entry.date, entry.revision) };
+  };
   const rootRoute = createRootRoute({ component: NavigationRoot });
   const appRoute = createRoute({
     component: AppShell,
@@ -80,18 +88,34 @@ export const createArchiveNavigationRouter = ({
   });
   const todayRoute = createRoute({
     component: () => {
-      const { entry } = todayRoute.useLoaderData();
-      return <DayPage entry={entry} save={save} today={config.today} />;
+      const { entry, evening } = todayRoute.useLoaderData();
+      return (
+        <DayPage
+          entry={entry}
+          evening={evening}
+          eveningActions={unansweredEveningActions}
+          save={save}
+          today={config.today}
+        />
+      );
     },
     getParentRoute: () => appRoute,
     head: () => ({ meta: [{ title: pageTitle('Today') }] }),
-    loader: () => ({ entry: loadEntryOn(config.today) }),
+    loader: () => loadDayOn(config.today),
     path: '/',
   });
   const datedRoute = createRoute({
     component: () => {
-      const { entry } = datedRoute.useLoaderData();
-      return <DayPage entry={entry} save={save} today={config.today} />;
+      const { entry, evening } = datedRoute.useLoaderData();
+      return (
+        <DayPage
+          entry={entry}
+          evening={evening}
+          eveningActions={unansweredEveningActions}
+          save={save}
+          today={config.today}
+        />
+      );
     },
     getParentRoute: () => appRoute,
     head: ({ params }) => ({
@@ -101,9 +125,7 @@ export const createArchiveNavigationRouter = ({
         },
       ],
     }),
-    loader: ({ params }) => ({
-      entry: loadEntryOn(params.date as JournalDate),
-    }),
+    loader: ({ params }) => loadDayOn(params.date as JournalDate),
     path: '/day/$date',
   });
   const archiveRoute = createRoute({

@@ -2,6 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import { Effect, Layer, Logger } from 'effect';
 import { AgentNoteGenerationError } from '../errors/journal-errors.ts';
 import {
+  closedDayNeededMessage,
+  notConfiguredMessage,
+} from '../evening-messages.ts';
+import {
   abandonedNoteMessage,
   agentNoteViewOf,
   type StoredAgentNote,
@@ -12,13 +16,8 @@ import {
   AgentNoteGenerator,
   type AgentNoteInput,
   agentNoteHistoryDays,
-  notConfiguredMessage,
 } from './agent-note-generator.ts';
-import {
-  AgentNotes,
-  closedDayNeededMessage,
-  unexpectedFailureMessage,
-} from './agent-notes.ts';
+import { AgentNotes, unexpectedFailureMessage } from './agent-notes.ts';
 import {
   bedrockAgentNoteGenerator,
   requestFailedMessage,

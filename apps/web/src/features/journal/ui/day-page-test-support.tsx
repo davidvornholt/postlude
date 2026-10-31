@@ -1,5 +1,10 @@
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import type { JournalEntry } from '../schemas/entry.ts';
+import type { EveningView } from '../services/evening-fns.ts';
+import {
+  emptyEvening,
+  unansweredEveningActions,
+} from '../testing/evening-view.ts';
 import { DayPage } from './day-page.tsx';
 
 export const today = '2026-08-26';
@@ -22,5 +27,20 @@ export const entryOn = (
 
 const neverSaves = () => new Promise<never>(() => undefined);
 
+/** The day page with this evening, where undefined is one that couldn't be read. */
+export const renderDayWith = (
+  entry: JournalEntry,
+  evening: EveningView | undefined,
+): Promise<string> =>
+  renderInRouter(
+    <DayPage
+      entry={entry}
+      evening={evening}
+      eveningActions={unansweredEveningActions}
+      save={neverSaves}
+      today={today}
+    />,
+  );
+
 export const renderDay = (entry: JournalEntry): Promise<string> =>
-  renderInRouter(<DayPage entry={entry} save={neverSaves} today={today} />);
+  renderDayWith(entry, emptyEvening(entry.date, entry.revision));

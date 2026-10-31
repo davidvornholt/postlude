@@ -13,6 +13,10 @@ import { createRoot } from 'react-dom/client';
 import { journalDateLabel } from '../src/features/journal/day-label.ts';
 import type { JournalDate } from '../src/features/journal/journal-day.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
+import {
+  emptyEvening,
+  unansweredEveningActions,
+} from '../src/features/journal/testing/evening-view.ts';
 import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import { AppShell, DayPage } from './day-navigation-fixture-module.ts';
@@ -52,12 +56,28 @@ export const NavigationRoot = () => (
 
 export const TodayPage = () => {
   const loaded = useFixtureDay();
-  return <DayPage entry={loaded.entry} save={save} today={loaded.today} />;
+  return (
+    <DayPage
+      entry={loaded.entry}
+      evening={emptyEvening(loaded.entry.date, loaded.entry.revision)}
+      eveningActions={unansweredEveningActions}
+      save={save}
+      today={loaded.today}
+    />
+  );
 };
 
 export const DatedPage = () => {
   const loaded = useFixtureDay();
-  return <DayPage entry={loaded.entry} save={save} today={loaded.today} />;
+  return (
+    <DayPage
+      entry={loaded.entry}
+      evening={emptyEvening(loaded.entry.date, loaded.entry.revision)}
+      eveningActions={unansweredEveningActions}
+      save={save}
+      today={loaded.today}
+    />
+  );
 };
 
 const rootRoute = createRootRoute({ component: NavigationRoot });

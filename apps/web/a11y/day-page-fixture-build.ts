@@ -4,6 +4,7 @@ import {
   type BrowserFixtureAssets,
   buildBrowserFixture,
   buildHydratedFixture,
+  buildHydratedFixtures,
   type FixtureAssets,
 } from './hydrated-fixture-build.ts';
 
@@ -18,22 +19,28 @@ const productionModulePath = new URL(
   import.meta.url,
 ).pathname;
 
+const dayPageFixtureOptions = {
+  clientEntryPath: new URL('./day-page-fixture.tsx', import.meta.url).pathname,
+  serverModuleId: '/a11y/day-page-fixture-render.tsx',
+  serverRenderName: 'renderDayPageFixture',
+  replacements: [
+    {
+      fixtureModulePath,
+      productionModulePath,
+      exportNames: ['DayPage'],
+    },
+  ],
+};
+
 export const buildDayPageFixture = async (
   config: DayPageFixtureConfig,
 ): Promise<FixtureAssets> =>
-  buildHydratedFixture(config, {
-    clientEntryPath: new URL('./day-page-fixture.tsx', import.meta.url)
-      .pathname,
-    serverModuleId: '/a11y/day-page-fixture-render.tsx',
-    serverRenderName: 'renderDayPageFixture',
-    replacements: [
-      {
-        fixtureModulePath,
-        productionModulePath,
-        exportNames: ['DayPage'],
-      },
-    ],
-  });
+  buildHydratedFixture(config, dayPageFixtureOptions);
+
+export const buildDayPageFixtures = async (
+  configs: ReadonlyArray<DayPageFixtureConfig>,
+): Promise<ReadonlyArray<FixtureAssets>> =>
+  buildHydratedFixtures(configs, dayPageFixtureOptions);
 
 const navigationFixtureModulePath = new URL(
   './day-navigation-fixture-module.ts',

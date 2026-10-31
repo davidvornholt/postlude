@@ -23,6 +23,7 @@
 import { Context, Duration, Effect, Layer } from 'effect';
 
 import { AgentNoteGenerationError } from '../errors/journal-errors.ts';
+import { notConfiguredMessage } from '../evening-messages.ts';
 import {
   agentNoteTimeoutMinutes,
   type WrapArea,
@@ -55,9 +56,6 @@ export type AgentNoteDraft = {
   /** The model that wrote it, as the page should name it. */
   readonly model: string;
 };
-
-export const notConfiguredMessage =
-  'No agent note generator is set up yet, so no note was written.';
 
 export class AgentNoteGenerator extends Context.Service<
   AgentNoteGenerator,

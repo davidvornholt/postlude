@@ -21,6 +21,7 @@ import {
   AgentNoteGenerationError,
   JournalValidationError,
 } from '../errors/journal-errors.ts';
+import { closedDayNeededMessage } from '../evening-messages.ts';
 import { shiftJournalDate } from '../journal-day.ts';
 import { agentNoteViewOf } from '../schemas/agent-area.ts';
 import { emptyJournalEntry } from '../schemas/entry.ts';
@@ -37,8 +38,6 @@ import { DayRatingRepository } from './day-rating-repository.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
-export const closedDayNeededMessage =
-  'Close the day before asking for a new note.';
 export const timedOutMessage =
   'Writing the note took too long, so it was stopped. Ask for a new one to try again.';
 export const unexpectedFailureMessage =

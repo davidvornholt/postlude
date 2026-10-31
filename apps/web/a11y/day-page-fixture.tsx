@@ -6,8 +6,12 @@ import type {
   DayPageFixtureWindow,
   SaveOutcome,
 } from './day-page-fixture-contract.ts';
-import { journalEntryFromFixture } from './day-page-fixture-contract.ts';
+import {
+  eveningFromFixture,
+  journalEntryFromFixture,
+} from './day-page-fixture-contract.ts';
 import { DayPage } from './day-page-fixture-module.ts';
+import { eveningFixtureActions } from './evening-fixture-actions.ts';
 
 const fixtureWindow = globalThis as unknown as DayPageFixtureWindow;
 const config = fixtureWindow.postludeDayPageFixture;
@@ -48,7 +52,13 @@ const save = (): Promise<unknown> => {
 };
 
 const router = createRenderingRouter(
-  <DayPage entry={entry} save={save} today={config.today} />,
+  <DayPage
+    entry={entry}
+    evening={eveningFromFixture(config)}
+    eveningActions={eveningFixtureActions(config)}
+    save={save}
+    today={config.today}
+  />,
 );
 await router.load();
 const recordRoute = (pathname: string) => {
