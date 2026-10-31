@@ -12,29 +12,11 @@ import {
   searchEvidenceMigrationTag,
   searchProjectionColumnsMigrationTag,
 } from './migrate.ts';
+import { databaseUrl } from './test-database-url.ts';
 
 const latestLegacyMigration = 2;
 const expectedMigrationCount = 11;
 const testTimeoutMilliseconds = 30_000;
-const generatedEnvFile = new URL('../.env.local', import.meta.url).pathname;
-
-const databaseUrl = (): string => {
-  const configured = globalThis.Bun.env.DATABASE_URL;
-  if (configured !== undefined && configured !== '') {
-    return configured;
-  }
-  const loaded = globalThis.Bun.spawnSync([
-    'bun',
-    `--env-file=${generatedEnvFile}`,
-    '-e',
-    'process.stdout.write(process.env.DATABASE_URL ?? "")',
-  ]);
-  const fromFile = loaded.exitCode === 0 ? loaded.stdout.toString() : '';
-  if (fromFile === '') {
-    throw new Error('DATABASE_URL is required for migration tests.');
-  }
-  return fromFile;
-};
 
 const closePool = (pool: Pool) =>
   Effect.promise(() => pool.end()).pipe(Effect.orDie);
