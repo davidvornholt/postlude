@@ -9,9 +9,8 @@
  * and says why.
  *
  * The queue outlives the page, so leaving the day and coming back keeps that
- * order. A page that comes back while earlier calls are still on their way
- * loaded the evening before they landed, so it reads the evening again once
- * they have.
+ * order, and a page that comes back to a day with calls made in this tab reads
+ * its evening again once they have landed.
  *
  * Closing the day and asking for a new note first wait for the writing to be
  * saved, because the note is written from the stored entry: closing a moment
@@ -62,7 +61,18 @@ const pollDelayMs = (attempt: number): number =>
 /** Each day's queue, dropped once it runs dry. */
 const queues = new Map<string, Promise<void>>();
 
+/**
+ * Days with calls made in this tab. A page that comes back to one of them may
+ * show an evening read before those calls landed, even once the queue has run
+ * dry: the loader's read can answer after them, and the router shows a day it
+ * still holds with the evening it read on an earlier visit while it reads the
+ * day again in the background. A read made here doesn't change what the
+ * router holds, so a day is never taken off the list.
+ */
+const calledDays = new Set<string>();
+
 const enqueue = (date: string, task: () => Promise<void>): void => {
+  calledDays.add(date);
   const queue: Promise<void> = (queues.get(date) ?? Promise.resolve())
     .then(task)
     .then(() => {
@@ -166,9 +176,8 @@ export const useEvening = (
   const [failure, setFailure] = useState<string | undefined>();
   const { readEvening } = actions;
 
-  // Calls queued on an earlier visit to the day are still on their way.
   useEffect(() => {
-    if (!queues.has(date)) {
+    if (!calledDays.has(date)) {
       return;
     }
     enqueue(date, async () => {

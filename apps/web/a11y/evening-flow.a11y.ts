@@ -150,6 +150,40 @@ test('a rating chosen after coming back to the day outlasts the ones before it',
   await expect(page.getByRole('radio', { name: 'Drained' })).toBeChecked();
 });
 
+test('coming back to a day shows the calls that landed while it was read again', async ({
+  page,
+}) => {
+  await mountEvening(page, 'report');
+  await holdEveningCalls(page, 'rate:energy=okay');
+  await choose(page, 'Energy', 'Okay');
+  await choose(page, 'Energy', 'Fresh');
+  await choose(page, 'Progress', 'Solid');
+  await page.getByRole('button', { name: 'Close the day' }).click();
+
+  // The day is read again while Okay is on its way, and that read answers only
+  // once Okay and every call behind it have landed.
+  await holdEveningCalls(page, 'read');
+  const revisited = revisitDay(page);
+  await expect.poll(() => eveningCalls(page)).toBe('rate:energy=okay read');
+  await releaseEveningCalls(page, 'rate:energy=okay');
+  await expect(page.getByText('This day is closed.')).toBeVisible();
+  await releaseEveningCalls(page, 'read');
+  await revisited;
+
+  // The page it replaced was still waiting to look at its note, so the note is
+  // the returning page's and the checks after it are about that page.
+  await expect(
+    page.getByText(`Written by an agent, ${noteModel}`, { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Fresh' })).toBeChecked();
+  await expect(page.getByText('This day is closed.')).toBeVisible();
+  await expect
+    .poll(() => eveningCalls(page))
+    .toBe(
+      'rate:energy=okay read rate:energy=fresh rate:progress=solid close read',
+    );
+});
+
 test('a late answer about an earlier note does not replace the one asked for since', async ({
   page,
 }) => {
