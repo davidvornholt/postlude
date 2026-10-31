@@ -168,8 +168,10 @@ for (const colorScheme of colorSchemes) {
     await previous.focus();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(previousDayUrl);
-    await expect(page.locator('main')).toBeFocused();
+    // The arrow that stepped keeps focus on the day it opened.
+    await expect(previous).toBeFocused();
     const recovery = page.getByRole('link', {
+      exact: true,
       name: 'Tuesday, August 25, 2026',
     });
     await recovery.focus();

@@ -85,7 +85,7 @@ test('changing the activity year keeps the reader at the selector', async ({
     .getByRole('textbox', { name: 'Evening journal' })
     .fill('Keep the archive in place.');
   await page.getByRole('link', { name: 'Archive' }).click();
-  const year = page.getByRole('link', { name: '2026' });
+  const year = page.getByRole('link', { exact: true, name: '2026' });
   await year.evaluate((element) => element.scrollIntoView({ block: 'center' }));
   const before = await page.evaluate(() => globalThis.scrollY);
   expect(before).toBeGreaterThan(0);
