@@ -7,9 +7,14 @@
  * protocol itself and has no way to adopt a `pg` pool, and better-auth has no
  * Effect adapter. So the client opens a pool of its own.
  *
- * Their sizes split the ten connections the single `pg` pool was allowed
- * before (pg's default), so a process still never holds more than ten against
- * a production Postgres whose 100 connections every app on the host shares.
+ * Neither pool can lend the other an idle connection, so their sizes together
+ * stay within the four connections a pull request preview's database allows
+ * the app's role (personal-infra, `infra/modules/apps/postlude-previews.nix`).
+ * A query beyond a full pool waits for a connection, while one beyond the
+ * role's limit fails with "too many connections for role". Production limits
+ * no role, and four is well within the 100 connections every app on the host
+ * shares there.
+ *
  * Both pools open connections on demand and close idle ones after ten seconds;
  * the Effect client checks every ten seconds, so it can take up to twenty.
  *
@@ -25,8 +30,8 @@ import pg from 'pg';
 
 import { preservePostgresDates } from './postgres-date.ts';
 
-const pgPoolSize = 4;
-const sqlClientPoolSize = 6;
+export const pgPoolSize = 2;
+export const sqlClientPoolSize = 2;
 // pg's default; the Effect client's own default keeps idle connections a minute.
 const idleTimeout = '10 seconds';
 
@@ -57,16 +62,12 @@ export const createPool = (connectionString: string): pg.Pool => {
  * The Effect SQL client and its pool. Building the layer opens no connection,
  * and closing the scope it was built in closes the pool, so build it once per
  * process and share the result: every build opens another pool.
- *
- * A short-lived process that runs one command at a time, such as the `postlude`
- * CLI, passes a smaller `maxConnections`.
  */
 export const pgClientLayer = (
   connectionString: string,
-  options: { readonly maxConnections?: number } = {},
 ): Layer.Layer<PgClient.PgClient | SqlClient, SqlError> =>
   PgClient.layer({
     url: Redacted.make(connectionString),
-    maxConnections: options.maxConnections ?? sqlClientPoolSize,
+    maxConnections: sqlClientPoolSize,
     idleTimeout,
   });

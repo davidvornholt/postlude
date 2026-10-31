@@ -91,7 +91,7 @@ const program = Effect.gen(function* () {
       DayRatingRepository.layer,
       AgentAreaRepository.layer,
     ),
-    pgClientLayer(databaseUrl, { maxConnections: 2 }),
+    pgClientLayer(databaseUrl),
   );
   return yield* runCliCommand(command, readStdin).pipe(
     Effect.provide(services),
