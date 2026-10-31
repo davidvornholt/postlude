@@ -37,13 +37,14 @@ const hit = (
   date: string,
   prose: string,
   terms: ReadonlyArray<string>,
+  reference = '',
 ): SearchHit =>
   searchHitFixture(terms)({
     date,
     words,
     journalText: prose,
     scriptureText: '',
-    scriptureReferenceText: '',
+    scriptureReferenceText: reference,
   });
 
 const answered = (
@@ -141,12 +142,20 @@ it('marks the found words as marks rather than as a colour', async () => {
   expect(html).toContain('font-medium');
 });
 
-it("sets the found writing in the journal's language and its labels in the page's", async () => {
+it("sets the found writing in the journal's language and its labels and passage references in the page's", async () => {
   const html = await render(
-    answered('rain', [hit('2026-03-01', 'The rain fell.', rain)]),
+    answered('rain proverbs', [
+      hit(
+        '2026-03-01',
+        'The rain fell.',
+        searchTerms('rain proverbs'),
+        'Proverbs 12:5-13',
+      ),
+    ]),
   );
   const [, excerpt = ''] = html.split(`lang="${journalLanguage}">`);
   expect(plainText(excerpt)).toStartWith('The rain fell.');
+  expect(plainText(html)).toContain('Proverbs 12:5-13');
   expect(html.match(languageAttribute)?.length).toBe(one);
 });
 
