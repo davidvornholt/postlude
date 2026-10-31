@@ -3,6 +3,7 @@ import type {
   ConverseCommandInput,
   ConverseCommandOutput,
 } from '@aws-sdk/client-bedrock-runtime';
+import { env } from 'bun';
 import { Cause, type Duration, Effect, Exit, Fiber } from 'effect';
 import { TestClock } from 'effect/testing';
 
@@ -17,6 +18,7 @@ import {
   agentNoteInferenceProfile,
   agentNoteModelName,
   bedrockAgentNoteGenerator,
+  bedrockConverse,
   type Converse,
   partlyConfiguredMessage,
   requestFailedMessage,
@@ -127,6 +129,34 @@ describe('the request', () => {
     for (const marker of Object.values(excludedMarkers)) {
       expect(sent).not.toContain(marker);
     }
+  });
+
+  it('goes to Bedrock in eu-central-1 even when an endpoint URL is configured', async () => {
+    const hostnames: Array<string> = [];
+    const requestHandler = {
+      handle: (request: { readonly hostname: string }) => {
+        hostnames.push(request.hostname);
+        return Promise.reject(new Error('The test sends nothing.'));
+      },
+    };
+    const variable = 'AWS_ENDPOINT_URL_BEDROCK_RUNTIME';
+    const configured = env[variable];
+    env[variable] = 'https://outside.example.test';
+    try {
+      await generateWith(
+        bedrockConverse(
+          { accessKeyId: 'AKIAEXAMPLE', secretAccessKey: 'secret' },
+          requestHandler,
+        ),
+      );
+    } finally {
+      if (configured === undefined) {
+        delete env[variable];
+      } else {
+        env[variable] = configured;
+      }
+    }
+    expect(hostnames).toEqual(['bedrock-runtime.eu-central-1.amazonaws.com']);
   });
 });
 

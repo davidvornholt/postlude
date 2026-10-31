@@ -20,6 +20,7 @@
 
 import {
   BedrockRuntimeClient,
+  type BedrockRuntimeClientConfig,
   ConverseCommand,
   type ConverseCommandInput,
   type ConverseCommandOutput,
@@ -234,15 +235,22 @@ export const agentNoteGeneratorFor = (
   );
 };
 
-const bedrockConverse = (credentials: {
-  readonly accessKeyId: string;
-  readonly secretAccessKey: string;
-}): Converse => {
+/** Sends through the AWS SDK; tests pass a `requestHandler` for the network. */
+export const bedrockConverse = (
+  credentials: {
+    readonly accessKeyId: string;
+    readonly secretAccessKey: string;
+  },
+  requestHandler?: BedrockRuntimeClientConfig['requestHandler'],
+): Converse => {
   const client = new BedrockRuntimeClient({
     region: bedrockRegion,
     credentials,
     // Effect owns the retries, so every attempt is bounded by the same timeout.
     maxAttempts: 1,
+    // An endpoint URL in the environment or AWS config must not get the text.
+    ignoreConfiguredEndpointUrls: true,
+    requestHandler,
   });
   return (request, signal) =>
     client.send(new ConverseCommand(request), { abortSignal: signal });
