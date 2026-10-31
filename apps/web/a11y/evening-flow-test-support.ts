@@ -103,7 +103,7 @@ const configs = {
     agentNote: noNote,
     settledNote: readyNote,
   }),
-  /** Closed while no note generator was set up, as it is until it is. */
+  /** Closed while no note generator is set up. */
   notConfigured: withEvening({
     rating: closedRating,
     wrap: noReport,

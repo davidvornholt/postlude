@@ -1,7 +1,6 @@
 /**
- * The ratings' words, in the order each scale runs. Every view that shows a
- * rating takes its words from here, so a scale reads the same on the day page
- * and in the weeks and months.
+ * Every view that shows a rating takes its words from here, so a scale reads
+ * the same everywhere.
  */
 
 import type { Energy, Progress, RepeatDay } from './schemas/day-rating.ts';

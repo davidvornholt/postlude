@@ -8,9 +8,7 @@
  * follow, now with the numbers at hand. Closing the day needs energy and
  * progress and asks an agent for its note, which appears last.
  *
- * Each rating saves as it is chosen. A closed day shows its ratings without
- * letting them change until it is reopened. A day that hasn't begun by the
- * server's clock can't be rated at all, and says so instead.
+ * A day that hasn't begun by the server's clock can't be rated at all.
  */
 
 import { useId } from 'react';

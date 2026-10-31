@@ -58,7 +58,7 @@ type DayPageProps = {
   readonly save: SaveDraft;
   /**
    * The day's ratings, report and agent note, as the server has them, or
-   * undefined when they couldn't be read. The writing never waits on them.
+   * undefined when they couldn't be read, so the writing still shows.
    */
   readonly evening: EveningView | undefined;
   /** Where the ratings and the closing go, passed in for the same reason. */
