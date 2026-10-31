@@ -71,10 +71,6 @@ export const searchAddressQuery = (
     : {};
 };
 
-/**
- * The page's answer: a native POST's when one came in, otherwise the address's
- * words, otherwise the empty search.
- */
 export const loadSearchView = (
   serverContext: unknown,
   search: SearchCall,

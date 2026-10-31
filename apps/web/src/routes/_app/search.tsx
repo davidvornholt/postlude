@@ -15,9 +15,10 @@ import {
 /**
  * `/search?q=` opens on the answer to its words, so a bookmark or a browser's
  * search keyword can land on results. The page's own form still posts its
- * words, and once the answer is in, the address drops them: the field and the
- * address would disagree after the next search, and the words need not sit in
- * the address bar any longer than the browser put them there.
+ * words. Once hydrated, the page replaces the current history entry with the
+ * bare address, because the field and the address would disagree after the
+ * next search and the words need not stay in the address bar. This can't take
+ * back the request that already went out with them.
  */
 const SearchRoute = () => {
   const search = useServerFn(searchJournalFn);

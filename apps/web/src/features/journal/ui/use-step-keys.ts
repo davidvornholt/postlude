@@ -1,8 +1,5 @@
 /**
- * The left and right arrow keys step to the date before and the date after,
- * as the two arrows under the heading do.
- *
- * Only the bare keys count, and only while focus is somewhere they mean
+ * Only the bare arrow keys count, and only while focus is somewhere they mean
  * nothing else. In a field or the editor they move the caret, in a group of
  * choices they move the choice, and with a modifier they belong to the browser
  * or the system, such as Alt with an arrow going back. Arrow keys rather than

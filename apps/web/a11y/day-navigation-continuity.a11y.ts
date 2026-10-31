@@ -72,7 +72,6 @@ test('Previous and Next preserve the app shell and keep focus on the arrow', asy
     'Monday, August 24, 2026',
     dayLink(page, 'Previous day'),
   );
-  // The arrow is described by the heading, so landing on it names the day.
   await expect(dayLink(page, 'Previous day')).toHaveAccessibleDescription(
     'Monday, August 24, 2026',
   );

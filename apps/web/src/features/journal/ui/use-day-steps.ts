@@ -1,8 +1,3 @@
-/**
- * The days either side of a day page, and the way to them that is not a link:
- * the date field and the arrow keys.
- */
-
 import { useNavigate } from '@tanstack/react-router';
 import {
   earliestJournalDate,
