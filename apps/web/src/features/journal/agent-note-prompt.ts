@@ -9,6 +9,7 @@
 
 import { Lexer, type Token, type Tokens } from 'marked';
 
+import { imageRoute } from './images.ts';
 import { journalDateWeekday } from './journal-day.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 import type { DayOverview } from './schemas/day-overview.ts';
@@ -110,12 +111,21 @@ const earlierDayOf = (day: DayOverview, version: number | null) => {
 };
 
 const bareAddress = /\b(?:[a-z][\d+.a-z-]*:\/\/|www\.)\S+/giu;
+const storedImageAddress = new RegExp(`${imageRoute}\\S*`, 'giu');
 const htmlLineBreak = /^<br\s*\/?>$/iu;
 const lineBreak = '\n';
 const paragraphBreak = '\n\n';
 
+/** Reads the Markdown inside code or an HTML block. */
+type ContentReader = (markdown: string) => string;
+
+const tagTextOf = (tag: string) => (htmlLineBreak.test(tag) ? lineBreak : '');
+
 /** The words of inline Markdown: a link's text without its target, no tags. */
-const inlineTextOf = (tokens: ReadonlyArray<Token>): string =>
+const inlineTextOf = (
+  tokens: ReadonlyArray<Token>,
+  readContent: ContentReader,
+): string =>
   tokens
     .map((token) => {
       switch (token.type) {
@@ -124,17 +134,18 @@ const inlineTextOf = (tokens: ReadonlyArray<Token>): string =>
         case 'br':
           return lineBreak;
         case 'html':
-          return htmlLineBreak.test(token.raw) ? lineBreak : '';
+          return tagTextOf(token.raw);
         case 'checkbox':
           return '';
         case 'link':
         case 'strong':
         case 'em':
         case 'del':
-          return inlineTextOf(token.tokens ?? []);
+          return inlineTextOf(token.tokens ?? [], readContent);
+        case 'codespan':
+          return readContent(token.text);
         case 'text':
         case 'escape':
-        case 'codespan':
           return token.text;
         default:
           return token.raw;
@@ -142,9 +153,16 @@ const inlineTextOf = (tokens: ReadonlyArray<Token>): string =>
     })
     .join('');
 
+/** An HTML block without its tags, still as Markdown. */
+const withoutTags = (html: string) =>
+  Lexer.lexInline(html)
+    .map((token) => (token.type === 'html' ? tagTextOf(token.raw) : token.raw))
+    .join('');
+
 const blocksTextOf = (
   tokens: ReadonlyArray<Token>,
   separator: string,
+  readContent: ContentReader,
 ): string =>
   tokens
     .map((token) => {
@@ -155,44 +173,58 @@ const blocksTextOf = (
         case 'checkbox':
           return '';
         case 'code':
-          return token.text;
-        // The tags go; the text between them is still the entry.
+          return readContent(token.text);
         case 'html':
-          return inlineTextOf(Lexer.lexInline(token.raw)).trim();
+          return readContent(withoutTags(token.raw));
         case 'blockquote':
-          return blocksTextOf(token.tokens ?? [], paragraphBreak);
+          return blocksTextOf(token.tokens ?? [], paragraphBreak, readContent);
         case 'list':
           return token.items
             .map((item: Tokens.ListItem) =>
-              blocksTextOf(item.tokens, lineBreak),
+              blocksTextOf(item.tokens, lineBreak, readContent),
             )
             .join(lineBreak);
         case 'table':
           return [token.header, ...token.rows]
             .map((row: Array<Tokens.TableCell>) =>
-              row.map((cell) => inlineTextOf(cell.tokens)).join(' '),
+              row
+                .map((cell) => inlineTextOf(cell.tokens, readContent))
+                .join(' '),
             )
             .join(lineBreak);
         case 'paragraph':
         case 'heading':
         case 'text':
-          return inlineTextOf(token.tokens ?? [token]);
+          return inlineTextOf(token.tokens ?? [token], readContent);
         default:
-          return inlineTextOf([token]);
+          return inlineTextOf([token], readContent);
       }
     })
     .filter((text) => text !== '')
     .join(separator);
 
 /**
+ * Code and HTML can hold images, links and definitions as text, so their
+ * content is read as Markdown too, but only once: that reading can find code
+ * or HTML again, even the same unclosed HTML block, so what it finds there is
+ * left out.
+ */
+const leaveOut: ContentReader = () => '';
+const readOnce: ContentReader = (markdown) =>
+  blocksTextOf(Lexer.lex(markdown), paragraphBreak, leaveOut);
+
+/**
  * The journal text as the model reads it. Image addresses point at Postlude's
  * own storage and link targets can carry tokens; neither helps the note. The
  * Markdown is read with the grammar the editor uses, so a destination with
- * brackets, parentheses or a reference definition is still recognized.
+ * brackets, parentheses or a reference definition is still recognized. An
+ * image address written as text, such as a definition that can't interrupt a
+ * paragraph, goes too.
  */
 const journalTextOf = (markdown: string) => {
-  const text = blocksTextOf(Lexer.lex(markdown), paragraphBreak)
+  const text = blocksTextOf(Lexer.lex(markdown), paragraphBreak, readOnce)
     .replace(bareAddress, '[link]')
+    .replace(storedImageAddress, '[image]')
     .trim();
   return text.length > journalTextLimit
     ? { journalText: text.slice(0, journalTextLimit), journalTextCut: true }

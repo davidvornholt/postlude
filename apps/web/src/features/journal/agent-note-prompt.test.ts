@@ -124,6 +124,110 @@ describe('what the model is given', () => {
   });
 });
 
+/** Journal Markdown whose image addresses and link targets must not be sent. */
+const addressCases = [
+  {
+    name: 'an image whose alt text has escaped brackets, as the editor writes it',
+    markdown:
+      'Unser Garten ![Foto \\[Haus\\]](</api/journal-images/SECRET-KEY.png>) im Herbst.',
+    journalText: 'Unser Garten [image] im Herbst.',
+  },
+  {
+    name: 'a link whose target has parentheses and a token',
+    markdown:
+      'Ich habe mein [Konto](https://secret.test/a(b)?token=SECRET-TOKEN) geprüft.',
+    journalText: 'Ich habe mein Konto geprüft.',
+  },
+  {
+    name: 'a reference-style link and image',
+    markdown: [
+      'Ich habe [den Plan][plan] fertig. ![Foto][foto]',
+      '',
+      '[plan]: https://secret.test/?token=SECRET-TOKEN',
+      '[foto]: /api/journal-images/SECRET-KEY.png',
+    ].join('\n'),
+    journalText: 'Ich habe den Plan fertig. [image]',
+  },
+  {
+    name: 'an uppercase bare address',
+    markdown: 'Gelesen: HTTPS://SECRET.TEST/?token=SECRET-TOKEN heute.',
+    journalText: 'Gelesen: [link] heute.',
+  },
+  {
+    name: 'an autolink',
+    markdown: 'Gelesen: <https://secret.test/?token=SECRET-TOKEN> heute.',
+    journalText: 'Gelesen: [link] heute.',
+  },
+  {
+    name: 'a www address',
+    markdown: 'Gelesen: www.secret.test/?token=SECRET-TOKEN heute.',
+    journalText: 'Gelesen: [link] heute.',
+  },
+  {
+    // Imported notes keep their HTML; the editor escapes typed HTML.
+    name: 'imported HTML',
+    markdown: [
+      'Unser Garten <img src="/api/journal-images/SECRET-KEY.png" alt="Garten"> und mein <a href="https://secret.test/?token=SECRET-TOKEN">Konto</a>.',
+      '',
+      '<img src="/api/journal-images/SECRET-KEY.png">',
+      '',
+      'Im Herbst.',
+    ].join('\n'),
+    journalText: 'Unser Garten  und mein Konto.\n\nIm Herbst.',
+  },
+  {
+    name: 'an image in inline code',
+    markdown:
+      'Ich habe `![Foto](/api/journal-images/SECRET-KEY.png)` eingefügt.',
+    journalText: 'Ich habe [image] eingefügt.',
+  },
+  {
+    name: 'an image, a link and a reference definition in a fenced code block',
+    markdown: [
+      'Mein Entwurf:',
+      '',
+      '```',
+      '![Foto][foto] und mein [Konto](/konto?token=SECRET-TOKEN)',
+      '',
+      '[foto]: /api/journal-images/SECRET-KEY.png',
+      '```',
+      '',
+      'Im Herbst.',
+    ].join('\n'),
+    journalText: 'Mein Entwurf:\n\n[image] und mein Konto\n\nIm Herbst.',
+  },
+  {
+    name: 'reference definitions in an imported HTML block',
+    markdown: [
+      'Unser Garten:',
+      '',
+      '<div>',
+      '[foto]: /api/journal-images/SECRET-KEY.png',
+      '[konto]: /konto?token=SECRET-TOKEN',
+      '![Foto][foto] und mein [Konto][konto]',
+      '</div>',
+      '',
+      'Im Herbst.',
+    ].join('\n'),
+    journalText: 'Unser Garten:\n\n[image] und mein Konto\n\nIm Herbst.',
+  },
+  {
+    // A definition can't interrupt a paragraph, so this is text.
+    name: 'an image address written as text in an imported HTML block',
+    markdown: [
+      'Unser Garten:',
+      '',
+      '<div>',
+      '![p][photo]',
+      '[photo]: /api/journal-images/SECRET-KEY.png',
+      '</div>',
+      '',
+      'Im Herbst.',
+    ].join('\n'),
+    journalText: 'Unser Garten:\n\n![p][photo]\n[photo]: [image]\n\nIm Herbst.',
+  },
+];
+
 describe('the journal text as the model reads it', () => {
   it('has no image addresses or link targets', () => {
     const data = dataOf(agentNotePromptOf(agentNoteInput()));
@@ -132,57 +236,7 @@ describe('the journal text as the model reads it', () => {
     expect(data.journalText).not.toContain('https://');
   });
 
-  it.each([
-    {
-      name: 'an image whose alt text has escaped brackets, as the editor writes it',
-      markdown:
-        'Unser Garten ![Foto \\[Haus\\]](</api/journal-images/SECRET-KEY.png>) im Herbst.',
-      journalText: 'Unser Garten [image] im Herbst.',
-    },
-    {
-      name: 'a link whose target has parentheses and a token',
-      markdown:
-        'Ich habe mein [Konto](https://secret.test/a(b)?token=SECRET-TOKEN) geprüft.',
-      journalText: 'Ich habe mein Konto geprüft.',
-    },
-    {
-      name: 'a reference-style link and image',
-      markdown: [
-        'Ich habe [den Plan][plan] fertig. ![Foto][foto]',
-        '',
-        '[plan]: https://secret.test/?token=SECRET-TOKEN',
-        '[foto]: /api/journal-images/SECRET-KEY.png',
-      ].join('\n'),
-      journalText: 'Ich habe den Plan fertig. [image]',
-    },
-    {
-      name: 'an uppercase bare address',
-      markdown: 'Gelesen: HTTPS://SECRET.TEST/?token=SECRET-TOKEN heute.',
-      journalText: 'Gelesen: [link] heute.',
-    },
-    {
-      name: 'an autolink',
-      markdown: 'Gelesen: <https://secret.test/?token=SECRET-TOKEN> heute.',
-      journalText: 'Gelesen: [link] heute.',
-    },
-    {
-      name: 'a www address',
-      markdown: 'Gelesen: www.secret.test/?token=SECRET-TOKEN heute.',
-      journalText: 'Gelesen: [link] heute.',
-    },
-    {
-      // Imported notes keep their HTML; the editor escapes typed HTML.
-      name: 'imported HTML',
-      markdown: [
-        'Unser Garten <img src="/api/journal-images/SECRET-KEY.png" alt="Garten"> und mein <a href="https://secret.test/?token=SECRET-TOKEN">Konto</a>.',
-        '',
-        '<img src="/api/journal-images/SECRET-KEY.png">',
-        '',
-        'Im Herbst.',
-      ].join('\n'),
-      journalText: 'Unser Garten  und mein Konto.\n\nIm Herbst.',
-    },
-  ])(
+  it.each(addressCases)(
     'keeps the words and drops the address of $name',
     ({ markdown, journalText }) => {
       const prompt = agentNotePromptOf(
