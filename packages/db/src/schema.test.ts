@@ -165,7 +165,7 @@ const expectedChecks: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     'entry_scripture_topic_not_blank',
-    `"entry"."scripture_topic" is null or "entry"."scripture_topic" ~ '[[:alnum:]]'`,
+    `"entry"."scripture_topic" is null or "entry"."scripture_topic" ~ '[^[:space:]]'`,
   ],
 ];
 

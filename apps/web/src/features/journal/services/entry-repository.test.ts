@@ -218,12 +218,86 @@ it('holds a passage or a topic, never both', async () => {
   expect(entry.scriptureReference).toEqual({ book: 'Psalms', chapter: 23 });
   expect(entry.scriptureTopic).toBeUndefined();
 });
-it('stores no topic for a line without a letter or a digit', async () => {
+it('keeps a topic made only of symbols and reads it back', async () => {
+  const [saved, reread] = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Nothing named.', ' 🙏 '),
+      );
+      return [first, yield* entries.read('2026-08-25')] as const;
+    }),
+  );
+  expect(saved.scriptureTopic).toBe('🙏');
+  expect(saved.scriptureFirstUsedAt).not.toBeNull();
+  expect(reread?.scriptureTopic).toBe('🙏');
+  expect(reread?.scriptureReference).toBeUndefined();
+});
+it('stores no topic for a line of only spaces and invisible marks', async () => {
   const entry = await withRepository((entries) =>
-    entries.save(draft('2026-08-25', 'Nothing named.', ' — ')),
+    entries.save(draft('2026-08-25', 'Nothing named.', ' \u00a0\u200b\t ')),
   );
   expect(entry.scriptureTopic).toBeUndefined();
   expect(entry.scriptureFirstUsedAt).toBeNull();
+});
+it('keeps a stored passage the parser does not know when only the evening changes', async () => {
+  const entry = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Read it first.', 'Psalms 23'),
+      );
+      // An import can store a book this parser has no name for.
+      yield* sql`
+        update entry set scripture_book = 'Jubilees'
+        where entry_date = '2026-08-25'
+      `;
+      return yield* entries.save(
+        draft('2026-08-25', 'Then wrote more.', 'Jubilees 23', first.revision),
+      );
+    }),
+  );
+  expect(entry.journalMarkdown).toBe('Then wrote more.');
+  expect(entry.scriptureReference).toEqual({ book: 'Jubilees', chapter: 23 });
+  expect(entry.scriptureTopic).toBeUndefined();
+});
+it('keeps a stored topic that reads as a passage when only the evening changes', async () => {
+  const entry = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Read it first.', 'Forgiveness'),
+      );
+      // Stored before the parser learned to read this line as a passage.
+      yield* sql`
+        update entry set scripture_topic = 'Psalms 23'
+        where entry_date = '2026-08-25'
+      `;
+      return yield* entries.save(
+        draft('2026-08-25', 'Then wrote more.', 'Psalms 23', first.revision),
+      );
+    }),
+  );
+  expect(entry.scriptureReference).toBeUndefined();
+  expect(entry.scriptureTopic).toBe('Psalms 23');
+});
+it('reads the line again once the writer changes it', async () => {
+  const entry = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Read it first.', 'Psalms 23'),
+      );
+      yield* sql`
+        update entry set scripture_book = 'Jubilees'
+        where entry_date = '2026-08-25'
+      `;
+      return yield* entries.save(
+        draft('2026-08-25', 'Then wrote more.', 'Jubilees 24', first.revision),
+      );
+    }),
+  );
+  expect(entry.scriptureReference).toBeUndefined();
+  expect(entry.scriptureTopic).toBe('Jubilees 24');
 });
 it('lists a range inclusively and in calendar order', async () => {
   const summaries = await withRepository((entries) =>

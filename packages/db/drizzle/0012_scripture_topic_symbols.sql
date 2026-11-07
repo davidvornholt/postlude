@@ -1,0 +1,2 @@
+ALTER TABLE "entry" DROP CONSTRAINT "entry_scripture_topic_not_blank";--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_scripture_topic_not_blank" CHECK ("entry"."scripture_topic" is null or "entry"."scripture_topic" ~ '[^[:space:]]');

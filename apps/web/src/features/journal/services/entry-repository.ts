@@ -32,6 +32,8 @@ import {
 } from '../schemas/entry-summary.ts';
 import {
   parseScriptureReference,
+  type ScriptureReference,
+  scriptureLineOf,
   scriptureTopicOf,
 } from '../scripture-reference.ts';
 import { type SearchDocument, searchDocumentOf } from '../search-document.ts';
@@ -140,6 +142,39 @@ const persistSavedEvidence =
       ? Effect.void
       : replaceSearchEvidence(sql, date, storedSearchEvidence(document));
 
+/** The stored day, locked until the transaction that read it ends. */
+const readLockedEntry = (sql: SqlClient.SqlClient, date: string) =>
+  sql`
+    select ${storedEntryColumns(sql)}
+    from entry
+    where entry_date = ${date}
+    for update
+  `.pipe(
+    Effect.flatMap(decodeEntries),
+    Effect.map((rows) => rows[0]),
+  );
+
+/**
+ * What a save keeps as the morning's passage or topic. The stored one stays
+ * unless the line itself changed, because re-reading an unchanged line could
+ * turn it into something else: a passage whose book an import stored but the
+ * parser does not know would come back as a topic when only the evening was
+ * edited.
+ */
+const studiedOf = (
+  line: string,
+  stored: JournalEntry | undefined,
+): {
+  readonly reference: ScriptureReference | undefined;
+  readonly topic: string | undefined;
+} =>
+  stored !== undefined && line.trim() === scriptureLineOf(stored)
+    ? { reference: stored.scriptureReference, topic: stored.scriptureTopic }
+    : {
+        reference: parseScriptureReference(line),
+        topic: scriptureTopicOf(line),
+      };
+
 export class EntryRepository extends Context.Service<EntryRepository>()(
   'journal/EntryRepository',
   {
@@ -172,7 +207,9 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
        * Writes the day, counting the words itself. An upsert rather than a read
        * and a write, so two saves that overlap — the writer typing while the
        * last autosave is still in flight — cannot turn into an insert that
-       * fails on a key that now exists.
+       * fails on a key that now exists. The stored row is still read first,
+       * locked for the rest of the transaction, so the line of what was studied
+       * can be compared with what it holds now.
        *
        * `updated_at` is set from the database clock, matching what Drizzle
        * writes elsewhere, so the two write paths stamp the row the same way.
@@ -185,9 +222,10 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         | ReturnType<typeof journalWriteError>
       > =>
         Effect.gen(function* () {
-          // The one line holds a passage or, failing that, a topic.
-          const reference = parseScriptureReference(draft.scriptureReference);
-          const topic = scriptureTopicOf(draft.scriptureReference);
+          const { reference, topic } = studiedOf(
+            draft.scriptureReference,
+            yield* readLockedEntry(sql, draft.date),
+          );
           const journalWordCount = countJournalWords(draft.journalMarkdown);
           const scriptureWordCount = countJournalWords(draft.scriptureMarkdown);
           const journalUsed = journalWordCount > 0;
@@ -323,13 +361,17 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           `.pipe(
             Effect.flatMap(decodeEntries),
             Effect.tap(persistSavedEvidence(sql, draft.date, searchDocument)),
-            sql.withTransaction,
-            Effect.mapError(journalWriteError),
           );
-          return saved[0] === undefined
-            ? yield* Effect.fail(journalWriteConflictError())
-            : saved[0];
-        });
+          return saved[0];
+        }).pipe(
+          sql.withTransaction,
+          Effect.mapError(journalWriteError),
+          Effect.flatMap((saved) =>
+            saved === undefined
+              ? Effect.fail(journalWriteConflictError())
+              : Effect.succeed(saved),
+          ),
+        );
 
       /**
        * Every day with current archive activity in a range, oldest first: the

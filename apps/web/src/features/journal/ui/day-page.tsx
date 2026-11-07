@@ -24,7 +24,7 @@ import {
 import type { Anniversary } from '../anniversary.ts';
 import type { JournalDate } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
-import { formatScriptureReference } from '../scripture-reference.ts';
+import { scriptureLineOf } from '../scripture-reference.ts';
 import type { EveningActions, EveningView } from '../services/evening-fns.ts';
 import { DayHeader } from './day-header.tsx';
 import type { ReadWrittenDays } from './day-picker.tsx';
@@ -71,10 +71,7 @@ const draftOf = (entry: JournalEntry): EntryDraft => ({
   date: entry.date,
   journalMarkdown: entry.journalMarkdown,
   scriptureMarkdown: entry.scriptureMarkdown,
-  scriptureReference:
-    entry.scriptureReference === undefined
-      ? (entry.scriptureTopic ?? '')
-      : formatScriptureReference(entry.scriptureReference),
+  scriptureReference: scriptureLineOf(entry),
   baseRevision: entry.revision,
 });
 

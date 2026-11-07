@@ -11,6 +11,8 @@
  * reads as a passage is kept as one and links to it, and anything else is kept
  * as written, as the topic of the morning. So "Sprüche 12,5" opens the right
  * passage without being corrected first, and "Forgiveness" is never refused.
+ * A long topic wraps onto further lines of the field rather than running out
+ * of sight, and stays one paragraph.
  */
 
 import { useId } from 'react';
@@ -18,7 +20,7 @@ import {
   deepFocusRingClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { TextField } from '#/shared/ui/text-field.tsx';
+import { WrappingTextField } from '#/shared/ui/text-field.tsx';
 import {
   formatScriptureReference,
   parseScriptureReference,
@@ -80,18 +82,18 @@ export const ScriptureRegister = ({
       <label className="block text-deep-ink-muted text-sm" htmlFor={fieldId}>
         Passage or topic
       </label>
-      <TextField
+      <WrappingTextField
         autoComplete="off"
         tone="deep"
         className={[readingMeasureClass, 'mt-2 font-display text-2xl'].join(
           ' ',
         )}
         id={fieldId}
-        // Leaving the field is a save, the same as leaving either editor.
+        // Leaving the field is a save, the same as leaving either editor, and
+        // Enter leaves it.
         onBlur={onLeave}
-        onChange={(event) => onReferenceChange(event.target.value)}
+        onValueChange={onReferenceChange}
         placeholder="Proverbs 12:5-13, or a topic"
-        type="text"
         value={reference}
       />
       <p className="mt-2 min-h-6 text-sm">

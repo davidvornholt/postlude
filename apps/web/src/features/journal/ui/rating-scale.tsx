@@ -8,8 +8,10 @@
  * "Drained" is not a failure, and green would say it was the good answer.
  * Its label stays the same words, so the choice never rests on colour alone.
  *
- * An optional rating is cleared by choosing its answer again, so undoing a
- * choice adds no control that appears and moves the page under the pointer.
+ * An optional rating is cleared by choosing its answer again, with a press or
+ * with Space, so undoing a choice adds no control that appears and moves the
+ * page under the pointer. The cleared answer is a radio button that is no
+ * longer checked, which is what a screen reader then says about it.
  */
 
 import { type ReactNode, useId } from 'react';
@@ -99,6 +101,23 @@ export const RatingScale = <Value extends string>({
               onClick={() => {
                 if (value === option.value) {
                   onClear?.();
+                }
+              }}
+              // Chromium and WebKit send no press when Space lands on a
+              // checked radio button, so Space on the chosen answer clears it
+              // here. The key's default is cancelled so that a browser which
+              // would press it as well cannot choose the answer again, and a
+              // held key's repeats are cancelled for the same reason: any of
+              // them would choose the just-cleared answer when the key is let go.
+              onKeyDown={(event) => {
+                if (event.key !== ' ' || onClear === undefined) {
+                  return;
+                }
+                if (event.repeat) {
+                  event.preventDefault();
+                } else if (value === option.value) {
+                  event.preventDefault();
+                  onClear();
                 }
               }}
               type="radio"

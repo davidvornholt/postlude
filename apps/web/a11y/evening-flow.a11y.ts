@@ -57,6 +57,24 @@ for (const colorScheme of colorSchemes) {
     await choose(page, 'Would you repeat this day?', 'Partly');
     await expect(page.getByRole('radio', { name: 'Partly' })).not.toBeChecked();
     expect((await repeat.boundingBox())?.height).toBe(heightBefore);
+    // Space does the same from the keyboard: it chooses the answer, and on the
+    // chosen answer it clears it, leaving the focus where it was and no answer
+    // in the group reported as checked.
+    const partly = repeat.getByRole('radio', { name: 'Partly' });
+    await partly.focus();
+    await page.keyboard.press('Space');
+    await expect(partly).toBeChecked();
+    await page.keyboard.press('Space');
+    await expect(partly).not.toBeChecked();
+    await expect(partly).toBeFocused();
+    await expect(repeat.getByRole('radio', { checked: true })).toHaveCount(0);
+    // A Space held long enough to repeat still only clears it.
+    await page.keyboard.press('Space');
+    await expect(partly).toBeChecked();
+    await page.keyboard.down('Space');
+    await page.keyboard.down('Space');
+    await page.keyboard.up('Space');
+    await expect(partly).not.toBeChecked();
     await expect(close).toBeEnabled();
 
     await close.click();
@@ -74,7 +92,15 @@ for (const colorScheme of colorSchemes) {
     ).toBeVisible();
     await expect(page.getByText(readyNoteText)).toHaveAttribute('lang', 'en');
     expect(await eveningCalls(page)).toBe(
-      'rate:energy=okay rate:progress=solid rate:repeatDay=partly rate:repeatDay=null close read',
+      [
+        'rate:energy=okay rate:progress=solid',
+        // A press, then Space, then a held Space choose the answer and clear it.
+        ...Array.from(
+          { length: 3 },
+          () => 'rate:repeatDay=partly rate:repeatDay=null',
+        ),
+        'close read',
+      ].join(' '),
     );
     await scanPage(page);
 

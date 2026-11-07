@@ -85,6 +85,13 @@
       "when": 1794055520795,
       "tag": "0011_scripture_topic",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794065086808,
+      "tag": "0012_scripture_topic_symbols",
+      "breakpoints": true
     }
   ]
 }

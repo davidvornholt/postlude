@@ -43,8 +43,11 @@ const tsvector = customType<{ data: string; driverData: string }>({
  *
  * Some mornings study a topic rather than a passage. That topic is free text in
  * `scripture_topic`, kept apart from the structured reference: a day holds a
- * passage or a topic, never both, and a topic needs a letter or a digit for
- * the same reason a book does.
+ * passage or a topic, never both. A topic may be anything visible, an emoji
+ * alone included, so the database only refuses one that is all whitespace. The
+ * app also counts a topic of nothing but invisible characters as blank and
+ * never stores one; Postgres has no character class for those that holds in
+ * every locale, so that half of the rule stays in the app.
  *
  * Both timestamps carry the database clock's `now()`: `created_at` from its
  * column default, `updated_at` from the `now()` that Drizzle writes into every
@@ -148,7 +151,7 @@ export const entry = pgTable(
     ),
     check(
       'entry_scripture_topic_not_blank',
-      sql`${table.scriptureTopic} is null or ${table.scriptureTopic} ~ '[[:alnum:]]'`,
+      sql`${table.scriptureTopic} is null or ${table.scriptureTopic} ~ '[^[:space:]]'`,
     ),
   ],
 );
