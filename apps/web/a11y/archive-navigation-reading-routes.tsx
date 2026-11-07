@@ -27,7 +27,7 @@ const calendarViewOn = (
         ? [
             {
               date: '2026-08-19',
-              hasScriptureReference: false,
+              hasScripture: false,
               revision: 1,
               snippet: 'A selected calendar memory.',
               words: 42,

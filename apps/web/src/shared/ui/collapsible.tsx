@@ -64,21 +64,23 @@ const useSettled = (
       return;
     }
     let current = true;
+    const settle = () => {
+      if (current) {
+        // Only the direction it was waiting for settles it.
+        setState((settling) =>
+          settling.open === open ? { ...settling, settled: true } : settling,
+        );
+      }
+    };
     // Reading the element's animations brings its style up to date first, so
     // the transitions this change started are among them. With none running,
     // as with reduced motion, it settles at once.
+    // A cancelled transition settles it too. A change of direction cancels
+    // them, and the effect for the new direction waits for its own; switching
+    // on reduced motion midway cancels them all.
     Promise.all(element.getAnimations().map(({ finished }) => finished)).then(
-      () => {
-        if (current) {
-          // Only the direction it was waiting for settles it.
-          setState((settling) =>
-            settling.open === open ? { ...settling, settled: true } : settling,
-          );
-        }
-      },
-      // A transition is cancelled when the direction changes before it ends,
-      // and the effect for the new direction waits for its own.
-      () => undefined,
+      settle,
+      settle,
     );
     return () => {
       current = false;

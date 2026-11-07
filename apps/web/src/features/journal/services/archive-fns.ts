@@ -65,7 +65,7 @@ const activityDayOf =
     date: summary.date,
     journalWords: summary.journalWordCount,
     scriptureWords: summary.scriptureWordCount,
-    hasScripture: summary.hasScriptureReference,
+    hasScripture: summary.hasScripture,
     journalWrittenOnTheDay:
       summary.journalFirstUsedAt !== null &&
       journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,

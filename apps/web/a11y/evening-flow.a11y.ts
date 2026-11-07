@@ -32,18 +32,23 @@ for (const colorScheme of colorSchemes) {
           document.documentElement.clientWidth,
       ),
     ).toBe(true);
-    await expect(
-      page.getByText('Rate energy and progress to close the day.'),
-    ).toBeVisible();
+    await expect(close).toHaveAccessibleDescription(
+      'Rate energy and progress to close the day.',
+    );
+    // The hint's line keeps the height its longest wording wraps to, so
+    // rating the day never moves what follows it.
+    const hintId = await close.getAttribute('aria-describedby');
+    const hintLine = page.locator(`[id="${hintId}"]`).locator('..');
+    const hintHeight = (await hintLine.boundingBox())?.height;
     await scanPage(page);
 
     // The arrow keys move between the choices and save each one.
     await page.getByRole('radio', { name: 'Drained' }).focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('radio', { name: 'Okay' })).toBeChecked();
-    await expect(
-      page.getByText('Rate progress to close the day.'),
-    ).toBeVisible();
+    await expect(close).toHaveAccessibleDescription(
+      'Rate progress to close the day.',
+    );
 
     await choose(page, 'Progress', 'Solid');
     await choose(page, 'Would you repeat this day?', 'Partly');
@@ -76,6 +81,7 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.up('Space');
     await expect(partly).not.toBeChecked();
     await expect(close).toBeEnabled();
+    expect((await hintLine.boundingBox())?.height).toBe(hintHeight);
 
     await close.click();
     await expect(page.getByText('This day is closed.')).toBeVisible();

@@ -390,7 +390,8 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             journal_first_used_at,
             scripture_word_count,
             scripture_first_used_at,
-            scripture_book is not null as has_scripture_reference
+            (scripture_book is not null or scripture_topic is not null)
+              as has_scripture
           from entry
           where entry_date between ${from} and ${to}
             and ${archiveActivityEntry(sql)}

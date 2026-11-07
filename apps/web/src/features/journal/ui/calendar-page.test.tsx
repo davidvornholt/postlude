@@ -12,28 +12,28 @@ const view: CalendarView = {
   days: [
     {
       date: '2026-08-19',
-      hasScriptureReference: false,
+      hasScripture: false,
       revision: 2,
       snippet: 'A quiet kind of progress.',
       words: 120,
     },
     {
       date: '2026-08-20',
-      hasScriptureReference: false,
+      hasScripture: false,
       revision: 1,
       snippet: '',
       words: 0,
     },
     {
       date: '2026-08-25',
-      hasScriptureReference: true,
+      hasScripture: true,
       revision: 1,
       snippet: '',
       words: 0,
     },
     {
       date: '2026-08-27',
-      hasScriptureReference: false,
+      hasScripture: false,
       revision: 1,
       snippet: 'A day I am looking forward to.',
       words: 42,

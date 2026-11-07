@@ -13,7 +13,8 @@ export const EntrySummaryFromRow = Schema.Struct({
   journalFirstUsedAt: Schema.NullOr(Schema.Date),
   scriptureWordCount: WordCountSchema,
   scriptureFirstUsedAt: Schema.NullOr(Schema.Date),
-  hasScriptureReference: Schema.Boolean,
+  /** Whether the morning noted a passage or a topic. */
+  hasScripture: Schema.Boolean,
 }).pipe(
   Schema.encodeKeys({
     date: 'entry_date',
@@ -21,7 +22,7 @@ export const EntrySummaryFromRow = Schema.Struct({
     journalFirstUsedAt: 'journal_first_used_at',
     scriptureWordCount: 'scripture_word_count',
     scriptureFirstUsedAt: 'scripture_first_used_at',
-    hasScriptureReference: 'has_scripture_reference',
+    hasScripture: 'has_scripture',
   }),
 );
 

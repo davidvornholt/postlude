@@ -23,7 +23,7 @@ export const readingPageFixtureConfigs = {
       days: [
         {
           date: '2026-08-19',
-          hasScriptureReference: false,
+          hasScripture: false,
           revision: 2,
           snippet: 'A quiet kind of progress.',
           words: 120,

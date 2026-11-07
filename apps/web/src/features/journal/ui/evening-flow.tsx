@@ -50,6 +50,8 @@ type EveningStepsProps = Omit<EveningFlowProps, 'evening' | 'today'> & {
   readonly evening: EveningView;
 };
 
+const LONGEST_CLOSE_HINT = 'Rate energy and progress to close the day.';
+
 const closeHint = (energy: boolean, progress: boolean): string | undefined => {
   if (energy && progress) {
     return;
@@ -57,15 +59,13 @@ const closeHint = (energy: boolean, progress: boolean): string | undefined => {
   if (energy) {
     return 'Rate progress to close the day.';
   }
-  return progress
-    ? 'Rate energy to close the day.'
-    : 'Rate energy and progress to close the day.';
+  return progress ? 'Rate energy to close the day.' : LONGEST_CLOSE_HINT;
 };
 
 /**
  * The button that closes the day, or reopens it, and a line under it saying
- * what is still to rate. The line keeps its height when it has nothing to say,
- * so rating the day never moves the note below it.
+ * what is still to rate. The line is always as tall as its longest wording
+ * wraps to, so rating the day never moves the note below it.
  */
 const DayClosing = ({ evening }: { readonly evening: Evening }) => {
   const hintId = useId();
@@ -101,8 +101,13 @@ const DayClosing = ({ evening }: { readonly evening: Evening }) => {
           </Button>
         )}
       </div>
-      <p className="mt-2 min-h-5 text-ink-muted text-sm" id={hintId}>
-        {hint}
+      <p className="mt-2 grid text-ink-muted text-sm">
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+          {LONGEST_CLOSE_HINT}
+        </span>
+        <span className="col-start-1 row-start-1" id={hintId}>
+          {hint}
+        </span>
       </p>
     </>
   );

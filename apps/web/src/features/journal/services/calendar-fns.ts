@@ -17,7 +17,8 @@ import { runJournalEffect } from './journal-runtime.ts';
 
 export type CalendarDay = {
   readonly date: JournalDate;
-  readonly hasScriptureReference: boolean;
+  /** Whether the morning noted a passage or a topic. */
+  readonly hasScripture: boolean;
   readonly revision: number;
   readonly snippet: string;
   readonly words: number;
@@ -32,7 +33,9 @@ export type CalendarView = {
 
 const calendarDayOf = (entry: EntryPreview): CalendarDay => ({
   date: entry.date,
-  hasScriptureReference: entry.scriptureReference !== undefined,
+  hasScripture:
+    entry.scriptureReference !== undefined ||
+    entry.scriptureTopic !== undefined,
   revision: entry.revision,
   snippet: archiveSnippet(entry),
   words: entry.journalWordCount + entry.scriptureWordCount,

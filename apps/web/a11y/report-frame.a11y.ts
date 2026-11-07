@@ -47,6 +47,20 @@ const leakedRequests = async (
   return leaked;
 };
 
+test('the hidden report leaves the page when reduced motion is switched on while it closes', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await mountEvening(page, 'report');
+  await openReport(page);
+  await expect(page.locator(frameSelector)).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Hide the report' }).click();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+
+  await expect(page.locator(frameSelector)).toHaveCount(0);
+});
+
 for (const colorScheme of colorSchemes) {
   const otherScheme = colorScheme === 'light' ? 'dark' : 'light';
 

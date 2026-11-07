@@ -304,6 +304,7 @@ it('lists a range inclusively and in calendar order', async () => {
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-01', 'One.'));
       yield* entries.save(draft('2026-03-15', 'Two words here.', 'Psalms 23'));
+      yield* entries.save(draft('2026-03-20', '', 'Forgiveness'));
       yield* entries.save(draft('2026-03-31', 'Three.'));
       yield* entries.save(draft('2026-04-01', 'Outside the range.'));
       return yield* entries.readArchive(archiveRequest('2026-03-31'));
@@ -312,11 +313,15 @@ it('lists a range inclusively and in calendar order', async () => {
   expect(summaries.summaries.map((summary) => summary.date)).toEqual([
     '2026-03-01',
     '2026-03-15',
+    '2026-03-20',
     '2026-03-31',
   ]);
-  expect(
-    summaries.summaries.map((summary) => summary.hasScriptureReference),
-  ).toEqual([false, true, false]);
+  expect(summaries.summaries.map((summary) => summary.hasScripture)).toEqual([
+    false,
+    true,
+    true,
+    false,
+  ]);
 });
 
 it('reads a calendar month with its earliest available day', async () => {
