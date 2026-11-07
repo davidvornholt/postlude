@@ -9,6 +9,7 @@
  * in `day-picker-keys.ts` move it.
  */
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   type KeyboardEvent,
   type RefObject,
@@ -30,7 +31,6 @@ import {
 import { journalDateLabel } from '../day-label.ts';
 import { dayPickerTarget, stepJournalMonth } from '../day-picker-keys.ts';
 import type { JournalDate } from '../journal-day.ts';
-import { JournalIcon } from './journal-icons.tsx';
 
 const weekdays = [
   ['Mo', 'Monday'],
@@ -308,7 +308,7 @@ export const DayPicker = ({
           onClick={() => moveMonth(-1)}
           variant="icon"
         >
-          <JournalIcon name="previous" />
+          <ChevronLeft />
         </Button>
         <h2
           aria-live="polite"
@@ -322,7 +322,7 @@ export const DayPicker = ({
           onClick={() => moveMonth(1)}
           variant="icon"
         >
-          <JournalIcon name="next" />
+          <ChevronRight />
         </Button>
       </div>
       <MonthGrid

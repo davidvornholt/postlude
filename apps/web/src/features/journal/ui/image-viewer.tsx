@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { useId, useRef } from 'react';
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
@@ -42,7 +43,7 @@ export const ImageViewer = ({ src, alt }: ImageViewerProps) => {
             {alt || 'Image'}
           </p>
           <JournalIconButton
-            icon="close"
+            icon={X}
             label="Close image"
             hintAlign="end"
             hint="Esc"

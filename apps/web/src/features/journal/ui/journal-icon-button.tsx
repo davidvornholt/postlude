@@ -1,16 +1,16 @@
+import type { LucideIcon } from 'lucide-react';
 import { type ComponentProps, useId, useState } from 'react';
 
 import {
   deepFocusRingClass,
   focusRingClass,
 } from '#/shared/ui/design-classes.ts';
-import { JournalIcon, type JournalIconName } from './journal-icons.tsx';
 
 /** The ground a control is set on: the page, or the deep register's band. */
 export type WritingTone = 'deep' | 'page';
 
 type JournalIconButtonProps = ComponentProps<'button'> & {
-  readonly icon: JournalIconName;
+  readonly icon: LucideIcon;
   readonly label: string;
   readonly hint?: string;
   readonly inToolbar?: boolean;
@@ -20,7 +20,7 @@ type JournalIconButtonProps = ComponentProps<'button'> & {
 };
 
 export const JournalIconButton = ({
-  icon,
+  icon: Icon,
   label,
   hint,
   inToolbar = false,
@@ -69,7 +69,7 @@ export const JournalIconButton = ({
         }}
         type="button"
       >
-        <JournalIcon name={icon} />
+        <Icon />
       </button>
       <span
         className={[

@@ -10,6 +10,7 @@
  * line above the date offers the way back to it.
  */
 
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   type RefObject,
   useCallback,
@@ -29,7 +30,6 @@ import type { JournalDate } from '../journal-day.ts';
 import { CopyDayControl } from './copy-day-control.tsx';
 import { DayLink } from './day-link.tsx';
 import { DayPicker, type ReadWrittenDays } from './day-picker.tsx';
-import { JournalIcon } from './journal-icons.tsx';
 
 const subscribeToNothing = () => () => undefined;
 
@@ -49,12 +49,11 @@ const dateClass = 'font-display text-4xl text-ink leading-tight sm:text-5xl';
  * the button.
  */
 const DateChevron = ({ open }: { readonly open: boolean }) => (
-  <JournalIcon
+  <ChevronDown
     className={[
       'ml-2 inline size-6 align-middle text-ink-muted transition-[rotate,color] duration-200 ease-standard group-hover:text-ink motion-reduce:transition-none sm:size-7',
       open ? 'rotate-180' : '',
     ].join(' ')}
-    name="expand"
   />
 );
 
@@ -195,7 +194,7 @@ export const DayHeader = ({
               today={today}
               variant="icon"
             >
-              <JournalIcon name="previous" />
+              <ChevronLeft />
             </DayLink>
           )}
           {next === undefined ? (
@@ -212,7 +211,7 @@ export const DayHeader = ({
               today={today}
               variant="icon"
             >
-              <JournalIcon name="next" />
+              <ChevronRight />
             </DayLink>
           )}
         </nav>

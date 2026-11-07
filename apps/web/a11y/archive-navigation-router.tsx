@@ -20,6 +20,7 @@ import {
   unansweredEveningActions,
 } from '../src/features/journal/testing/evening-view.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
+import { IconDefaults } from '../src/shared/ui/icon-defaults.tsx';
 import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import { RouterError } from '../src/shared/ui/router-fallbacks.tsx';
@@ -36,11 +37,11 @@ type ArchiveNavigationDependencies = {
 };
 
 const NavigationRoot = () => (
-  <>
+  <IconDefaults>
     <HeadContent />
     <NavigationFocus />
     <Outlet />
-  </>
+  </IconDefaults>
 );
 
 export const emptyArchiveView = (

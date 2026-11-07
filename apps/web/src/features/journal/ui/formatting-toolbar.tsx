@@ -1,3 +1,4 @@
+import { ImagePlus } from 'lucide-react';
 import {
   type KeyboardEvent,
   type ReactNode,
@@ -85,7 +86,7 @@ export const FormattingToolbar = ({ tone }: { readonly tone: WritingTone }) => {
           }
           disabled={disabled}
           hint={action.hint}
-          icon={action.mark}
+          icon={action.icon}
           key={action.label}
           label={action.label}
           onClick={(event) => {
@@ -111,7 +112,7 @@ export const FormattingToolbar = ({ tone }: { readonly tone: WritingTone }) => {
         hintAlign="end"
         disabled={disabled}
         hint="Or paste a photo"
-        icon="image"
+        icon={ImagePlus}
         label="Add image"
         onClick={active?.addImage}
         onKeyDown={(event) => navigateToolbar(event, active)}

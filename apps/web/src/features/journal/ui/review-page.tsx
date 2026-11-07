@@ -4,6 +4,7 @@
  * are there to set beside how the days felt, not to tell it.
  */
 
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { ActionLink } from '#/shared/ui/action-link.tsx';
@@ -125,7 +126,7 @@ const ReviewHeader = ({ view }: { readonly view: ReviewView }) => {
               period={previous}
               variant="icon"
             >
-              ←
+              <ArrowLeft />
             </PeriodLink>
           )}
           {next === undefined ? (
@@ -136,7 +137,7 @@ const ReviewHeader = ({ view }: { readonly view: ReviewView }) => {
               period={next}
               variant="icon"
             >
-              →
+              <ArrowRight />
             </PeriodLink>
           )}
           {periodIncludes(period, today) ? null : (

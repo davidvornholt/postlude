@@ -17,6 +17,13 @@ for (const colorScheme of ['light', 'dark'] as const) {
         page.getByRole('button', { name: 'Sign out', exact: true }),
       ).toBeVisible();
       expect(await scanWcag22AaViolations(page)).toEqual([]);
+      // The real root sets the icons' size and stroke, and they stay decorative.
+      const icon = page
+        .getByRole('link', { name: 'Previous day', exact: true })
+        .locator('svg');
+      await expect(icon).toHaveAttribute('aria-hidden', 'true');
+      await expect(icon).toHaveAttribute('stroke-width', '1.7');
+      expect(await icon.boundingBox()).toMatchObject({ height: 20, width: 20 });
       const archive = page.getByRole('link', { name: 'Archive', exact: true });
       await archive.focus();
       await page.keyboard.press('Enter');

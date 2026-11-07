@@ -17,6 +17,7 @@
  * being read has none, and says so (see `anniversary.ts`).
  */
 
+import { ChevronDown } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { Collapsible } from '#/shared/ui/collapsible.tsx';
@@ -37,7 +38,6 @@ import {
 } from '../scripture-reference.ts';
 import { journalSnippet } from '../snippet.ts';
 import { DayLink } from './day-link.tsx';
-import { JournalIcon } from './journal-icons.tsx';
 import { ReadOnlyMarkdown } from './read-only-markdown.tsx';
 
 const proseClass =
@@ -143,12 +143,11 @@ const MemoryToggle = ({
           </span>
         </Collapsible>
       </span>
-      <JournalIcon
+      <ChevronDown
         className={[
-          'mt-0.5 size-5 shrink-0 text-ink-muted transition-[rotate,color] duration-300 ease-standard group-hover/memory:text-ink motion-reduce:transition-none',
+          'mt-0.5 shrink-0 text-ink-muted transition-[rotate,color] duration-300 ease-standard group-hover/memory:text-ink motion-reduce:transition-none',
           open ? 'rotate-180' : '',
         ].join(' ')}
-        name="expand"
       />
     </button>
   </h3>

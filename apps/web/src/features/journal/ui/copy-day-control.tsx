@@ -1,5 +1,6 @@
 /** Copies the complete current draft without adding controls to each section. */
 
+import { Check, Copy } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { Button } from '#/shared/ui/action.tsx';
 
@@ -23,30 +24,6 @@ const writeClipboardText = (markdown: string): Promise<void> => {
     ? Promise.reject(new Error('The Clipboard API is unavailable.'))
     : clipboard.writeText(markdown);
 };
-
-const CopyIcon = () => (
-  <svg
-    aria-hidden="true"
-    className="size-5"
-    fill="none"
-    focusable="false"
-    viewBox="0 0 24 24"
-  >
-    <path d="M8 8h11v11H8zM5 16H4V4h12v1" stroke="currentColor" />
-  </svg>
-);
-
-const CopiedIcon = () => (
-  <svg
-    aria-hidden="true"
-    className="size-5"
-    fill="none"
-    focusable="false"
-    viewBox="0 0 24 24"
-  >
-    <path d="m5 12 4 4L19 6" stroke="currentColor" />
-  </svg>
-);
 
 export const CopyDayControl = ({
   day,
@@ -114,7 +91,7 @@ export const CopyDayControl = ({
         title="Copy day as Markdown"
         type="button"
       >
-        {state === 'succeeded' ? <CopiedIcon /> : <CopyIcon />}
+        {state === 'succeeded' ? <Check /> : <Copy />}
       </Button>
       <span
         aria-atomic="true"
