@@ -18,8 +18,10 @@ import {
   plainText,
 } from '#/shared/testing/rendered-html.ts';
 import type { InsightsView } from '../insights-view.ts';
+import { sampleDayMetrics } from '../testing/evening-view.ts';
 import {
   allTimeOf,
+  blankDay,
   sampleInsightsMonth,
   sampleInsightsView,
   sampleInsightsWeek,
@@ -75,6 +77,47 @@ const allTime = await render(
 const month = await render(sampleInsightsMonth);
 const week = await render(sampleInsightsWeek);
 const empty = await render(emptyView);
+const insightsToday = '2026-10-30';
+/** A month with nothing written: one answer, and a report without screen time. */
+const unwrittenMonth = await render(
+  sampleInsightsView(
+    [
+      { ...blankDay('2026-10-05'), progress: 'solid' },
+      {
+        ...blankDay('2026-10-06'),
+        report: {
+          ...sampleDayMetrics('2026-10-06'),
+          activeMinutes: null,
+          focusMinutes: null,
+          scatteredMinutes: null,
+          appointmentMinutes: 90,
+        },
+      },
+    ],
+    { kind: 'month', month: '2026-10' },
+    insightsToday,
+  ),
+);
+/** A week whose screen time was measured but not sorted into categories. */
+const unsortedWeek = await render(
+  sampleInsightsView(
+    [
+      {
+        ...blankDay('2026-10-26'),
+        journalWords: 120,
+        report: {
+          ...sampleDayMetrics('2026-10-26'),
+          categories: [
+            { id: 'work', label: 'Work', minutes: null },
+            { id: 'leisure', label: 'Leisure', minutes: null },
+          ],
+        },
+      },
+    ],
+    { kind: 'week', start: '2026-10-26' },
+    insightsToday,
+  ),
+);
 
 const foldTitles = (html: string): ReadonlyArray<string> =>
   Array.from(html.matchAll(foldTitlePattern), (match) =>
@@ -153,6 +196,29 @@ it('folds the detail away and keeps only what has something to say', () => {
   expect(plainText(month)).toContain('Most of it: Writing');
   expect(plainText(pastYear)).not.toContain('Streaks');
   expect(plainText(allTime)).not.toContain('Day by day');
+});
+
+/*
+ * Ratings and /wrap's totals stand on their own: a month with nothing written
+ * still shows them, and categories without minutes never name a winner.
+ */
+it('keeps ratings and measured totals without writing or screen time', () => {
+  expect(plainText(unwrittenMonth)).toContain(
+    'Nothing written yet this month.',
+  );
+  expect(foldTitles(unwrittenMonth)).toEqual([
+    'Ratings',
+    'Screen time',
+    'Day by day',
+  ]);
+  expect(plainText(unwrittenMonth)).toContain('1 of 30 days rated');
+  expect(plainText(unwrittenMonth)).not.toContain('No day rated yet');
+  expect(plainText(unwrittenMonth)).toContain(
+    'Not measured · other totals from 1 report',
+  );
+  expect(plainText(unwrittenMonth)).toContain('In appointments1 h 30 min');
+  expect(foldTitles(unsortedWeek)).not.toContain('Where it went');
+  expect(plainText(unsortedWeek)).not.toContain('Most of it');
 });
 
 it('offers the four ranges on one track and marks the one shown', () => {

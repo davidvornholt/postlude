@@ -63,6 +63,14 @@ const measured = (
 const isWritten = (day: SampleDay): boolean =>
   day.journalWords + day.scriptureWords > 0 || day.hasScripture;
 
+/** Insights opens on the first day with writing, a rating or a report. */
+const isStored = (day: SampleDay): boolean =>
+  isWritten(day) ||
+  day.energy !== null ||
+  day.progress !== null ||
+  day.repeatDay !== null ||
+  day.report !== null;
+
 const historyOf = (
   journal: ReadonlyArray<SampleDay>,
 ): ReadonlyArray<ActivityDay> =>
@@ -81,7 +89,7 @@ export const allTimeOf = (
   today: JournalDate,
 ): InsightsRange => ({
   kind: 'all',
-  from: journal.find(isWritten)?.date ?? today,
+  from: journal.find(isStored)?.date ?? today,
   to: today,
 });
 
@@ -95,7 +103,7 @@ export const sampleInsightsView = (
   const days = rangeDates(range).map(
     (date) => byDate.get(date) ?? blankDay(date),
   );
-  const earliest = journal.find(isWritten)?.date;
+  const earliest = journal.find(isStored)?.date;
   const history = historyOf(journal.filter((day) => day.date <= today));
   return {
     range,
@@ -107,7 +115,7 @@ export const sampleInsightsView = (
     ),
     journalStreak: journalStreak(history, today),
     scriptureStreak: scriptureStreak(history, today),
-    exportAvailable: earliest !== undefined,
+    exportAvailable: journal.some(isWritten),
   };
 };
 

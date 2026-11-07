@@ -33,7 +33,7 @@ export type InsightsRange =
   | { readonly kind: 'week'; readonly start: JournalDate }
   | { readonly kind: 'month'; readonly month: JournalMonth }
   | { readonly kind: 'year'; readonly year: number }
-  /** From the first written day to today. */
+  /** From the first day with writing, a rating or a report to today. */
   | {
       readonly kind: 'all';
       readonly from: JournalDate;

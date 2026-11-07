@@ -97,8 +97,20 @@ export const readInsightsFn = createServerFn({ method: 'GET' })
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
         const areas = yield* AgentAreaRepository;
-        const { earliest, summaries, exportAvailable } =
-          yield* entries.readHistory({ today });
+        const {
+          earliest: firstWritten,
+          summaries,
+          exportAvailable,
+        } = yield* entries.readHistory({ today });
+        // Ratings and /wrap reports count as much as writing: a day that holds
+        // only those is still a day Insights can show.
+        const firstRatedOrMeasured =
+          yield* areas.earliestRatedOrMeasured(today);
+        const earliest =
+          firstRatedOrMeasured !== undefined &&
+          (firstWritten === undefined || firstRatedOrMeasured < firstWritten)
+            ? firstRatedOrMeasured
+            : firstWritten;
         const range = rangeOfSearch(data, today, earliest);
         const overviews = (yield* Effect.forEach(
           chunksOf(rangeDates(range)),

@@ -4,9 +4,9 @@
  *
  * A fold is shown only when it has something to say about the range: no
  * streaks for a month that is over, no weekdays for a single week, no screen
- * time where /wrap stored no report, and none at all before anything has been
- * written. A page that lists every section whether
- * or not it is empty is the clutter this page is meant to leave behind.
+ * time where /wrap stored no report, and none at all before anything is
+ * stored. A page that lists every section whether or not it is empty is the
+ * clutter this page is meant to leave behind.
  *
  * Folds are keyed by their names, so one the reader opened stays open while
  * they step to the next week or month and the same question is answered
@@ -20,6 +20,7 @@ import { activityCells } from '../activity-cells.ts';
 import {
   comparableDays,
   comparisonVersion,
+  measuresAnything,
   otherVersionDays,
   ratingCounts,
   tally,
@@ -67,34 +68,52 @@ const Note = ({ children }: { readonly children: ReactNode }) => (
   </p>
 );
 
+const ratingsTakeaway = (
+  rated: number,
+  share: string,
+  mostly: string | undefined,
+): string => {
+  if (rated === 0) {
+    return 'No day rated yet';
+  }
+  return mostly === undefined ? share : `Mostly ${mostly} · ${share}`;
+};
+
 const ratingsFold = (view: InsightsView): Fold | undefined => {
-  const { counts, unrated } = ratingCounts(
+  const past = pastDays(view.days, view.today);
+  if (past.length === 0) {
+    return;
+  }
+  // A day counts as rated once any of its three answers is given, as the
+  // fold's counts show each answer on its own.
+  const rated = past.filter(
+    (day) =>
+      day.energy !== null || day.progress !== null || day.repeatDay !== null,
+  ).length;
+  const { counts } = ratingCounts(
     view.days,
     view.today,
     energyOptions.map((option) => option.value),
     (day) => day.energy,
   );
-  const rated = [...counts.values()].reduce((sum, count) => sum + count, 0);
-  if (rated + unrated === 0) {
-    return;
-  }
   const [mostly] = [...energyOptions]
     .reverse()
     .map((option) => ({ ...option, count: counts.get(option.value) ?? 0 }))
+    .filter((option) => option.count > 0)
     .sort((first, second) => second.count - first.count);
-  const share = `${rated} of ${journalCountLabel(rated + unrated, 'day')} rated`;
+  const share = `${rated} of ${journalCountLabel(past.length, 'day')} rated`;
   return {
     title: 'Ratings',
-    takeaway:
-      mostly === undefined || rated === 0
-        ? 'No day rated yet'
-        : `Mostly ${mostly.label.toLowerCase()} · ${share}`,
+    takeaway: ratingsTakeaway(rated, share, mostly?.label.toLowerCase()),
     body: <RatingCounts days={view.days} today={view.today} />,
   };
 };
 
 const streaksFold = (view: InsightsView): Fold | undefined => {
-  if (!rangeIncludes(view.range, view.today) || view.earliest === undefined) {
+  if (
+    !rangeIncludes(view.range, view.today) ||
+    view.journalStreak.longest + view.scriptureStreak.longest === 0
+  ) {
     return;
   }
   const evenings = view.journalStreak.current;
@@ -118,7 +137,11 @@ const streaksFold = (view: InsightsView): Fold | undefined => {
 
 const weekdaysFold = (view: InsightsView): Fold | undefined => {
   const summary = writingSummary(view.days, view.today);
-  if (view.range.kind === 'week' || summary.elapsed < weekdayMinimumDays) {
+  if (
+    view.range.kind === 'week' ||
+    summary.elapsed < weekdayMinimumDays ||
+    summary.written === 0
+  ) {
     return;
   }
   const patterns = weekdayPatterns(view.days, view.today);
@@ -202,15 +225,21 @@ const VersionNote = ({ view }: { readonly view: InsightsView }) => {
 
 const screenTimeFolds = (view: InsightsView): ReadonlyArray<Fold> => {
   const metrics = comparableDays(view.days);
-  const active = tally(metrics, (day) => day.activeMinutes);
-  if (active.measured === 0) {
+  if (!measuresAnything(metrics)) {
     return [];
   }
-  const daily = view.range.kind === 'week' || view.range.kind === 'month';
+  const active = tally(metrics, (day) => day.activeMinutes);
+  // Without screen time the fold stays for the other totals /wrap measured.
+  const daily =
+    active.measured > 0 &&
+    (view.range.kind === 'week' || view.range.kind === 'month');
   const folds: Array<Fold> = [
     {
       title: 'Screen time',
-      takeaway: `${durationLabel(Math.round(active.total / active.measured))} on an average measured day`,
+      takeaway:
+        active.measured === 0
+          ? `Not measured · other totals from ${journalCountLabel(metrics.length, 'report')}`
+          : `${durationLabel(Math.round(active.total / active.measured))} on an average measured day`,
       body: (
         <>
           {daily ? (
@@ -224,7 +253,10 @@ const screenTimeFolds = (view: InsightsView): ReadonlyArray<Fold> => {
       ),
     },
   ];
-  const [largest] = view.categories;
+  // A category without measured minutes cannot be where most of it went.
+  const largest = view.categories.find(
+    (category) => category.minutes !== null && category.minutes > 0,
+  );
   if (largest !== undefined) {
     folds.push({
       title: 'Where it went',
@@ -271,7 +303,7 @@ const dayByDayFold = (view: InsightsView): Fold | undefined =>
     : undefined;
 
 export const InsightsFolds = ({ view }: { readonly view: InsightsView }) => {
-  // A journal with nothing in it has nothing to fold away; the opening
+  // A journal with nothing stored has nothing to fold away; the opening
   // sentence says so, and a list of empty sections would only repeat it.
   if (view.earliest === undefined) {
     return null;

@@ -28,6 +28,21 @@ export type DayMeasures = {
   readonly sentMail: number | null;
 };
 
+/** Whether any day measured any of the totals the screen-time fold lists. */
+export const measuresAnything = (
+  metrics: ReadonlyArray<DayMeasures>,
+): boolean =>
+  metrics.some((day) =>
+    [
+      day.activeMinutes,
+      day.focusMinutes,
+      day.offComputerMinutes,
+      day.appointmentMinutes,
+      day.landedPrs,
+      day.sentMail,
+    ].some((value) => value !== null),
+  );
+
 export type MetricsState =
   /** After today, so nothing can be stored yet. */
   | 'upcoming'

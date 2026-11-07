@@ -29,7 +29,7 @@ export type InsightsView = {
   readonly range: InsightsRange;
   /** The server's journal day, so the days after it read as still to come. */
   readonly today: JournalDate;
-  /** The first written day, or undefined while nothing has been written. */
+  /** The first day with writing, a rating or a report, or undefined before any. */
   readonly earliest: JournalDate | undefined;
   /** Every day of the range, in order, whether or not anything is stored. */
   readonly days: ReadonlyArray<InsightsDay>;
