@@ -1,6 +1,7 @@
 ---
 name: postlude
-description: Read the user's Postlude journal days, ratings, and search, and store the /wrap metrics and report for a day, with the postlude command. Use when the user asks what they wrote or how they rated a day or a stretch of days, wants their journal searched, or when /wrap stores a day's metrics and report.
+description: Read the user's Postlude journal days, ratings, and search, and store the /wrap metrics and report for a day, with the postlude command. Only the user starts it, because the journal is private.
+disable-model-invocation: true
 ---
 
 # Postlude
