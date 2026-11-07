@@ -1,12 +1,14 @@
 /**
- * The end of the day, under the evening's writing: rate it, read what /wrap
+ * The end of the day, after the evening's writing: rate it, read what /wrap
  * measured, close it, and read what an agent made of it.
  *
- * The order is the order it is done in. Energy comes first, before the report
- * is open, so the numbers can't change how the day felt. The report opens
- * once energy is rated, and progress and the optional "would you repeat it"
- * follow, now with the numbers at hand. Closing the day needs energy and
- * progress and asks an agent for its note, which appears last.
+ * It comes after the writing because writing is what the page is for; the
+ * look back is one calm step once that is done, not a set of controls the
+ * writing has to get past. Its order is the order it is done in. Energy comes
+ * first, before the report is open, so the numbers can't change how the day
+ * felt. The report opens once energy is rated, and progress and the optional
+ * "would you repeat it" follow, now with the numbers at hand. Closing the day
+ * needs energy and progress and asks an agent for its note, which appears last.
  *
  * A day that hasn't begun by the server's clock can't be rated at all.
  */
@@ -14,10 +16,7 @@
 import { useId } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
-import {
-  eyebrowClass,
-  readingMeasureClass,
-} from '#/shared/ui/design-classes.ts';
+import { readingMeasureClass } from '#/shared/ui/design-classes.ts';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import {
   energyOptions,
@@ -65,8 +64,8 @@ const DayClosing = ({ evening }: { readonly evening: Evening }) => {
   const { rating, busy } = evening;
   if (rating.closedAt !== null) {
     return (
-      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
-        <p className="font-display text-ink text-xl">This day is closed.</p>
+      <div className="flex min-h-11 flex-wrap items-center gap-x-6 gap-y-3">
+        <p className="text-ink">This day is closed.</p>
         <Button
           aria-busy={busy === 'reopening'}
           disabled={busy !== undefined}
@@ -80,7 +79,7 @@ const DayClosing = ({ evening }: { readonly evening: Evening }) => {
   }
   const hint = closeHint(rating.energy !== null, rating.progress !== null);
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+    <div className="flex min-h-11 flex-wrap items-center gap-x-6 gap-y-3">
       <Button
         aria-busy={busy === 'closing'}
         aria-describedby={hint === undefined ? undefined : hintId}
@@ -112,7 +111,7 @@ const EveningSteps = ({
   const locked = closed || busy === 'closing' || busy === 'reopening';
 
   return (
-    <div className="mt-6 flex flex-col gap-10">
+    <div className="mt-6">
       <RatingScale
         disabled={locked}
         legend="Energy"
@@ -133,18 +132,15 @@ const EveningSteps = ({
         value={rating.progress}
       />
       <RatingScale
-        clear={{
-          label: 'Clear this answer',
-          run: () => evening.rate({ repeatDay: null }),
-        }}
         disabled={locked}
-        hint="Optional."
+        hint="Optional. Choose it again to clear it."
         legend="Would you repeat this day?"
         onChange={(repeatDay) => evening.rate({ repeatDay })}
+        onClear={() => evening.rate({ repeatDay: null })}
         options={repeatDayOptions}
         value={rating.repeatDay}
       />
-      <div>
+      <div className="border-border border-t py-5 sm:pl-44">
         <DayClosing evening={evening} />
         <div aria-live="polite" role="status">
           {evening.failure === undefined ? null : (
@@ -152,7 +148,7 @@ const EveningSteps = ({
           )}
         </div>
       </div>
-      <div className="border-border border-t pt-8">
+      <div className="border-border border-t py-8">
         <AgentNote
           blocked={busy !== undefined && busy !== 'regenerating'}
           closed={closed}
@@ -187,22 +183,14 @@ export const EveningFlow = ({ today, ...props }: EveningFlowProps) => {
   }
 
   return (
-    <PageFrame
-      aria-labelledby={headingId}
-      as="section"
-      className="mt-14 sm:mt-20"
-    >
-      <div
-        className={[readingMeasureClass, 'border-border border-t pt-10'].join(
-          ' ',
-        )}
-      >
-        <h2
-          className={[eyebrowClass, 'text-ink-muted'].join(' ')}
-          id={headingId}
-        >
-          Looking back
+    <PageFrame aria-labelledby={headingId} as="section" className="pt-12 pb-6">
+      <div className={readingMeasureClass}>
+        <h2 className="font-display text-ink text-xl" id={headingId}>
+          End of the day
         </h2>
+        <p className="mt-1 text-pretty text-ink-muted">
+          When the writing is done, rate the day and close it.
+        </p>
         {content}
       </div>
     </PageFrame>

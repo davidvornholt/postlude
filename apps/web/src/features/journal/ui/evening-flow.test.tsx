@@ -77,10 +77,12 @@ it('asks for energy first and keeps the closing shut until both ratings are in',
   const html = await renderEvening(eveningWith());
   const text = plainText(html);
 
-  expect(text).toContain('Looking back');
+  expect(text).toContain('End of the day');
   expect(text.indexOf('Energy')).toBeLessThan(text.indexOf('Day report'));
   expect(text.indexOf('Day report')).toBeLessThan(text.indexOf('Progress'));
-  expect(text).toContain('Would you repeat this day?Optional.YesPartlyNo');
+  expect(text).toContain(
+    'Would you repeat this day?YesPartlyNoOptional. Choose it again to clear it.',
+  );
   expect(html.match(/type="radio"/gu)?.length).toBe(9);
   expect(html).not.toContain('checked=""');
   const close = buttonAttributes(html, 'Close the day');

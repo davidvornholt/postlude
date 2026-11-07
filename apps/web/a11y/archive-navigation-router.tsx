@@ -16,6 +16,7 @@ import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
 import {
   emptyEvening,
+  noWrittenDays,
   unansweredEveningActions,
 } from '../src/features/journal/testing/evening-view.ts';
 import type { SaveDraft } from '../src/features/journal/ui/use-autosave.ts';
@@ -91,9 +92,11 @@ export const createArchiveNavigationRouter = ({
       const { entry, evening } = todayRoute.useLoaderData();
       return (
         <DayPage
+          anniversaries={[]}
           entry={entry}
           evening={evening}
           eveningActions={unansweredEveningActions}
+          readWrittenDays={noWrittenDays}
           save={save}
           today={config.today}
         />
@@ -109,9 +112,11 @@ export const createArchiveNavigationRouter = ({
       const { entry, evening } = datedRoute.useLoaderData();
       return (
         <DayPage
+          anniversaries={[]}
           entry={entry}
           evening={evening}
           eveningActions={unansweredEveningActions}
+          readWrittenDays={noWrittenDays}
           save={save}
           today={config.today}
         />

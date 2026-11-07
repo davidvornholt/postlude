@@ -155,6 +155,22 @@ export const parseScriptureReference = (
     : { book: book.english, chapter, verseStart, verseEnd };
 };
 
+const containsWordCharacter = /[\p{L}\p{N}]/u;
+
+/**
+ * The topic a morning studied when its line names no passage: "Forgiveness",
+ * "The Sermon on the Mount". A line that reads as a passage is not a topic,
+ * and neither is one without a letter or a digit, which renders as nothing a
+ * reader could recognise.
+ */
+export const scriptureTopicOf = (text: string): string | undefined => {
+  const topic = text.trim();
+  return containsWordCharacter.test(topic) &&
+    parseScriptureReference(topic) === undefined
+    ? topic
+    : undefined;
+};
+
 /** The one house style: "Proverbs 12:5-13", "Proverbs 12:5", "Psalms 23". */
 export const formatScriptureReference = ({
   book,

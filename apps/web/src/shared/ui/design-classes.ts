@@ -11,10 +11,11 @@
  */
 
 /**
- * Eyebrows are typed as sentence case and uppercased by CSS, so the words stay
- * readable in the source and in anything that reads the page aloud.
+ * A small label: a section's name, a field's name, a quiet action. It keeps the
+ * sentence case it is written in, because a page where every label is set in
+ * capitals makes each one shout at the same volume as the writing it frames.
  */
-export const eyebrowClass = 'text-xs uppercase tracking-widest';
+export const eyebrowClass = 'text-sm';
 
 export const focusRingClass =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';

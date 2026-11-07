@@ -1,0 +1,3 @@
+ALTER TABLE "entry" ADD COLUMN "scripture_topic" text;--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_scripture_topic_without_reference" CHECK ("entry"."scripture_topic" is null or "entry"."scripture_book" is null);--> statement-breakpoint
+ALTER TABLE "entry" ADD CONSTRAINT "entry_scripture_topic_not_blank" CHECK ("entry"."scripture_topic" is null or "entry"."scripture_topic" ~ '[[:alnum:]]');

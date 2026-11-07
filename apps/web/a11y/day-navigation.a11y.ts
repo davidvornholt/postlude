@@ -7,109 +7,66 @@ import {
   scan,
 } from './day-page-test-support.ts';
 
-const visibleFieldLabel = 'Go to a day';
-const dayFieldName = `${visibleFieldLabel}. Showing Wednesday, August 26, 2026.`;
-const nativeDayUrl = /\/day\?date=2026-08-25$/u;
+const dayName = 'Wednesday, August 26, 2026';
 const colorSchemes = ['light', 'dark'] as const;
 
 type Page = Parameters<typeof scan>[0];
 
-// On desktop the arrow keys step the focused segment of a native date field.
-// Under mobile emulation Chromium draws the field as one control that opens the
-// system picker, with no segments to step, so there the reader's pick in that
-// picker is stood in for by filling the value.
-const changeDay = async (
-  page: Page,
-  {
-    isMobile,
-    keys,
-    to,
-  }: {
-    readonly isMobile: boolean;
-    readonly keys: ReadonlyArray<string>;
-    readonly to: string;
-  },
-): Promise<void> => {
-  const field = page.getByLabel(dayFieldName);
-  if (isMobile) {
-    await field.fill(to);
-  } else {
-    for (const key of keys) {
-      await page.keyboard.press(key);
-    }
-  }
-  await expect(field).toHaveValue(to);
-};
-
-const editDaySegmentBack = async (page: Page, isMobile: boolean) => {
-  await expect(page.getByLabel(dayFieldName)).toHaveValue('2026-08-26');
-  await changeDay(page, {
-    isMobile,
-    keys: ['ArrowRight', 'ArrowDown'],
-    to: '2026-08-25',
-  });
+const openCalendar = async (page: Page) => {
+  const trigger = page
+    .getByRole('heading', { level: 1 })
+    .getByRole('button', { name: dayName, exact: true });
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  const calendar = page.getByRole('dialog', { name: 'Choose a day' });
+  await expect(calendar).toBeVisible();
+  return { calendar, trigger };
 };
 
 for (const colorScheme of colorSchemes) {
-  test(`the hydrated date field moves only after keyboard submit in ${colorScheme} mode`, async ({
-    isMobile,
+  test(`the date opens a calendar that chooses a day by keyboard in ${colorScheme} mode`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountDayPage(page, ['stored']);
-    const field = page.getByLabel(dayFieldName);
-    const heading = page.getByRole('heading', {
-      name: 'Wednesday, August 26, 2026',
-    });
+    const { calendar } = await openCalendar(page);
 
-    await expect(heading).toBeVisible();
-    expect(
-      await field.evaluate((element) => element.getBoundingClientRect().width),
-    ).toBeLessThanOrEqual(1);
-    // The field is the next stop after the controls on the line above it.
-    await page.getByLabel('Copy day as Markdown').focus();
-    await page.keyboard.press('Tab');
-    await expect(field).toBeFocused();
-    expect(
-      await heading.evaluate(
-        (element) => element.getBoundingClientRect().width,
-      ),
-    ).toBeLessThanOrEqual(1);
-    expect(
-      await field.evaluate((element) => element.getBoundingClientRect().width),
-    ).toBeGreaterThan(1);
-    // Speech input reaches a field by saying the words it shows (WCAG 2.5.3),
-    // so the label drawn over the focused field starts its accessible name.
-    expect(
-      await page
-        .getByText(visibleFieldLabel, { exact: true })
-        .evaluate((element) => element.getBoundingClientRect().width),
-    ).toBeGreaterThan(1);
-    await expect(field).toHaveAccessibleName(
-      new RegExp(`^${visibleFieldLabel}\\b`, 'u'),
+    // Focus starts on the day in view, and the days with writing say so.
+    await expect(
+      calendar.getByRole('button', { name: dayName, exact: true }),
+    ).toBeFocused();
+    await expect(calendar.getByRole('gridcell', { selected: true })).toHaveText(
+      '26',
     );
-
-    await changeDay(page, {
-      isMobile,
-      keys: ['ArrowRight', 'ArrowUp'],
-      to: '2026-08-27',
-    });
-    await page.getByRole('button', { name: 'Open' }).click();
-    await expect(page.locator('html')).toHaveAttribute(
-      'data-route',
-      '/day/2026-08-27',
-    );
-    await field.focus();
-    await changeDay(page, {
-      isMobile,
-      keys: ['ArrowRight', 'ArrowDown', 'ArrowDown'],
-      to: '2026-08-25',
-    });
+    await expect(
+      calendar.getByRole('button', {
+        name: 'Thursday, August 20, 2026, written',
+      }),
+    ).toBeVisible();
+    // Today's own page has nowhere for "Go to today" to go, and it keeps its
+    // place rather than moving the link beside it.
+    await expect(
+      calendar.getByRole('button', { name: 'Go to today' }),
+    ).toBeHidden();
     await scan(page);
-    await field.press('Enter');
+
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowUp');
+    await expect(
+      calendar.getByRole('button', { name: 'Tuesday, August 18, 2026' }),
+    ).toBeFocused();
+    await page.keyboard.press('PageDown');
+    await expect(calendar.getByRole('heading')).toHaveText('September 2026');
+    await expect(
+      calendar.getByRole('button', { name: 'Friday, September 18, 2026' }),
+    ).toBeFocused();
+    await page.keyboard.press('Enter');
+
+    await expect(calendar).toBeHidden();
     await expect(page.locator('html')).toHaveAttribute(
       'data-route',
-      '/day/2026-08-25',
+      '/day/2026-09-18',
     );
   });
 
@@ -126,55 +83,106 @@ for (const colorScheme of colorSchemes) {
       'href',
       '/',
     );
+    await expect(
+      page.getByRole('link', { name: 'Go to today', exact: true }),
+    ).toHaveAttribute('href', '/');
     await scan(page);
-  });
-
-  test(`the visible heading opens the native no-script form in ${colorScheme} mode`, async ({
-    isMobile,
-    page,
-  }) => {
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await page.route('**/day?date=2026-08-25', (route) =>
-      route.fulfill({
-        body: '<!doctype html><title>Opened day</title><p>Native day opened</p>',
-        contentType: 'text/html',
-      }),
-    );
-    await mountUnhydratedDayPage(page);
-    const field = page.getByLabel(dayFieldName);
-    const heading = page.getByRole('heading', {
-      name: 'Wednesday, August 26, 2026',
-    });
-
-    await expect(heading).toBeVisible();
-    await heading.click();
-    await expect(field).toBeFocused();
-    await expect(field).toBeVisible();
-    await editDaySegmentBack(page, isMobile);
-    await scan(page);
-    await page.getByRole('button', { name: 'Open' }).click();
-
-    await expect(page).toHaveURL(nativeDayUrl);
-    await expect(page.getByText('Native day opened')).toBeVisible();
   });
 }
 
-test('pressing the date heading opens the browser date picker', async ({
+test('Escape closes the calendar and gives focus back to the date', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await mountDayPage(page, ['stored']);
-  const field = page.getByLabel(dayFieldName);
-  const pickerOpen = () =>
-    field.evaluate((element) => element.matches(':open'));
+  const { calendar, trigger } = await openCalendar(page);
 
-  await page
-    .getByRole('heading', { name: 'Wednesday, August 26, 2026' })
-    .click();
-  await expect(field).toBeFocused();
-  await expect.poll(pickerOpen).toBe(true);
+  // The month's own buttons leave focus where it was pressed, and the arrow
+  // keys there belong to the calendar rather than stepping the page's day.
+  await calendar.getByRole('button', { name: 'Next month' }).click();
+  await expect(calendar.getByRole('heading')).toHaveText('September 2026');
+  await expect(
+    calendar.getByRole('button', { name: 'Next month' }),
+  ).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.locator('html')).toHaveAttribute('data-route', '/');
+
   await page.keyboard.press('Escape');
-  await expect.poll(pickerOpen).toBe(false);
-  await expect(field).toBeFocused();
+  await expect(calendar).toBeHidden();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('a press outside the calendar closes it without moving the day', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mountDayPage(page, ['stored']);
+  const { calendar } = await openCalendar(page);
+
+  // Pressing into the writing is the usual way out, and it keeps that press.
+  const evening = page.getByRole('textbox', { name: 'Evening journal' });
+  await evening.click();
+  await expect(calendar).toBeHidden();
+  await expect(evening).toBeFocused();
+  await expect(page.locator('html')).toHaveAttribute('data-route', '/');
+});
+
+test('on another day the calendar offers the way back to today', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mountDatedDayPage(page);
+  await page
+    .getByRole('button', { name: 'Tuesday, August 25, 2026', exact: true })
+    .click();
+  const calendar = page.getByRole('dialog', { name: 'Choose a day' });
+
+  await calendar.getByRole('button', { name: 'Go to today' }).click();
+  await expect(calendar).toBeHidden();
+  await expect(page.locator('html')).toHaveAttribute('data-route', '/');
+});
+
+test('before the page hydrates the date is a link to the calendar', async ({
+  page,
+}) => {
+  await mountUnhydratedDayPage(page);
+
+  await expect(
+    page.getByRole('link', { name: dayName, exact: true }),
+  ).toHaveAttribute('href', '/calendar?month=2026-08&day=2026-08-26');
   await scan(page);
+});
+
+const arrowAlignment = (page: Page) =>
+  page.evaluate(() => {
+    const date = document.querySelector('h1 button');
+    const arrow = document.querySelector('a[data-focus-key="previous-day"]');
+    if (date === null || arrow === null) {
+      return;
+    }
+    const line = Number.parseFloat(getComputedStyle(date).lineHeight);
+    const dateBox = date.getBoundingClientRect();
+    const arrowBox = arrow.getBoundingClientRect();
+    return {
+      lines: Math.round(dateBox.height / line),
+      offset: arrowBox.top + arrowBox.height / 2 - (dateBox.top + line / 2),
+    };
+  });
+
+test('the arrows sit on the first line of the date, however many it takes', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  // A wide window keeps the date on one line, a narrower one wraps it. Below
+  // these widths the arrows move up to the line above the date.
+  for (const [width, lines] of [
+    [1280, 1],
+    [700, 2],
+  ] as const) {
+    await page.setViewportSize({ width, height: 800 });
+    await expect.poll(() => arrowAlignment(page)).toMatchObject({ lines });
+    const { offset } = (await arrowAlignment(page)) ?? { offset: Number.NaN };
+    expect(Math.abs(offset)).toBeLessThan(1);
+  }
 });

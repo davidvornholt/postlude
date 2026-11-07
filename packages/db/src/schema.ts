@@ -41,6 +41,11 @@ const tsvector = customType<{ data: string; driverData: string }>({
  * a whitespace-only test lets through because Postgres counts none of them as
  * `[:space:]`.
  *
+ * Some mornings study a topic rather than a passage. That topic is free text in
+ * `scripture_topic`, kept apart from the structured reference: a day holds a
+ * passage or a topic, never both, and a topic needs a letter or a digit for
+ * the same reason a book does.
+ *
  * Both timestamps carry the database clock's `now()`: `created_at` from its
  * column default, `updated_at` from the `now()` that Drizzle writes into every
  * update it issues. Neither reads an app process's clock, so the pair cannot
@@ -66,6 +71,7 @@ export const entry = pgTable(
     scriptureChapter: integer('scripture_chapter'),
     scriptureVerseStart: integer('scripture_verse_start'),
     scriptureVerseEnd: integer('scripture_verse_end'),
+    scriptureTopic: text('scripture_topic'),
     revision: integer('revision').notNull().default(1),
     journalSearchText: text('journal_search_text').notNull(),
     scriptureSearchText: text('scripture_search_text').notNull(),
@@ -135,6 +141,14 @@ export const entry = pgTable(
     check(
       'entry_scripture_book_not_blank',
       sql`${table.scriptureBook} is null or ${table.scriptureBook} ~ '[[:alpha:]]'`,
+    ),
+    check(
+      'entry_scripture_topic_without_reference',
+      sql`${table.scriptureTopic} is null or ${table.scriptureBook} is null`,
+    ),
+    check(
+      'entry_scripture_topic_not_blank',
+      sql`${table.scriptureTopic} is null or ${table.scriptureTopic} ~ '[[:alnum:]]'`,
     ),
   ],
 );

@@ -25,6 +25,26 @@ The day ended with [rain](https://example.com).
 `);
   });
 
+  it('names a topic studied in place of a passage as a topic', () => {
+    expect(
+      dayCopyMarkdown({
+        date: '2026-08-26',
+        scriptureReference: 'Forgiveness',
+        scriptureMarkdown: 'Seventy times seven.',
+        journalMarkdown: '',
+      }),
+    ).toBe(`# Wednesday, August 26, 2026
+
+## Morning
+
+Topic: Forgiveness
+
+Seventy times seven.
+
+## Evening
+`);
+  });
+
   it('keeps both parts of an otherwise empty day available for writing', () => {
     expect(
       dayCopyMarkdown({

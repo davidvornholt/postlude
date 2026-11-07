@@ -103,7 +103,7 @@ export const CopyDayControl = ({
   };
 
   return (
-    <div className="flex min-h-11 items-center gap-3">
+    <div className="relative flex min-h-11 items-center">
       <Button
         aria-label="Copy day as Markdown"
         aria-busy={copying}
@@ -119,7 +119,11 @@ export const CopyDayControl = ({
       <span
         aria-atomic="true"
         aria-live="polite"
-        className={state === 'failed' ? 'text-critical text-sm' : 'sr-only'}
+        className={
+          state === 'failed'
+            ? 'absolute top-full right-0 whitespace-nowrap text-critical text-sm'
+            : 'sr-only'
+        }
       >
         {statusText[state]}
       </span>

@@ -24,6 +24,14 @@ for (const colorScheme of colorSchemes) {
 
     const close = page.getByRole('button', { name: 'Close the day' });
     await expect(close).toBeDisabled();
+    // Each row's choices sit under its name on a phone, never past the edge.
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
     await expect(
       page.getByText('Rate energy and progress to close the day.'),
     ).toBeVisible();
@@ -40,8 +48,15 @@ for (const colorScheme of colorSchemes) {
     await choose(page, 'Progress', 'Solid');
     await choose(page, 'Would you repeat this day?', 'Partly');
     await expect(page.getByRole('radio', { name: 'Partly' })).toBeChecked();
-    await page.getByRole('button', { name: 'Clear this answer' }).click();
+    // The optional answer is undone by choosing it again, so nothing appears
+    // beside it and moves the page.
+    const repeat = page.getByRole('group', {
+      name: 'Would you repeat this day?',
+    });
+    const heightBefore = (await repeat.boundingBox())?.height;
+    await choose(page, 'Would you repeat this day?', 'Partly');
     await expect(page.getByRole('radio', { name: 'Partly' })).not.toBeChecked();
+    expect((await repeat.boundingBox())?.height).toBe(heightBefore);
     await expect(close).toBeEnabled();
 
     await close.click();

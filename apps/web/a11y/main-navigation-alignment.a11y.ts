@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { mountArchiveNavigation } from './archive-navigation-test-support.ts';
 
 const alignmentTolerance = 1;
-const placeCount = 6;
+const placeCount = 5;
 
 test('Archive shares the baseline of the places on its line', async ({
   page,

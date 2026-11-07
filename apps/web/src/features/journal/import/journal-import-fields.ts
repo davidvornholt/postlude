@@ -27,6 +27,8 @@ export const derivedImportFieldsOf = (record: JournalImportRecord) => ({
     journalMarkdown: record.journalMarkdown,
     scriptureMarkdown: record.scriptureMarkdown,
     scriptureReference: record.scriptureReference,
+    // Imported days predate topics; a morning with no passage has none.
+    scriptureTopic: undefined,
   }),
 });
 

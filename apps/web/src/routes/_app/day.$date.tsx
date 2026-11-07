@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, redirect } from '@tanstack/react-router';
+import { readWrittenDays } from '#/features/journal/browser-written-days.ts';
 import { journalDateLabel } from '#/features/journal/day-label.ts';
 import { isJournalDate } from '#/features/journal/journal-day.ts';
 import {
@@ -28,12 +29,14 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * that drift apart in a bookmark or a browser's history.
  */
 const DayRoute = () => {
-  const { entry, today, evening } = Route.useLoaderData();
+  const { anniversaries, entry, today, evening } = Route.useLoaderData();
   return (
     <DayPage
+      anniversaries={anniversaries}
       entry={entry}
       evening={evening}
       eveningActions={eveningActions}
+      readWrittenDays={readWrittenDays}
       save={saveDraft}
       today={today}
     />

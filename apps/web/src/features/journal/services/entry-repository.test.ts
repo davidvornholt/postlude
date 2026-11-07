@@ -196,34 +196,34 @@ it('drops a reference the writer removed', async () => {
   );
   expect(entry.scriptureReference).toBeUndefined();
 });
-it('explains an invalid reference without changing the stored entry', async () => {
-  const outcome = await withRepository((entries) =>
+it('keeps a line that names no passage as the morning topic', async () => {
+  const entry = await withRepository((entries) =>
+    entries.save(draft('2026-08-25', 'Thinking it over.', '  Forgiveness  ')),
+  );
+  expect(entry.scriptureReference).toBeUndefined();
+  expect(entry.scriptureTopic).toBe('Forgiveness');
+  expect(entry.scriptureFirstUsedAt).not.toBeNull();
+});
+it('holds a passage or a topic, never both', async () => {
+  const entry = await withRepository((entries) =>
     Effect.gen(function* () {
-      const storedReference = yield* entries.save(
-        draft('2026-08-25', 'With one.', 'Psalms 23'),
+      const topic = yield* entries.save(
+        draft('2026-08-25', 'First a topic.', 'Proverbs 12:'),
       );
-      const failure = yield* Effect.flip(
-        entries.save(
-          draft(
-            '2026-08-25',
-            'Still editing.',
-            'Proverbs 12:',
-            storedReference.revision,
-          ),
-        ),
+      return yield* entries.save(
+        draft('2026-08-25', 'Then a passage.', 'Psalms 23', topic.revision),
       );
-      const stored = yield* entries.read('2026-08-25');
-      return { failure, stored } as const;
     }),
   );
-
-  expect(outcome.failure._tag).toBe('JournalValidationError');
-  expect(outcome.failure.message).toContain('scripture reference');
-  expect(outcome.stored?.journalMarkdown).toBe('With one.');
-  expect(outcome.stored?.scriptureReference).toEqual({
-    book: 'Psalms',
-    chapter: 23,
-  });
+  expect(entry.scriptureReference).toEqual({ book: 'Psalms', chapter: 23 });
+  expect(entry.scriptureTopic).toBeUndefined();
+});
+it('stores no topic for a line without a letter or a digit', async () => {
+  const entry = await withRepository((entries) =>
+    entries.save(draft('2026-08-25', 'Nothing named.', ' — ')),
+  );
+  expect(entry.scriptureTopic).toBeUndefined();
+  expect(entry.scriptureFirstUsedAt).toBeNull();
 });
 it('lists a range inclusively and in calendar order', async () => {
   const summaries = await withRepository((entries) =>

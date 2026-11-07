@@ -1,15 +1,10 @@
 import { type AnyRoute, createRoute } from '@tanstack/react-router';
 
-import { isoMonthStart } from '../src/features/journal/anniversary.ts';
 import { journalMonthOf } from '../src/features/journal/calendar.ts';
 import type { CalendarQueryParams } from '../src/features/journal/schemas/calendar-query.ts';
 import { decodeCalendarQuery } from '../src/features/journal/schemas/calendar-query.ts';
-import type { OnThisDayQueryParams } from '../src/features/journal/schemas/on-this-day-query.ts';
-import { decodeOnThisDayQuery } from '../src/features/journal/schemas/on-this-day-query.ts';
 import type { CalendarView } from '../src/features/journal/services/calendar-fns.ts';
-import type { OnThisDayView } from '../src/features/journal/services/on-this-day-fns.ts';
 import { CalendarPage } from '../src/features/journal/ui/calendar-page.tsx';
-import { OnThisDayPage } from '../src/features/journal/ui/on-this-day-page.tsx';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import type { ArchiveNavigationFixtureConfig } from './archive-navigation-fixture-contract.ts';
 
@@ -45,26 +40,6 @@ const calendarViewOn = (
   };
 };
 
-const onThisDayViewOn = (
-  config: ArchiveNavigationFixtureConfig,
-  query: OnThisDayQueryParams,
-): OnThisDayView => {
-  const date = query.date ?? config.today;
-  return {
-    anniversaries: [
-      {
-        date: `2025-${date.slice(isoMonthStart)}`,
-        journalMarkdown: 'A memory from this date.',
-        scriptureMarkdown: '',
-        yearsAgo: 1,
-        words: 42,
-      },
-    ],
-    date,
-    today: config.today,
-  };
-};
-
 export const createReadingNavigationRoutes = ({
   appRoute,
   config,
@@ -86,14 +61,5 @@ export const createReadingNavigationRoutes = ({
     path: '/calendar',
     validateSearch: decodeCalendarQuery,
   });
-  const onThisDayRoute = createRoute({
-    component: () => <OnThisDayPage view={onThisDayRoute.useLoaderData()} />,
-    getParentRoute: () => appRoute,
-    head: () => ({ meta: [{ title: pageTitle('On this day') }] }),
-    loader: ({ deps }) => onThisDayViewOn(config, deps),
-    loaderDeps: ({ search }) => search,
-    path: '/on-this-day',
-    validateSearch: decodeOnThisDayQuery,
-  });
-  return [calendarRoute, onThisDayRoute];
+  return [calendarRoute];
 };

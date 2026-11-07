@@ -5,39 +5,40 @@ import { editAndLeave, mountDayPage, scan } from './day-page-test-support.ts';
 
 test.describe.configure({ mode: 'serial' });
 const passageLinkName = /Read Proverbs 12:5-13/u;
-const bibleserverLinkName = /bibleserver/u;
 const connectionMessage =
   'This entry could not be saved. Your words are still here; check your connection.';
-const validationMessage =
-  'Check the scripture reference and use a form such as Proverbs 12:5-13.';
 const authenticationMessage =
   'Your sign-in ended before this entry could be saved. Your words are kept in this tab.';
 
 const colorSchemes = ['light', 'dark'] as const;
-const dayFieldName = 'Go to a day. Showing Wednesday, August 26, 2026.';
+const dayName = 'Wednesday, August 26, 2026';
 
-// On desktop a native date field is a tab stop for each of its segments. Under
-// mobile emulation Chromium draws it as one control that opens the system
-// picker, so the whole field is a single stop.
-const tabPastDayField = async (
-  page: Parameters<typeof scan>[0],
-  isMobile: boolean,
-): Promise<void> => {
-  const stops = isMobile ? 1 : 4;
-  for (let stop = 0; stop < stops; stop += 1) {
-    await page.keyboard.press('Tab');
-  }
+type Page = Parameters<typeof scan>[0];
+
+/** The one stop a part's writing tools take, ahead of what they act on. */
+const expectToolsFocused = async (page: Page, section: string) => {
+  const tools = page
+    .getByRole('region', { name: section, exact: true })
+    .getByRole('toolbar');
+  await expect(tools.getByRole('button', { name: 'Bold' })).toBeFocused();
+  await expect(tools).toBeVisible();
 };
 
 for (const colorScheme of colorSchemes) {
   test(`the hydrated writing page works by keyboard in ${colorScheme} mode`, async ({
-    isMobile,
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountDayPage(page, ['stored']);
 
-    // The steps and the copy share the line above the date, so they come first.
+    // The date comes first and opens the calendar, then the steps and the
+    // copy beside it. Today's own page has no way back to today to stop on.
+    await page.keyboard.press('Tab');
+    await expect(
+      page
+        .getByRole('heading', { level: 1 })
+        .getByRole('button', { name: dayName, exact: true }),
+    ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(
       page.getByRole('link', { name: 'Previous day' }),
@@ -46,13 +47,12 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByRole('link', { name: 'Next day' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('Copy day as Markdown')).toBeFocused();
+    // Each part's tools take one stop ahead of its writing, and show when
+    // focus reaches them.
     await page.keyboard.press('Tab');
-    const dayField = page.getByLabel(dayFieldName);
-    await expect(dayField).toBeFocused();
-    await tabPastDayField(page, isMobile);
-    await expect(page.getByRole('button', { name: 'Open' })).toBeFocused();
+    await expectToolsFocused(page, 'Morning scripture');
     await page.keyboard.press('Tab');
-    const passage = page.getByRole('textbox', { name: 'Passage' });
+    const passage = page.getByRole('textbox', { name: 'Passage or topic' });
     await expect(passage).toBeFocused();
     await page.keyboard.type('Proverbs 12:5-13');
     await page.keyboard.press('Tab');
@@ -66,6 +66,8 @@ for (const colorScheme of colorSchemes) {
     await expect(morning).toBeFocused();
     await expect(morning).toHaveAttribute('aria-multiline', 'true');
     await page.keyboard.type('Mercy arrived this morning.');
+    await page.keyboard.press('Tab');
+    await expectToolsFocused(page, 'Evening');
     await page.keyboard.press('Tab');
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
     await expect(evening).toBeFocused();
@@ -111,38 +113,6 @@ for (const colorScheme of colorSchemes) {
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
       0,
     );
-  });
-
-  test(`an invalid passage passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
-    page,
-  }) => {
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountDayPage(page, ['validation']);
-    await editAndLeave(page, 'Passage', 'Proverbs 12:');
-    const passage = page.getByRole('textbox', { name: 'Passage' });
-    await expect(passage).toHaveAttribute('aria-invalid', 'true');
-    const guidanceId = await passage.getAttribute('aria-describedby');
-    expect(guidanceId).not.toBeNull();
-    await expect(page.locator(`#${guidanceId ?? ''}`)).toHaveText(
-      validationMessage,
-    );
-    await expect(
-      page.locator('[data-save-status] [aria-live="polite"]'),
-    ).toHaveText(validationMessage);
-    await expect(
-      page.getByRole('link', { name: bibleserverLinkName }),
-    ).toHaveCount(0);
-    await scan(page);
-
-    await passage.fill('still not a passage');
-    await expect(passage).toHaveAttribute('aria-invalid', 'true');
-    await expect(page.locator(`#${guidanceId ?? ''}`)).toHaveText(
-      validationMessage,
-    );
-
-    await passage.fill('Proverbs 12:5');
-    await expect(passage).not.toHaveAttribute('aria-invalid', 'true');
-    expect(await passage.getAttribute('aria-describedby')).toBeNull();
   });
 
   test(`an expired sign-in passes WCAG 2.2 AA in ${colorScheme} mode`, async ({

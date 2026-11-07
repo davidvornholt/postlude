@@ -36,7 +36,6 @@ const appPaths = [
   '/archive',
   '/calendar',
   '/day/$date',
-  '/on-this-day',
   '/review',
   '/review/month',
   '/review/week',

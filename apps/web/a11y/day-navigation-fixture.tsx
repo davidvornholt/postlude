@@ -15,6 +15,7 @@ import type { JournalDate } from '../src/features/journal/journal-day.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import {
   emptyEvening,
+  noWrittenDays,
   unansweredEveningActions,
 } from '../src/features/journal/testing/evening-view.ts';
 import { NavigationFocus } from '../src/shared/ui/navigation-focus';
@@ -58,9 +59,11 @@ export const TodayPage = () => {
   const loaded = useFixtureDay();
   return (
     <DayPage
+      anniversaries={[]}
       entry={loaded.entry}
       evening={emptyEvening(loaded.entry.date, loaded.entry.revision)}
       eveningActions={unansweredEveningActions}
+      readWrittenDays={noWrittenDays}
       save={save}
       today={loaded.today}
     />
@@ -71,9 +74,11 @@ export const DatedPage = () => {
   const loaded = useFixtureDay();
   return (
     <DayPage
+      anniversaries={[]}
       entry={loaded.entry}
       evening={emptyEvening(loaded.entry.date, loaded.entry.revision)}
       eveningActions={unansweredEveningActions}
+      readWrittenDays={noWrittenDays}
       save={save}
       today={loaded.today}
     />

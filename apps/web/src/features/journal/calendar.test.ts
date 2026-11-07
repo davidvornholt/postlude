@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 
 import {
   calendarWeekdayIndex,
+  calendarWeeks,
   datesInMonth,
   firstDateOfMonth,
   isJournalMonth,
@@ -11,6 +12,8 @@ import {
 
 const sundayColumn = 6;
 const decemberDayCount = 31;
+const novemberDayCount = 30;
+const daysPerWeek = 7;
 
 describe('journal calendar months', () => {
   it('validates and names supported months', () => {
@@ -40,5 +43,23 @@ describe('journal calendar months', () => {
 
     expect(dates).toHaveLength(decemberDayCount);
     expect(dates.at(-1)).toBe('9999-12-31');
+  });
+
+  it('draws a month as whole Monday-to-Sunday weeks', () => {
+    const weeks = calendarWeeks('2026-11');
+    const [first] = weeks;
+    const last = weeks.at(-1);
+
+    // November 2026 starts on a Sunday and ends on a Monday.
+    expect(weeks.every((week) => week.length === daysPerWeek)).toBe(true);
+    expect(
+      first?.slice(0, sundayColumn).every((day) => day === undefined),
+    ).toBe(true);
+    expect(first?.[sundayColumn]).toBe('2026-11-01');
+    expect(last?.[0]).toBe('2026-11-30');
+    expect(last?.slice(1).every((day) => day === undefined)).toBe(true);
+    expect(weeks.flat().filter((day) => day !== undefined)).toHaveLength(
+      novemberDayCount,
+    );
   });
 });

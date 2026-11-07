@@ -72,11 +72,6 @@ test('navigation keeps the page content opaque between views', async ({
   await openViewWithoutBlankingContent(page, 'Calendar', 'August 2026');
   await openViewWithoutBlankingContent(
     page,
-    'On this day',
-    'Wednesday, August 26',
-  );
-  await openViewWithoutBlankingContent(
-    page,
     'Today',
     'Wednesday, August 26, 2026',
   );

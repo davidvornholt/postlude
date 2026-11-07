@@ -96,8 +96,8 @@ const writingAreaClass =
   'cursor-text scroll-mt-24 whitespace-pre-wrap! border-(--journal-rule) border-b pb-6 text-lg leading-7 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';
 
 const sizeClass = {
-  entry: 'min-h-48',
-  notes: 'min-h-16',
+  entry: 'min-h-96',
+  notes: 'min-h-28',
 } as const;
 
 /** Set over the first line of the area, in the type that line is written in. */
@@ -179,9 +179,10 @@ const WritingPrompt = ({
 
 /**
  * The room ProseMirror keeps between the caret and the edges of the window when
- * it scrolls to follow typing or arrow keys. The formatting toolbar is pinned
- * to the top of the window over the writing, so the top keeps clear of it: the
- * same 6rem as `scroll-mt-24`, which clears the toolbar with a line to spare.
+ * it scrolls to follow typing or arrow keys. The section's bar, with its
+ * formatting toolbar, is pinned to the top of the window over the writing, so
+ * the top keeps clear of it: the same 6rem as `scroll-mt-24`, which clears the
+ * bar's 3.5rem with a line to spare.
  * The bottom keeps a line or so of air below the line being typed.
  */
 const caretClearance = { top: 96, right: 0, bottom: 48, left: 0 };

@@ -3,9 +3,10 @@
  *
  * The page saves itself, but successful autosaves are routine rather than an
  * event the interface should narrate. The visible line therefore stays on the
- * stable promise "Autosave on" while a draft waits, saves, and settles. The
- * exact state remains available to assistive technology without becoming a
- * live announcement on every pause in writing.
+ * stable promise "Autosave on" while a draft waits, saves, and settles, and
+ * only the dot before it breathes while words are on their way, then rests
+ * once they have landed. The exact state remains available to assistive
+ * technology without becoming a live announcement on every pause in writing.
  *
  * Nothing here is said in colour alone. Each state is its own words, and the
  * one that needs attention adds a control rather than a hue.
@@ -67,9 +68,18 @@ export const SaveStatusLine = ({
 
   return (
     <p
-      className={[eyebrowClass, 'text-ink-faint'].join(' ')}
+      className={[eyebrowClass, 'flex items-center gap-2 text-ink-faint'].join(
+        ' ',
+      )}
       data-save-status={status}
     >
+      <span
+        aria-hidden="true"
+        className={[
+          'size-1.5 rounded-full bg-current',
+          status === 'saved' ? '' : 'animate-pulse motion-reduce:animate-none',
+        ].join(' ')}
+      />
       <span aria-hidden="true">Autosave on</span>
       <span className="sr-only">{assistiveWording[status]}</span>
     </p>

@@ -8,6 +8,7 @@ it('projects everything the Markdown reader shows and no hidden target', () => {
       '[shown label](hidden-target) ![hidden image](hidden-file)\n```\nhidden code\n```',
     scriptureMarkdown: '<!-- hidden comment -->Visible morning.',
     scriptureReference: undefined,
+    scriptureTopic: undefined,
   });
   expect(projected.journalText).toBe('shown label hidden image\nhidden code');
   expect(projected.scriptureText).toBe(
@@ -22,6 +23,7 @@ it('keeps exact visible prose and indexes every supported reference spelling', (
     journalMarkdown: 'Spru\u0308che',
     scriptureMarkdown: '',
     scriptureReference: { book: 'Proverbs', chapter: 12, verseStart: 5 },
+    scriptureTopic: undefined,
   });
   expect(projected.journalText).toBe('Spru\u0308che');
   expect(projected.scriptureReferenceText).toContain('Proverbs 12:5');
@@ -49,6 +51,7 @@ it('follows the parser for nested, reference, escaped and malformed links', () =
 [entry]: https://hidden.example/reference`,
     scriptureMarkdown: '',
     scriptureReference: undefined,
+    scriptureTopic: undefined,
   });
   expect(projected.journalText).toBe(`outer [nested]
 reference label
@@ -58,4 +61,15 @@ https://visible.example/a.b?q=1
 inline code`);
   expect(projected.journalText).not.toContain('hidden.example');
   expect(projected.searchTokenText).toContain('visible example a b q 1');
+});
+
+it('indexes the topic a morning studied instead of a passage', () => {
+  const projected = searchDocumentOf({
+    journalMarkdown: '',
+    scriptureMarkdown: '',
+    scriptureReference: undefined,
+    scriptureTopic: 'Forgiveness',
+  });
+  expect(projected.scriptureReferenceText).toBe('Forgiveness');
+  expect(projected.searchTokenText).toContain('forgiveness');
 });

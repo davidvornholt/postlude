@@ -18,7 +18,12 @@ import {
   elementAttributes,
   plainText,
 } from '#/shared/testing/rendered-html.ts';
-import { entryOn, renderDay } from './day-page-test-support.tsx';
+import { emptyEvening } from '../testing/evening-view.ts';
+import { entryOn, renderDay, renderDayWith } from './day-page-test-support.tsx';
+
+/** The opening tag of the link a header arrow is, found by its name. */
+const dayLink = (html: string, label: string): string =>
+  html.match(new RegExp(`<a[^>]*aria-label="${label}"[^>]*>`, 'u'))?.[0] ?? '';
 
 const headingSequence = (html: string): ReadonlyArray<string> =>
   Array.from(
@@ -43,8 +48,7 @@ it('offers the next dated day from today', async () => {
   const html = await renderDay(entryOn());
 
   expect(html).toContain('aria-label="Previous day"');
-  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/2026-08-27"');
-  expect(html).toContain('aria-label="Next day"');
+  expect(dayLink(html, 'Next day')).toContain('href="/day/2026-08-27"');
 });
 
 it('labels and links a future day without changing its dated address', async () => {
@@ -53,8 +57,8 @@ it('labels and links a future day without changing its dated address', async () 
   );
 
   expect(html).toContain('Tomorrow');
-  expect(elementAttributes(html, 'a', '←')).toContain('href="/"');
-  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/2026-08-28"');
+  expect(dayLink(html, 'Previous day')).toContain('href="/"');
+  expect(dayLink(html, 'Next day')).toContain('href="/day/2026-08-28"');
 });
 
 it('omits the previous-day link at the start of the journal calendar', async () => {
@@ -62,7 +66,7 @@ it('omits the previous-day link at the start of the journal calendar', async () 
 
   expect(html).toContain('Monday, January 1, 1');
   expect(html).not.toContain('Previous day');
-  expect(elementAttributes(html, 'a', '→')).toContain('href="/day/0001-01-02"');
+  expect(dayLink(html, 'Next day')).toContain('href="/day/0001-01-02"');
 });
 
 it('renders supported low years without changing their calendar day', async () => {
@@ -111,9 +115,10 @@ it('keeps entry headings below the page and section headings', async () => {
     'h2: Evening',
     'h3: Evening thought',
     'h4: What stayed',
-    'h2: Looking back',
+    'h2: End of the day',
     'h3: Day report',
     'h3: Agent note',
+    'h2: On this day',
   ]);
   expect(html).toContain('<strong>clear</strong>');
   expect(html).toContain('<a href="https://example.com">A source</a>');
@@ -150,6 +155,45 @@ it('links a stored reference to the passage it names', async () => {
 
 it('offers no passage link on a day with no reference', async () => {
   expect(await renderDay(entryOn())).not.toContain('bibleserver.com');
+});
+
+/*
+ * A morning spent on a topic rather than a passage keeps the topic as it was
+ * written, in the same field, and says what it was kept as.
+ */
+it('opens a stored topic in the line it was written in', async () => {
+  const html = await renderDay(entryOn({ scriptureTopic: 'Forgiveness' }));
+
+  expect(html).toContain('value="Forgiveness"');
+  expect(plainText(html)).toContain('Kept as a topic');
+  expect(html).not.toContain('bibleserver.com');
+});
+
+it('ends on the same date in the years before the day being read', async () => {
+  const html = await renderDayWith(
+    entryOn({ date: '2026-08-24' }),
+    emptyEvening('2026-08-24'),
+    [
+      {
+        date: '2025-08-24',
+        journalMarkdown: 'The year before.',
+        scriptureMarkdown: '',
+        yearsAgo: 1,
+        words: 3,
+      },
+    ],
+  );
+  const text = plainText(html);
+
+  expect(text).toContain('On this dayThe same date, in earlier years.');
+  expect(text).toContain('1 year ago · Sunday, August 24, 2025');
+  // The writing comes first and the memories last.
+  expect(text.indexOf('How did the day go?')).toBeLessThan(
+    text.indexOf('End of the day'),
+  );
+  expect(text.indexOf('End of the day')).toBeLessThan(
+    text.indexOf('On this day'),
+  );
 });
 
 /*

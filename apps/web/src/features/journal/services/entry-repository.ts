@@ -14,7 +14,6 @@ import { Context, Effect, Layer, Schema } from 'effect';
 import { SqlClient } from 'effect/sql';
 
 import {
-  invalidScriptureReferenceError,
   journalReadError,
   journalWriteConflictError,
   journalWriteError,
@@ -31,7 +30,10 @@ import {
   type EntrySummary,
   EntrySummaryFromRow,
 } from '../schemas/entry-summary.ts';
-import { parseScriptureReference } from '../scripture-reference.ts';
+import {
+  parseScriptureReference,
+  scriptureTopicOf,
+} from '../scripture-reference.ts';
 import { type SearchDocument, searchDocumentOf } from '../search-document.ts';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
 import { countJournalWords } from '../word-count.ts';
@@ -77,6 +79,7 @@ const storedEntryColumns = (sql: SqlClient.SqlClient) =>
       'scripture_chapter',
       'scripture_verse_start',
       'scripture_verse_end',
+      'scripture_topic',
       'revision',
       'created_at',
       'updated_at',
@@ -97,6 +100,7 @@ const anniversaryColumns = (sql: SqlClient.SqlClient) =>
       'scripture_chapter',
       'scripture_verse_start',
       'scripture_verse_end',
+      'scripture_topic',
     ].join(', '),
   );
 const ExportAvailabilityRow = Schema.Struct({
@@ -177,25 +181,25 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         draft: EntryDraft,
       ): Effect.Effect<
         JournalEntry,
-        | ReturnType<typeof invalidScriptureReferenceError>
         | ReturnType<typeof journalWriteConflictError>
         | ReturnType<typeof journalWriteError>
       > =>
         Effect.gen(function* () {
-          const enteredReference = draft.scriptureReference.trim();
-          const reference = parseScriptureReference(enteredReference);
-          if (enteredReference !== '' && reference === undefined) {
-            return yield* Effect.fail(invalidScriptureReferenceError());
-          }
+          // The one line holds a passage or, failing that, a topic.
+          const reference = parseScriptureReference(draft.scriptureReference);
+          const topic = scriptureTopicOf(draft.scriptureReference);
           const journalWordCount = countJournalWords(draft.journalMarkdown);
           const scriptureWordCount = countJournalWords(draft.scriptureMarkdown);
           const journalUsed = journalWordCount > 0;
           const scriptureUsed =
-            scriptureWordCount > 0 || reference !== undefined;
+            scriptureWordCount > 0 ||
+            reference !== undefined ||
+            topic !== undefined;
           const searchDocument = searchDocumentOf({
             journalMarkdown: draft.journalMarkdown,
             scriptureMarkdown: draft.scriptureMarkdown,
             scriptureReference: reference,
+            scriptureTopic: topic,
           });
           const saved = yield* sql`
           with candidate (
@@ -210,6 +214,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             scripture_chapter,
             scripture_verse_start,
             scripture_verse_end,
+            scripture_topic,
             journal_search_text,
             scripture_search_text,
             scripture_reference_search_text,
@@ -229,6 +234,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             ${reference?.chapter ?? null}::integer,
             ${reference?.verseStart ?? null}::integer,
             ${reference?.verseEnd ?? null}::integer,
+            ${topic ?? null}::text,
             ${searchDocument.journalText}::text,
             ${searchDocument.scriptureText}::text,
             ${searchDocument.scriptureReferenceText}::text,
@@ -254,6 +260,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             scripture_chapter = candidate.scripture_chapter,
             scripture_verse_start = candidate.scripture_verse_start,
             scripture_verse_end = candidate.scripture_verse_end,
+            scripture_topic = candidate.scripture_topic,
             journal_search_text = candidate.journal_search_text,
             scripture_search_text = candidate.scripture_search_text,
             scripture_reference_search_text = candidate.scripture_reference_search_text,
@@ -279,6 +286,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
               scripture_chapter,
               scripture_verse_start,
               scripture_verse_end,
+              scripture_topic,
               journal_search_text,
               scripture_search_text,
               scripture_reference_search_text,
@@ -297,6 +305,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
               scripture_chapter,
               scripture_verse_start,
               scripture_verse_end,
+              scripture_topic,
               journal_search_text,
               scripture_search_text,
               scripture_reference_search_text,
@@ -374,6 +383,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
                 journal_word_count > 0
                 or scripture_word_count > 0
                 or scripture_book is not null
+                or scripture_topic is not null
               )
           ) as matching
           where year_rank <= ${limit}

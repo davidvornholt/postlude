@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 import { ActionLink } from '#/shared/ui/action-link.tsx';
+import { dayTransition } from '../day-transition.ts';
 import type { JournalDate } from '../journal-day.ts';
 
 type DayLinkProps = {
@@ -14,6 +15,8 @@ type DayLinkProps = {
   /** Lets focus come back to this link's twin on the page it opens. */
   readonly 'data-focus-key'?: string;
   readonly title?: string;
+  /** The day this link leaves, which gives the page turn its direction. */
+  readonly from?: JournalDate;
 } & (
   | { readonly variant: 'icon' | 'quiet'; readonly className?: string }
   | { readonly variant: 'text'; readonly className: string }
@@ -27,12 +30,15 @@ export const DayLink = ({
   className,
   label,
   children,
+  from,
   ...attributes
 }: DayLinkProps) => {
-  const destination =
-    date === today
+  const destination = {
+    ...(date === today
       ? { to: '/' as const }
-      : { to: '/day/$date' as const, params: { date } };
+      : { to: '/day/$date' as const, params: { date } }),
+    viewTransition: from === undefined ? undefined : dayTransition(from, date),
+  };
   return variant === 'text' ? (
     <Link
       {...destination}

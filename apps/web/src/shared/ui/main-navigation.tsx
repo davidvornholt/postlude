@@ -5,7 +5,6 @@ const navItems = [
   { to: '/', label: 'Today' },
   { to: '/calendar', label: 'Calendar', preload: false },
   { to: '/review', label: 'Review', preload: false },
-  { to: '/on-this-day', label: 'On this day', preload: false },
   { to: '/archive', label: 'Archive', preload: false },
   { to: '/search', label: 'Search' },
 ] as const;

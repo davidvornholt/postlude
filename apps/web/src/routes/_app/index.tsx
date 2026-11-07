@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { readWrittenDays } from '#/features/journal/browser-written-days.ts';
 import {
   eveningActions,
   readEveningWithDay,
@@ -23,12 +24,14 @@ import { pageTitle } from '#/shared/ui/page-title.ts';
  * cannot escape a frame the shell has already closed around it.
  */
 const TodayRoute = () => {
-  const { entry, today, evening } = Route.useLoaderData();
+  const { anniversaries, entry, today, evening } = Route.useLoaderData();
   return (
     <DayPage
+      anniversaries={anniversaries}
       entry={entry}
       evening={evening}
       eveningActions={eveningActions}
+      readWrittenDays={readWrittenDays}
       save={saveDraft}
       today={today}
     />

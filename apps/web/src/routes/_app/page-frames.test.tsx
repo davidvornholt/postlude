@@ -26,6 +26,7 @@ import {
 } from '#/features/journal/testing/archive-view.ts';
 import {
   emptyEvening,
+  noWrittenDays,
   unansweredEveningActions,
 } from '#/features/journal/testing/evening-view.ts';
 import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
@@ -53,9 +54,11 @@ const neverSaves = () => new Promise<never>(() => undefined);
 
 const today = await renderInRouter(
   <DayPage
+    anniversaries={[]}
     entry={emptyDay}
     evening={emptyEvening(emptyDay.date)}
     eveningActions={unansweredEveningActions}
+    readWrittenDays={noWrittenDays}
     save={neverSaves}
     today={emptyDay.date}
   />,
@@ -73,14 +76,14 @@ const archive = await renderInRouter(
 );
 
 /*
- * Six frames: the day's heading, the persistent toolbar, the deep register's
- * own frame inside its edge-to-edge ground, the evening's writing, the evening
- * flow below it, and the steps to the days either side at the end. The
- * register sets its own rather than sharing the page's, which is the whole
- * reason the shell sets none — a ground that has to reach the viewport edges
- * cannot do it from inside a frame.
+ * Seven frames: the date at the top; the morning's bar and its writing inside
+ * the deep register's edge-to-edge ground; the evening's bar and its writing;
+ * the end of the day; and the same date in earlier years. The register sets
+ * its own rather than sharing the page's, which is the whole reason the shell
+ * sets none — a ground that has to reach the viewport edges cannot do it from
+ * inside a frame.
  */
-const writingPageFrames = 6;
+const writingPageFrames = 7;
 
 it('wraps the writing page in the shared frame', () => {
   expect(countRecipe(today, expectedPageFrame)).toBe(writingPageFrames);

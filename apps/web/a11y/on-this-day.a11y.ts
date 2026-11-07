@@ -1,87 +1,96 @@
 import { expect, test } from '@playwright/test';
 
-import {
-  mountReadingPage,
-  mountUnhydratedReadingPage,
-  readingPageFixtureConfigs,
-  scanReadingPage,
-} from './reading-page-test-support.ts';
+import { buildDayPageFixture } from './day-page-fixture-build.ts';
+import type { DayPageFixtureConfig } from './day-page-fixture-contract.ts';
+import { fixtureConfig, mountFixture } from './day-page-mount.ts';
+import { mountDayPage, scan } from './day-page-test-support.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
-const nativeDateUrl = /\/on-this-day\?date=2026-12-24$/u;
-const newestMemoryName = /1 year ago/u;
-const olderMemoryName = /2 years ago/u;
-const scriptureLinkName = /Read James 5:7-8/u;
+
+const rememberedConfig: DayPageFixtureConfig = {
+  ...fixtureConfig(['stored'], ''),
+  anniversaries: [
+    {
+      date: '2025-08-26',
+      journalMarkdown: 'A long walk by the river after the rain.',
+      scriptureMarkdown: '',
+      yearsAgo: 1,
+      words: 9,
+    },
+    {
+      date: '2024-08-26',
+      journalMarkdown: '',
+      scriptureMarkdown: 'Slow to anger, and quick to listen.',
+      scriptureTopic: 'Patience',
+      yearsAgo: 2,
+      words: 7,
+    },
+  ],
+};
+const rememberedAssets = await buildDayPageFixture(rememberedConfig);
+
+const rememberedRegion = (page: Parameters<typeof scan>[0]) =>
+  page.getByRole('region', { name: 'On this day' });
 
 for (const colorScheme of colorSchemes) {
-  test(`memories remain readable and operable in ${colorScheme} mode`, async ({
+  test(`the same date in earlier years waits folded below the day in ${colorScheme} mode`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountReadingPage(page, readingPageFixtureConfigs.onThisDay);
-    const nextDate = page.getByRole('link', { name: 'Next date' });
-    await expect(nextDate).toHaveAttribute(
-      'href',
-      '/on-this-day?date=2026-08-27',
-    );
-    const newest = page.getByRole('link', {
-      name: newestMemoryName,
+    await mountFixture(page, rememberedConfig, rememberedAssets);
+    const region = rememberedRegion(page);
+    const lastYear = region.getByRole('group').filter({
+      hasText: '1 year ago',
     });
-    const older = page.getByRole('link', {
-      name: olderMemoryName,
-    });
-    await expect(newest).toHaveAttribute('href', '/day/2025-08-26');
-    await expect(older).toHaveAttribute('href', '/day/2024-08-26');
 
-    await newest.focus();
-    await page.keyboard.press('Tab');
+    // Folded, each year shows its date and its first words.
+    await expect(lastYear).toContainText('Tuesday, August 26, 2025');
+    await expect(lastYear).toContainText('A long walk by the river');
     await expect(
-      page.getByRole('link', { name: scriptureLinkName }),
-    ).toBeFocused();
-    await page.keyboard.press('Tab');
-    await expect(older).toBeFocused();
-    const focus = await older.evaluate((element) => {
-      const style = getComputedStyle(element);
-      return {
-        outline: style.outlineStyle,
-        width: Number.parseFloat(style.outlineWidth),
-      };
+      region.getByRole('link', { name: 'Open this day' }),
+    ).toHaveCount(0);
+    await scan(page);
+
+    await lastYear.getByText('1 year ago').click();
+    await expect(
+      lastYear.getByRole('link', { name: 'Open this day' }),
+    ).toHaveAttribute('href', '/day/2025-08-26');
+
+    // The keyboard opens a year the same way, and a topic is read as one.
+    const twoYears = region.getByRole('group').filter({
+      hasText: '2 years ago',
     });
-    expect(focus.outline).not.toBe('none');
-    expect(focus.width).toBeGreaterThanOrEqual(2);
+    await twoYears.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    await expect(twoYears.getByText('Patience', { exact: true })).toBeVisible();
+    // Open, the year's words are read in full rather than as a first line.
+    await expect(
+      twoYears.getByRole('paragraph').filter({
+        hasText: 'Slow to anger, and quick to listen.',
+      }),
+    ).toBeVisible();
+    await expect(
+      twoYears.locator('summary').getByText('Slow to anger'),
+    ).toBeHidden();
     expect(
       await page.evaluate(
-        () => document.documentElement.scrollWidth <= globalThis.innerWidth,
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
       ),
     ).toBe(true);
-    await scanReadingPage(page);
-  });
-
-  test(`the heading opens the native no-script form in ${colorScheme} mode`, async ({
-    page,
-  }) => {
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await page.route('**/on-this-day?date=2026-12-24', (route) =>
-      route.fulfill({
-        body: '<!doctype html><title>Opened date</title><p>Native date opened</p>',
-        contentType: 'text/html',
-      }),
-    );
-    await mountUnhydratedReadingPage(page, readingPageFixtureConfigs.onThisDay);
-    const field = page.getByLabel(
-      'Go to a date. Showing Wednesday, August 26, 2026.',
-    );
-
-    await page
-      .getByRole('heading', { level: 1, name: 'Wednesday, August 26, 2026' })
-      .click();
-    await expect(field).toBeFocused();
-    await expect(field).toBeVisible();
-    await field.fill('2026-12-24');
-    await scanReadingPage(page);
-    await page.getByRole('button', { name: 'Open' }).click();
-
-    await expect(page).toHaveURL(nativeDateUrl);
-    await expect(page.getByText('Native date opened')).toBeVisible();
+    await scan(page);
   });
 }
+
+test('a date with nothing from earlier years says so in a line', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  const region = rememberedRegion(page);
+
+  await expect(region).toContainText(
+    'Nothing was written on this date in an earlier year.',
+  );
+  await expect(region.getByRole('group')).toHaveCount(0);
+});
