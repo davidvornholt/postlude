@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { ActionLink } from '#/shared/ui/action-link.tsx';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
@@ -65,7 +65,7 @@ export const CalendarPage = ({
             search={{ month: previous }}
             to="/calendar"
           >
-            <ArrowLeft />
+            <ChevronLeft />
           </ActionLink>
         )}
         <h1 className="text-balance font-display text-4xl text-ink sm:text-5xl">
@@ -78,7 +78,7 @@ export const CalendarPage = ({
             search={{ month: next }}
             to="/calendar"
           >
-            <ArrowRight />
+            <ChevronRight />
           </ActionLink>
         )}
         {view.month === journalMonthOf(view.today) ? null : (
