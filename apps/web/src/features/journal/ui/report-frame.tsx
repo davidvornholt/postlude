@@ -13,7 +13,8 @@
  * Its numbers arrive in one message after it has loaded, together with the
  * page's colour scheme, and again whenever the scheme changes. The frame grows
  * to the height the report asks for, but only when the request comes from this
- * frame's own window, and only within bounds.
+ * frame's own window, and only within bounds, and it eases to that height so
+ * what follows it slides rather than jumps.
  *
  * A report that navigates its frame anyway has stopped being the report, so
  * the frame is taken down when it loads again and nothing more is sent to it.
@@ -139,7 +140,7 @@ export const ReportFrame = ({
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onLoad is the frame's own load event, not something a person does, so it needs no keyboard equivalent.
     <iframe
-      className="block w-full border border-border bg-surface"
+      className="block w-full border border-border bg-surface transition-[height] duration-300 ease-standard motion-reduce:transition-none"
       onLoad={loaded}
       ref={frameRef}
       referrerPolicy="no-referrer"

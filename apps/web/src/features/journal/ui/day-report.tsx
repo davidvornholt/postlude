@@ -7,11 +7,17 @@
  *
  * Reading the report is often what starts the writing, so the open report ends
  * with a way straight back to the editor.
+ *
+ * The report and the line that says why it is locked both grow and shrink to
+ * their height rather than appearing at once, so the ratings below slide out
+ * of the way instead of jumping. The report leaves the page once it is hidden,
+ * so showing it again loads it afresh.
  */
 
 import { useId, useState } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
+import { Collapsible } from '#/shared/ui/collapsible.tsx';
 import type { WrapArea } from '../schemas/agent-area.ts';
 import { RowLabel } from './rating-scale.tsx';
 import { ReportFrame } from './report-frame.tsx';
@@ -41,7 +47,7 @@ export const DayReport = ({
       Day report
     </RowLabel>
   );
-  const rowClass = 'flow-root border-border border-t py-5';
+  const rowClass = 'flow-root py-3';
 
   if (reportHtml === null || dayMetrics === null || metricsVersion === null) {
     return (
@@ -60,7 +66,7 @@ export const DayReport = ({
       {heading}
       <div className="clear-left flex min-h-11 flex-wrap items-center gap-x-6 gap-y-2 sm:clear-none">
         <Button
-          aria-controls={shown ? regionId : undefined}
+          aria-controls={regionId}
           aria-describedby={unlocked ? undefined : lockId}
           aria-expanded={shown}
           className={disabledQuietClass}
@@ -70,26 +76,23 @@ export const DayReport = ({
         >
           {shown ? 'Hide the report' : 'Show the report'}
         </Button>
-        {shown ? (
-          <Button onClick={onBackToWriting} variant="quiet">
-            Back to writing
-          </Button>
-        ) : null}
         {wrap.reportModel === null ? null : (
           <p className="text-ink-faint text-sm">By {wrap.reportModel}</p>
         )}
       </div>
-      {unlocked ? null : (
+      <Collapsible open={!unlocked} unmountWhenClosed={true}>
         <p className="mt-1 text-ink-muted text-sm sm:ml-44" id={lockId}>
           Rate your energy first. The report opens once you have, so its numbers
           don’t sway how the day felt.
         </p>
-      )}
-      {shown ? (
-        <div
-          className="clear-both starting:-translate-y-2 pt-4 starting:opacity-0 transition-[opacity,translate] duration-300 ease-standard motion-reduce:transition-none"
-          id={regionId}
-        >
+      </Collapsible>
+      <Collapsible
+        className="clear-both"
+        id={regionId}
+        open={shown}
+        unmountWhenClosed={true}
+      >
+        <div className="pt-4">
           <ReportFrame
             dayMetrics={dayMetrics}
             metricsVersion={metricsVersion}
@@ -99,7 +102,7 @@ export const DayReport = ({
             Back to writing
           </Button>
         </div>
-      ) : null}
+      </Collapsible>
     </section>
   );
 };

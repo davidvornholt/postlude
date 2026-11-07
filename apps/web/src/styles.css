@@ -213,27 +213,6 @@
   .journal-prose em {
     font-style: italic;
   }
-
-  /* A folded year opens by growing to its height instead of appearing at once. */
-  @media (prefers-reduced-motion: no-preference) {
-    @supports (interpolate-size: allow-keywords) {
-      details {
-        interpolate-size: allow-keywords;
-      }
-    }
-
-    details::details-content {
-      block-size: 0;
-      overflow: clip;
-      transition:
-        block-size 250ms var(--ease-standard),
-        content-visibility 250ms allow-discrete;
-    }
-
-    details[open]::details-content {
-      block-size: auto;
-    }
-  }
 }
 
 /* Turning to another day slides the day toward the past or the future. The

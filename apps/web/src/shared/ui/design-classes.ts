@@ -11,7 +11,15 @@
  */
 
 /**
- * A small label: a section's name, a field's name, a quiet action. It keeps the
+ * The name of a part of a page, such as the morning or the end of the day: the
+ * one step between the page's own title and the labels inside each part. It is
+ * set well above both, so the parts of a long page can be told apart at a
+ * glance without a rule between them.
+ */
+export const sectionHeadingClass = 'font-display text-2xl sm:text-3xl';
+
+/**
+ * A small label: a field's name, a note's source, a quiet action. It keeps the
  * sentence case it is written in, because a page where every label is set in
  * capitals makes each one shout at the same volume as the writing it frames.
  */

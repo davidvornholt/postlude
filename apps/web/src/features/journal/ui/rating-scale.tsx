@@ -84,7 +84,7 @@ export const RatingScale = <Value extends string>({
   return (
     <fieldset
       aria-describedby={hint === undefined ? undefined : hintId}
-      className="flow-root border-border border-t py-5"
+      className="flow-root py-3"
       disabled={disabled}
     >
       <RowLabel as="legend">{legend}</RowLabel>

@@ -8,10 +8,15 @@
  * fade in where they were all along: their place is kept either way, so the
  * page never moves to make room. On a phone the name gives way to the tools,
  * because the two do not fit side by side there.
+ *
+ * No rule sets the bar apart. The section's name is what marks where a part of
+ * the day begins, with room above it, and pinned, the bar's own ground covers
+ * the writing that scrolls under it.
  */
 
 import { type ReactNode, useId } from 'react';
 
+import { sectionHeadingClass } from '#/shared/ui/design-classes.ts';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import {
   FormattingToolbar,
@@ -22,11 +27,6 @@ import type { WritingTone } from './journal-icon-button.tsx';
 const ground: Record<WritingTone, string> = {
   deep: 'bg-deep-ground text-deep-ink',
   page: 'bg-background text-ink',
-};
-
-const rule: Record<WritingTone, string> = {
-  deep: 'border-deep-rule/50',
-  page: 'border-border',
 };
 
 const fade =
@@ -48,15 +48,15 @@ export const WritingSection = ({
     <FormattingToolbarProvider>
       <section
         aria-labelledby={headingId}
-        className={`group/writing ${ground[tone]} ${className}`}
+        className={`group/writing pt-6 ${ground[tone]} ${className}`}
       >
         <div
-          className={`sticky top-0 z-30 border-b ${ground[tone]} ${rule[tone]}`}
+          className={`sticky top-0 z-30 ${ground[tone]}`}
           data-formatting-toolbar=""
         >
           <PageFrame className="grid min-h-14 grid-cols-1 items-center sm:grid-cols-[1fr_auto] sm:gap-6">
             <h2
-              className={`col-start-1 row-start-1 font-display text-xl group-focus-within/writing:opacity-0 sm:group-focus-within/writing:opacity-100 ${fade}`}
+              className={`col-start-1 row-start-1 ${sectionHeadingClass} group-focus-within/writing:opacity-0 sm:group-focus-within/writing:opacity-100 ${fade}`}
               id={headingId}
             >
               {title}
@@ -68,7 +68,7 @@ export const WritingSection = ({
             </div>
           </PageFrame>
         </div>
-        <PageFrame className="pt-6 pb-8">{children}</PageFrame>
+        <PageFrame className="pt-4 pb-8">{children}</PageFrame>
       </section>
     </FormattingToolbarProvider>
   );

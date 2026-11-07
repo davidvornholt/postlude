@@ -79,28 +79,32 @@ export const ScriptureRegister = ({
 
   return (
     <WritingSection title="Morning scripture" tone="deep">
-      <label className="block text-deep-ink-muted text-sm" htmlFor={fieldId}>
-        Passage or topic
-      </label>
-      <WrappingTextField
-        autoComplete="off"
-        tone="deep"
-        className={[readingMeasureClass, 'mt-2 font-display text-2xl'].join(
-          ' ',
-        )}
-        id={fieldId}
-        // Leaving the field is a save, the same as leaving either editor, and
-        // Enter leaves it.
-        onBlur={onLeave}
-        onValueChange={onReferenceChange}
-        placeholder="Proverbs 12:5-13, or a topic"
-        value={reference}
-      />
-      <p className="mt-2 min-h-6 text-sm">
-        <ReadingNote reference={reference} />
-      </p>
+      {/* The measure is set at the page's type size, so the line ends where
+          the notes below it do rather than at the passage's larger size. */}
+      <div className={readingMeasureClass}>
+        <label className="block text-deep-ink-muted text-sm" htmlFor={fieldId}>
+          Passage or topic
+        </label>
+        <WrappingTextField
+          autoComplete="off"
+          tone="deep"
+          className="mt-2 font-display text-xl"
+          id={fieldId}
+          // Leaving the field is a save, the same as leaving either editor,
+          // and Enter leaves it.
+          onBlur={onLeave}
+          onValueChange={onReferenceChange}
+          placeholder="Proverbs 12:5-13, or a topic"
+          value={reference}
+        />
+        <p className="mt-2 min-h-6 text-sm">
+          <ReadingNote reference={reference} />
+        </p>
+      </div>
 
-      <div className={[readingMeasureClass, 'mt-4'].join(' ')}>
+      {/* The notes go by their prompt, as the evening does, and are named in
+          full for assistive technology. */}
+      <div className={[readingMeasureClass, 'mt-6'].join(' ')}>
         <MarkdownEditor
           focusClass={deepFocusRingClass}
           initialMarkdown={initialMarkdown}

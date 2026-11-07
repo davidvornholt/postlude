@@ -43,6 +43,21 @@ const useHydrated = (): boolean =>
 
 const dateClass = 'font-display text-4xl text-ink leading-tight sm:text-5xl';
 
+/**
+ * The mark after the date that says it opens. The link the date is before
+ * hydration wears it too, so the date does not change width when it becomes
+ * the button.
+ */
+const DateChevron = ({ open }: { readonly open: boolean }) => (
+  <JournalIcon
+    className={[
+      'ml-2 inline size-6 align-middle text-ink-muted transition-[rotate,color] duration-200 ease-standard group-hover:text-ink motion-reduce:transition-none sm:size-7',
+      open ? 'rotate-180' : '',
+    ].join(' ')}
+    name="expand"
+  />
+);
+
 const DateTrigger = ({
   date,
   open,
@@ -61,11 +76,12 @@ const DateTrigger = ({
   if (!hydrated) {
     return (
       <ActionAnchor
-        className={`${dateClass} text-left`}
+        className={`group ${dateClass} text-left`}
         href={`/calendar?month=${journalMonthOf(date)}&day=${date}`}
         variant="plain"
       >
         {label}
+        <DateChevron open={false} />
       </ActionAnchor>
     );
   }
@@ -81,13 +97,7 @@ const DateTrigger = ({
       type="button"
     >
       {label}
-      <JournalIcon
-        className={[
-          'ml-2 inline size-6 align-middle text-ink-muted transition-[rotate,color] duration-200 ease-standard group-hover:text-ink motion-reduce:transition-none sm:size-7',
-          open ? 'rotate-180' : '',
-        ].join(' ')}
-        name="expand"
-      />
+      <DateChevron open={open} />
     </button>
   );
 };
@@ -133,7 +143,7 @@ export const DayHeader = ({
   return (
     <PageFrame
       as="header"
-      className="relative grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 pt-2 pb-8 sm:pt-6"
+      className="relative grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 pt-2 pb-6 sm:pt-2"
     >
       <p className="col-start-1 row-start-1 flex flex-wrap items-baseline gap-x-2 text-ink-muted text-sm">
         <span>{journalDayRelation(date, today)}</span>

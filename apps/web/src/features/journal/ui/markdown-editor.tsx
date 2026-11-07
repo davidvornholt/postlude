@@ -82,10 +82,12 @@ type MarkdownEditorProps = {
 
 /**
  * The shape of the writing area, worn by the editor and by what stands in for
- * it before hydration alike. An empty day is mostly this: a tall area with a
- * rule under it, which is what says there is somewhere to write before there is
- * anything written. Both wear it so the page does not resize when ProseMirror
- * arrives and the read-only surface becomes an editor.
+ * it before hydration alike. An empty day is mostly this: a tall area under a
+ * prompt, which is what says there is somewhere to write before there is
+ * anything written, and which takes a press anywhere in it. It has no rule of
+ * its own, so the page's lines are left to the parts that need them. Both wear
+ * it so the page does not resize when ProseMirror arrives and the read-only
+ * surface becomes an editor.
  *
  * Spaces wrap as they do in any paragraph: ProseMirror's own `break-spaces` lets
  * the space before a word that no longer fits begin the next line, which leaves
@@ -93,7 +95,7 @@ type MarkdownEditorProps = {
  * outside the cascade layers, so only an important utility can override it.
  */
 const writingAreaClass =
-  'cursor-text scroll-mt-24 whitespace-pre-wrap! border-(--journal-rule) border-b pb-6 text-lg leading-7 transition-colors duration-150 ease-standard hover:border-(--journal-quiet) motion-reduce:transition-none';
+  'cursor-text scroll-mt-24 whitespace-pre-wrap! text-lg leading-7';
 
 const sizeClass = {
   entry: 'min-h-96',

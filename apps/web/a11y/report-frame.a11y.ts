@@ -122,9 +122,9 @@ test('the open report leads straight back to the writing', async ({ page }) => {
   await mountEvening(page, 'report');
   await openReport(page);
   const back = page.getByRole('button', { name: 'Back to writing' });
-  await expect(back).toHaveCount(2);
+  await expect(back).toHaveCount(1);
 
-  await back.last().click();
+  await back.click();
   await expect(
     page.getByRole('textbox', { name: 'Evening journal' }),
   ).toBeFocused();

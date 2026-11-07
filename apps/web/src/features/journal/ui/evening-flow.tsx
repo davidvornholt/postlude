@@ -16,7 +16,10 @@
 import { useId } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
-import { readingMeasureClass } from '#/shared/ui/design-classes.ts';
+import {
+  readingMeasureClass,
+  sectionHeadingClass,
+} from '#/shared/ui/design-classes.ts';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import {
   energyOptions,
@@ -59,42 +62,49 @@ const closeHint = (energy: boolean, progress: boolean): string | undefined => {
     : 'Rate energy and progress to close the day.';
 };
 
+/**
+ * The button that closes the day, or reopens it, and a line under it saying
+ * what is still to rate. The line keeps its height when it has nothing to say,
+ * so rating the day never moves the note below it.
+ */
 const DayClosing = ({ evening }: { readonly evening: Evening }) => {
   const hintId = useId();
   const { rating, busy } = evening;
-  if (rating.closedAt !== null) {
-    return (
-      <div className="flex min-h-11 flex-wrap items-center gap-x-6 gap-y-3">
-        <p className="text-ink">This day is closed.</p>
-        <Button
-          aria-busy={busy === 'reopening'}
-          disabled={busy !== undefined}
-          onClick={evening.reopen}
-          variant="quiet"
-        >
-          {busy === 'reopening' ? 'Reopening…' : 'Reopen the day'}
-        </Button>
-      </div>
-    );
-  }
-  const hint = closeHint(rating.energy !== null, rating.progress !== null);
+  const closed = rating.closedAt !== null;
+  const hint = closed
+    ? undefined
+    : closeHint(rating.energy !== null, rating.progress !== null);
   return (
-    <div className="flex min-h-11 flex-wrap items-center gap-x-6 gap-y-3">
-      <Button
-        aria-busy={busy === 'closing'}
-        aria-describedby={hint === undefined ? undefined : hintId}
-        className="border border-transparent disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-ink-muted disabled:hover:bg-transparent"
-        disabled={!canCloseDay(rating) || busy !== undefined}
-        onClick={evening.close}
-      >
-        {busy === 'closing' ? 'Closing…' : 'Close the day'}
-      </Button>
-      {hint === undefined ? null : (
-        <p className="text-ink-muted text-sm" id={hintId}>
-          {hint}
-        </p>
-      )}
-    </div>
+    <>
+      <div className="flex min-h-11 flex-wrap items-center gap-x-6 gap-y-3">
+        {closed ? (
+          <>
+            <p className="text-ink">This day is closed.</p>
+            <Button
+              aria-busy={busy === 'reopening'}
+              disabled={busy !== undefined}
+              onClick={evening.reopen}
+              variant="quiet"
+            >
+              {busy === 'reopening' ? 'Reopening…' : 'Reopen the day'}
+            </Button>
+          </>
+        ) : (
+          <Button
+            aria-busy={busy === 'closing'}
+            aria-describedby={hint === undefined ? undefined : hintId}
+            className="border border-transparent disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-ink-muted disabled:hover:bg-transparent"
+            disabled={!canCloseDay(rating) || busy !== undefined}
+            onClick={evening.close}
+          >
+            {busy === 'closing' ? 'Closing…' : 'Close the day'}
+          </Button>
+        )}
+      </div>
+      <p className="mt-2 min-h-5 text-ink-muted text-sm" id={hintId}>
+        {hint}
+      </p>
+    </>
   );
 };
 
@@ -111,7 +121,7 @@ const EveningSteps = ({
   const locked = closed || busy === 'closing' || busy === 'reopening';
 
   return (
-    <div className="mt-6">
+    <div className="mt-8">
       <RatingScale
         disabled={locked}
         legend="Energy"
@@ -140,7 +150,7 @@ const EveningSteps = ({
         options={repeatDayOptions}
         value={rating.repeatDay}
       />
-      <div className="border-border border-t py-5 sm:pl-44">
+      <div className="mt-5 sm:pl-44">
         <DayClosing evening={evening} />
         <div aria-live="polite" role="status">
           {evening.failure === undefined ? null : (
@@ -148,7 +158,7 @@ const EveningSteps = ({
           )}
         </div>
       </div>
-      <div className="border-border border-t py-8">
+      <div className="mt-12">
         <AgentNote
           blocked={busy !== undefined && busy !== 'regenerating'}
           closed={closed}
@@ -169,26 +179,29 @@ export const EveningFlow = ({ today, ...props }: EveningFlowProps) => {
   const headingId = useId();
   const { date, evening } = props;
   let content = (
-    <p className="mt-6 text-ink-muted">
+    <p className="mt-8 text-ink-muted">
       This day has not begun yet. Rate and close it once it has.
     </p>
   );
   if (date <= today) {
     content =
       evening === undefined ? (
-        <p className="mt-6 text-ink-muted">{unavailableMessage}</p>
+        <p className="mt-8 text-ink-muted">{unavailableMessage}</p>
       ) : (
         <EveningSteps {...props} evening={evening} />
       );
   }
 
   return (
-    <PageFrame aria-labelledby={headingId} as="section" className="pt-12 pb-6">
+    <PageFrame aria-labelledby={headingId} as="section" className="pt-12">
       <div className={readingMeasureClass}>
-        <h2 className="font-display text-ink text-xl" id={headingId}>
+        <h2
+          className={[sectionHeadingClass, 'text-ink'].join(' ')}
+          id={headingId}
+        >
           End of the day
         </h2>
-        <p className="mt-1 text-pretty text-ink-muted">
+        <p className="mt-2 text-pretty text-ink-muted">
           When the writing is done, rate the day and close it.
         </p>
         {content}
