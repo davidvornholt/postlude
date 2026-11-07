@@ -12,14 +12,14 @@ import {
   useRef,
   useState,
 } from 'react';
-import {
-  discardPreparedArchiveNavigation,
-  preloadArchiveNavigation,
-  prepareRollingArchiveNavigation,
-} from '#/features/journal/browser-archive-navigation.ts';
 import { navigateAfterAutosavesSettle } from '#/features/journal/browser-autosaves.ts';
+import {
+  discardPreparedInsightsNavigation,
+  preloadInsightsNavigation,
+  prepareInsightsNavigation,
+} from '#/features/journal/browser-insights-navigation.ts';
 import type { JournalDate } from '#/features/journal/journal-day.ts';
-import { ArchiveNavigationFailure } from '#/features/journal/ui/archive-navigation-failure.tsx';
+import { InsightsNavigationFailure } from '#/features/journal/ui/insights-navigation-failure.tsx';
 import { authClient } from '#/shared/auth/auth-client.ts';
 import { rejectAuthError } from '#/shared/auth/auth-response.ts';
 import { hasAuthorizedSessionFn } from '#/shared/auth/session-fn.ts';
@@ -39,13 +39,13 @@ const skipLinkClass =
 const AppShell = () => {
   const mainId = useId();
   const router = useRouter();
-  const [blockedArchiveDay, setBlockedArchiveDay] = useState<
+  const [blockedInsightsDay, setBlockedInsightsDay] = useState<
     JournalDate | undefined
   >();
-  const [archiveNavigationPending, setArchiveNavigationPending] =
+  const [insightsNavigationPending, setInsightsNavigationPending] =
     useState(false);
   const mainRef = useRef<HTMLElement>(null);
-  const archiveNavigationStartedRef: RefObject<boolean> = useRef(false);
+  const insightsNavigationStartedRef: RefObject<boolean> = useRef(false);
   // A ref rather than `isPending`: mutation state lands in a later render, so
   // two activations inside one React batch would both read "not pending" and
   // fire the request twice. Flipping a ref before the call closes that window.
@@ -64,7 +64,7 @@ const AppShell = () => {
     signOutStartedRef.current = true;
     signOutMutation.mutate();
   };
-  const openArchive = async (
+  const openInsights = async (
     event: MouseEvent<HTMLAnchorElement>,
   ): Promise<void> => {
     if (
@@ -77,21 +77,23 @@ const AppShell = () => {
       return;
     }
     event.preventDefault();
-    if (archiveNavigationStartedRef.current) {
+    if (insightsNavigationStartedRef.current) {
       return;
     }
-    archiveNavigationStartedRef.current = true;
-    setArchiveNavigationPending(true);
+    insightsNavigationStartedRef.current = true;
+    setInsightsNavigationPending(true);
     try {
       const result = await navigateAfterAutosavesSettle(
-        prepareRollingArchiveNavigation,
-        () => router.navigate({ to: '/archive' }),
+        prepareInsightsNavigation,
+        () => router.navigate({ to: '/insights' }),
       );
-      setBlockedArchiveDay(result._tag === 'blocked' ? result.date : undefined);
+      setBlockedInsightsDay(
+        result._tag === 'blocked' ? result.date : undefined,
+      );
     } finally {
-      discardPreparedArchiveNavigation();
-      archiveNavigationStartedRef.current = false;
-      setArchiveNavigationPending(false);
+      discardPreparedInsightsNavigation();
+      insightsNavigationStartedRef.current = false;
+      setInsightsNavigationPending(false);
     }
   };
 
@@ -106,17 +108,17 @@ const AppShell = () => {
             <BrandLink>Postlude</BrandLink>
           </p>
           <MainNavigation
-            archivePending={archiveNavigationPending}
-            onOpenArchive={openArchive}
-            onPrepareArchive={preloadArchiveNavigation}
+            insightsPending={insightsNavigationPending}
+            onOpenInsights={openInsights}
+            onPrepareInsights={preloadInsightsNavigation}
           />
         </PageFrame>
       </header>
-      {blockedArchiveDay === undefined ? null : (
+      {blockedInsightsDay === undefined ? null : (
         <PageFrame className="pt-6">
-          <ArchiveNavigationFailure
-            date={blockedArchiveDay}
-            onOpen={() => setBlockedArchiveDay(undefined)}
+          <InsightsNavigationFailure
+            date={blockedInsightsDay}
+            onOpen={() => setBlockedInsightsDay(undefined)}
           />
         </PageFrame>
       )}

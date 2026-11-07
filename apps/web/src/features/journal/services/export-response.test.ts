@@ -22,7 +22,7 @@ const responseFrom = async (promise: Promise<unknown>): Promise<Response> => {
 };
 
 const requestWith = (body: BodyInit, contentType?: string): Request =>
-  new Request('https://postlude.test/archive/export', {
+  new Request('https://postlude.test/insights/export', {
     method: 'POST',
     body,
     ...(contentType === undefined

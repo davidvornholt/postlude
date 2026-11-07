@@ -11,17 +11,17 @@
 import { useId } from 'react';
 
 import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
+import { screenTimeDetails } from '../day-details.ts';
 import { journalDateLabel } from '../day-label.ts';
-import type { JournalDate } from '../journal-day.ts';
-import { screenTimeDetails } from '../review-day-details.ts';
 import {
+  type DayMeasures,
   metricsStateOf,
   screenTimeSplit,
   versionChanges,
-} from '../review-summary.ts';
-import type { ReviewDay } from '../review-view.ts';
-import type { DayMetrics } from '../schemas/day-metrics.ts';
-import { ChartRow, DayAxis } from './review-day-axis.tsx';
+} from '../day-measures.ts';
+import type { InsightsDay } from '../insights-view.ts';
+import type { JournalDate } from '../journal-day.ts';
+import { ChartRow, DayAxis } from './day-axis.tsx';
 import { useDaySelection } from './use-day-selection.ts';
 
 const columnWidth = 10;
@@ -52,7 +52,7 @@ const scaleClasses = [
   'top-0',
 ] as const;
 
-const scaleMinutes = (days: ReadonlyArray<ReviewDay>): number => {
+const scaleMinutes = (days: ReadonlyArray<InsightsDay>): number => {
   const busiest = Math.max(
     0,
     ...days.map((day) => day.metrics?.activeMinutes ?? 0),
@@ -64,7 +64,7 @@ const scaleMinutes = (days: ReadonlyArray<ReviewDay>): number => {
   return step * minutesPerHour * gridSteps;
 };
 
-const hasUnsplitTime = (metrics: DayMetrics): boolean => {
+const hasUnsplitTime = (metrics: DayMeasures): boolean => {
   if (metrics.activeMinutes === null || metrics.activeMinutes === 0) {
     return false;
   }
@@ -78,7 +78,7 @@ const DayBar = ({
   scale,
   today,
 }: {
-  readonly day: ReviewDay;
+  readonly day: InsightsDay;
   readonly index: number;
   readonly scale: number;
   readonly today: JournalDate;
@@ -202,7 +202,7 @@ export const ScreenTimeChart = ({
   days,
   today,
 }: {
-  readonly days: ReadonlyArray<ReviewDay>;
+  readonly days: ReadonlyArray<InsightsDay>;
   readonly today: JournalDate;
 }) => {
   const detailsId = useId();

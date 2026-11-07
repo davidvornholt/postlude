@@ -1,11 +1,11 @@
 /**
- * The two runs the archive states in words: consecutive evenings written, and
+ * The two runs Insights states in words: consecutive evenings written, and
  * consecutive mornings the scripture section was used. They are counted
  * separately and neither one repairs the other — a morning passage read on a
  * day nothing was written in the evening keeps one run alive and not the other.
  *
  * A section only joins its run if it was first used on the day it is about.
- * Filling in last Tuesday this evening is worth doing and the archive shows it
+ * Filling in last Tuesday this evening is worth doing and Insights shows it
  * on the map, but it does not put back a run that ended on Tuesday: a streak
  * that can be repaired afterwards measures bookkeeping rather than the habit.
  *

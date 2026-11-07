@@ -1,4 +1,10 @@
-import { type KeyboardEvent, type RefCallback, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type RefCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import type { ActivityCell } from '../activity-cells.ts';
 import type { JournalDate } from '../journal-day.ts';
@@ -29,6 +35,22 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
     days.at(-1)?.date,
   );
   const elementsRef = useRef(new Map<JournalDate, HTMLDivElement>());
+  const regionRef = useRef<HTMLElement>(null);
+  const lastDate = days.at(-1)?.date;
+  // A phone shows a few months at a time. Open the strip on its newest day,
+  // the one the details line describes, rather than on January; only the strip
+  // scrolls, so the page stays where the reader is.
+  useEffect(() => {
+    const region = regionRef.current;
+    const cell =
+      lastDate === undefined ? undefined : elementsRef.current.get(lastDate);
+    if (region === null || cell === undefined) {
+      return;
+    }
+    const overflow =
+      cell.getBoundingClientRect().right - region.getBoundingClientRect().right;
+    region.scrollLeft = Math.max(0, region.scrollLeft + overflow);
+  }, [lastDate]);
   const activeDay = days.find((day) => day.date === activeDate) ?? days.at(-1);
   const activeIndex = days.findIndex((day) => day.date === activeDay?.date);
   const scrollCellIntoView = (date: JournalDate): void => {
@@ -76,6 +98,7 @@ export const useActivitySelection = (days: ReadonlyArray<ActivityDayCell>) => {
     activeDay,
     focusLastDay,
     moveActiveDay,
+    regionRef,
     registerCell,
     setActiveDate,
   } as const;

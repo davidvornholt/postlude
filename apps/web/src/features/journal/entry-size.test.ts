@@ -7,6 +7,8 @@ const day = (date: string, words: number): ActivityCell => ({
   kind: 'day',
   date,
   words,
+  energy: null,
+  progress: null,
   level: words === 0 ? 'none' : 'q1',
 });
 

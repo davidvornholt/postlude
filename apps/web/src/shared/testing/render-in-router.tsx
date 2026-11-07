@@ -33,15 +33,7 @@ import { renderToString } from 'react-dom/server';
 
 import { IconDefaults } from '../ui/icon-defaults.tsx';
 
-const appPaths = [
-  '/',
-  '/archive',
-  '/calendar',
-  '/day/$date',
-  '/review',
-  '/review/month',
-  '/review/week',
-] as const;
+const appPaths = ['/', '/calendar', '/day/$date', '/insights'] as const;
 
 const emptyComponent = () => null;
 

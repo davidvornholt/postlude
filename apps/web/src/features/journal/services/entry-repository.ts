@@ -125,13 +125,13 @@ const readExportAvailability = (sql: SqlClient.SqlClient) =>
     Effect.map((rows) => rows[0]?.available ?? false),
   );
 
-export type ArchiveRead = {
+export type HistoryRead = {
   readonly earliest: JournalDate | undefined;
   readonly summaries: ReadonlyArray<EntrySummary>;
   readonly exportAvailable: boolean;
 };
 
-export type ArchiveReadRequest = {
+export type HistoryReadRequest = {
   readonly today: JournalDate;
 };
 
@@ -374,7 +374,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         );
 
       /**
-       * Every day with current archive activity in a range, oldest first: the
+       * Every day with current journal activity in a range, oldest first: the
        * counts that decide a mark's weight and each section's
        * first-use stamp, which decides whether that habit counts toward its
        * streak. Cleared rows remain stored but have nothing to show here.
@@ -391,7 +391,8 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
             scripture_word_count,
             scripture_first_used_at,
             (scripture_book is not null or scripture_topic is not null)
-              as has_scripture
+              as has_scripture,
+            scripture_book
           from entry
           where entry_date between ${from} and ${to}
             and ${archiveActivityEntry(sql)}
@@ -436,7 +437,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           Effect.mapError(journalReadError),
         );
 
-      /** The oldest day that still has something for the archive to show. */
+      /** The oldest day that still has something for Insights to show. */
       const earliestDate = (today: JournalDate) =>
         sql`
           select min(entry_date) as entry_date
@@ -448,10 +449,10 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           Effect.map((rows) => rows[0]?.date ?? undefined),
         );
 
-      const readArchive = ({
+      const readHistory = ({
         today,
-      }: ArchiveReadRequest): Effect.Effect<
-        ArchiveRead,
+      }: HistoryReadRequest): Effect.Effect<
+        HistoryRead,
         ReturnType<typeof journalReadError>
       > =>
         inRepeatableReadSnapshot(
@@ -474,7 +475,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         readAnniversaries,
         readCalendar: makeCalendarReader(sql),
         save,
-        readArchive,
+        readHistory,
       } as const;
     }),
   },

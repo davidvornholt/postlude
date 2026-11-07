@@ -87,7 +87,7 @@ export const ExportControl = ({
 
   return (
     <form
-      action="/archive/export"
+      action="/insights/export"
       aria-busy={settling}
       method="post"
       onSubmit={submitAfterSettling}

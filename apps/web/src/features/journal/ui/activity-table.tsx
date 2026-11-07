@@ -10,14 +10,14 @@
  * description, as the gaps in each month's count, and three hundred lines
  * saying nothing happened would bury the ones that say something did.
  *
- * It starts collapsed. A year is a long list, and the writer who came to the
- * archive to look at the shape of the year should not have to scroll past it.
+ * It starts collapsed. A year is a long list, and the writer who came to look
+ * at the shape of the year should not have to scroll past it.
  */
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
 import type { ActivityCell } from '../activity-cells.ts';
-import { heatLevelLabels } from '../activity-labels.ts';
 import { journalDateLabel } from '../day-label.ts';
+import { energyLabel, progressLabel } from '../insights-labels.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
 import { DayLink } from './day-link.tsx';
@@ -38,8 +38,8 @@ type ActivityTableProps = {
 };
 
 export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
-  // Newest first: the archive is read backwards from now, not forwards from
-  // whenever the window happens to open.
+  // Newest first: the journal is read backwards from now, not forwards from
+  // whenever the shown stretch happens to open.
   const days = cells.filter((cell) => cell.kind === 'day');
   const written = [...days].reverse().filter((cell) => cell.words > 0);
 
@@ -80,11 +80,14 @@ export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
               <th className="px-3 py-2 font-medium" scope="col">
                 Day
               </th>
-              <th className="px-3 py-2 font-medium" scope="col">
-                Activity
-              </th>
               <th className="px-3 py-2 text-right font-medium" scope="col">
                 Words
+              </th>
+              <th className="px-3 py-2 font-medium" scope="col">
+                Energy
+              </th>
+              <th className="px-3 py-2 font-medium" scope="col">
+                Progress
               </th>
             </tr>
           </thead>
@@ -101,11 +104,18 @@ export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
                     {journalDateLabel(cell.date)}
                   </DayLink>
                 </td>
-                <td className="px-3 py-2 text-ink-muted">
-                  {heatLevelLabels[cell.level]}
-                </td>
                 <td className="px-3 py-2 text-right text-ink tabular-nums">
                   {journalNumberLabel(cell.words)}
+                </td>
+                <td className="px-3 py-2 text-ink-muted">
+                  {cell.energy === null
+                    ? 'Not rated'
+                    : energyLabel(cell.energy)}
+                </td>
+                <td className="px-3 py-2 text-ink-muted">
+                  {cell.progress === null
+                    ? 'Not rated'
+                    : progressLabel(cell.progress)}
                 </td>
               </tr>
             ))}

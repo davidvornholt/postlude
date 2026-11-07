@@ -69,7 +69,7 @@ it('turns a failure before the first chunk into a safe retryable response', asyn
   expect(response.status).toBe(unavailableStatus);
   const document = await response.text();
   expect(document).toContain(exportUnavailableMessage);
-  expect(document).toContain('href="/archive"');
+  expect(document).toContain('href="/insights"');
   expect(document).toContain('<title>Export unavailable | Postlude</title>');
   expect(document).toContain('<main class=');
   const headingId = attributeValue(

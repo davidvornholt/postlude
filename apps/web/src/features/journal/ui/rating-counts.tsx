@@ -1,12 +1,12 @@
+import { ratingCounts } from '../day-measures.ts';
 import {
   energyOptions,
   progressOptions,
   repeatDayOptions,
 } from '../evening-labels.ts';
+import type { InsightsDay } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
-import { ratingCounts } from '../review-summary.ts';
-import type { ReviewDay } from '../review-view.ts';
 
 type Row = {
   readonly name: string;
@@ -18,7 +18,7 @@ type Row = {
 };
 
 const rowOf = <Value extends string>(
-  days: ReadonlyArray<ReviewDay>,
+  days: ReadonlyArray<InsightsDay>,
   today: JournalDate,
   rating: {
     readonly name: string;
@@ -26,7 +26,7 @@ const rowOf = <Value extends string>(
       readonly value: Value;
       readonly label: string;
     }>;
-    readonly pick: (day: ReviewDay) => Value | null;
+    readonly pick: (day: InsightsDay) => Value | null;
   },
 ): Row => {
   const { name, options, pick } = rating;
@@ -50,7 +50,7 @@ export const RatingCounts = ({
   days,
   today,
 }: {
-  readonly days: ReadonlyArray<ReviewDay>;
+  readonly days: ReadonlyArray<InsightsDay>;
   readonly today: JournalDate;
 }) => {
   const rows = [

@@ -116,7 +116,7 @@ const DayBody = ({
       />
 
       <WritingSection title="Evening" tone="page">
-        {/* The frame is the archive's, which is wider than anyone wants to
+        {/* The frame is the one Insights uses, which is wider than anyone wants to
             write a paragraph across, so the writing keeps its own measure
             inside it and starts on the same line as everything above it. */}
         <div className={readingMeasureClass}>

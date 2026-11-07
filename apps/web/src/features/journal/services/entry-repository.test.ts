@@ -14,7 +14,7 @@ import {
 } from './entry-repository-test-support.ts';
 import { inRepeatableReadSnapshot } from './read-snapshot.ts';
 
-const archiveRequest = (today: string) => ({ today });
+const historyRequest = (today: string) => ({ today });
 it('reads nothing for a day that was never written', async () => {
   const entry = await withRepository((entries) => entries.read('2019-04-02'));
   expect(entry).toBeUndefined();
@@ -307,7 +307,7 @@ it('lists a range inclusively and in calendar order', async () => {
       yield* entries.save(draft('2026-03-20', '', 'Forgiveness'));
       yield* entries.save(draft('2026-03-31', 'Three.'));
       yield* entries.save(draft('2026-04-01', 'Outside the range.'));
-      return yield* entries.readArchive(archiveRequest('2026-03-31'));
+      return yield* entries.readHistory(historyRequest('2026-03-31'));
     }),
   );
   expect(summaries.summaries.map((summary) => summary.date)).toEqual([
@@ -321,6 +321,12 @@ it('lists a range inclusively and in calendar order', async () => {
     true,
     true,
     false,
+  ]);
+  expect(summaries.summaries.map((summary) => summary.scriptureBook)).toEqual([
+    null,
+    'Psalms',
+    null,
+    null,
   ]);
 });
 
@@ -572,15 +578,15 @@ it('includes scripture notes and a reference-only anniversary', async () => {
 });
 
 it('reports no archive coverage while the journal is empty', async () => {
-  const archive = await withRepository((entries) =>
-    entries.readArchive(archiveRequest('2026-08-26')),
+  const history = await withRepository((entries) =>
+    entries.readHistory(historyRequest('2026-08-26')),
   );
-  expect(archive.earliest).toBeUndefined();
-  expect(archive.exportAvailable).toBe(false);
+  expect(history.earliest).toBeUndefined();
+  expect(history.exportAvailable).toBe(false);
 });
 
 it('reports recoverable stored source separately from archive activity', async () => {
-  const archive = await withRepository((entries) =>
+  const history = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-08-20', '```\n\n```'));
       yield* entries.save({
@@ -592,27 +598,27 @@ it('reports recoverable stored source separately from archive activity', async (
         ...draft('2026-08-23', ''),
         scriptureMarkdown: ' \t\r\n',
       });
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
 
-  expect(archive.exportAvailable).toBe(true);
-  expect(archive.earliest).toBeUndefined();
-  expect(archive.summaries).toEqual([]);
+  expect(history.exportAvailable).toBe(true);
+  expect(history.earliest).toBeUndefined();
+  expect(history.summaries).toEqual([]);
 });
 
 it('keeps planned future rows out of the historical archive', async () => {
-  const archive = await withRepository((entries) =>
+  const history = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-12-01', 'Later this year.'));
       yield* entries.save(draft('2027-01-01', 'Next year.'));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
 
-  expect(archive.earliest).toBeUndefined();
-  expect(archive.exportAvailable).toBe(true);
-  expect(archive.summaries).toEqual([]);
+  expect(history.earliest).toBeUndefined();
+  expect(history.exportAvailable).toBe(true);
+  expect(history.summaries).toEqual([]);
 });
 
 it('reports the oldest written day as where the archive starts', async () => {
@@ -620,47 +626,47 @@ it('reports the oldest written day as where the archive starts', async () => {
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-15', 'Later.'));
       yield* entries.save(draft('2025-11-02', 'Earlier.'));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
   expect(earliest.earliest).toBe('2025-11-02');
 });
 
 it('keeps an empty historical row without extending archive coverage', async () => {
-  const archive = await withRepository((entries) =>
+  const history = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2024-01-01', ''));
       yield* entries.save(draft('2025-11-02', 'Meaningful.'));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
 
-  expect(archive.earliest).toBe('2025-11-02');
-  expect(archive.summaries.map((summary) => summary.date)).toEqual([
+  expect(history.earliest).toBe('2025-11-02');
+  expect(history.summaries.map((summary) => summary.date)).toEqual([
     '2025-11-02',
   ]);
 });
 
 it('removes a cleared journal section from archive coverage', async () => {
-  const archive = await withRepository((entries) =>
+  const history = await withRepository((entries) =>
     Effect.gen(function* () {
       const written = yield* entries.save(
         draft('2024-01-01', 'Once meaningful.'),
       );
       yield* entries.save(draft('2024-01-01', '', '', written.revision));
       yield* entries.save(draft('2025-11-02', '', 'Psalms 23'));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
 
-  expect(archive.earliest).toBe('2025-11-02');
-  expect(archive.summaries.map((summary) => summary.date)).toEqual([
+  expect(history.earliest).toBe('2025-11-02');
+  expect(history.summaries.map((summary) => summary.date)).toEqual([
     '2025-11-02',
   ]);
 });
 
 it('removes a cleared scripture section from archive coverage', async () => {
-  const archive = await withRepository((entries) =>
+  const history = await withRepository((entries) =>
     Effect.gen(function* () {
       const written = yield* entries.save({
         ...draft('2024-01-01', ''),
@@ -668,18 +674,18 @@ it('removes a cleared scripture section from archive coverage', async () => {
       });
       yield* entries.save(draft('2024-01-01', '', '', written.revision));
       yield* entries.save(draft('2025-11-02', 'Still here.'));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
 
-  expect(archive.earliest).toBe('2025-11-02');
-  expect(archive.summaries.map((summary) => summary.date)).toEqual([
+  expect(history.earliest).toBe('2025-11-02');
+  expect(history.summaries.map((summary) => summary.date)).toEqual([
     '2025-11-02',
   ]);
 });
 
 it('reports a truly empty archive after every meaningful section is cleared', async () => {
-  const archive = await withRepository((entries) =>
+  const history = await withRepository((entries) =>
     Effect.gen(function* () {
       const journal = yield* entries.save(
         draft('2024-01-01', 'Once meaningful.'),
@@ -689,13 +695,13 @@ it('reports a truly empty archive after every meaningful section is cleared', as
       );
       yield* entries.save(draft('2024-01-01', '', '', journal.revision));
       yield* entries.save(draft('2025-11-02', '', '', scripture.revision));
-      return yield* entries.readArchive(archiveRequest('2026-08-26'));
+      return yield* entries.readHistory(historyRequest('2026-08-26'));
     }),
   );
 
-  expect(archive.earliest).toBeUndefined();
-  expect(archive.exportAvailable).toBe(false);
-  expect(archive.summaries).toEqual([]);
+  expect(history.earliest).toBeUndefined();
+  expect(history.exportAvailable).toBe(false);
+  expect(history.summaries).toEqual([]);
 });
 
 it('holds one snapshot while a concurrent archive-visible row commits', async () => {

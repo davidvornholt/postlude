@@ -74,7 +74,7 @@ describe('createFetchHandler', () => {
       Response.redirect('https://postlude.test/login', redirectStatus),
     );
     const response = await redirectHandler(
-      new Request('http://127.0.0.1/archive'),
+      new Request('http://127.0.0.1/insights'),
     );
     expect(response.status).toBe(redirectStatus);
     expect(response.headers.get('location')).toBe(

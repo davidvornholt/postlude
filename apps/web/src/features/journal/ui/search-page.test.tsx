@@ -1,7 +1,7 @@
 /**
  * The search page as it reaches the reader, server-rendered.
  *
- * Like the archive, this page sits behind the sign-in, so the browser
+ * Like Insights, this page sits behind the sign-in, so the browser
  * accessibility suite in `a11y/routes.a11y.ts` never reaches it. What matters
  * most here is what the page says when it has no days to show: not having been
  * asked anything, having been asked something with no words in it, and having
