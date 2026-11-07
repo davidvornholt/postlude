@@ -15,6 +15,25 @@ import {
 
 const colorSchemes = ['light', 'dark'] as const;
 
+test('rating the day never moves what follows the close hint, even where it wraps', async ({
+  page,
+}) => {
+  // At the narrowest phone width the longest hint takes two lines.
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mountEvening(page, 'report');
+  const close = page.getByRole('button', { name: 'Close the day' });
+  const hintId = await close.getAttribute('aria-describedby');
+  const hintLine = page.locator(`[id="${hintId}"]`).locator('..');
+  const height = (await hintLine.boundingBox())?.height;
+
+  await choose(page, 'Energy', 'Okay');
+  await choose(page, 'Progress', 'Solid');
+
+  await expect(close).toBeEnabled();
+  expect((await hintLine.boundingBox())?.height).toBe(height);
+});
+
 for (const colorScheme of colorSchemes) {
   test(`an evening is rated, closed and given its note in ${colorScheme} mode`, async ({
     page,
@@ -35,11 +54,6 @@ for (const colorScheme of colorSchemes) {
     await expect(close).toHaveAccessibleDescription(
       'Rate energy and progress to close the day.',
     );
-    // The hint's line keeps the height its longest wording wraps to, so
-    // rating the day never moves what follows it.
-    const hintId = await close.getAttribute('aria-describedby');
-    const hintLine = page.locator(`[id="${hintId}"]`).locator('..');
-    const hintHeight = (await hintLine.boundingBox())?.height;
     await scanPage(page);
 
     // The arrow keys move between the choices and save each one.
@@ -81,7 +95,6 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.up('Space');
     await expect(partly).not.toBeChecked();
     await expect(close).toBeEnabled();
-    expect((await hintLine.boundingBox())?.height).toBe(hintHeight);
 
     await close.click();
     await expect(page.getByText('This day is closed.')).toBeVisible();
