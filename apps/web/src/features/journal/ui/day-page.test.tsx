@@ -164,7 +164,7 @@ it('offers no passage link on a day with no reference', async () => {
 it('opens a stored topic in the line it was written in', async () => {
   const html = await renderDay(entryOn({ scriptureTopic: 'Forgiveness' }));
 
-  expect(html).toContain('value="Forgiveness"');
+  expect(html).toMatch(/<textarea[^>]*>Forgiveness<\/textarea>/u);
   expect(plainText(html)).toContain('Kept as a topic');
   expect(html).not.toContain('bibleserver.com');
 });
