@@ -3,11 +3,9 @@ import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
 import { activityWindow, dayWords } from '../src/features/journal/activity.ts';
+import { sampleJournal } from '../src/features/journal/sample/sample-journal.ts';
 import type { ArchiveView } from '../src/features/journal/services/archive-fns.ts';
-import {
-  sampleArchiveView,
-  sampleJournal,
-} from '../src/features/journal/testing/archive-view.ts';
+import { sampleArchiveView } from '../src/features/journal/testing/archive-view.ts';
 import { buildArchivePageFixture } from './archive-page-fixture-build.ts';
 import type {
   ArchivePageFixtureConfig,

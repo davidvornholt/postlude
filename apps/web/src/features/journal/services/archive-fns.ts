@@ -28,16 +28,12 @@ import {
   type ActivityDay,
   type ActivityTotals,
   type ActivityWindow,
+  activityDayOf,
   activityTotals,
   activityWindow,
 } from '../activity.ts';
-import {
-  type JournalDate,
-  journalDateAt,
-  parseJournalDate,
-} from '../journal-day.ts';
+import { type JournalDate, parseJournalDate } from '../journal-day.ts';
 import { decodeArchiveQuery } from '../schemas/archive-query.ts';
-import type { EntrySummary } from '../schemas/entry-summary.ts';
 import { journalStreak, type Streak, scriptureStreak } from '../streaks.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
@@ -58,21 +54,6 @@ export type ArchiveView = {
   /** The whole journal, which is what the streaks are counted against. */
   readonly totals: ActivityTotals;
 };
-
-const activityDayOf =
-  (timeZone: string) =>
-  (summary: EntrySummary): ActivityDay => ({
-    date: summary.date,
-    journalWords: summary.journalWordCount,
-    scriptureWords: summary.scriptureWordCount,
-    hasScripture: summary.hasScriptureReference,
-    journalWrittenOnTheDay:
-      summary.journalFirstUsedAt !== null &&
-      journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,
-    scriptureUsedOnTheDay:
-      summary.scriptureFirstUsedAt !== null &&
-      journalDateAt(summary.scriptureFirstUsedAt, timeZone) === summary.date,
-  });
 
 /**
  * Every year the journal touches, newest first. It runs from the first day

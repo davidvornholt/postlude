@@ -17,8 +17,9 @@ import {
   plainText,
 } from '#/shared/testing/rendered-html.ts';
 import { activityWindow } from '../activity.ts';
+import { sampleJournal } from '../sample/sample-journal.ts';
 import type { ArchiveView } from '../services/archive-fns.ts';
-import { sampleArchiveView, sampleJournal } from '../testing/archive-view.ts';
+import { sampleArchiveView } from '../testing/archive-view.ts';
 import { ArchivePage } from './archive-page.tsx';
 
 const today = '2026-08-26';

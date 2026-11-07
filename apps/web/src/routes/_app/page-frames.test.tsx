@@ -19,11 +19,9 @@
  */
 
 import { expect, it } from 'bun:test';
+import { sampleJournal } from '#/features/journal/sample/sample-journal.ts';
 import type { JournalEntry } from '#/features/journal/schemas/entry.ts';
-import {
-  sampleArchiveView,
-  sampleJournal,
-} from '#/features/journal/testing/archive-view.ts';
+import { sampleArchiveView } from '#/features/journal/testing/archive-view.ts';
 import {
   emptyEvening,
   unansweredEveningActions,

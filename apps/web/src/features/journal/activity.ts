@@ -10,10 +10,12 @@ import {
   earliestJournalDate,
   formatJournalDate,
   type JournalDate,
+  journalDateAt,
   journalDateWeekday,
   parseJournalDate,
   shiftJournalDate,
 } from './journal-day.ts';
+import type { EntrySummary } from './schemas/entry-summary.ts';
 
 /** One archive day without the prose bodies the map does not draw. */
 export type ActivityDay = {
@@ -27,6 +29,26 @@ export type ActivityDay = {
   /** The scripture section was first used on the day it is about. */
   readonly scriptureUsedOnTheDay: boolean;
 };
+
+/**
+ * A stored day as the archive counts it. Whether each section was first used
+ * on its own day is decided against the journal's zone, which the server knows
+ * and a browser carried abroad doesn't.
+ */
+export const activityDayOf =
+  (timeZone: string) =>
+  (summary: EntrySummary): ActivityDay => ({
+    date: summary.date,
+    journalWords: summary.journalWordCount,
+    scriptureWords: summary.scriptureWordCount,
+    hasScripture: summary.hasScriptureReference,
+    journalWrittenOnTheDay:
+      summary.journalFirstUsedAt !== null &&
+      journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,
+    scriptureUsedOnTheDay:
+      summary.scriptureFirstUsedAt !== null &&
+      journalDateAt(summary.scriptureFirstUsedAt, timeZone) === summary.date,
+  });
 
 export type HeatLevel = 'none' | 'q1' | 'q2' | 'q3' | 'q4';
 
