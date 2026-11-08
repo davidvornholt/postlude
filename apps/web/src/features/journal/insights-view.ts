@@ -55,6 +55,8 @@ export type InsightsView = {
   readonly scriptureStreak: Streak;
   /** The day with the most words in the whole journal, for the range's own to stand beside. */
   readonly longestEntry: DayRecord | undefined;
+  /** Some day outside the range holds writing, so the range's longest can be the longest yet. */
+  readonly writtenOutside: boolean;
   /** The same week, month or year one year earlier, when anything was written in it. */
   readonly yearAgo: YearAgo | undefined;
   /** Stored source exists even when no day shows any writing. */

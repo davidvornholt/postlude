@@ -29,7 +29,11 @@ import type { ActivityDay } from '../activity.ts';
 import { categoryTotals, comparableDays, measuresOf } from '../day-measures.ts';
 import { rangeOfSearch } from '../insights-address.ts';
 import { rangeDates } from '../insights-range.ts';
-import { longestEntry, yearAgoOf } from '../insights-records.ts';
+import {
+  longestEntry,
+  writtenOutside,
+  yearAgoOf,
+} from '../insights-records.ts';
 import type { InsightsDay, InsightsView } from '../insights-view.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { type DayOverview, dayRangeLimit } from '../schemas/day-overview.ts';
@@ -139,6 +143,7 @@ export const readInsightsFn = createServerFn({ method: 'GET' })
           journalStreak: journalStreak(history, today),
           scriptureStreak: scriptureStreak(history, today),
           longestEntry: longestEntry(history, today),
+          writtenOutside: writtenOutside(range, history, today),
           yearAgo: yearAgoOf(range, history, today),
           exportAvailable,
         };

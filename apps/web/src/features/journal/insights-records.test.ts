@@ -200,6 +200,15 @@ describe('recordsOf', () => {
     expect(onlyThisMonth?.takeaway).toBe(
       'Longest entry: 700 words on October 12',
     );
+    // Days passing after the range are no writing to beat.
+    const lookedBack = recordsOf(
+      sampleInsightsView(
+        recent,
+        { kind: 'month', month: '2026-10' },
+        '2026-11-08',
+      ),
+    );
+    expect(lookedBack?.isRecord).toBe(false);
   });
 
   it('names the year over all time and compares months only over a year or more', () => {

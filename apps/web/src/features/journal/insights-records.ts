@@ -19,7 +19,6 @@ import {
   isoWeekNumber,
   rangeDates,
   rangeHolding,
-  rangeIncludes,
   rangeLabel,
 } from './insights-range.ts';
 import type {
@@ -191,24 +190,39 @@ export const recordDayLabel = (
   return withYear ? `${opening}, ${year}` : opening;
 };
 
+/** Whether a day outside the range, up to today, holds writing. */
+export const writtenOutside = (
+  range: InsightsRange,
+  days: ReadonlyArray<DatedWords>,
+  today: JournalDate,
+): boolean => {
+  const dates = rangeDates(range);
+  const [first] = dates;
+  const last = dates.at(-1);
+  return days.some(
+    (day) =>
+      day.date <= today &&
+      dayWords(day) > 0 &&
+      (first === undefined ||
+        last === undefined ||
+        day.date < first ||
+        day.date > last),
+  );
+};
+
 /**
  * The range's records, or undefined before it holds a written day. "Yet" is
- * said only where the journal reaches outside the range, before it or after
- * it, so that a record is more than the range's one long day.
+ * said only where writing outside the range was beaten, so that a record is
+ * more than the range's one long day.
  */
 export const recordsOf = (view: InsightsView): Records | undefined => {
-  const { range, today, earliest } = view;
+  const { range, today } = view;
   const longest = longestEntry(view.days, today);
   if (longest === undefined) {
     return;
   }
-  const [start] = rangeDates(range);
-  const reachesOutside =
-    range.kind !== 'all' &&
-    ((earliest !== undefined && start !== undefined && earliest < start) ||
-      !rangeIncludes(range, today));
   const holdsLongest = view.longestEntry?.date === longest.date;
-  const isRecord = holdsLongest && reachesOutside;
+  const isRecord = holdsLongest && view.writtenOutside;
   const withYear = range.kind === 'all';
   const said = `${journalCountLabel(longest.words, 'word')} on ${recordDayLabel(longest.date, withYear)}`;
   return {
