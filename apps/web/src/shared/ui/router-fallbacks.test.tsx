@@ -53,7 +53,7 @@ const expectedPageFrame = 'mx-auto w-full max-w-4xl px-5 sm:px-8';
  */
 const shellComponent = () => (
   <div>
-    <BrandLink>Wordmark</BrandLink>
+    <BrandLink />
     <main>
       <InsideMainLandmark>
         <Outlet />
@@ -167,7 +167,7 @@ it('sets the page frame exactly once wherever a fallback lands', async () => {
  * missing link fails there instead of passing an empty attribute string through
  * the negative assertions.
  */
-it.each(['Wordmark', 'Back to Postlude'])(
+it.each(['Postlude', 'Back to Postlude'])(
   'leaves the %s link unmarked on the page it points at',
   async (text) => {
     const attributes = linkAttributes(await renderAt('/'), text);

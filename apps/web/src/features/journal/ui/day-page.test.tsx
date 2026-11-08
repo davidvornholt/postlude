@@ -61,11 +61,13 @@ it('labels and links a future day without changing its dated address', async () 
   expect(dayLink(html, 'Next day')).toContain('href="/day/2026-08-28"');
 });
 
-it('omits the previous-day link at the start of the journal calendar', async () => {
+it('dims the previous-day step at the start of the journal calendar', async () => {
   const html = await renderDay(entryOn({ date: '0001-01-01' }));
+  const previous = dayLink(html, 'Previous day');
 
   expect(html).toContain('Monday, January 1, 1');
-  expect(html).not.toContain('Previous day');
+  expect(previous).toContain('aria-disabled="true"');
+  expect(previous).not.toContain('href=');
   expect(dayLink(html, 'Next day')).toContain('href="/day/0001-01-02"');
 });
 
