@@ -150,10 +150,6 @@ export const EntryFromRow = EntryRow.pipe(
   }),
 );
 
-/**
- * A day as `postlude days changed` returns it: when it was last saved, and its
- * word counts, without any prose.
- */
 export const ChangedDayFromRow = Schema.Struct({
   date: JournalDateSchema,
   revision: RevisionSchema,

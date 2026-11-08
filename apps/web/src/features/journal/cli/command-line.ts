@@ -202,7 +202,6 @@ const daysList = (words: ReadonlyArray<string>): CliCommand | UsageError => {
 };
 
 /**
- * The time of an instant: hours, minutes, seconds, a fraction, and a zone.
  * Postgres takes offsets up to 15:59 either way, so a larger one is a usage
  * error here rather than a database error later.
  */
@@ -210,8 +209,8 @@ const instantTime =
   /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:0\d|1[0-5]):[0-5]\d)$/u;
 
 /**
- * An ISO 8601 instant whose date is a calendar date. It reaches Postgres as
- * text, so it keeps every digit of a fraction, down to microseconds.
+ * It reaches Postgres as text, so it keeps every digit of a fraction, down to
+ * microseconds.
  */
 const isInstant = (value: string) => {
   const [date, time, ...rest] = value.split('T');

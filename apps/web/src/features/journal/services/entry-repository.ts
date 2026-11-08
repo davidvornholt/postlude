@@ -146,8 +146,6 @@ const persistSavedEvidence =
       ? Effect.void
       : replaceSearchEvidence(sql, date, storedSearchEvidence(document));
 
-/** The stored day, locked until the transaction that read it ends. */
-/** The first day up to `today` with something the archive shows. */
 const readEarliestDate = (sql: SqlClient.SqlClient) => (today: JournalDate) =>
   sql`
     select min(entry_date) as entry_date
@@ -159,11 +157,6 @@ const readEarliestDate = (sql: SqlClient.SqlClient) => (today: JournalDate) =>
     Effect.map((rows) => rows[0]?.date ?? undefined),
   );
 
-/**
- * Every stored day saved after `since`, an ISO 8601 instant, by date. A save of
- * either section counts. An agent that remembers when it last looked asks for
- * this instead of a date range, so it also sees late edits to days long past.
- */
 const readChangedSince = (sql: SqlClient.SqlClient) => (since: string) =>
   sql`
     select
@@ -177,6 +170,7 @@ const readChangedSince = (sql: SqlClient.SqlClient) => (since: string) =>
     order by entry_date
   `.pipe(Effect.flatMap(decodeChangedDays), Effect.mapError(journalReadError));
 
+/** The stored day, locked until the transaction that read it ends. */
 const readLockedEntry = (sql: SqlClient.SqlClient, date: string) =>
   sql`
     select ${storedEntryColumns(sql)}
@@ -471,7 +465,6 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           Effect.mapError(journalReadError),
         );
 
-      /** The oldest day that still has something for Insights to show. */
       const readHistory = ({
         today,
       }: HistoryReadRequest): Effect.Effect<
