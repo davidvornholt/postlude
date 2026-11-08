@@ -9,9 +9,10 @@
  * saying its finding while closed, so the detail is there when asked for and
  * not before.
  *
- * Stepping to the range before or after slides it the way a day slides on the
- * day page, and while the next range loads the current one dims rather than
- * blanking, so the reader can see that the press was taken.
+ * Stepping to the range before or after fades the readings in place the way a
+ * day turns on the day page, with the heading and the controls held still, and
+ * while the next range loads the current one dims rather than blanking, so the
+ * reader can see that the press was taken.
  *
  * The download sits at the foot, under the readings, because it answers the
  * same question — what is in here — and is not a reading of the journal at all.

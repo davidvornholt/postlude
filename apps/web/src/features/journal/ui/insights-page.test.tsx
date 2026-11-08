@@ -119,6 +119,11 @@ const unsortedWeek = await render(
   ),
 );
 
+/** The opening tag of the link a screen reader names `label`. */
+const anchorLabelled = (html: string, label: string): string =>
+  html.match(new RegExp(`<a\\b[^>]*aria-label="${label}"[^>]*>`, 'u'))?.[0] ??
+  '';
+
 const foldTitles = (html: string): ReadonlyArray<string> =>
   Array.from(html.matchAll(foldTitlePattern), (match) =>
     plainText(match.groups?.title ?? ''),
@@ -237,8 +242,13 @@ it('offers the four ranges on one track and marks the one shown', () => {
 });
 
 it('steps back from the current range and offers the way home from a past one', () => {
-  expect(year).toContain('aria-label="Previous year"');
-  expect(year).not.toContain('aria-label="Next year"');
+  expect(attributeValue(anchorLabelled(year, 'Previous year'), 'href')).toBe(
+    '/insights?year=2025',
+  );
+  // The step past today keeps its place, dimmed and announced as unavailable.
+  const next = anchorLabelled(year, 'Next year');
+  expect(attributeValue(next, 'aria-disabled')).toBe('true');
+  expect(attributeValue(next, 'href')).toBe('');
   expect(plainText(year)).not.toContain('This year');
   expect(pastYear).toContain('aria-label="Next year"');
   expect(plainText(pastYear)).toContain('This year');
