@@ -159,7 +159,7 @@ exit "$status"
                     'steps',
                     [
                       {
-                        name: 'Run the full exact-head repository gate',
+                        name: 'Verify idempotent migrations and container health',
                         status: 'completed',
                         conclusion: 'success',
                       },

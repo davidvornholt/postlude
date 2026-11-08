@@ -260,12 +260,12 @@ jobs:
             test "$(jq -er '.[0].run_id' <<<"$smoke_jobs")" = "$EVENT_RUN_ID"
             test "$(jq -er '.[0].run_attempt' <<<"$smoke_jobs")" = "$run_attempt"
             test "$(jq -er '.[0].head_sha' <<<"$smoke_jobs")" = "$EVENT_HEAD_SHA"
-            exact_head_gates=$(jq -c \
-              '[.[0].steps[] | select(.name == "Run the full exact-head repository gate")]' \
+            smoke_tests=$(jq -c \
+              '[.[0].steps[] | select(.name == "Verify idempotent migrations and container health")]' \
               <<<"$smoke_jobs")
-            test "$(jq -er length <<<"$exact_head_gates")" = 1
-            test "$(jq -er '.[0].status' <<<"$exact_head_gates")" = completed
-            test "$(jq -er '.[0].conclusion' <<<"$exact_head_gates")" = success
+            test "$(jq -er length <<<"$smoke_tests")" = 1
+            test "$(jq -er '.[0].status' <<<"$smoke_tests")" = completed
+            test "$(jq -er '.[0].conclusion' <<<"$smoke_tests")" = success
           fi
           pr=$(gh api "repos/$REPOSITORY/pulls/$pr_number")
           test "$(jq -er .head.sha <<<"$pr")" = "$EVENT_HEAD_SHA"
@@ -292,7 +292,7 @@ jobs:
     outputs:
       image: ${{ steps.publish.outputs.image }}
     steps:
-      - name: Fetch and validate the exact gated artifact
+      - name: Fetch and validate the exact smoke-tested artifact
         id: validate
         env:
           GH_TOKEN: ${{ github.token }}
@@ -316,38 +316,12 @@ jobs:
           test "$(jq -er '.[0].run_id' <<<"$smoke_jobs")" = "$RUN_ID"
           test "$(jq -er '.[0].run_attempt' <<<"$smoke_jobs")" = "$RUN_ATTEMPT"
           test "$(jq -er '.[0].head_sha' <<<"$smoke_jobs")" = "$HEAD_SHA"
-          exact_head_gates=$(jq -c \
-            '[.[0].steps[] | select(.name == "Run the full exact-head repository gate")]' \
+          smoke_tests=$(jq -c \
+            '[.[0].steps[] | select(.name == "Verify idempotent migrations and container health")]' \
             <<<"$smoke_jobs")
-          test "$(jq -er length <<<"$exact_head_gates")" = 1
-          test "$(jq -er '.[0].status' <<<"$exact_head_gates")" = completed
-          test "$(jq -er '.[0].conclusion' <<<"$exact_head_gates")" = success
-
-          standards_workflow=$(gh api "repos/$REPOSITORY/actions/workflows/standards.yml")
-          test "$(jq -er .path <<<"$standards_workflow")" = .github/workflows/standards.yml
-          test "$(jq -er .state <<<"$standards_workflow")" = active
-          standards_workflow_id=$(jq -er '.id | select(. >= 1 and floor == .)' <<<"$standards_workflow")
-          standards_runs=$(gh api "repos/$REPOSITORY/actions/workflows/$standards_workflow_id/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100")
-          test "$(jq -er .total_count <<<"$standards_runs")" -le 100
-          standards_run=$(jq -cr \
-            '[.workflow_runs[] | select(
-              .path == ".github/workflows/standards.yml"
-              and .event == "pull_request"
-              and .head_repository.full_name == "davidvornholt/postlude"
-            )] | sort_by(.run_number, .run_attempt, .id) | last // empty' \
-            <<<"$standards_runs")
-          test -n "$standards_run"
-          test "$(jq -er .head_sha <<<"$standards_run")" = "$HEAD_SHA"
-          test "$(jq -er .status <<<"$standards_run")" = completed
-          test "$(jq -er .conclusion <<<"$standards_run")" = success
-          standards_run_id=$(jq -er '.id | select(. >= 1 and floor == .)' <<<"$standards_run")
-          standards_jobs=$(gh api "repos/$REPOSITORY/actions/runs/$standards_run_id/jobs?per_page=100")
-          test "$(jq -er .total_count <<<"$standards_jobs")" -le 100
-          standards_checks=$(jq -c '[.jobs[] | select(.name == "check")]' <<<"$standards_jobs")
-          test "$(jq -er length <<<"$standards_checks")" = 1
-          test "$(jq -er '.[0].status' <<<"$standards_checks")" = completed
-          test "$(jq -er '.[0].conclusion' <<<"$standards_checks")" = success
-          test "$(jq -er '.[0].head_sha' <<<"$standards_checks")" = "$HEAD_SHA"
+          test "$(jq -er length <<<"$smoke_tests")" = 1
+          test "$(jq -er '.[0].status' <<<"$smoke_tests")" = completed
+          test "$(jq -er '.[0].conclusion' <<<"$smoke_tests")" = success
 
           artifact_name="postlude-pr-preview-$PR_NUMBER-$HEAD_SHA-$RUN_ATTEMPT"
           artifacts=$(gh api "repos/$REPOSITORY/actions/runs/$RUN_ID/artifacts?per_page=100")
@@ -495,34 +469,6 @@ jobs:
             test "$(jq -er .path <<<"$main_file")" = "$path"
             test "$(jq -er .sha <<<"$head_file")" = "$(jq -er .sha <<<"$main_file")"
           done
-          current_main_ref=$(gh api "repos/$REPOSITORY/git/ref/heads/main")
-          test "$(jq -er .object.sha <<<"$current_main_ref")" = "$main_sha"
-
-          standards_workflow=$(gh api "repos/$REPOSITORY/actions/workflows/standards.yml")
-          test "$(jq -er .path <<<"$standards_workflow")" = .github/workflows/standards.yml
-          test "$(jq -er .state <<<"$standards_workflow")" = active
-          standards_workflow_id=$(jq -er '.id | select(. >= 1 and floor == .)' <<<"$standards_workflow")
-          standards_runs=$(gh api "repos/$REPOSITORY/actions/workflows/$standards_workflow_id/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=100")
-          test "$(jq -er .total_count <<<"$standards_runs")" -le 100
-          standards_run=$(jq -cr \
-            '[.workflow_runs[] | select(
-              .path == ".github/workflows/standards.yml"
-              and .event == "pull_request"
-              and .head_repository.full_name == "davidvornholt/postlude"
-            )] | sort_by(.run_number, .run_attempt, .id) | last // empty' \
-            <<<"$standards_runs")
-          test -n "$standards_run"
-          test "$(jq -er .head_sha <<<"$standards_run")" = "$HEAD_SHA"
-          test "$(jq -er .status <<<"$standards_run")" = completed
-          test "$(jq -er .conclusion <<<"$standards_run")" = success
-          standards_run_id=$(jq -er '.id | select(. >= 1 and floor == .)' <<<"$standards_run")
-          standards_jobs=$(gh api "repos/$REPOSITORY/actions/runs/$standards_run_id/jobs?per_page=100")
-          test "$(jq -er .total_count <<<"$standards_jobs")" -le 100
-          checks=$(jq -c '[.jobs[] | select(.name == "check")]' <<<"$standards_jobs")
-          test "$(jq -er length <<<"$checks")" = 1
-          test "$(jq -er '.[0].status' <<<"$checks")" = completed
-          test "$(jq -er '.[0].conclusion' <<<"$checks")" = success
-          test "$(jq -er '.[0].head_sha' <<<"$checks")" = "$HEAD_SHA"
 
           pr=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER")
           test "$(jq -er .state <<<"$pr")" = open

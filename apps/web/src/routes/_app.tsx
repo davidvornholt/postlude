@@ -103,9 +103,9 @@ const AppShell = () => {
         Skip to content
       </a>
       <header className="border-border border-b">
-        <PageFrame className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 py-5">
-          <p className="font-display text-ink text-xl">
-            <BrandLink>Postlude</BrandLink>
+        <PageFrame className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 pt-4.5 pb-5">
+          <p className="font-display text-2xl text-ink">
+            <BrandLink />
           </p>
           <MainNavigation
             insightsPending={insightsNavigationPending}

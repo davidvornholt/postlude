@@ -132,7 +132,7 @@ export const InsightsPage = ({ view, settleAutosaves }: InsightsPageProps) => {
       <div
         aria-busy={pending}
         className={[
-          'insights-range mt-10 transition-opacity duration-200 ease-standard motion-reduce:transition-none',
+          'mt-10 transition-opacity duration-200 ease-standard motion-reduce:transition-none',
           pending ? 'opacity-50 delay-150' : '',
         ].join(' ')}
       >

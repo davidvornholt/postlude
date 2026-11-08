@@ -92,7 +92,7 @@ const DayBody = ({
   const { next, openDay, previous } = useDaySteps(entry.date, today);
 
   return (
-    <article className="journal-day">
+    <article>
       <DayHeader
         copyDay={autosave.draft}
         date={entry.date}
@@ -160,11 +160,7 @@ const DayBody = ({
         today={today}
       />
 
-      <OnThisDay
-        anniversaries={anniversaries}
-        date={entry.date}
-        today={today}
-      />
+      <OnThisDay anniversaries={anniversaries} today={today} />
     </article>
   );
 };

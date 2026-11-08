@@ -1,11 +1,11 @@
 import { useNavigate } from '@tanstack/react-router';
-import { dayTransition } from '../day-transition.ts';
 import {
   earliestJournalDate,
   type JournalDate,
   latestJournalDate,
   shiftJournalDate,
 } from '../journal-day.ts';
+import { pageTurn } from '../page-turn.ts';
 import { useStepKeys } from './use-step-keys.ts';
 
 export const useDaySteps = (date: JournalDate, today: JournalDate) => {
@@ -14,14 +14,13 @@ export const useDaySteps = (date: JournalDate, today: JournalDate) => {
   // calendar has no link to fall back on, so a move the router can't make
   // loads the day as a page instead.
   const openDay = (chosen: JournalDate): void => {
-    const viewTransition = dayTransition(date, chosen);
     const moving =
       chosen === today
-        ? navigate({ to: '/', viewTransition })
+        ? navigate({ to: '/', viewTransition: pageTurn })
         : navigate({
             params: { date: chosen },
             to: '/day/$date',
-            viewTransition,
+            viewTransition: pageTurn,
           });
     moving.catch(() =>
       globalThis.location.assign(chosen === today ? '/' : `/day/${chosen}`),

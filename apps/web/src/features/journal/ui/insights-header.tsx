@@ -17,7 +17,6 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ActionLink, UnmarkedActionLink } from '#/shared/ui/action-link.tsx';
 import { SegmentLink } from '#/shared/ui/segment-link.tsx';
 import { SegmentedTrack } from '#/shared/ui/segmented-control.tsx';
-import { dayTransition } from '../day-transition.ts';
 import {
   insightsSearch,
   searchedKind,
@@ -27,13 +26,13 @@ import {
   type InsightsRange,
   isoWeekNumber,
   type RangeKind,
-  rangeDates,
   rangeHolding,
   rangeIncludes,
   rangeLabel,
   reachableShift,
 } from '../insights-range.ts';
 import type { JournalDate } from '../journal-day.ts';
+import { pageTurn } from '../page-turn.ts';
 import { insightsSearchOf } from '../schemas/insights-query.ts';
 
 const kinds = [
@@ -91,9 +90,6 @@ export const RangeSwitcher = ({
   );
 };
 
-const firstDateOf = (range: InsightsRange): JournalDate | undefined =>
-  rangeDates(range)[0];
-
 const Step = ({
   direction,
   range,
@@ -104,9 +100,7 @@ const Step = ({
   readonly bounds: Bounds;
 }) => {
   const target = reachableShift(range, direction, bounds);
-  const from = firstDateOf(range);
-  const to = target === undefined ? undefined : firstDateOf(target);
-  if (target === undefined || from === undefined || to === undefined) {
+  if (target === undefined) {
     return <span aria-hidden="true" className="size-11" />;
   }
   const noun = range.kind;
@@ -117,7 +111,7 @@ const Step = ({
       search={insightsSearch(target, bounds.today)}
       to="/insights"
       variant="icon"
-      viewTransition={dayTransition(from, to)}
+      viewTransition={pageTurn}
     >
       {direction < 0 ? <ChevronLeft /> : <ChevronRight />}
     </ActionLink>
@@ -173,10 +167,7 @@ export const RangeHeading = ({
             )}
             to="/insights"
             variant="quiet"
-            viewTransition={dayTransition(
-              firstDateOf(range) ?? bounds.today,
-              bounds.today,
-            )}
+            viewTransition={pageTurn}
           >
             {`This ${range.kind}`}
           </UnmarkedActionLink>
