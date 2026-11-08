@@ -1,8 +1,10 @@
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
+import type { Anniversary } from '../anniversary.ts';
 import type { JournalEntry } from '../schemas/entry.ts';
 import type { EveningView } from '../services/evening-fns.ts';
 import {
   emptyEvening,
+  noWrittenDays,
   unansweredEveningActions,
 } from '../testing/evening-view.ts';
 import { DayPage } from './day-page.tsx';
@@ -31,12 +33,15 @@ const neverSaves = () => new Promise<never>(() => undefined);
 export const renderDayWith = (
   entry: JournalEntry,
   evening: EveningView | undefined,
+  anniversaries: ReadonlyArray<Anniversary> = [],
 ): Promise<string> =>
   renderInRouter(
     <DayPage
+      anniversaries={anniversaries}
       entry={entry}
       evening={evening}
       eveningActions={unansweredEveningActions}
+      readWrittenDays={noWrittenDays}
       save={neverSaves}
       today={today}
     />,

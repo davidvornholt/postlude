@@ -1,11 +1,19 @@
 import { Effect } from 'effect';
 
+import {
+  type Anniversary,
+  anniversaryLimit,
+  anniversaryMonthDays,
+  anniversaryOf,
+} from '../anniversary.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { emptyJournalEntry, type JournalEntry } from '../schemas/entry.ts';
 import { EntryRepository } from './entry-repository.ts';
 
 export type JournalDayView = {
   readonly entry: JournalEntry;
+  /** The same date in earlier years, which the day page ends on. */
+  readonly anniversaries: ReadonlyArray<Anniversary>;
   readonly today: JournalDate;
 };
 
@@ -25,9 +33,20 @@ export const makeJournalDayReader = (run: RunJournalReadEffect) => {
     run(
       Effect.gen(function* () {
         const entries = yield* EntryRepository;
-        const entry = yield* entries.read(date);
+        const [entry, earlier] = yield* Effect.all(
+          [
+            entries.read(date),
+            entries.readAnniversaries(
+              anniversaryMonthDays(date),
+              date,
+              anniversaryLimit,
+            ),
+          ],
+          { concurrency: 'unbounded' },
+        );
         return {
           entry: entry ?? emptyJournalEntry(date),
+          anniversaries: earlier.map(anniversaryOf(date)),
           today,
         };
       }),

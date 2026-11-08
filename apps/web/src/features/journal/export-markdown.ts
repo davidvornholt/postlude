@@ -65,12 +65,18 @@ const morningChunks = (
   heading: string,
 ): ReadonlyArray<string> => {
   const reference = formattedReference(entry);
-  if (entry.scriptureMarkdown === '' && reference === undefined) {
+  const topic = entry.scriptureTopic;
+  if (
+    entry.scriptureMarkdown === '' &&
+    reference === undefined &&
+    topic === null
+  ) {
     return [];
   }
   return [
     `\n\n${heading} Morning`,
     ...(reference === undefined ? [] : [`\n\nPassage: ${reference}`]),
+    ...(topic === null ? [] : [`\n\nTopic: ${topic}`]),
     ...(entry.scriptureMarkdown === ''
       ? []
       : ['\n\n', ...markdownChunks(entry.scriptureMarkdown)]),
@@ -98,6 +104,7 @@ export const entryDocumentChunks = (
     frontMatter({
       date: entry.date,
       ...(reference === undefined ? {} : { scripture: reference }),
+      ...(entry.scriptureTopic === null ? {} : { topic: entry.scriptureTopic }),
     }),
     ...morningChunks(entry, '##'),
     ...eveningChunks(entry, '##'),

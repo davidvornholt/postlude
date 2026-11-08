@@ -8,12 +8,7 @@
 
 import { expect, it } from 'bun:test';
 
-import {
-  anniversaryMonthDays,
-  anniversaryOf,
-  onThisDayBounds,
-  onThisDayDate,
-} from './anniversary.ts';
+import { anniversaryMonthDays, anniversaryOf } from './anniversary.ts';
 import { journalDateAt } from './journal-day.ts';
 import type { EntryPreview } from './schemas/entry-preview.ts';
 
@@ -30,25 +25,9 @@ const threeYears = 3;
 const fourYears = 4;
 const longMemorySentenceCount = 20;
 
-it('keeps dates in the current year, including dates after today', () => {
-  expect(onThisDayDate('2026-08-25', '2026-08-26')).toBe('2026-08-25');
-  expect(onThisDayDate(undefined, '2026-08-26')).toBe('2026-08-26');
-  expect(onThisDayDate('2026-08-27', '2026-08-26')).toBe('2026-08-27');
-});
-
-it('bounds retrospective browsing to the current calendar year', () => {
-  expect(onThisDayBounds('2026-08-26')).toEqual({
-    first: '2026-01-01',
-    last: '2026-12-31',
-  });
-  expect(onThisDayDate('2025-12-31', '2026-08-26')).toBe('2026-01-01');
-  expect(onThisDayDate('2027-01-01', '2026-08-26')).toBe('2026-12-31');
-});
-
 /*
- * February 29 is a date in one year out of four, and the page only offers dates
- * of the current year. Without February 28 standing in for it, a leap day would
- * be unreadable here for three years at a time.
+ * February 29 is a date in one year out of four. Without February 28 standing
+ * in for it, a leap day would go unremembered for three years at a time.
  */
 it('reads the leap day on February 28 of a year without one', () => {
   expect(anniversaryMonthDays('2027-02-28')).toEqual(['02-28', '02-29']);
@@ -65,14 +44,14 @@ it('reads the leap day only on February 29 in a leap year', () => {
 });
 
 /*
- * The page's own date comes from the clock when no date is asked for, and the
- * journal day runs from 04:00. The small hours of March 1 are still February 28,
+ * Today's page takes its date from the clock, and the journal day runs from
+ * 04:00. The small hours of March 1 are still February 28,
  * so they still read the leap day.
  */
 it('takes the leap day from the journal day, which ends at 04:00', () => {
   const berlin = 'Europe/Berlin';
   const today = (utcClock: string) =>
-    onThisDayDate(undefined, journalDateAt(new Date(`${utcClock}Z`), berlin));
+    journalDateAt(new Date(`${utcClock}Z`), berlin);
 
   // 03:59:59 and 04:00:00 in Berlin, an hour ahead of UTC in winter.
   expect(anniversaryMonthDays(today('2027-03-01T02:59:59'))).toEqual([

@@ -118,6 +118,7 @@ const dayGet = (date: string) =>
         entry.scriptureReference === undefined
           ? null
           : formatScriptureReference(entry.scriptureReference),
+      scriptureTopic: entry.scriptureTopic ?? null,
       scriptureMarkdown: entry.scriptureMarkdown,
       scriptureWordCount: entry.scriptureWordCount,
       rating: {

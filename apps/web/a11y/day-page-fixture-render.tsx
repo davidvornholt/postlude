@@ -4,6 +4,7 @@ import {
   type DayPageFixtureConfig,
   eveningFromFixture,
   journalEntryFromFixture,
+  writtenDaysFromFixture,
 } from './day-page-fixture-contract.ts';
 import { DayPage } from './day-page-fixture-module.ts';
 
@@ -14,9 +15,11 @@ export const renderDayPageFixture = (
 ): Promise<string> =>
   renderInRouter(
     <DayPage
+      anniversaries={config.anniversaries ?? []}
       entry={journalEntryFromFixture(config.entry)}
       evening={eveningFromFixture(config)}
       eveningActions={unansweredEveningActions}
+      readWrittenDays={writtenDaysFromFixture(config)}
       save={neverSaves}
       today={config.today}
     />,

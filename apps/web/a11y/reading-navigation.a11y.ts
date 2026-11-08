@@ -6,10 +6,7 @@ const calendarUrl = /\/calendar(?:\?.*)?$/u;
 const currentCalendarDay = /day=2026-08-19/u;
 const currentCalendarMonth = /month=2026-08/u;
 const nextCalendarMonth = /\/calendar\?month=2026-09$/u;
-const onThisDayUrl = /\/on-this-day(?:\?.*)?$/u;
 const selectedCalendarDay = /Wednesday, August 19, 2026, entry available/u;
-const previousOnThisDay = /date=2026-08-25/u;
-const onThisDayToday = /\/on-this-day$/u;
 
 test('Calendar keeps selected days and months in browser history', async ({
   page,
@@ -50,40 +47,34 @@ test('Calendar keeps selected days and months in browser history', async ({
   ).toBeVisible();
 });
 
-test('On this day keeps adjacent dates and browser history in sync', async ({
-  page,
-}) => {
-  await mountArchiveNavigation(page);
-  await page.getByRole('link', { name: 'On this day' }).click();
+/*
+ * "August 2026" and "September 2026" are names of different widths, and the
+ * steps must not move with them: a reader stepping through the months keeps
+ * the pointer where it is. Both widths are checked, because the heading wraps
+ * differently on a phone.
+ */
+for (const width of [1280, 390]) {
+  test(`Calendar month steps stay put across month names at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ height: 800, width });
+    await mountArchiveNavigation(page);
+    await page.getByRole('link', { name: 'Calendar' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'August 2026' }),
+    ).toBeVisible();
 
-  await expect(page).toHaveURL(onThisDayUrl);
-  await expect(
-    page.getByRole('heading', { name: 'Wednesday, August 26, 2026' }),
-  ).toBeVisible();
-  await expect(page.locator('main')).toBeFocused();
+    const previous = page.getByRole('link', { name: 'Previous month' });
+    const next = page.getByRole('link', { name: 'Next month' });
+    const before = [await previous.boundingBox(), await next.boundingBox()];
+    await next.click();
+    await expect(page).toHaveURL(nextCalendarMonth);
+    await expect(
+      page.getByRole('heading', { name: 'September 2026' }),
+    ).toBeVisible();
 
-  await page.getByRole('link', { name: 'Previous date' }).click();
-  await expect(page).toHaveURL(previousOnThisDay);
-  await expect(
-    page.getByRole('heading', { name: 'Tuesday, August 25, 2026' }),
-  ).toBeVisible();
-  await expect(page.getByText('A memory from this date.')).toBeVisible();
-
-  await page.goBack();
-  await expect(page).toHaveURL(onThisDayToday);
-  await expect(
-    page.getByRole('heading', { name: 'Wednesday, August 26, 2026' }),
-  ).toBeVisible();
-
-  await page.goForward();
-  await expect(page).toHaveURL(previousOnThisDay);
-  await expect(
-    page.getByRole('heading', { name: 'Tuesday, August 25, 2026' }),
-  ).toBeVisible();
-
-  await page.getByRole('link', { name: 'Next date' }).click();
-  await expect(page).toHaveURL(onThisDayToday);
-  await expect(
-    page.getByRole('heading', { name: 'Wednesday, August 26, 2026' }),
-  ).toBeVisible();
-});
+    expect([await previous.boundingBox(), await next.boundingBox()]).toEqual(
+      before,
+    );
+  });
+}

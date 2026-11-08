@@ -196,40 +196,115 @@ it('drops a reference the writer removed', async () => {
   );
   expect(entry.scriptureReference).toBeUndefined();
 });
-it('explains an invalid reference without changing the stored entry', async () => {
-  const outcome = await withRepository((entries) =>
+it('keeps a line that names no passage as the morning topic', async () => {
+  const entry = await withRepository((entries) =>
+    entries.save(draft('2026-08-25', 'Thinking it over.', '  Forgiveness  ')),
+  );
+  expect(entry.scriptureReference).toBeUndefined();
+  expect(entry.scriptureTopic).toBe('Forgiveness');
+  expect(entry.scriptureFirstUsedAt).not.toBeNull();
+});
+it('holds a passage or a topic, never both', async () => {
+  const entry = await withRepository((entries) =>
     Effect.gen(function* () {
-      const storedReference = yield* entries.save(
-        draft('2026-08-25', 'With one.', 'Psalms 23'),
+      const topic = yield* entries.save(
+        draft('2026-08-25', 'First a topic.', 'Proverbs 12:'),
       );
-      const failure = yield* Effect.flip(
-        entries.save(
-          draft(
-            '2026-08-25',
-            'Still editing.',
-            'Proverbs 12:',
-            storedReference.revision,
-          ),
-        ),
+      return yield* entries.save(
+        draft('2026-08-25', 'Then a passage.', 'Psalms 23', topic.revision),
       );
-      const stored = yield* entries.read('2026-08-25');
-      return { failure, stored } as const;
     }),
   );
-
-  expect(outcome.failure._tag).toBe('JournalValidationError');
-  expect(outcome.failure.message).toContain('scripture reference');
-  expect(outcome.stored?.journalMarkdown).toBe('With one.');
-  expect(outcome.stored?.scriptureReference).toEqual({
-    book: 'Psalms',
-    chapter: 23,
-  });
+  expect(entry.scriptureReference).toEqual({ book: 'Psalms', chapter: 23 });
+  expect(entry.scriptureTopic).toBeUndefined();
+});
+it('keeps a topic made only of symbols and reads it back', async () => {
+  const [saved, reread] = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Nothing named.', ' 🙏 '),
+      );
+      return [first, yield* entries.read('2026-08-25')] as const;
+    }),
+  );
+  expect(saved.scriptureTopic).toBe('🙏');
+  expect(saved.scriptureFirstUsedAt).not.toBeNull();
+  expect(reread?.scriptureTopic).toBe('🙏');
+  expect(reread?.scriptureReference).toBeUndefined();
+});
+it('stores no topic for a line of only spaces and invisible marks', async () => {
+  const entry = await withRepository((entries) =>
+    entries.save(draft('2026-08-25', 'Nothing named.', ' \u00a0\u200b\t ')),
+  );
+  expect(entry.scriptureTopic).toBeUndefined();
+  expect(entry.scriptureFirstUsedAt).toBeNull();
+});
+it('keeps a stored passage the parser does not know when only the evening changes', async () => {
+  const entry = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Read it first.', 'Psalms 23'),
+      );
+      // An import can store a book this parser has no name for.
+      yield* sql`
+        update entry set scripture_book = 'Jubilees'
+        where entry_date = '2026-08-25'
+      `;
+      return yield* entries.save(
+        draft('2026-08-25', 'Then wrote more.', 'Jubilees 23', first.revision),
+      );
+    }),
+  );
+  expect(entry.journalMarkdown).toBe('Then wrote more.');
+  expect(entry.scriptureReference).toEqual({ book: 'Jubilees', chapter: 23 });
+  expect(entry.scriptureTopic).toBeUndefined();
+});
+it('keeps a stored topic that reads as a passage when only the evening changes', async () => {
+  const entry = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Read it first.', 'Forgiveness'),
+      );
+      // Stored before the parser learned to read this line as a passage.
+      yield* sql`
+        update entry set scripture_topic = 'Psalms 23'
+        where entry_date = '2026-08-25'
+      `;
+      return yield* entries.save(
+        draft('2026-08-25', 'Then wrote more.', 'Psalms 23', first.revision),
+      );
+    }),
+  );
+  expect(entry.scriptureReference).toBeUndefined();
+  expect(entry.scriptureTopic).toBe('Psalms 23');
+});
+it('reads the line again once the writer changes it', async () => {
+  const entry = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const first = yield* entries.save(
+        draft('2026-08-25', 'Read it first.', 'Psalms 23'),
+      );
+      yield* sql`
+        update entry set scripture_book = 'Jubilees'
+        where entry_date = '2026-08-25'
+      `;
+      return yield* entries.save(
+        draft('2026-08-25', 'Then wrote more.', 'Jubilees 24', first.revision),
+      );
+    }),
+  );
+  expect(entry.scriptureReference).toBeUndefined();
+  expect(entry.scriptureTopic).toBe('Jubilees 24');
 });
 it('lists a range inclusively and in calendar order', async () => {
   const summaries = await withRepository((entries) =>
     Effect.gen(function* () {
       yield* entries.save(draft('2026-03-01', 'One.'));
       yield* entries.save(draft('2026-03-15', 'Two words here.', 'Psalms 23'));
+      yield* entries.save(draft('2026-03-20', '', 'Forgiveness'));
       yield* entries.save(draft('2026-03-31', 'Three.'));
       yield* entries.save(draft('2026-04-01', 'Outside the range.'));
       return yield* entries.readArchive(archiveRequest('2026-03-31'));
@@ -238,11 +313,15 @@ it('lists a range inclusively and in calendar order', async () => {
   expect(summaries.summaries.map((summary) => summary.date)).toEqual([
     '2026-03-01',
     '2026-03-15',
+    '2026-03-20',
     '2026-03-31',
   ]);
-  expect(
-    summaries.summaries.map((summary) => summary.hasScriptureReference),
-  ).toEqual([false, true, false]);
+  expect(summaries.summaries.map((summary) => summary.hasScripture)).toEqual([
+    false,
+    true,
+    true,
+    false,
+  ]);
 });
 
 it('reads a calendar month with its earliest available day', async () => {

@@ -6,7 +6,7 @@ import { isTimeZone } from '#/shared/time-zone.ts';
 import { journalDayBoundary } from './journal-day.ts';
 import { JournalDateSchema } from './schemas/entry.ts';
 
-export const exportFormatVersion = 1;
+export const exportFormatVersion = 2;
 export const exportManifestMediaType =
   'application/vnd.postlude.journal-export+json';
 export const exportEntriesMediaType = 'application/x-ndjson';
@@ -83,6 +83,7 @@ export const ExportEntrySchema = Schema.Struct({
   journalMarkdown: Schema.String,
   scriptureMarkdown: Schema.String,
   scriptureReference: Schema.NullOr(ExportScriptureReferenceSchema),
+  scriptureTopic: Schema.NullOr(Schema.String.check(Schema.isMinLength(1))),
   journalFirstUsedAt: Schema.NullOr(UtcTimestampSchema),
   scriptureFirstUsedAt: Schema.NullOr(UtcTimestampSchema),
   createdAt: UtcTimestampSchema,

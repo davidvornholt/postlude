@@ -73,19 +73,33 @@ const englishNote = /<p[^>]*lang="en"[^>]*>A quiet day/u;
 const isDisabled = (attributes: string): boolean =>
   disabledAttribute.test(attributes);
 
+// The hint the close button is described by. A hidden copy of the longest
+// hint only holds its space, so the page text always contains that one.
+const closeHintOf = (html: string): string => {
+  const id = attributeValue(
+    buttonAttributes(html, 'Close the day'),
+    'aria-describedby',
+  );
+  return id === ''
+    ? ''
+    : plainText(html.split(`id="${id}">`)[1]?.split('<')[0] ?? '');
+};
+
 it('asks for energy first and keeps the closing shut until both ratings are in', async () => {
   const html = await renderEvening(eveningWith());
   const text = plainText(html);
 
-  expect(text).toContain('Looking back');
+  expect(text).toContain('End of the day');
   expect(text.indexOf('Energy')).toBeLessThan(text.indexOf('Day report'));
   expect(text.indexOf('Day report')).toBeLessThan(text.indexOf('Progress'));
-  expect(text).toContain('Would you repeat this day?Optional.YesPartlyNo');
+  expect(text).toContain(
+    'Would you repeat this day?YesPartlyNoOptional. Choose it again to clear it.',
+  );
   expect(html.match(/type="radio"/gu)?.length).toBe(9);
   expect(html).not.toContain('checked=""');
   const close = buttonAttributes(html, 'Close the day');
   expect(isDisabled(close)).toBe(true);
-  expect(text).toContain('Rate energy and progress to close the day.');
+  expect(closeHintOf(html)).toBe('Rate energy and progress to close the day.');
 });
 
 it('says plainly when /wrap has written no report for the day', async () => {
@@ -119,7 +133,7 @@ it('offers the report once energy is rated, still folded and with no numbers in 
   expect(plainText(html)).toContain('By Synthetic Model 1');
   expect(html).not.toContain(reportMarker);
   expect(html).not.toContain('412');
-  expect(plainText(html)).toContain('Rate progress to close the day.');
+  expect(closeHintOf(html)).toBe('Rate progress to close the day.');
 });
 
 it('opens the closing once energy and progress are rated', async () => {
@@ -129,7 +143,7 @@ it('opens the closing once energy and progress are rated', async () => {
 
   expect(isDisabled(buttonAttributes(html, 'Close the day'))).toBe(false);
   expect(html.match(/checked=""/gu)?.length).toBe(2);
-  expect(plainText(html)).not.toContain('to close the day.');
+  expect(closeHintOf(html)).toBe('');
 });
 
 it('shows a closed day with its ratings held and a way to reopen it', async () => {

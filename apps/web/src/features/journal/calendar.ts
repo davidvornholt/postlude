@@ -94,3 +94,23 @@ export const datesInMonth = (
 /** Monday is the first column, matching the calendar the writer uses. */
 export const calendarWeekdayIndex = (date: JournalDate): number =>
   (journalDateWeekday(date) + mondayOffset) % daysPerWeek;
+
+/**
+ * The month as the weeks a calendar draws it: Monday to Sunday, with the days
+ * outside the month left empty so every row has seven cells.
+ */
+export const calendarWeeks = (
+  month: JournalMonth,
+): ReadonlyArray<ReadonlyArray<JournalDate | undefined>> => {
+  const dates = datesInMonth(month);
+  const leading = new Array<undefined>(
+    calendarWeekdayIndex(dates[0] ?? firstDateOfMonth(month)),
+  ).fill(undefined);
+  const cells: Array<JournalDate | undefined> = [...leading, ...dates];
+  while (cells.length % daysPerWeek !== 0) {
+    cells.push(undefined);
+  }
+  return Array.from({ length: cells.length / daysPerWeek }, (_unused, index) =>
+    cells.slice(index * daysPerWeek, (index + 1) * daysPerWeek),
+  );
+};

@@ -58,7 +58,9 @@ test('copy day uses the live draft and confirms the Markdown copy', async ({
   await mountDayPage(page, ['pending']);
   await captureClipboardWrites(page);
 
-  await page.getByRole('textbox', { name: 'Passage' }).fill('Proverbs 12:5');
+  await page
+    .getByRole('textbox', { name: 'Passage or topic' })
+    .fill('Proverbs 12:5');
   await page
     .getByRole('textbox', { name: 'Morning scripture notes' })
     .fill('Morning draft.');

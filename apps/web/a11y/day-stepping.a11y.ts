@@ -24,6 +24,11 @@ test('the arrow keys step a day only where they mean nothing else', async ({
   await expect(page.locator('main')).toBeFocused();
   await page.keyboard.press('ArrowRight');
   await expect(page).toHaveURL(startingDay);
+  // The address changes as the day starts to turn, and the new day's page is
+  // in place a moment later.
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Tuesday, August 25, 2026' }),
+  ).toBeVisible();
 
   // With a modifier the key belongs to the browser or the system.
   await page.keyboard.press('Shift+ArrowRight');
@@ -35,7 +40,7 @@ test('the arrow keys step a day only where they mean nothing else', async ({
   await page.keyboard.type('Ein Tag');
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowRight');
-  const reference = page.getByRole('textbox', { name: 'Passage' });
+  const reference = page.getByRole('textbox', { name: 'Passage or topic' });
   await reference.focus();
   await page.keyboard.press('ArrowLeft');
   await expect(page).toHaveURL(startingDay);

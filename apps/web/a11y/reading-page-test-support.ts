@@ -14,7 +14,6 @@ import type {
 } from './reading-page-fixture-contract.ts';
 
 const today = '2026-08-26';
-const longMemoryWordRepeats = 160;
 
 export const readingPageFixtureConfigs = {
   calendar: {
@@ -24,7 +23,7 @@ export const readingPageFixtureConfigs = {
       days: [
         {
           date: '2026-08-19',
-          hasScriptureReference: false,
+          hasScripture: false,
           revision: 2,
           snippet: 'A quiet kind of progress.',
           words: 120,
@@ -32,36 +31,6 @@ export const readingPageFixtureConfigs = {
       ],
       earliest: '2025-03-02',
       month: '2026-08',
-      today,
-    },
-  },
-  onThisDay: {
-    kind: 'on-this-day',
-    view: {
-      anniversaries: [
-        {
-          date: '2025-08-26',
-          journalMarkdown:
-            'Moved the desk under the window.\n\nThe room felt easier to work in.',
-          scriptureMarkdown: 'Patience makes room to notice what is growing.',
-          scriptureReference: {
-            book: 'James',
-            chapter: 5,
-            verseStart: 7,
-            verseEnd: 8,
-          },
-          yearsAgo: 1,
-          words: 210,
-        },
-        {
-          date: '2024-08-26',
-          journalMarkdown: `A-long-unbroken-memory-${'word'.repeat(longMemoryWordRepeats)}`,
-          scriptureMarkdown: '',
-          yearsAgo: 2,
-          words: 89,
-        },
-      ],
-      date: today,
       today,
     },
   },

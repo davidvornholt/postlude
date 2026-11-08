@@ -214,3 +214,27 @@
     font-style: italic;
   }
 }
+
+/* A step to another day or month fades the page across in place
+   (`page-turn.ts`). Nothing on the page is named, so the whole page is one
+   picture: whatever both days share, the frame, the header and the controls,
+   is the same on both sides of the fade and stands still, and only what
+   changed fades. The fade is short, because a reader stepping through the days
+   is reading, not watching. */
+@layer overrides {
+  @media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 160ms;
+      animation-timing-function: var(--ease-standard);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none;
+    }
+  }
+}

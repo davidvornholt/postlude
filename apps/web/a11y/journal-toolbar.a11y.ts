@@ -1,3 +1,4 @@
+import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
 import { mountDayPage, scan } from './day-page-test-support.ts';
@@ -18,6 +19,10 @@ const nonSquareControls = (elements: Array<Element>) =>
     })
     .map((element) => element.outerHTML);
 
+/** The writing tools of one part of the day, found by the part's name. */
+const sectionTools = (page: playwright.Page, section: string) =>
+  page.getByRole('region', { name: section, exact: true }).getByRole('toolbar');
+
 /**
  * Scrolls to where the evening's writing ends, with the evening section below
  * it still on the page.
@@ -29,6 +34,39 @@ const scrollToWritingEnd = (element: Element) =>
       window.scrollY -
       window.innerHeight,
   );
+
+/** Where the evening's writing sits on the page, and how far it is scrolled. */
+const writingGeometry = (evening: playwright.Locator) => () =>
+  evening.evaluate((element) => ({
+    top: element.getBoundingClientRect().top + window.scrollY,
+    height: document.documentElement.scrollHeight,
+    scrollY: window.scrollY,
+  }));
+
+/**
+ * Opens the image dialog from the morning's own tools and closes it again,
+ * with the page held where it was the whole time.
+ */
+const addImageToMorningInPlace = async (
+  page: playwright.Page,
+  geometry: ReturnType<typeof writingGeometry>,
+): Promise<void> => {
+  await page.getByRole('textbox', { name: 'Morning scripture notes' }).focus();
+  const morningGeometry = await geometry();
+  await sectionTools(page, 'Morning scripture')
+    .getByRole('button', { name: 'Add image', exact: true })
+    .click();
+  const dialog = page.getByRole('dialog', { name: 'Add image', exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('form')).toHaveAttribute(
+    'aria-label',
+    'Add image to Morning scripture notes',
+  );
+  await expect.poll(geometry).toEqual(morningGeometry);
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect.poll(geometry).toEqual(morningGeometry);
+};
 
 test('writing tools fit a narrow screen, preserve selection, and support keyboard navigation', async ({
   page,
@@ -46,31 +84,23 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await page.goto('/toolbar-fixture');
   await mountDayPage(page, ['stored']);
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
-  const toolbar = page.getByRole('toolbar');
-  await expect(page.getByRole('button', { name: addImageName })).toHaveCount(1);
+  const morningTools = sectionTools(page, 'Morning scripture');
+  const toolbar = sectionTools(page, 'Evening');
+  // Each part of the day carries its own tools, over its own writing.
+  await expect(page.getByRole('button', { name: addImageName })).toHaveCount(2);
+  // The tools belong to their section's one editor from the start, so they
+  // are never disabled while there is something to write in.
+  await expect(morningTools).toHaveAccessibleName(
+    'Formatting Morning scripture notes',
+  );
+  await expect(toolbar).toHaveAccessibleName('Formatting Evening journal');
   await expect(
     toolbar.getByRole('button', { name: 'Bold', exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await scan(page);
-  const geometry = () =>
-    evening.evaluate((element) => ({
-      top: element.getBoundingClientRect().top + window.scrollY,
-      height: document.documentElement.scrollHeight,
-      scrollY: window.scrollY,
-    }));
-  await page.getByRole('textbox', { name: 'Morning scripture notes' }).focus();
-  const morningGeometry = await geometry();
-  await toolbar.getByRole('button', { name: 'Add image', exact: true }).click();
+  const geometry = writingGeometry(evening);
+  await addImageToMorningInPlace(page, geometry);
   const dialog = page.getByRole('dialog', { name: 'Add image', exact: true });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('form')).toHaveAttribute(
-    'aria-label',
-    'Add image to Morning scripture notes',
-  );
-  await expect.poll(geometry).toEqual(morningGeometry);
-  await page.keyboard.press('Escape');
-  await expect(dialog).not.toBeVisible();
-  await expect.poll(geometry).toEqual(morningGeometry);
   const originalTop = (await geometry()).top;
   await evening.fill('Keep these words.');
   await expect.poll(async () => (await geometry()).top).toBe(originalTop);
@@ -99,10 +129,11 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
   await expect(bold).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(evening).toBeFocused();
-  await expect(page.locator('[data-formatting-toolbar]')).toHaveCSS(
-    'position',
-    'sticky',
-  );
+  await expect(
+    page
+      .getByRole('region', { name: 'Evening', exact: true })
+      .locator('[data-formatting-toolbar]'),
+  ).toHaveCSS('position', 'sticky');
   const toolbarBox = await toolbar.boundingBox();
   expect(toolbarBox?.x).toBeGreaterThanOrEqual(0);
   expect((toolbarBox?.x ?? 0) + (toolbarBox?.width ?? 0)).toBeLessThanOrEqual(
@@ -141,7 +172,7 @@ test('the writing tools scroll away once the writing ends', async ({
 }) => {
   await page.setViewportSize({ width: narrowWidth, height: 800 });
   await mountDayPage(page, ['stored']);
-  const toolbar = page.getByRole('toolbar');
+  const toolbar = sectionTools(page, 'Evening');
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
 
   await evening.scrollIntoViewIfNeeded();
@@ -166,9 +197,10 @@ test('tooltips dismiss with Escape and return on a new keyboard or pointer visit
   await mountDayPage(page, ['stored']);
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
   await evening.fill('Keep writing.');
-  const bold = page
-    .getByRole('toolbar')
-    .getByRole('button', { name: 'Bold', exact: true });
+  const bold = sectionTools(page, 'Evening').getByRole('button', {
+    name: 'Bold',
+    exact: true,
+  });
   const hint = page.getByRole('tooltip').filter({ hasText: 'Bold' });
   await page.keyboard.press('Alt+F10');
   await expect(hint).toBeVisible();

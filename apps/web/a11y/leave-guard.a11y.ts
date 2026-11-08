@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { signInToRealJournal } from './authenticated-fixture.ts';
 
-const validationMessage =
-  'Check the scripture reference and use a form such as Proverbs 12:5-13.';
+const connectionMessage =
+  'This entry could not be saved. Your words are still here; check your connection.';
+const refusedWords = 'Words the server never receives.';
 
 // Tests running at the same time share one database, so each worker slot
 // opens its own day.
@@ -21,16 +22,20 @@ test('closing the tab still asks first after leaving a day whose writing was not
     });
   try {
     await page.goto(`/day/${dayFor(testInfo.parallelIndex)}`);
+    // The save carrying these words is dropped on its way, as a lost
+    // connection would drop it, while every other request goes through.
+    await page.route('**/_serverFn/**', (route) =>
+      route.request().postData()?.includes(refusedWords)
+        ? route.abort('internetdisconnected')
+        : route.fallback(),
+    );
     const evening = page.getByRole('textbox', { name: 'Evening journal' });
     await evening.focus();
-    await page.keyboard.type('Words the server refuses with the passage.');
-    const passage = page.getByRole('textbox', { name: 'Passage' });
-    await passage.focus();
-    await page.keyboard.type('Proverbs 12:');
+    await page.keyboard.type(refusedWords);
     await page.keyboard.press('Tab');
     await expect(
       page.locator('[data-save-status] [aria-live="polite"]'),
-    ).toHaveText(validationMessage);
+    ).toHaveText(connectionMessage);
     expect(await closingIsQuestioned()).toBe(true);
 
     await page

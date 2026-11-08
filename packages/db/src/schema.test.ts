@@ -158,6 +158,15 @@ const expectedChecks: ReadonlyArray<readonly [string, string]> = [
     'entry_scripture_book_not_blank',
     `"entry"."scripture_book" is null or "entry"."scripture_book" ~ '[[:alpha:]]'`,
   ],
+  // A morning studies a passage or a topic, never both at once.
+  [
+    'entry_scripture_topic_without_reference',
+    '"entry"."scripture_topic" is null or "entry"."scripture_book" is null',
+  ],
+  [
+    'entry_scripture_topic_not_blank',
+    `"entry"."scripture_topic" is null or "entry"."scripture_topic" ~ '[^[:space:]]'`,
+  ],
 ];
 
 it('the database rejects incoherent word counts and scripture references', () => {

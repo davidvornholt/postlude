@@ -58,3 +58,7 @@ export const sampleDayMetrics = (date: string): DayMetrics => ({
     { source: 'calendar', status: 'unreachable' },
   ],
 });
+
+/** A calendar under the date that knows of no written days. */
+export const noWrittenDays = (): Promise<ReadonlyArray<string>> =>
+  Promise.resolve([]);

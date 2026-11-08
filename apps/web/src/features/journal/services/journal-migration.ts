@@ -80,6 +80,8 @@ const backfillSearchDocumentBatch = async (
         journalMarkdown: row.journalMarkdown ?? '',
         scriptureMarkdown: row.scriptureMarkdown ?? '',
         scriptureReference,
+        // This backfill belongs to a migration that ran before topics existed.
+        scriptureTopic: undefined,
       });
       await client.query(
         `update entry

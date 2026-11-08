@@ -1,52 +1,42 @@
 /**
  * One journal day, as a page.
  *
- * The day runs in the order it was lived: the morning scripture first, in the
- * deep register, then the evening's writing on the parchment. There is no save
- * button and no edit mode — the page opens on the words and the words are
- * already editable, because a journal that asks to be unlocked before it can be
- * written in is one more thing to do before writing.
+ * The page puts the writing first. Under the date come the morning scripture,
+ * in the deep register, and then the evening's writing on the parchment, and
+ * only after them the end of the day — the ratings, the report and the close —
+ * and the same date in earlier years. Everything that looks back waits below
+ * the words, so the page never asks which to do first.
+ *
+ * There is no save button and no edit mode: the page opens on the words and
+ * the words are already editable, because a journal that asks to be unlocked
+ * before it can be written in is one more thing to do before writing.
  *
  * A day is written on the page it is read on, so this same component serves
  * today, a planned future day, and any day in the archive. Only the route
- * differs.
- *
- * The date at the top is the way to another day as well as the name of this
- * one: `date-heading.tsx` makes it the field, and the two arrows above it step
- * to the day before and the day after, as the arrow keys do. The page ends on
- * the same two steps (`day-steps.tsx`).
+ * differs. The date at the top is the way to another day (`day-header.tsx`).
  */
 
-import { useId, useRef } from 'react';
+import { useRef } from 'react';
 import {
-  eyebrowClass,
   focusRingClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
-import { PageFrame } from '#/shared/ui/page-frame.tsx';
-import { journalDayRelation } from '../day-label.ts';
-import {
-  earliestJournalDate,
-  type JournalDate,
-  latestJournalDate,
-} from '../journal-day.ts';
+import type { Anniversary } from '../anniversary.ts';
+import type { JournalDate } from '../journal-day.ts';
 import type { EntryDraft, JournalEntry } from '../schemas/entry.ts';
-import { formatScriptureReference } from '../scripture-reference.ts';
+import { scriptureLineOf } from '../scripture-reference.ts';
 import type { EveningActions, EveningView } from '../services/evening-fns.ts';
-import { CopyDayControl } from './copy-day-control.tsx';
-import { DateHeading } from './date-heading.tsx';
-import { DayTurns, NearbyDays } from './day-steps.tsx';
+import { DayHeader } from './day-header.tsx';
+import type { ReadWrittenDays } from './day-picker.tsx';
 import { EntryCounts } from './entry-counts.tsx';
 import { EveningFlow } from './evening-flow.tsx';
-import {
-  FormattingToolbar,
-  FormattingToolbarProvider,
-} from './formatting-toolbar.tsx';
 import { type EditorFocus, MarkdownEditor } from './markdown-editor.tsx';
+import { OnThisDay } from './on-this-day.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
 import { type SaveDraft, useAutosave } from './use-autosave.ts';
 import { useDaySteps } from './use-day-steps.ts';
+import { WritingSection } from './writing-section.tsx';
 
 type DayPageProps = {
   readonly entry: JournalEntry;
@@ -64,22 +54,24 @@ type DayPageProps = {
   readonly evening: EveningView | undefined;
   /** Where the ratings and the closing go, passed in for the same reason. */
   readonly eveningActions: EveningActions;
+  /** The same date in earlier years, read with the day. */
+  readonly anniversaries: ReadonlyArray<Anniversary>;
+  /** Which days of a month have writing, for the calendar under the date. */
+  readonly readWrittenDays: ReadWrittenDays;
 };
 
 /**
- * The entry as the editors and the autosave rule take it: markdown and a typed
- * reference line, with counts and database metadata left behind. The stored
- * reference is re-rendered in the one house style rather than kept as whatever
- * was typed, so a day reopened weeks later reads the way the archive does.
+ * The entry as the editors and the autosave rule take it: markdown and the
+ * line of what was studied, with counts and database metadata left behind. A
+ * stored passage is re-rendered in the one house style rather than kept as
+ * whatever was typed, so a day reopened weeks later reads the way the archive
+ * does. A topic is kept as it was written.
  */
 const draftOf = (entry: JournalEntry): EntryDraft => ({
   date: entry.date,
   journalMarkdown: entry.journalMarkdown,
   scriptureMarkdown: entry.scriptureMarkdown,
-  scriptureReference:
-    entry.scriptureReference === undefined
-      ? ''
-      : formatScriptureReference(entry.scriptureReference),
+  scriptureReference: scriptureLineOf(entry),
   baseRevision: entry.revision,
 });
 
@@ -89,116 +81,74 @@ const DayBody = ({
   save,
   evening,
   eveningActions,
+  anniversaries,
+  readWrittenDays,
 }: DayPageProps) => {
   const autosave = useAutosave(
     { draft: draftOf(entry), revision: entry.revision },
     save,
   );
   const eveningEditorRef = useRef<EditorFocus>(null);
-  const referenceError =
-    autosave.failure?.kind === 'validation'
-      ? autosave.failure.message
-      : undefined;
-  const eveningId = useId();
-  const headingId = useId();
   const { next, openDay, previous } = useDaySteps(entry.date, today);
 
   return (
-    <>
-      <PageFrame as="header">
-        {/* The steps share the line above the date with the day's place in
-            time, which they move through, and lend it no height: the targets
-            reach into the space around the line rather than push the writing
-            further down. */}
-        <div className="flex items-center justify-between gap-4">
-          <p className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
-            {journalDayRelation(entry.date, today)}
-          </p>
-          <div className="-my-3 -mr-3 flex items-center gap-2">
-            <NearbyDays
-              headingId={headingId}
-              next={next}
-              previous={previous}
-              today={today}
-            />
-            <CopyDayControl day={autosave.draft} />
-          </div>
-        </div>
-        <DateHeading
-          action="/day"
-          date={entry.date}
-          headingId={headingId}
-          max={latestJournalDate}
-          min={earliestJournalDate}
-          noun="day"
-          onChoose={openDay}
-        />
-      </PageFrame>
+    <article>
+      <DayHeader
+        copyDay={autosave.draft}
+        date={entry.date}
+        next={next}
+        onChoose={openDay}
+        previous={previous}
+        readWrittenDays={readWrittenDays}
+        today={today}
+      />
 
-      {/* The toolbar sticks only while the writing is on screen. It acts on the
-          two editors, so it scrolls away with them rather than hanging over the
-          ratings, report and note below. */}
-      <div>
-        <FormattingToolbar />
+      <ScriptureRegister
+        initialMarkdown={autosave.draft.scriptureMarkdown}
+        onLeave={autosave.flush}
+        onMarkdownChange={(scriptureMarkdown) =>
+          autosave.edit({ scriptureMarkdown })
+        }
+        onReferenceChange={(scriptureReference) =>
+          autosave.edit({ scriptureReference })
+        }
+        reference={autosave.draft.scriptureReference}
+      />
 
-        <div className="mt-6 sm:mt-8">
-          <ScriptureRegister
-            initialMarkdown={autosave.draft.scriptureMarkdown}
-            onLeave={autosave.flush}
-            onMarkdownChange={(scriptureMarkdown) =>
-              autosave.edit({ scriptureMarkdown })
-            }
-            onReferenceChange={(scriptureReference) =>
-              autosave.edit({ scriptureReference })
-            }
-            reference={autosave.draft.scriptureReference}
-            referenceError={referenceError}
-          />
-        </div>
-
-        <PageFrame aria-labelledby={eveningId} as="section" className="mt-10">
-          <h2
-            className={[eyebrowClass, 'text-ink-muted'].join(' ')}
-            id={eveningId}
-          >
-            Evening
-          </h2>
-          {/* The frame is the archive's now, which is wider than anyone wants to
+      <WritingSection title="Evening" tone="page">
+        {/* The frame is the archive's, which is wider than anyone wants to
             write a paragraph across, so the writing keeps its own measure
             inside it and starts on the same line as everything above it. */}
-          <div className={[readingMeasureClass, 'mt-4'].join(' ')}>
-            <MarkdownEditor
-              focusClass={focusRingClass}
-              focusHandle={eveningEditorRef}
-              initialMarkdown={autosave.draft.journalMarkdown}
-              label="Evening journal"
-              onChange={(journalMarkdown) => autosave.edit({ journalMarkdown })}
-              onLeave={autosave.flush}
-              placeholder="How did the day go?"
-              proseClass="journal-prose"
-              size="entry"
-            />
-          </div>
-          {/* The count and the save state sit below the writing rather than beside
-            it, so nothing hovers next to the words while they are being typed.
-            The rule above them is the writing area's own, which follows the
-            words down as the entry grows; a second one here would be the same
-            line drawn twice. */}
-          <div
-            className={[
-              readingMeasureClass,
-              'mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3',
-            ].join(' ')}
-          >
-            <EntryCounts markdown={autosave.draft.journalMarkdown} />
-            <SaveStatusLine
-              failure={autosave.failure}
-              onRetry={autosave.flush}
-              status={autosave.status}
-            />
-          </div>
-        </PageFrame>
-      </div>
+        <div className={readingMeasureClass}>
+          <MarkdownEditor
+            focusClass={focusRingClass}
+            focusHandle={eveningEditorRef}
+            initialMarkdown={autosave.draft.journalMarkdown}
+            label="Evening journal"
+            onChange={(journalMarkdown) => autosave.edit({ journalMarkdown })}
+            onLeave={autosave.flush}
+            placeholder="How did the day go?"
+            proseClass="journal-prose"
+            size="entry"
+          />
+        </div>
+        {/* The count and the save state sit below the writing rather than
+            beside it, so nothing hovers next to the words while they are being
+            typed. */}
+        <div
+          className={[
+            readingMeasureClass,
+            'mt-4 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3',
+          ].join(' ')}
+        >
+          <EntryCounts markdown={autosave.draft.journalMarkdown} />
+          <SaveStatusLine
+            failure={autosave.failure}
+            onRetry={autosave.flush}
+            status={autosave.status}
+          />
+        </div>
+      </WritingSection>
 
       <EveningFlow
         actions={eveningActions}
@@ -210,8 +160,8 @@ const DayBody = ({
         today={today}
       />
 
-      <DayTurns next={next} previous={previous} today={today} />
-    </>
+      <OnThisDay anniversaries={anniversaries} today={today} />
+    </article>
   );
 };
 
@@ -223,7 +173,5 @@ const DayBody = ({
  * call sites, so no route can forget it.
  */
 export const DayPage = (props: DayPageProps) => (
-  <FormattingToolbarProvider key={props.entry.date}>
-    <DayBody {...props} />
-  </FormattingToolbarProvider>
+  <DayBody key={props.entry.date} {...props} />
 );

@@ -49,6 +49,7 @@ const EntryRow = Schema.Struct({
   scriptureWordCount: WordCountSchema,
   scriptureFirstUsedAt: Schema.NullOr(Schema.Date),
   ...scriptureReferenceRowFields,
+  scriptureTopic: Schema.NullOr(Schema.String),
   revision: RevisionSchema,
   createdAt: Schema.Date,
   updatedAt: Schema.Date,
@@ -63,6 +64,7 @@ const EntryRow = Schema.Struct({
       scriptureWordCount: 'scripture_word_count',
       scriptureFirstUsedAt: 'scripture_first_used_at',
       ...scriptureReferenceRowKeys,
+      scriptureTopic: 'scripture_topic',
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     }),
@@ -85,6 +87,8 @@ export type JournalEntry = {
   readonly scriptureWordCount: number;
   readonly scriptureFirstUsedAt: Date | null;
   readonly scriptureReference?: ScriptureReference;
+  /** What the morning studied when it was a topic rather than a passage. */
+  readonly scriptureTopic?: string;
   /** Monotonic for this day, incremented by the same upsert that stores it. */
   readonly revision: number;
   /**
@@ -105,6 +109,7 @@ const JournalEntrySchema: Schema.Codec<JournalEntry> = Schema.Struct({
   scriptureWordCount: Schema.Number,
   scriptureFirstUsedAt: Schema.NullOr(Schema.Date),
   scriptureReference: Schema.optionalKey(ScriptureReferenceSchema),
+  scriptureTopic: Schema.optionalKey(Schema.String),
   revision: Schema.Number,
   createdAt: Schema.Date,
   updatedAt: Schema.Date,
@@ -128,6 +133,9 @@ const entryOf = (row: Schema.Schema.Type<typeof EntryRow>): JournalEntry => {
     scriptureWordCount: row.scriptureWordCount,
     scriptureFirstUsedAt: row.scriptureFirstUsedAt,
     ...(reference === undefined ? {} : { scriptureReference: reference }),
+    ...(row.scriptureTopic === null
+      ? {}
+      : { scriptureTopic: row.scriptureTopic }),
     revision: row.revision,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

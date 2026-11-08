@@ -9,14 +9,24 @@ const paths = {
   image:
     'M20 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h8M4 16l5-5 7 9M19 3v6M16 6h6M9 7h.01',
   close: 'm6 6 12 12M6 18 18 6',
+  previous: 'm15 18-6-6 6-6',
+  next: 'm9 18 6-6-6-6',
+  expand: 'm6 9 6 6 6-6',
 } as const;
 
 export type JournalIconName = keyof typeof paths;
 
-export const JournalIcon = ({ name }: { readonly name: JournalIconName }) => (
+export const JournalIcon = ({
+  name,
+  className = 'size-5',
+}: {
+  readonly name: JournalIconName;
+  /** The icon's size and placement; it takes its colour from the text. */
+  readonly className?: string;
+}) => (
   <svg
     aria-hidden="true"
-    className="size-5"
+    className={className}
     fill="none"
     focusable="false"
     stroke="currentColor"

@@ -1,7 +1,13 @@
 import { type ComponentProps, useId, useState } from 'react';
 
-import { focusRingClass } from '#/shared/ui/design-classes.ts';
+import {
+  deepFocusRingClass,
+  focusRingClass,
+} from '#/shared/ui/design-classes.ts';
 import { JournalIcon, type JournalIconName } from './journal-icons.tsx';
+
+/** The ground a control is set on: the page, or the deep register's band. */
+export type WritingTone = 'deep' | 'page';
 
 type JournalIconButtonProps = ComponentProps<'button'> & {
   readonly icon: JournalIconName;
@@ -10,6 +16,7 @@ type JournalIconButtonProps = ComponentProps<'button'> & {
   readonly inToolbar?: boolean;
   readonly divider?: boolean;
   readonly hintAlign?: 'start' | 'end';
+  readonly tone?: WritingTone;
 };
 
 export const JournalIconButton = ({
@@ -19,7 +26,8 @@ export const JournalIconButton = ({
   inToolbar = false,
   divider = false,
   hintAlign = 'start',
-  className = focusRingClass,
+  tone = 'page',
+  className = tone === 'deep' ? deepFocusRingClass : focusRingClass,
   onKeyDown,
   onFocus,
   ...props
@@ -31,7 +39,9 @@ export const JournalIconButton = ({
       className={[
         'group/icon relative inline-flex min-w-0',
         inToolbar ? 'max-w-11 flex-1' : 'w-11 shrink-0',
-        divider ? 'ml-1.5 box-content border-border border-l pl-1.5' : '',
+        divider
+          ? `ml-1.5 box-content border-l pl-1.5 ${tone === 'deep' ? 'border-deep-rule' : 'border-border'}`
+          : '',
       ].join(' ')}
       onPointerEnter={() => setDismissed(false)}
     >
@@ -41,8 +51,10 @@ export const JournalIconButton = ({
         aria-label={label}
         className={[
           'relative inline-flex h-11 w-full min-w-8 cursor-pointer items-center justify-center transition-colors duration-150 ease-standard motion-reduce:transition-none',
-          'enabled:hover:bg-current/10 disabled:cursor-default disabled:opacity-40 aria-pressed:bg-primary-subtle aria-pressed:text-primary',
-          'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-primary after:opacity-0 aria-pressed:after:opacity-100',
+          // Pressed is a state, not a verdict, so it is drawn in the text's own
+          // colour on either ground rather than in the green that says "good".
+          'enabled:hover:bg-current/10 disabled:cursor-default disabled:opacity-40 aria-pressed:bg-current/15',
+          'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-current after:opacity-0 after:transition-opacity aria-pressed:after:opacity-100 motion-reduce:after:transition-none',
           className,
         ].join(' ')}
         onFocus={(event) => {

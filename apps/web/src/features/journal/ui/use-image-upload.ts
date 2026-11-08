@@ -25,6 +25,9 @@ export const useImageUpload = (editor: Editor, label: string) => {
   }, [open]);
   useEffect(() => {
     const focused = () => activate?.({ editor, label, addImage });
+    // Each section's tools serve its one editor, so the editor takes them
+    // over as soon as it is on the page rather than on its first focus.
+    focused();
     editor.on('focus', focused);
     const shortcut = (event: KeyboardEvent) => {
       if (event.altKey && event.key === 'F10') {

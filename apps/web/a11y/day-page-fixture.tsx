@@ -10,6 +10,7 @@ import type {
 import {
   eveningFromFixture,
   journalEntryFromFixture,
+  writtenDaysFromFixture,
 } from './day-page-fixture-contract.ts';
 import { DayPage } from './day-page-fixture-module.ts';
 import { eveningFixtureActions } from './evening-fixture-actions.ts';
@@ -46,9 +47,7 @@ const save = (): Promise<unknown> => {
     );
   }
   const message =
-    outcome === 'validation'
-      ? 'Check the scripture reference and use a form such as Proverbs 12:5-13.'
-      : 'This entry could not be saved. Your words are still here; check your connection.';
+    'This entry could not be saved. Your words are still here; check your connection.';
   return Promise.reject(new Error(message));
 };
 
@@ -71,10 +70,12 @@ export const VisitedDayPage = () => {
   }, []);
   return (
     <DayPage
+      anniversaries={config.anniversaries ?? []}
       entry={entry}
       evening={visit.evening}
       eveningActions={eveningActions}
       key={visit.count}
+      readWrittenDays={writtenDaysFromFixture(config)}
       save={save}
       today={config.today}
     />

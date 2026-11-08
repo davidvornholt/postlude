@@ -8,7 +8,7 @@ const summary = Object.fromEntries([
   ['journal_first_used_at', null],
   ['scripture_word_count', 1],
   ['scripture_first_used_at', null],
-  ['has_scripture_reference', false],
+  ['has_scripture', false],
 ]);
 const fractionalCount = 1.5;
 const decode = Schema.decodeUnknownResult(EntrySummaryFromRow);

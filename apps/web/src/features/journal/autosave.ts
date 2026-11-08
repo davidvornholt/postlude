@@ -1,18 +1,11 @@
 import type { EntryDraft } from './schemas/entry.ts';
-import { parseScriptureReference } from './scripture-reference.ts';
 
 export type SaveStatus = 'saving' | 'failed' | 'unsaved' | 'saved';
 
-export type AutosaveFailure =
-  | {
-      readonly kind: 'validation';
-      readonly field: 'scriptureReference';
-      readonly message: string;
-    }
-  | {
-      readonly kind: 'authentication' | 'conflict' | 'network';
-      readonly message: string;
-    };
+export type AutosaveFailure = {
+  readonly kind: 'authentication' | 'conflict' | 'network';
+  readonly message: string;
+};
 
 export type AutosaveState = {
   /** The newest text, whether or not anyone has been told about it yet. */
@@ -132,20 +125,10 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
     ];
   }
   if (!sameDraft(state.draft, state.inFlight)) {
-    const correctedReference =
-      failure.kind === 'validation' &&
-      (state.draft.scriptureReference.trim() === '' ||
-        parseScriptureReference(state.draft.scriptureReference) !== undefined);
-    if (failure.kind !== 'validation' || correctedReference) {
-      return [
-        {
-          ...state,
-          inFlight: state.draft,
-          failure: correctedReference ? undefined : failure,
-        },
-        [{ _tag: 'save', draft: state.draft }],
-      ];
-    }
+    return [
+      { ...state, inFlight: state.draft, failure },
+      [{ _tag: 'save', draft: state.draft }],
+    ];
   }
   return [{ ...state, inFlight: undefined, failure }, []];
 };
@@ -162,18 +145,7 @@ const settling: Record<
 };
 
 const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
-  const referenceChanged =
-    state.failure?.kind === 'validation' &&
-    draft.scriptureReference !== state.draft.scriptureReference;
-  const correctedValidation =
-    referenceChanged &&
-    (draft.scriptureReference.trim() === '' ||
-      parseScriptureReference(draft.scriptureReference) !== undefined);
-  const edited: AutosaveState = {
-    ...state,
-    draft,
-    failure: correctedValidation ? undefined : state.failure,
-  };
+  const edited: AutosaveState = { ...state, draft };
 
   if (state.inFlight === undefined && sameDraft(draft, state.stored.draft)) {
     return state.failure?.kind === 'conflict'

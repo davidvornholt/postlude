@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 
 import { ActionLink } from '#/shared/ui/action-link.tsx';
 import type { JournalDate } from '../journal-day.ts';
+import { pageTurn } from '../page-turn.ts';
 
 type DayLinkProps = {
   readonly date: JournalDate;
@@ -14,6 +15,8 @@ type DayLinkProps = {
   /** Lets focus come back to this link's twin on the page it opens. */
   readonly 'data-focus-key'?: string;
   readonly title?: string;
+  /** Steps from one day page to another, so the page turns rather than jumps. */
+  readonly turnsPage?: boolean;
 } & (
   | { readonly variant: 'icon' | 'quiet'; readonly className?: string }
   | { readonly variant: 'text'; readonly className: string }
@@ -27,12 +30,15 @@ export const DayLink = ({
   className,
   label,
   children,
+  turnsPage = false,
   ...attributes
 }: DayLinkProps) => {
-  const destination =
-    date === today
+  const destination = {
+    ...(date === today
       ? { to: '/' as const }
-      : { to: '/day/$date' as const, params: { date } };
+      : { to: '/day/$date' as const, params: { date } }),
+    viewTransition: turnsPage ? pageTurn : undefined,
+  };
   return variant === 'text' ? (
     <Link
       {...destination}

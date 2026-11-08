@@ -15,7 +15,7 @@ import type {
 
 export const today = '2026-08-26';
 const timestamp = '2026-08-26T20:00:00.000Z';
-const textboxCount = 4;
+const textboxCount = 3;
 
 export const fixtureConfig = (
   saveOutcomes: ReadonlyArray<SaveOutcome>,
@@ -36,6 +36,8 @@ export const fixtureConfig = (
   },
   today,
   saveOutcomes,
+  // A day the calendar under the date marks as written.
+  writtenDays: ['2026-08-20'],
 });
 
 export const mountFixture = async (

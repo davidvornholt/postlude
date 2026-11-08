@@ -1,6 +1,5 @@
 import type { AutosaveFailure } from './autosave.ts';
 import {
-  invalidScriptureReferenceMessage,
   journalWriteConflictMessage,
   journalWriteMessage,
 } from './errors/journal-errors.ts';
@@ -23,16 +22,6 @@ export const autosaveFailureOf = (error: unknown): AutosaveFailure => {
   }
 
   const message = property(error, 'message');
-  if (
-    typeof message === 'string' &&
-    message.includes(invalidScriptureReferenceMessage)
-  ) {
-    return {
-      kind: 'validation',
-      field: 'scriptureReference',
-      message: invalidScriptureReferenceMessage,
-    };
-  }
   if (
     typeof message === 'string' &&
     message.includes(journalWriteConflictMessage)

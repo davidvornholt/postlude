@@ -15,6 +15,25 @@ import {
 
 const colorSchemes = ['light', 'dark'] as const;
 
+test('rating the day never moves what follows the close hint, even where it wraps', async ({
+  page,
+}) => {
+  // At the narrowest phone width the longest hint takes two lines.
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await mountEvening(page, 'report');
+  const close = page.getByRole('button', { name: 'Close the day' });
+  const hintId = await close.getAttribute('aria-describedby');
+  const hintLine = page.locator(`[id="${hintId}"]`).locator('..');
+  const height = (await hintLine.boundingBox())?.height;
+
+  await choose(page, 'Energy', 'Okay');
+  await choose(page, 'Progress', 'Solid');
+
+  await expect(close).toBeEnabled();
+  expect((await hintLine.boundingBox())?.height).toBe(height);
+});
+
 for (const colorScheme of colorSchemes) {
   test(`an evening is rated, closed and given its note in ${colorScheme} mode`, async ({
     page,
@@ -24,24 +43,57 @@ for (const colorScheme of colorSchemes) {
 
     const close = page.getByRole('button', { name: 'Close the day' });
     await expect(close).toBeDisabled();
-    await expect(
-      page.getByText('Rate energy and progress to close the day.'),
-    ).toBeVisible();
+    // Each row's choices sit under its name on a phone, never past the edge.
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    await expect(close).toHaveAccessibleDescription(
+      'Rate energy and progress to close the day.',
+    );
     await scanPage(page);
 
     // The arrow keys move between the choices and save each one.
     await page.getByRole('radio', { name: 'Drained' }).focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('radio', { name: 'Okay' })).toBeChecked();
-    await expect(
-      page.getByText('Rate progress to close the day.'),
-    ).toBeVisible();
+    await expect(close).toHaveAccessibleDescription(
+      'Rate progress to close the day.',
+    );
 
     await choose(page, 'Progress', 'Solid');
     await choose(page, 'Would you repeat this day?', 'Partly');
     await expect(page.getByRole('radio', { name: 'Partly' })).toBeChecked();
-    await page.getByRole('button', { name: 'Clear this answer' }).click();
+    // The optional answer is undone by choosing it again, so nothing appears
+    // beside it and moves the page.
+    const repeat = page.getByRole('group', {
+      name: 'Would you repeat this day?',
+    });
+    const heightBefore = (await repeat.boundingBox())?.height;
+    await choose(page, 'Would you repeat this day?', 'Partly');
     await expect(page.getByRole('radio', { name: 'Partly' })).not.toBeChecked();
+    expect((await repeat.boundingBox())?.height).toBe(heightBefore);
+    // Space does the same from the keyboard: it chooses the answer, and on the
+    // chosen answer it clears it, leaving the focus where it was and no answer
+    // in the group reported as checked.
+    const partly = repeat.getByRole('radio', { name: 'Partly' });
+    await partly.focus();
+    await page.keyboard.press('Space');
+    await expect(partly).toBeChecked();
+    await page.keyboard.press('Space');
+    await expect(partly).not.toBeChecked();
+    await expect(partly).toBeFocused();
+    await expect(repeat.getByRole('radio', { checked: true })).toHaveCount(0);
+    // A Space held long enough to repeat still only clears it.
+    await page.keyboard.press('Space');
+    await expect(partly).toBeChecked();
+    await page.keyboard.down('Space');
+    await page.keyboard.down('Space');
+    await page.keyboard.up('Space');
+    await expect(partly).not.toBeChecked();
     await expect(close).toBeEnabled();
 
     await close.click();
@@ -59,7 +111,15 @@ for (const colorScheme of colorSchemes) {
     ).toBeVisible();
     await expect(page.getByText(readyNoteText)).toHaveAttribute('lang', 'en');
     expect(await eveningCalls(page)).toBe(
-      'rate:energy=okay rate:progress=solid rate:repeatDay=partly rate:repeatDay=null close read',
+      [
+        'rate:energy=okay rate:progress=solid',
+        // A press, then Space, then a held Space choose the answer and clear it.
+        ...Array.from(
+          { length: 3 },
+          () => 'rate:repeatDay=partly rate:repeatDay=null',
+        ),
+        'close read',
+      ].join(' '),
     );
     await scanPage(page);
 

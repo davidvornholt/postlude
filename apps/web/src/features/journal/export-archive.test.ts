@@ -13,6 +13,7 @@ const entry = (parts: Partial<ExportEntry> = {}): ExportEntry => ({
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: null,
+  scriptureTopic: null,
   journalFirstUsedAt: null,
   scriptureFirstUsedAt: null,
   createdAt: timestamp,
@@ -62,6 +63,13 @@ describe('entryDocument', () => {
     );
     expect(document).toContain('## Morning\n\nPassage: Psalms 23');
     expect(document).not.toContain('## Evening');
+  });
+
+  it('keeps a topic-only morning visible', () => {
+    const document = entryDocument(entry({ scriptureTopic: 'Forgiveness' }));
+    expect(yamlOf(document)).toContain('topic: "Forgiveness"');
+    expect(document).toContain('## Morning\n\nTopic: Forgiveness');
+    expect(document).not.toContain('Passage:');
   });
 
   it('isolates hostile Markdown without trimming exact source', () => {

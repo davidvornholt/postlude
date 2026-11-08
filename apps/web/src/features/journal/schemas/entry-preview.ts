@@ -18,6 +18,7 @@ export type EntryPreview = {
   readonly revision: number;
   readonly scriptureMarkdown: string;
   readonly scriptureReference?: ScriptureReference;
+  readonly scriptureTopic?: string;
   readonly scriptureWordCount: number;
 };
 
@@ -29,6 +30,7 @@ const EntryPreviewRow = Schema.Struct({
   scriptureMarkdown: Schema.NullOr(Schema.String),
   scriptureWordCount: WordCountSchema,
   ...scriptureReferenceRowFields,
+  scriptureTopic: Schema.NullOr(Schema.String),
 })
   .pipe(
     Schema.encodeKeys({
@@ -39,6 +41,7 @@ const EntryPreviewRow = Schema.Struct({
       scriptureMarkdown: 'scripture_markdown',
       scriptureWordCount: 'scripture_word_count',
       ...scriptureReferenceRowKeys,
+      scriptureTopic: 'scripture_topic',
     }),
   )
   .check(
@@ -57,6 +60,7 @@ const EntryPreviewSchema: Schema.Codec<EntryPreview> = Schema.Struct({
   revision: Schema.Number,
   scriptureMarkdown: Schema.String,
   scriptureReference: Schema.optionalKey(ScriptureReferenceSchema),
+  scriptureTopic: Schema.optionalKey(Schema.String),
   scriptureWordCount: Schema.Number,
 });
 
@@ -72,6 +76,9 @@ export const EntryPreviewFromRow = EntryPreviewRow.pipe(
         revision: row.revision,
         scriptureMarkdown: row.scriptureMarkdown ?? '',
         ...(scriptureReference === undefined ? {} : { scriptureReference }),
+        ...(row.scriptureTopic === null
+          ? {}
+          : { scriptureTopic: row.scriptureTopic }),
         scriptureWordCount: row.scriptureWordCount,
       };
     }),

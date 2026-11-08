@@ -27,6 +27,7 @@ if (isServiceProbeProcess) {
 
   const stale: JournalDayView = {
     entry: emptyJournalEntry(requestedDate),
+    anniversaries: [],
     today: '2026-08-26',
   };
   const fresh: JournalDayView = {
