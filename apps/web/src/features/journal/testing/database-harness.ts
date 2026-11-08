@@ -146,5 +146,15 @@ export const journalDatabase = () => {
         areas: AgentAreaRepository,
       }),
     ),
+    // A whole journal stored at once, and every page's reads of it.
+    withEveryService: withService(
+      Effect.all({
+        sql: SqlClient.SqlClient,
+        entries: EntryRepository,
+        search: EntrySearch,
+        ratings: DayRatingRepository,
+        areas: AgentAreaRepository,
+      }),
+    ),
   } as const;
 };
