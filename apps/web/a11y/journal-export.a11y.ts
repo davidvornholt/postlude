@@ -105,6 +105,24 @@ test('a non-default grouping stays described and posts without JavaScript', asyn
   await expect(
     page.getByText('One Markdown file for each journal day', { exact: false }),
   ).toBeHidden();
+  // The choice carries the same sliding thumb as the Insights range switcher,
+  // placed from the checked radio itself while the script is absent.
+  await expect
+    .poll(() =>
+      page
+        .locator('label')
+        .filter({ has: radio })
+        .evaluate((segment) => {
+          const thumb = segment.parentElement?.firstElementChild;
+          return thumb === null || thumb === undefined
+            ? Number.NaN
+            : Math.abs(
+                thumb.getBoundingClientRect().left -
+                  segment.getBoundingClientRect().left,
+              );
+        }),
+    )
+    .toBeLessThan(1);
 
   const downloadStarted = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download the journal' }).click();

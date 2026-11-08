@@ -1,7 +1,8 @@
 /**
- * How a rating becomes a step of the green ramp. Three answers share four
- * steps, so the mapping is the thing to pin: the hoped-for answer takes the
- * darkest step, and a day or month without an answer takes none.
+ * How a rating becomes a fill. Progress has three answers on the four steps
+ * of the green ramp, so the mapping is the thing to pin: the hoped-for answer
+ * takes the darkest step. Energy's answers take colors of their own. A day or
+ * month without an answer takes none.
  */
 
 import { expect, it } from 'bun:test';
@@ -72,15 +73,15 @@ it('weighs a month by the days it has had so far', () => {
   expect(level({ words: 0, elapsed: 0 })).toBe('none');
 });
 
-it('lists the legend in the order the evening asks, with the step each takes', () => {
+it('lists the legend in the order the evening asks, with the fill each takes', () => {
   expect(ratingAnswers('energy')).toEqual([
-    { label: 'Drained', level: 'q1' },
-    { label: 'Okay', level: 'q2' },
-    { label: 'Fresh', level: 'q4' },
+    { label: 'Drained', shade: 'drained' },
+    { label: 'Okay', shade: 'okay' },
+    { label: 'Fresh', shade: 'fresh' },
   ]);
-  expect(ratingAnswers('progress').map((answer) => answer.label)).toEqual([
-    'Little',
-    'Solid',
-    'A lot',
+  expect(ratingAnswers('progress')).toEqual([
+    { label: 'Little', shade: 'q1' },
+    { label: 'Solid', shade: 'q2' },
+    { label: 'A lot', shade: 'q4' },
   ]);
 });

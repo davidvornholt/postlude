@@ -2,15 +2,20 @@
  * What the year and all-time pictures can be coloured by: how much was
  * written, or how the days were rated.
  *
- * All three use the one green ramp the activity map already draws with,
- * because each runs from less to more — fewer words, less energy, less
- * progress — and a ramp says "more" without a legend having to. A day without
- * an answer is the outlined square in every one of them, so a gap never reads
- * as the lowest answer.
+ * Writing and progress use the one green ramp the activity map already draws
+ * with, because each runs from less to more — fewer words, less progress —
+ * and a ramp says "more" without a legend having to. A rating spans three
+ * steps and the ramp four: little takes the lightest step and a lot the
+ * darkest, with some on the lighter of the two between, so the end a writer
+ * hopes for stands out most.
  *
- * A rating spans three steps and the ramp four. Drained and little take the
- * lightest step and fresh and a lot the darkest, with the middle answer on the
- * lighter of the two between, so the end a writer hopes for stands out most.
+ * Energy is not more or less of one thing: a drained day, an okay one and a
+ * fresh one are three kinds of day, and three greens a step apart read as one
+ * in a square this small. Each answer has a color of its own instead, which
+ * the theme keeps apart for every common kind of color vision.
+ *
+ * A day without an answer is the outlined square in every picture, so a gap
+ * never reads as the lowest answer.
  */
 
 import { type HeatLevel, heatLevel, quartilesOf } from './activity.ts';
@@ -45,6 +50,12 @@ export const energyScore = (energy: Energy): number =>
 export const progressScore = (progress: Progress): number =>
   scoreIn(progressOptions, progress);
 
+/**
+ * What a square is filled with: a step of the ramp, or an energy answer's own
+ * color.
+ */
+export type Shade = HeatLevel | Energy;
+
 /** The ramp step for each score, the lowest score at the lightest step. */
 const scoreLevels: ReadonlyArray<HeatLevel> = ['none', 'q1', 'q2', 'q4'];
 
@@ -58,8 +69,8 @@ const highAverage = 2.5;
 
 /**
  * The ramp step an average answer takes, for a month of rated days. A month
- * of nothing but okay days takes the step an okay day does, and only a month
- * leaning toward the top of the scale reaches the steps above it.
+ * of nothing but some days takes the step a single such day does, and only a
+ * month leaning toward the top of the scale reaches the steps above it.
  */
 export const averageLevel = (average: number | undefined): HeatLevel => {
   if (average === undefined) {
@@ -100,13 +111,13 @@ export const monthWritingLevel = (
 /** The answers of a rating scale, lowest first, as the legend lists them. */
 export const ratingAnswers = (
   measure: RatingMeasure,
-): ReadonlyArray<{ readonly label: string; readonly level: HeatLevel }> =>
+): ReadonlyArray<{ readonly label: string; readonly shade: Shade }> =>
   measure === 'energy'
     ? energyOptions.map((option) => ({
         label: option.label,
-        level: ratingLevel(energyScore(option.value)),
+        shade: option.value,
       }))
     : progressOptions.map((option) => ({
         label: option.label,
-        level: ratingLevel(progressScore(option.value)),
+        shade: ratingLevel(progressScore(option.value)),
       }));

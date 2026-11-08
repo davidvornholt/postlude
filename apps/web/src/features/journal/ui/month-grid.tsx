@@ -4,8 +4,12 @@
  * season can be compared with itself.
  *
  * A square is shaded by how much the month was written against the other
- * months, or by the month's average energy or progress. Its label says the counts behind
- * the shade, and it opens that month, as each year's name opens that year.
+ * months or by its average progress. By energy it is split instead, into the
+ * share of its rated days that were drained, okay and fresh, low to high: an
+ * average of three kinds of day would put nearly every month in the middle,
+ * and the mix is what changes with the seasons. Its label says the counts
+ * behind the shade, and it opens that month, as each year's name opens that
+ * year.
  *
  * Every month is a link, but the months are one stop in the tab order: the
  * arrow keys move between them, so a journal of many years does not put a
@@ -45,6 +49,7 @@ import {
   journalCountLabel,
   journalMonthLabel as monthName,
 } from '../journal-labels.ts';
+import type { Energy } from '../schemas/day-rating.ts';
 import { heatSquareClass } from './activity-cell-classes.ts';
 import { HeatLegend } from './heat-legend.tsx';
 
@@ -57,21 +62,35 @@ const monthNumbers = Array.from(
 
 const levelsOf = (
   years: ReadonlyArray<YearOfMonths>,
-  measure: InsightsMeasure,
-): ((summary: MonthSummary) => HeatLevel) => {
-  switch (measure) {
-    case 'energy':
-      return (summary) => averageLevel(summary.energy.average);
-    case 'progress':
-      return (summary) => averageLevel(summary.progress.average);
-    default:
-      return monthWritingLevel(
+  measure: Exclude<InsightsMeasure, 'energy'>,
+): ((summary: MonthSummary) => HeatLevel) =>
+  measure === 'progress'
+    ? (summary) => averageLevel(summary.progress.average)
+    : monthWritingLevel(
         years
           .flatMap((year) => year.months)
           .filter((summary) => summary !== undefined),
       );
-  }
-};
+
+/**
+ * A month's energy as a strip for each answer it had, as wide as that
+ * answer's share of the rated days. Each strip keeps two pixels at least, so
+ * one drained day in a month of okay ones still shows. A month with nothing
+ * rated has no strips and stays the outlined square.
+ */
+const EnergyMix = ({ tally }: { readonly tally: AnswerTally<Energy> }) =>
+  energyOptions
+    .filter((option) => tally.counts[option.value] > 0)
+    .map((option) => (
+      <span
+        className={['min-w-0.5 basis-0', heatSquareClass(option.value)].join(
+          ' ',
+        )}
+        key={option.value}
+        // biome-ignore lint/nursery/noInlineStyles: The strip's width is its answer's count, known only at run time.
+        style={{ flexGrow: tally.counts[option.value] }}
+      />
+    ));
 
 const answersSaid = <Answer extends string>(
   name: string,
@@ -167,7 +186,15 @@ export const MonthGrid = ({
   const captionId = useId();
   const years = monthGrid(days, today);
   const { active, choose, moveFrom, register } = useActiveMonth(years);
-  const levelOf = levelsOf(years, measure);
+  const levelOf = measure === 'energy' ? undefined : levelsOf(years, measure);
+  const fillOf = (summary: MonthSummary): string => {
+    if (levelOf !== undefined) {
+      return `block ${heatSquareClass(levelOf(summary))}`;
+    }
+    return summary.energy.rated === 0
+      ? `block ${heatSquareClass('none')}`
+      : 'flex gap-px';
+  };
 
   return (
     <figure className="m-0">
@@ -204,8 +231,8 @@ export const MonthGrid = ({
                     <Link
                       aria-label={monthDetails(summary)}
                       className={[
-                        'block h-7 sm:h-9',
-                        heatSquareClass(levelOf(summary)),
+                        'h-7 sm:h-9',
+                        fillOf(summary),
                         summary.month === active?.month
                           ? 'outline outline-ink outline-offset-1'
                           : '',
@@ -221,7 +248,11 @@ export const MonthGrid = ({
                       )}
                       tabIndex={summary.month === active?.month ? 0 : -1}
                       to="/insights"
-                    />
+                    >
+                      {levelOf === undefined ? (
+                        <EnergyMix tally={summary.energy} />
+                      ) : null}
+                    </Link>
                   )}
                 </td>
               ))}

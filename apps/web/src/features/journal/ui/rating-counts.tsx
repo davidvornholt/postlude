@@ -7,12 +7,16 @@ import {
 import type { InsightsDay } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
+import type { Energy } from '../schemas/day-rating.ts';
+import { EnergySwatch } from './energy-swatch.tsx';
 
 type Row = {
   readonly name: string;
   readonly answers: ReadonlyArray<{
     readonly label: string;
     readonly count: number;
+    /** The answer's own color, for energy, the one scale that has them. */
+    readonly swatch: Energy | undefined;
   }>;
   readonly unrated: number;
 };
@@ -27,9 +31,10 @@ const rowOf = <Value extends string>(
       readonly label: string;
     }>;
     readonly pick: (day: InsightsDay) => Value | null;
+    readonly swatch?: (value: Value) => Energy;
   },
 ): Row => {
-  const { name, options, pick } = rating;
+  const { name, options, pick, swatch } = rating;
   const { counts, unrated } = ratingCounts(
     days,
     today,
@@ -41,6 +46,7 @@ const rowOf = <Value extends string>(
     answers: options.map((option) => ({
       label: option.label,
       count: counts.get(option.value) ?? 0,
+      swatch: swatch?.(option.value),
     })),
     unrated,
   };
@@ -58,6 +64,7 @@ export const RatingCounts = ({
       name: 'Energy',
       options: energyOptions,
       pick: (day) => day.energy,
+      swatch: (energy) => energy,
     }),
     rowOf(days, today, {
       name: 'Progress',
@@ -77,7 +84,10 @@ export const RatingCounts = ({
           <dt className="text-ink-muted">{row.name}</dt>
           <dd className="flex flex-wrap gap-x-4 gap-y-1 text-ink tabular-nums">
             {row.answers.map((answer) => (
-              <span key={answer.label}>
+              <span className="flex items-center gap-2" key={answer.label}>
+                {answer.swatch === undefined ? null : (
+                  <EnergySwatch energy={answer.swatch} />
+                )}
                 {answer.label} {journalNumberLabel(answer.count)}
               </span>
             ))}

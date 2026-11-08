@@ -6,19 +6,13 @@
  * same row here as it does on the calendar page.
  */
 
-import {
-  dayWords,
-  type HeatLevel,
-  heatLevel,
-  quartiles,
-  type WordCounts,
-} from './activity.ts';
+import { dayWords, heatLevel, quartiles, type WordCounts } from './activity.ts';
 import { calendarWeekdayIndex } from './calendar.ts';
 import {
-  energyScore,
   type InsightsMeasure,
   progressScore,
   ratingLevel,
+  type Shade,
 } from './insights-measure.ts';
 import { type JournalDate, shiftJournalDate } from './journal-day.ts';
 import type { Energy, Progress } from './schemas/day-rating.ts';
@@ -37,8 +31,8 @@ export type ActivityCell =
       readonly words: number;
       readonly energy: Energy | null;
       readonly progress: Progress | null;
-      /** The ramp step for the measure the cells were coloured by. */
-      readonly level: HeatLevel;
+      /** What the square is filled with, for the measure on show. */
+      readonly shade: Shade;
     }
   | {
       /** Keeps the calendar grid aligned without calling an un-lived day empty. */
@@ -51,17 +45,15 @@ export type ActivityStretch = {
   readonly to: JournalDate;
 };
 
-const levelOf = (
+const shadeOf = (
   measure: InsightsMeasure,
   day: ActivitySource | undefined,
   words: number,
   thresholds: readonly [number, number, number],
-): HeatLevel => {
+): Shade => {
   switch (measure) {
-    case 'energy': {
-      const energy = day?.energy ?? null;
-      return ratingLevel(energy === null ? null : energyScore(energy));
-    }
+    case 'energy':
+      return day?.energy ?? 'none';
     case 'progress': {
       const progress = day?.progress ?? null;
       return ratingLevel(progress === null ? null : progressScore(progress));
@@ -105,7 +97,7 @@ export const activityCells = (
         words,
         energy: day?.energy ?? null,
         progress: day?.progress ?? null,
-        level: levelOf(measure, day, words, thresholds),
+        shade: shadeOf(measure, day, words, thresholds),
       });
     }
   }

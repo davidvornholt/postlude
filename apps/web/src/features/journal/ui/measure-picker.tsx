@@ -23,13 +23,7 @@ export const MeasurePicker = ({
   return (
     <fieldset>
       <legend className="sr-only">Shade by</legend>
-      <SegmentedTrack
-        className="w-72 max-w-full"
-        count={measureOptions.length}
-        selected={measureOptions.findIndex(
-          (option) => option.value === measure,
-        )}
-      >
+      <SegmentedTrack className="w-72 max-w-full" count={measureOptions.length}>
         {measureOptions.map((option) => (
           <SegmentRadio
             checked={option.value === measure}

@@ -12,6 +12,7 @@
 import { durationLabel, energyLabel } from '../insights-labels.ts';
 import type { EnergyScreenTime } from '../insights-patterns.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
+import { EnergySwatch } from './energy-swatch.tsx';
 
 export const EnergyScreenTimeTable = ({
   rows,
@@ -42,7 +43,10 @@ export const EnergyScreenTimeTable = ({
       {[...rows].reverse().map((row) => (
         <tr className="border-border border-t" key={row.energy}>
           <th className="py-2 pr-4 text-left font-normal text-ink" scope="row">
-            {energyLabel(row.energy)}
+            <span className="flex items-center gap-2">
+              <EnergySwatch energy={row.energy} />
+              {energyLabel(row.energy)}
+            </span>
           </th>
           <td className="py-2 pr-4 text-right text-ink-muted tabular-nums">
             {journalNumberLabel(row.days)}

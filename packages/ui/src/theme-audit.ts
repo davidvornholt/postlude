@@ -1,16 +1,18 @@
 /**
  * The audit machinery `theme-contract.test.ts` runs over the tokens in
- * `theme.css`: contrast, the sequential activity ramp, and which tokens have to
- * exist in both color schemes. Postlude has one palette: the `--pl-*` tokens
- * declared at `:root`, in a light and a dark color scheme. The rules sit apart
- * from the test so each reads as a stated contract rather than as an assertion
- * buried in a case, and so a failure names the rule it broke.
+ * `theme.css`: contrast, the sequential activity ramp, the energy marks that
+ * are told apart by color, and which tokens have to exist in both color
+ * schemes. Postlude has one palette: the `--pl-*` tokens declared at `:root`,
+ * in a light and a dark color scheme. The rules sit apart from the test so
+ * each reads as a stated contract rather than as an assertion buried in a
+ * case, and so a failure names the rule it broke.
  *
  * The reader of a failure gets the whole list at once, so every check returns
  * findings as strings instead of asserting: a caller compares the list to `[]`
  * and one run names every pair that is out.
  */
 
+import { perceivedDistance, visions } from './color-vision.ts';
 import { contrastRatio, oklchLightness } from './oklch-contrast.ts';
 
 export type Scheme = 'light' | 'dark';
@@ -223,4 +225,62 @@ export const rampFindings = (
         ];
   });
   return [...order, ...contrast];
+};
+
+export const energyMarkNames = [
+  '--pl-energy-drained',
+  '--pl-energy-okay',
+  '--pl-energy-fresh',
+] as const;
+
+/*
+ * The thresholds of the dataviz palette check, in OKLab ×100: 15 is the least
+ * two neighbouring categories can differ by and still be told apart at a
+ * glance with full color vision, and 8 is the target under a simulated
+ * deficiency, where a smaller gap is legal only with a second encoding.
+ */
+const normalVisionMinimum = 15;
+const deficientVisionMinimum = 8;
+const distanceDecimals = 1;
+
+/**
+ * The energy answers are categories, so they are judged on being told apart
+ * rather than on order: every pair has to stay far enough apart with full
+ * color vision and under each simulated dichromacy, and every mark has to
+ * clear WCAG's non-text minimum against the ground it is drawn on, as the
+ * ramp's steps do.
+ */
+export const energyFindings = (
+  label: string,
+  palette: Palette,
+  ground: string,
+): ReadonlyArray<string> => {
+  const contrast = energyMarkNames.flatMap((mark) => {
+    const measured = ratio(palette, mark, ground);
+    return measured >= markMinimum
+      ? []
+      : [
+          `${label}: ${mark} on ${ground} = ${measured.toFixed(reportedDecimals)}:1`,
+        ];
+  });
+  const pairs = energyMarkNames.flatMap((first, index) =>
+    energyMarkNames.slice(index + 1).map((second) => [first, second] as const),
+  );
+  const separation = pairs.flatMap(([first, second]) =>
+    visions.flatMap((vision) => {
+      const distance = perceivedDistance(
+        palette[first] ?? '',
+        palette[second] ?? '',
+        vision,
+      );
+      const minimum =
+        vision === 'normal' ? normalVisionMinimum : deficientVisionMinimum;
+      return distance >= minimum
+        ? []
+        : [
+            `${label}: ${first} and ${second} are ${distance.toFixed(distanceDecimals)} apart ${vision === 'normal' ? 'with full color vision' : `under ${vision}`}`,
+          ];
+    }),
+  );
+  return [...contrast, ...separation];
 };

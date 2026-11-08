@@ -72,6 +72,22 @@
     --pl-heat-q3: oklch(0.39 0.085 160);
     --pl-heat-q4: oklch(0.28 0.06 162);
 
+    /*
+     * Energy is told by color, not by a step of the ramp: a drained day, an
+     * okay one and a fresh one are three different kinds of day, and in a 12px
+     * square three shades of one green read as one. The hues run from a spent
+     * umber through ochre to a cool petrol, warm to cool as the evening's
+     * answer runs from low to high, and stay as quiet as the rest of the
+     * paper. Drained is earth rather than the critical red, because a drained
+     * day is not an error. Hue alone fails a reader without red-green vision,
+     * so the answers also differ in lightness and along the blue-yellow axis
+     * that survives every common color-vision deficiency. `theme-audit.ts`
+     * measures each pair under simulation, and each mark against the page.
+     */
+    --pl-energy-drained: oklch(0.44 0.1 50);
+    --pl-energy-okay: oklch(0.61 0.12 84);
+    --pl-energy-fresh: oklch(0.56 0.1 220);
+
     /* The deep register: the one separate surface, an ink-ground under light
        type, kept to a section or two a page. */
     --pl-deep-ground: oklch(0.24 0.02 55);
@@ -125,6 +141,12 @@
       --pl-heat-q2: oklch(0.63 0.095 155);
       --pl-heat-q3: oklch(0.74 0.1 155);
       --pl-heat-q4: oklch(0.85 0.095 155);
+
+      /* Lifted just clear of the dark page, and no further: a brighter mark
+         would glare in a square this small. */
+      --pl-energy-drained: oklch(0.53 0.105 50);
+      --pl-energy-okay: oklch(0.67 0.13 88);
+      --pl-energy-fresh: oklch(0.62 0.1 220);
 
       /* Lifted off the page rather than inverted: a ground a little lighter than
          the background reads as a band edge to edge without glare, and the ink
@@ -185,6 +207,9 @@
   --color-heat-q2: var(--pl-heat-q2);
   --color-heat-q3: var(--pl-heat-q3);
   --color-heat-q4: var(--pl-heat-q4);
+  --color-energy-drained: var(--pl-energy-drained);
+  --color-energy-okay: var(--pl-energy-okay);
+  --color-energy-fresh: var(--pl-energy-fresh);
   --color-deep-ground: var(--pl-deep-ground);
   --color-deep-ink: var(--pl-deep-ink);
   --color-deep-ink-muted: var(--pl-deep-ink-muted);
