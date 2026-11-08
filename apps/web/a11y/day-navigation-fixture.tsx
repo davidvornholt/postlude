@@ -18,6 +18,7 @@ import {
   noWrittenDays,
   unansweredEveningActions,
 } from '../src/features/journal/testing/evening-view.ts';
+import { IconDefaults } from '../src/shared/ui/icon-defaults.tsx';
 import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import { AppShell, DayPage } from './day-navigation-fixture-module.ts';
@@ -48,11 +49,11 @@ const useFixtureDay = (): FixtureDay =>
   useLoaderData({ strict: false }) as FixtureDay;
 
 export const NavigationRoot = () => (
-  <>
+  <IconDefaults>
     <HeadContent />
     <NavigationFocus />
     <Outlet />
-  </>
+  </IconDefaults>
 );
 
 export const TodayPage = () => {

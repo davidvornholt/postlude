@@ -14,6 +14,7 @@
  * line above, and the date breaks after the weekday on purpose.
  */
 
+import { ChevronDown } from 'lucide-react';
 import {
   type RefObject,
   useCallback,
@@ -36,7 +37,6 @@ import type { JournalDate } from '../journal-day.ts';
 import { CopyDayControl } from './copy-day-control.tsx';
 import { DayLink } from './day-link.tsx';
 import { DayPicker, type ReadWrittenDays } from './day-picker.tsx';
-import { JournalIcon } from './journal-icons.tsx';
 import { StepGlyph, UnavailableStep } from './period-heading.tsx';
 
 const subscribeToNothing = () => () => undefined;
@@ -67,12 +67,11 @@ const dateClass =
  * the button.
  */
 const DateChevron = ({ open }: { readonly open: boolean }) => (
-  <JournalIcon
+  <ChevronDown
     className={[
       'ml-2 inline size-6 align-middle text-ink-muted transition-[rotate,color] duration-200 ease-standard group-hover:text-ink motion-reduce:transition-none md:size-7',
       open ? 'rotate-180' : '',
     ].join(' ')}
-    name="expand"
   />
 );
 

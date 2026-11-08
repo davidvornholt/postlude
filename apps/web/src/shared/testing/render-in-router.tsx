@@ -31,6 +31,8 @@ import {
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 
+import { IconDefaults } from '../ui/icon-defaults.tsx';
+
 const appPaths = [
   '/',
   '/archive',
@@ -50,7 +52,9 @@ export const createRenderingRouter = (element: ReactNode) => {
   // rendered and the placeholder pages below never appear in the markup.
   const rootRoute = createRootRoute({
     component: () => (
-      <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <IconDefaults>{element}</IconDefaults>
+      </QueryClientProvider>
     ),
   });
   return createRouter({

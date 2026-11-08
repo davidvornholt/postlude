@@ -1,4 +1,5 @@
 import type { Editor } from '@tiptap/react';
+import { X } from 'lucide-react';
 import { type RefObject, useId } from 'react';
 import { Button } from '#/shared/ui/action.tsx';
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
@@ -52,7 +53,7 @@ export const ImageUploadControl = ({
               </p>
             </div>
             <JournalIconButton
-              icon="close"
+              icon={X}
               label="Cancel image upload"
               hintAlign="end"
               hint="Esc"

@@ -13,9 +13,8 @@
  * without moving what is below.
  */
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-
-import { JournalIcon } from './journal-icons.tsx';
 
 export type StepDirection = -1 | 1;
 
@@ -23,7 +22,7 @@ export const StepGlyph = ({
   direction,
 }: {
   readonly direction: StepDirection;
-}) => <JournalIcon name={direction < 0 ? 'previous' : 'next'} />;
+}) => (direction < 0 ? <ChevronLeft /> : <ChevronRight />);
 
 /**
  * An arrow with nowhere to go. It is the disabled-link pattern from the ARIA
