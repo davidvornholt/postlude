@@ -36,7 +36,7 @@ it('draws a square for every day of the stretch, written or not', () => {
     daysBetweenJournalDates(year2025.from, year2025.to) + 1,
   );
   expect(
-    cells.filter((cell) => cell.kind === 'day' && cell.level !== 'none').length,
+    cells.filter((cell) => cell.kind === 'day' && cell.shade !== 'none').length,
   ).toBe(1);
 });
 
@@ -74,8 +74,9 @@ it('clips the first week to the stretch and keeps the rest whole', () => {
 });
 
 /*
- * A rating has three answers and the ramp four steps; the answer a writer
- * hopes for takes the darkest one, and a day without an answer takes none.
+ * Progress has three answers on the ramp's four steps, and the answer a writer
+ * hopes for takes the darkest one. Energy's answers each take their own color.
+ * A day without an answer takes none.
  */
 it('colours a day by its energy or progress when asked to', () => {
   const stretch = { from: '2025-03-03', to: '2025-03-06' } as const;
@@ -85,11 +86,11 @@ it('colours a day by its energy or progress when asked to', () => {
     day('2025-03-05', mostWords, 'fresh', 'a_lot'),
     day('2025-03-06', mostWords),
   ];
-  const levels = (measure: 'energy' | 'progress') =>
+  const shades = (measure: 'energy' | 'progress') =>
     activityCells(days, stretch, today, measure).map((cell) =>
-      cell.kind === 'day' ? cell.level : undefined,
+      cell.kind === 'day' ? cell.shade : undefined,
     );
 
-  expect(levels('energy')).toEqual(['q1', 'q2', 'q4', 'none']);
-  expect(levels('progress')).toEqual(['q1', 'q2', 'q4', 'none']);
+  expect(shades('energy')).toEqual(['drained', 'okay', 'fresh', 'none']);
+  expect(shades('progress')).toEqual(['q1', 'q2', 'q4', 'none']);
 });

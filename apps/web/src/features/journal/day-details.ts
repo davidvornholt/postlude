@@ -18,6 +18,7 @@ import {
 } from './insights-labels.ts';
 import type { InsightsDay } from './insights-view.ts';
 import type { JournalDate } from './journal-day.ts';
+import type { Energy } from './schemas/day-rating.ts';
 
 export type RatingScale = {
   readonly name: string;
@@ -26,6 +27,13 @@ export type RatingScale = {
   readonly steps: number;
   /** How many steps a day's rating fills, or null when it has none. */
   readonly filled: (day: InsightsDay) => number | null;
+  /**
+   * The answer whose own color fills the meter. Only energy has one: its
+   * answers are three kinds of day rather than more or less of one thing, and
+   * they wear the colors they wear in the year's picture. The other scales
+   * fill in the one green.
+   */
+  readonly coloredAnswer: (day: InsightsDay) => Energy | undefined;
   readonly said: (day: InsightsDay) => string;
 };
 
@@ -43,6 +51,7 @@ export const ratingScales: ReadonlyArray<RatingScale> = [
     short: 'Energy',
     steps: energyOptions.length,
     filled: (day) => stepOf(energyOptions, day.energy),
+    coloredAnswer: (day) => day.energy ?? undefined,
     said: (day) =>
       day.energy === null ? 'not rated' : energyLabel(day.energy),
   },
@@ -51,6 +60,7 @@ export const ratingScales: ReadonlyArray<RatingScale> = [
     short: 'Progress',
     steps: progressOptions.length,
     filled: (day) => stepOf(progressOptions, day.progress),
+    coloredAnswer: () => undefined,
     said: (day) =>
       day.progress === null ? 'not rated' : progressLabel(day.progress),
   },
@@ -63,6 +73,7 @@ export const ratingScales: ReadonlyArray<RatingScale> = [
       const step = stepOf(repeatDayOptions, day.repeatDay);
       return step === null ? null : repeatDayOptions.length + 1 - step;
     },
+    coloredAnswer: () => undefined,
     said: (day) =>
       day.repeatDay === null ? 'not rated' : repeatDayLabel(day.repeatDay),
   },

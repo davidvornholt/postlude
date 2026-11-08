@@ -39,7 +39,7 @@ it('gives each activity square an exact hover and keyboard reading', () => {
     activityDayDetails({
       kind: 'day',
       date: '2026-08-26',
-      level: 'q2',
+      shade: 'q2',
       words: 120,
       energy: 'fresh',
       progress: 'a_lot',
@@ -51,7 +51,7 @@ it('gives each activity square an exact hover and keyboard reading', () => {
     activityDayDetails({
       kind: 'day',
       date: '2026-08-25',
-      level: 'none',
+      shade: 'none',
       words: 0,
       energy: null,
       progress: null,

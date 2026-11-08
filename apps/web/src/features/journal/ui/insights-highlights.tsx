@@ -21,6 +21,7 @@ import type { YearAgo } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalCountLabel, journalNumberLabel } from '../journal-labels.ts';
 import { DayLink } from './day-link.tsx';
+import { EnergySwatch } from './energy-swatch.tsx';
 
 const linkClass =
   'text-ink underline decoration-border underline-offset-4 hover:decoration-current';
@@ -224,7 +225,10 @@ export const EnergyWordsTable = ({
       {[...rows].reverse().map((row) => (
         <tr className="border-border border-t" key={row.energy}>
           <th className="py-2 pr-4 text-left font-normal text-ink" scope="row">
-            {energyLabel(row.energy)}
+            <span className="flex items-center gap-2">
+              <EnergySwatch energy={row.energy} />
+              {energyLabel(row.energy)}
+            </span>
           </th>
           <td className={`${cellClass} text-ink-muted`}>
             {journalNumberLabel(row.days)}

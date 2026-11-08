@@ -1,6 +1,7 @@
 /**
- * The key under a shaded picture: what an outlined square means and which way
- * the ramp runs, in the words of the measure it is shaded by.
+ * The key under a shaded picture: what an outlined square means, and which
+ * way the ramp runs or which color each answer takes, in the words of the
+ * measure it is shaded by.
  */
 
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
@@ -41,7 +42,7 @@ export const HeatLegend = ({
         <span className="flex items-center gap-2" key={answer.label}>
           <span
             aria-hidden="true"
-            className={activityCellClass[answer.level]}
+            className={activityCellClass[answer.shade]}
           />
           {answer.label}
         </span>

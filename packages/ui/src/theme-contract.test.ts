@@ -4,6 +4,8 @@ import {
   activityMarkNames,
   colorTokenNames,
   deepRegisterFindings,
+  energyFindings,
+  energyMarkNames,
   rampFindings,
   schemeDeclarations,
   shadowTokenNames,
@@ -149,6 +151,43 @@ it('rejects activity marks that blend into the page', () => {
       ).toContain(
         `mutated ${scheme} ${token}: ${token} on --pl-background = 1.000:1`,
       );
+    }
+  }
+});
+
+it('keeps the energy answers apart for every common kind of color vision', () => {
+  expect([
+    ...energyFindings('light', light, '--pl-background'),
+    ...energyFindings('light', light, '--pl-surface-sunken'),
+    ...energyFindings('dark', dark, '--pl-background'),
+    ...energyFindings('dark', dark, '--pl-surface-sunken'),
+  ]).toEqual([]);
+});
+
+it('rejects energy drawn as shades of one green', () => {
+  // The ramp's own steps, which is how energy was drawn before it had colors
+  // of its own: far enough apart in lightness to order, too close to name.
+  const shades = {
+    ...light,
+    '--pl-energy-drained': light['--pl-heat-q1'] ?? '',
+    '--pl-energy-okay': light['--pl-heat-q2'] ?? '',
+    '--pl-energy-fresh': light['--pl-heat-q4'] ?? '',
+  };
+  expect(energyFindings('shades', shades, '--pl-background')).toEqual([
+    'shades: --pl-energy-drained and --pl-energy-okay are 11.0 apart with full color vision',
+  ]);
+});
+
+it('rejects energy marks that blend into the page', () => {
+  for (const [scheme, palette] of [
+    ['light', light],
+    ['dark', dark],
+  ] as const) {
+    for (const token of energyMarkNames) {
+      const mutated = { ...palette, [token]: palette['--pl-background'] };
+      expect(
+        energyFindings(`mutated ${scheme}`, mutated, '--pl-background'),
+      ).toContain(`mutated ${scheme}: ${token} on --pl-background = 1.000:1`);
     }
   }
 });
