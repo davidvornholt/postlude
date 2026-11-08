@@ -30,6 +30,7 @@ import { energyOptions } from '../evening-labels.ts';
 import { durationLabel, energyLabel } from '../insights-labels.ts';
 import {
   energyScreenTime,
+  energyWords,
   mostWrittenWeekday,
   pastDays,
   scriptureBookCounts,
@@ -38,13 +39,23 @@ import {
   writingSummary,
 } from '../insights-patterns.ts';
 import { rangeIncludes, rangeNoun } from '../insights-range.ts';
+import { recordsOf, yearAgoTakeaway } from '../insights-records.ts';
 import type { InsightsView } from '../insights-view.ts';
-import { journalCountLabel, journalWeekdayLabel } from '../journal-labels.ts';
+import {
+  journalCountLabel,
+  journalNumberLabel,
+  journalWeekdayLabel,
+} from '../journal-labels.ts';
 import { CategoryChart } from './category-chart.tsx';
 import { DayTable } from './day-table.tsx';
 import { EnergyScreenTimeTable } from './energy-screen-time.tsx';
 import { EntrySizeChart } from './entry-size-chart.tsx';
 import { InsightFold } from './insight-fold.tsx';
+import {
+  EnergyWordsTable,
+  RecordFigures,
+  YearAgoTable,
+} from './insights-highlights.tsx';
 import { RatingCounts } from './rating-counts.tsx';
 import { ScreenTimeChart } from './screen-time-chart.tsx';
 import { ScreenTimeTotals } from './screen-time-totals.tsx';
@@ -131,6 +142,62 @@ const streaksFold = (view: InsightsView): Fold | undefined => {
         journal={view.journalStreak}
         scripture={view.scriptureStreak}
       />
+    ),
+  };
+};
+
+const recordsFold = (view: InsightsView): Fold | undefined => {
+  const records = recordsOf(view);
+  return records === undefined
+    ? undefined
+    : {
+        title: 'Records',
+        takeaway: records.takeaway,
+        body: <RecordFigures records={records} today={view.today} />,
+      };
+};
+
+const yearAgoFold = (view: InsightsView): Fold | undefined => {
+  const { yearAgo } = view;
+  if (yearAgo === undefined) {
+    return;
+  }
+  return {
+    title: 'A year ago',
+    takeaway: yearAgoTakeaway(yearAgo),
+    body: (
+      <YearAgoTable
+        current={rangeIncludes(view.range, view.today)}
+        now={writingSummary(view.days, view.today)}
+        range={view.range}
+        today={view.today}
+        yearAgo={yearAgo}
+      />
+    ),
+  };
+};
+
+const energyWordsFold = (view: InsightsView): Fold | undefined => {
+  if (view.range.kind === 'week') {
+    return;
+  }
+  const rows = energyWords(view.days, view.today);
+  const [lowest] = rows;
+  const highest = rows.at(-1);
+  if (rows.length < 2 || lowest === undefined || highest === undefined) {
+    return;
+  }
+  return {
+    title: 'Energy and words',
+    takeaway: `Typically ${journalCountLabel(highest.typicalWords, 'word')} on ${energyLabel(highest.energy).toLowerCase()} days, ${journalNumberLabel(lowest.typicalWords)} on ${energyLabel(lowest.energy).toLowerCase()} ones`,
+    body: (
+      <>
+        <EnergyWordsTable rows={rows} />
+        <Note>
+          Typical words is the middle length of the written days that felt each
+          way, so one long evening does not lift it.
+        </Note>
+      </>
     ),
   };
 };
@@ -311,8 +378,11 @@ export const InsightsFolds = ({ view }: { readonly view: InsightsView }) => {
   const folds = [
     ratingsFold(view),
     streaksFold(view),
+    recordsFold(view),
+    yearAgoFold(view),
     weekdaysFold(view),
     entryLengthFold(view),
+    energyWordsFold(view),
     scriptureFold(view),
     ...screenTimeFolds(view),
     dayByDayFold(view),

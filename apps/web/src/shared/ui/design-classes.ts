@@ -47,3 +47,25 @@ export const deepFocusRingClass =
  * begins on the same line as the heading above it.
  */
 export const readingMeasureClass = 'max-w-prose';
+
+/**
+ * The frame of a segmented track (`segmented-control.tsx`), also for a form
+ * that draws its segments itself.
+ */
+export const segmentTrackClass =
+  'relative grid auto-cols-fr grid-flow-col border border-border p-1';
+
+/**
+ * A segment around a native radio laid invisibly over it, filled while that
+ * radio is checked: the segmented track's look for a form that must work
+ * before its script runs. The state comes from the radio itself, so the
+ * segment is right with or without the script, and it stops inviting a press
+ * while its fieldset is disabled. The chosen segment fills at once rather than
+ * sliding.
+ */
+export const checkedSegmentClass = [
+  'relative flex min-h-10 cursor-pointer items-center justify-center whitespace-nowrap px-3 text-ink-muted text-sm transition-colors duration-300 ease-standard motion-reduce:transition-none',
+  'hover:text-ink has-checked:bg-ink has-checked:text-background has-checked:hover:text-background',
+  'has-focus-visible:outline-2 has-focus-visible:outline-primary has-focus-visible:outline-offset-2',
+  'has-disabled:cursor-default',
+].join(' ');

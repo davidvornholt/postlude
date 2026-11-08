@@ -174,6 +174,36 @@ export const energyScreenTime = (
   });
 };
 
+export type EnergyWords = {
+  readonly energy: Energy;
+  /** Written days rated at this energy. */
+  readonly days: number;
+  /** The middle word count of those days, so one long evening does not lift it. */
+  readonly typicalWords: number;
+};
+
+/**
+ * How much got written on the days that felt each way, low energy first. Only
+ * days that were both written and rated count, and a feeling without such a
+ * day is left out rather than shown as no words at all.
+ */
+export const energyWords = (
+  days: ReadonlyArray<InsightsDay>,
+  today: JournalDate,
+): ReadonlyArray<EnergyWords> => {
+  const past = pastDays(days, today);
+  return energyOptions.flatMap(({ value: energy }) => {
+    const words = past
+      .filter((day) => day.energy === energy)
+      .map(dayWords)
+      .filter((count) => count > 0);
+    const typical = median(words);
+    return typical === undefined
+      ? []
+      : [{ energy, days: words.length, typicalWords: typical }];
+  });
+};
+
 /** A morning counts when its section was used: a passage or topic, notes, or both. */
 export const scriptureMornings = (
   days: ReadonlyArray<InsightsDay>,

@@ -13,9 +13,10 @@ import { useRef, useState } from 'react';
 import { Button } from '#/shared/ui/action.tsx';
 
 import {
+  checkedSegmentClass,
   eyebrowClass,
-  focusRingClass,
   readingMeasureClass,
+  segmentTrackClass,
 } from '#/shared/ui/design-classes.ts';
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 import { type ExportGrouping, exportGroupings } from '../export-period.ts';
@@ -46,6 +47,19 @@ const exportLabel: Record<ExportState, string> = {
 
 const groupingDescriptionId = (grouping: ExportGrouping): string =>
   `export-${grouping}-description`;
+
+const groupingInputId = (grouping: ExportGrouping): string =>
+  `export-${grouping}`;
+
+// Each grouping's description shows while its radio is checked, read from the
+// radio itself so it follows the choice before the script runs too. Written
+// out in full so the stylesheet generator can find each class.
+const descriptionShown: Record<ExportGrouping, string> = {
+  day: 'group-has-[#export-day:checked]:block',
+  week: 'group-has-[#export-week:checked]:block',
+  month: 'group-has-[#export-month:checked]:block',
+  year: 'group-has-[#export-year:checked]:block',
+};
 
 type ExportControlProps = {
   readonly settleAutosaves?: SettleAutosaves;
@@ -104,14 +118,15 @@ export const ExportControl = ({
         <legend className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           One reading-copy file per
         </legend>
-        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
-          {exportGroupings.map((option) => (
-            <div className="group contents" key={option}>
-              <label className="flex items-center gap-2 text-ink-muted has-checked:text-ink">
+        <div className="group mt-3">
+          <div className={[segmentTrackClass, 'w-full max-w-md'].join(' ')}>
+            {exportGroupings.map((option) => (
+              <label className={checkedSegmentClass} key={option}>
                 <input
                   aria-describedby={groupingDescriptionId(option)}
                   checked={grouping === option}
-                  className={['accent-primary', focusRingClass].join(' ')}
+                  className="absolute inset-0 m-0 cursor-pointer appearance-none opacity-0 disabled:cursor-default"
+                  id={groupingInputId(option)}
                   name="grouping"
                   onChange={() => setGrouping(option)}
                   type="radio"
@@ -119,16 +134,20 @@ export const ExportControl = ({
                 />
                 {groupingLabels[option]}
               </label>
-              <p
-                className={[
-                  readingMeasureClass,
-                  'order-last hidden basis-full text-ink-faint group-has-[:checked]:block',
-                ].join(' ')}
-                id={groupingDescriptionId(option)}
-              >
-                {groupingDescriptions[option]}
-              </p>
-            </div>
+            ))}
+          </div>
+          {exportGroupings.map((option) => (
+            <p
+              className={[
+                readingMeasureClass,
+                'mt-3 hidden text-ink-faint',
+                descriptionShown[option],
+              ].join(' ')}
+              id={groupingDescriptionId(option)}
+              key={option}
+            >
+              {groupingDescriptions[option]}
+            </p>
           ))}
         </div>
       </fieldset>

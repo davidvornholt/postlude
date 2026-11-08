@@ -67,6 +67,8 @@ const viewOf = (query: InsightsQueryParams): InsightsView => {
       ? { current: 1, longest: 1 }
       : { current: 0, longest: 0 },
     scriptureStreak: { current: 0, longest: 0 },
+    longestEntry: undefined,
+    yearAgo: undefined,
     exportAvailable: written,
   };
 };

@@ -58,7 +58,6 @@ it('groups an anniversary distance without changing its linked date', async () =
           words: 1,
         },
       ]}
-      date={today}
       today={today}
     />,
   );

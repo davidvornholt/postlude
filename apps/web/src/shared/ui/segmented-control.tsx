@@ -12,11 +12,14 @@
  * somewhere and says which one is current, for a choice that belongs in the
  * address; a radio segment changes something on the page, for a choice that
  * does not.
+ *
+ * A form that must work before its script runs draws the same track from its
+ * radios' own checked state instead, with `checkedSegmentClass`.
  */
 
 import type { ComponentProps, ReactNode } from 'react';
 
-import { focusRingClass } from './design-classes.ts';
+import { focusRingClass, segmentTrackClass } from './design-classes.ts';
 
 /** A track holds two to four segments; past that it stops reading as one choice. */
 export type SegmentCount = 2 | 3 | 4;
@@ -37,7 +40,7 @@ const thumbOffsets: ReadonlyArray<string> = [
 
 const segmentClass = (selected: boolean): string =>
   [
-    'relative z-10 flex min-h-10 items-center justify-center whitespace-nowrap rounded-full px-3 text-sm transition-colors duration-300 ease-standard motion-reduce:transition-none',
+    'relative z-10 flex min-h-10 items-center justify-center whitespace-nowrap px-3 text-sm transition-colors duration-300 ease-standard motion-reduce:transition-none',
     selected ? 'text-background' : 'text-ink-muted hover:text-ink',
   ].join(' ');
 
@@ -55,16 +58,11 @@ export const SegmentedTrack = ({
   children,
   className = '',
 }: SegmentedTrackProps) => (
-  <div
-    className={[
-      'relative grid auto-cols-fr grid-flow-col rounded-full border border-border p-1',
-      className,
-    ].join(' ')}
-  >
+  <div className={[segmentTrackClass, className].join(' ')}>
     <span
       aria-hidden="true"
       className={[
-        'absolute inset-y-1 left-1 rounded-full bg-ink transition-[translate,opacity] duration-300 ease-standard motion-reduce:transition-none',
+        'absolute inset-y-1 left-1 bg-ink transition-[translate,opacity] duration-300 ease-standard motion-reduce:transition-none',
         thumbWidths[count],
         thumbOffsets[Math.max(selected, 0)] ?? '',
         selected < 0 ? 'opacity-0' : '',

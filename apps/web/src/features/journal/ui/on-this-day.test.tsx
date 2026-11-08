@@ -40,7 +40,6 @@ it('names a leap day read on February 28 by its own date and says why it is ther
           words: 6,
         },
       ]}
-      date="2027-02-28"
       today={today}
     />,
   );
@@ -73,7 +72,6 @@ it('folds each year to its opening and keeps a studied topic', async () => {
           words: 0,
         },
       ]}
-      date="2026-11-07"
       today="2026-11-07"
     />,
   );
@@ -97,7 +95,7 @@ it('folds each year to its opening and keeps a studied topic', async () => {
 
 it('says when no earlier year has this date', async () => {
   const html = await renderInRouter(
-    <OnThisDay anniversaries={[]} date="2026-11-07" today="2026-11-07" />,
+    <OnThisDay anniversaries={[]} today="2026-11-07" />,
   );
 
   expect(plainText(html)).toContain(

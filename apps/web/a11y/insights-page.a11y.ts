@@ -195,6 +195,27 @@ test('a change of metrics version is said, and the totals leave the old days out
   ).toBeVisible();
 });
 
+/*
+ * A step past today keeps its place beside the one that can be taken, dimmed
+ * and marked unavailable, and the keyboard passes over it.
+ */
+test('a step that cannot be taken stays in place, dimmed and out of the tab order', async ({
+  page,
+}) => {
+  await mountInsightsPage(page, insightsFixtureConfigs.year);
+  const previous = page.getByRole('link', { name: 'Previous year' });
+  const next = page.getByRole('link', { name: 'Next year' });
+  await expect(next).toHaveAttribute('aria-disabled', 'true');
+  await expect(next).not.toHaveAttribute('href');
+  await expect(previous).not.toHaveAttribute('aria-disabled');
+  const colour = (link: playwright.Locator) =>
+    link.evaluate((element) => getComputedStyle(element).color);
+  expect(await colour(next)).not.toBe(await colour(previous));
+  await previous.focus();
+  await page.keyboard.press('Tab');
+  await expect(next).not.toBeFocused();
+});
+
 const sidewaysOverflow = (page: playwright.Page): Promise<number> =>
   page.evaluate(
     () =>

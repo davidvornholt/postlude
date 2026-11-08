@@ -249,54 +249,18 @@
   }
 }
 
-/* Turning to another day slides the day toward the past or the future, and
-   stepping Insights to another week, month, or year slides the range the same
-   way. The router names the direction as the transition's type
-   (`day-transition.ts`). */
+/* A step to another day, month or Insights range fades the page across in place
+   (`page-turn.ts`). Nothing on the page is named, so the whole page is one
+   picture: whatever both days share, the frame, the header and the controls,
+   is the same on both sides of the fade and stands still, and only what
+   changed fades. The fade is short, because a reader stepping through the days
+   is reading, not watching. */
 @layer overrides {
-  .journal-day {
-    view-transition-name: journal-day;
-  }
-
-  .insights-range {
-    view-transition-name: insights-range;
-  }
-
   @media (prefers-reduced-motion: no-preference) {
-    ::view-transition-old(journal-day),
-    ::view-transition-new(journal-day),
-    ::view-transition-old(insights-range),
-    ::view-transition-new(insights-range) {
-      animation-duration: 220ms;
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+      animation-duration: 160ms;
       animation-timing-function: var(--ease-standard);
-    }
-
-    :active-view-transition-type(day-later)::view-transition-old(journal-day),
-    :active-view-transition-type(day-later)::view-transition-old(
-        insights-range
-      ) {
-      animation-name: journal-day-out-earlier;
-    }
-
-    :active-view-transition-type(day-later)::view-transition-new(journal-day),
-    :active-view-transition-type(day-later)::view-transition-new(
-        insights-range
-      ) {
-      animation-name: journal-day-in-later;
-    }
-
-    :active-view-transition-type(day-earlier)::view-transition-old(journal-day),
-    :active-view-transition-type(day-earlier)::view-transition-old(
-        insights-range
-      ) {
-      animation-name: journal-day-out-later;
-    }
-
-    :active-view-transition-type(day-earlier)::view-transition-new(journal-day),
-    :active-view-transition-type(day-earlier)::view-transition-new(
-        insights-range
-      ) {
-      animation-name: journal-day-in-earlier;
     }
   }
 
@@ -306,34 +270,6 @@
     ::view-transition-new(*) {
       animation: none;
     }
-  }
-}
-
-@keyframes journal-day-out-earlier {
-  to {
-    opacity: 0;
-    translate: -1.5rem 0;
-  }
-}
-
-@keyframes journal-day-in-later {
-  from {
-    opacity: 0;
-    translate: 1.5rem 0;
-  }
-}
-
-@keyframes journal-day-out-later {
-  to {
-    opacity: 0;
-    translate: 1.5rem 0;
-  }
-}
-
-@keyframes journal-day-in-earlier {
-  from {
-    opacity: 0;
-    translate: -1.5rem 0;
   }
 }
 

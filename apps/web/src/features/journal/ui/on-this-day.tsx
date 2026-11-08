@@ -198,11 +198,9 @@ const EveningPart = ({
 
 const Memory = ({
   anniversary,
-  date,
   today,
 }: {
   readonly anniversary: Anniversary;
-  readonly date: JournalDate;
   readonly today: JournalDate;
 }) => {
   const bodyId = useId();
@@ -233,7 +231,7 @@ const Memory = ({
           <DayLink
             className="mt-6"
             date={anniversary.date}
-            from={date}
+            turnsPage={true}
             today={today}
             variant="quiet"
           >
@@ -246,12 +244,11 @@ const Memory = ({
 };
 
 type OnThisDayProps = {
-  readonly date: JournalDate;
   readonly today: JournalDate;
   readonly anniversaries: ReadonlyArray<Anniversary>;
 };
 
-export const OnThisDay = ({ date, today, anniversaries }: OnThisDayProps) => {
+export const OnThisDay = ({ today, anniversaries }: OnThisDayProps) => {
   const headingId = useId();
   return (
     <PageFrame aria-labelledby={headingId} as="section" className="pt-20 pb-24">
@@ -272,7 +269,6 @@ export const OnThisDay = ({ date, today, anniversaries }: OnThisDayProps) => {
             {anniversaries.map((anniversary) => (
               <Memory
                 anniversary={anniversary}
-                date={date}
                 key={anniversary.date}
                 today={today}
               />
