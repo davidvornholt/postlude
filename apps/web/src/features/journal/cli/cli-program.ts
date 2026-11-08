@@ -178,6 +178,11 @@ export const runCliCommand = <E>(
         Effect.flatMap((areas) => areas.listDays(command.from, command.to)),
         Effect.map((days) => ({ from: command.from, to: command.to, days })),
       );
+    case 'days-changed':
+      return EntryRepository.pipe(
+        Effect.flatMap((entries) => entries.listChangedSince(command.since)),
+        Effect.map((days) => ({ since: command.since, days })),
+      );
     case 'search':
       return search(command.query, command.limit);
     case 'agent-area-get':

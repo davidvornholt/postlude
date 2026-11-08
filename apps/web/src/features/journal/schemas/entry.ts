@@ -150,6 +150,25 @@ export const EntryFromRow = EntryRow.pipe(
   }),
 );
 
+/**
+ * A day as `postlude days changed` returns it: when it was last saved, and its
+ * word counts, without any prose.
+ */
+export const ChangedDayFromRow = Schema.Struct({
+  date: JournalDateSchema,
+  revision: RevisionSchema,
+  journalWordCount: WordCountSchema,
+  scriptureWordCount: WordCountSchema,
+  updatedAt: Schema.Date,
+}).pipe(
+  Schema.encodeKeys({
+    date: 'entry_date',
+    journalWordCount: 'journal_word_count',
+    scriptureWordCount: 'scripture_word_count',
+    updatedAt: 'updated_at',
+  }),
+);
+
 /** The nullable aggregate row returned by `min(entry_date)`. */
 export const EarliestDateFromRow = Schema.Struct({
   date: Schema.NullOr(JournalDateSchema),

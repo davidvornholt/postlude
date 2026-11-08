@@ -19,6 +19,7 @@ export type CliCommand =
   | { readonly kind: 'help' }
   | { readonly kind: 'day-get'; readonly date: string }
   | { readonly kind: 'days-list'; readonly from: string; readonly to: string }
+  | { readonly kind: 'days-changed'; readonly since: string }
   | { readonly kind: 'search'; readonly query: string; readonly limit: number }
   | { readonly kind: 'agent-area-get'; readonly date: string }
   | { readonly kind: 'agent-area-put'; readonly date: string };
@@ -26,6 +27,7 @@ export type CliCommand =
 export const usage = [
   'day get <date>',
   'days list --from <date> --to <date>',
+  'days changed --since <instant>   (an ISO 8601 time with a zone, such as 2026-11-08T03:30:00Z)',
   `search <query> [--limit <1-${searchLimitMax}>]`,
   'agent-area get <date>',
   'agent-area put <date>   (reads {dayMetrics, metricsVersion, reportHtml, reportModel} as JSON on stdin)',
@@ -199,6 +201,42 @@ const daysList = (words: ReadonlyArray<string>): CliCommand | UsageError => {
   return to instanceof UsageError ? to : { kind: 'days-list', from, to };
 };
 
+/** The time of an instant: hours, minutes, seconds, a fraction, and a zone. */
+const instantTime =
+  /^(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/u;
+
+/**
+ * An ISO 8601 instant whose date is a calendar date. It reaches Postgres as
+ * text, so it keeps every digit of a fraction, down to microseconds.
+ */
+const isInstant = (value: string) => {
+  const [date, time, ...rest] = value.split('T');
+  return (
+    rest.length === 0 &&
+    date !== undefined &&
+    isDate(date) &&
+    time !== undefined &&
+    instantTime.test(time)
+  );
+};
+
+const daysChanged = (words: ReadonlyArray<string>): CliCommand | UsageError => {
+  const parsed = parseOptions(words, ['since']);
+  if (parsed instanceof UsageError) {
+    return parsed;
+  }
+  if (parsed.positional.length > 0) {
+    return usageError('days changed takes only --since.');
+  }
+  const since = parsed.options.get('since');
+  if (since === undefined || !isInstant(since)) {
+    return usageError(
+      'Give --since as an ISO 8601 time with a zone, such as 2026-11-08T03:30:00Z.',
+    );
+  }
+  return { kind: 'days-changed', since };
+};
+
 const search = (words: ReadonlyArray<string>): CliCommand | UsageError => {
   const parsed = parseOptions(words, ['limit']);
   if (parsed instanceof UsageError) {
@@ -246,6 +284,8 @@ export const parseCommand = (
       return oneDate('day-get', rest);
     case 'days list':
       return daysList(rest);
+    case 'days changed':
+      return daysChanged(rest);
     case 'agent-area get':
       return oneDate('agent-area-get', rest);
     case 'agent-area put':

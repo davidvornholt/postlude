@@ -55,6 +55,33 @@ it('replaces a day rather than failing on the second save', async () => {
   expect(entry.journalMarkdown).toBe('Rewritten, and shorter.');
   expect(entry.journalWordCount).toBe(words);
 });
+it('lists the days saved after an instant, whatever their date', async () => {
+  const changed = await withRepository((entries) =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      const savedAt = (date: string, at: string) =>
+        sql`update entry set updated_at = ${at}::timestamptz where entry_date = ${date}`;
+      yield* entries.save(draft('2025-03-01', 'An old day, edited late.'));
+      yield* entries.save(draft('2026-11-01', 'Saved at the instant.'));
+      yield* entries.save(draft('2026-11-02', 'Saved before it.'));
+      yield* savedAt('2025-03-01', '2026-11-07T10:00:00.000002Z');
+      yield* savedAt('2026-11-01', '2026-11-07T10:00:00.000001Z');
+      yield* savedAt('2026-11-02', '2026-11-02T20:00:00Z');
+      return yield* entries.listChangedSince(
+        '2026-11-07T11:00:00.000001+01:00',
+      );
+    }),
+  );
+  expect(changed).toEqual([
+    {
+      date: '2025-03-01',
+      revision: 1,
+      journalWordCount: 5,
+      scriptureWordCount: 0,
+      updatedAt: new Date('2026-11-07T10:00:00.000Z'),
+    },
+  ]);
+});
 it('saves and reads back a day whose search vector is long', async () => {
   // Postgres sends a tsvector in binary, starting with its lexeme count, and
   // the client decodes a type it has no codec for as UTF-8 text. A count whose

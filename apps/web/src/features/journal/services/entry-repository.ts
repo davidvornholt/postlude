@@ -20,6 +20,7 @@ import {
 } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
 import {
+  ChangedDayFromRow,
   EarliestDateFromRow,
   type EntryDraft,
   EntryFromRow,
@@ -58,6 +59,9 @@ const decodeEarliestDates = Schema.decodeUnknownEffect(
 );
 const decodeSummaries = Schema.decodeUnknownEffect(
   Schema.Array(EntrySummaryFromRow),
+);
+const decodeChangedDays = Schema.decodeUnknownEffect(
+  Schema.Array(ChangedDayFromRow),
 );
 /**
  * The columns a stored entry decodes from, which `EntryFromRow` names.
@@ -400,6 +404,28 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         `.pipe(Effect.flatMap(decodeSummaries));
 
       /**
+       * Every stored day saved after `since`, an ISO 8601 instant, by date. A
+       * save of either section counts. An agent that remembers when it last
+       * looked asks for this instead of a date range, so it also sees late
+       * edits to days long past.
+       */
+      const listChangedSince = (since: string) =>
+        sql`
+          select
+            entry_date,
+            revision,
+            journal_word_count,
+            scripture_word_count,
+            updated_at
+          from entry
+          where updated_at > ${since}::timestamptz
+          order by entry_date
+        `.pipe(
+          Effect.flatMap(decodeChangedDays),
+          Effect.mapError(journalReadError),
+        );
+
+      /**
        * Earlier days on any of the given `MM-DD` days, newest first, from the
        * nearest `limit` years that have one. The limit counts years rather than
        * rows, because February 28 can also read a leap day from the same year.
@@ -472,6 +498,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
 
       return {
         read,
+        listChangedSince,
         readAnniversaries,
         readCalendar: makeCalendarReader(sql),
         save,

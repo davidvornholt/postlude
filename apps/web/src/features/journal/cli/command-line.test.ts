@@ -73,6 +73,12 @@ describe('reading a command', () => {
       from: '2026-10-01',
       to: '2026-10-09',
     });
+    expect(
+      commandOf('days changed --since 2026-11-08T03:30:56.865734Z'),
+    ).toEqual({ kind: 'days-changed', since: '2026-11-08T03:30:56.865734Z' });
+    expect(commandOf('days changed --since=2026-11-08T04:30:00+01:00')).toEqual(
+      { kind: 'days-changed', since: '2026-11-08T04:30:00+01:00' },
+    );
     expect(commandOf('agent-area get 2026-10-30')).toEqual({
       kind: 'agent-area-get',
       date: '2026-10-30',
@@ -123,6 +129,27 @@ describe('reading a command', () => {
     expect(commandOf('day get today')).toBeInstanceOf(UsageError);
     expect(commandOf('day get')).toBeInstanceOf(UsageError);
     expect(commandOf('days list --from 2026-10-01')).toBeInstanceOf(UsageError);
+  });
+
+  it('refuses a since that is not an instant with a zone', () => {
+    for (const since of [
+      '',
+      '2026-11-08',
+      '2026-11-08T03:30:00',
+      '2026-11-08T03:30Z',
+      '2026-02-30T03:30:00Z',
+      '2026-11-08T24:00:00Z',
+      '2026-11-08T03:30:00.1234567Z',
+      '2026-11-08T03:30:00ZT',
+    ]) {
+      expect(commandOf(`days changed --since '${since}'`)).toBeInstanceOf(
+        UsageError,
+      );
+    }
+    expect(commandOf('days changed')).toBeInstanceOf(UsageError);
+    expect(
+      commandOf('days changed 2026-11-08 --since 2026-11-08T03:30:00Z'),
+    ).toBeInstanceOf(UsageError);
   });
 
   it('refuses extra words and unknown options', () => {
