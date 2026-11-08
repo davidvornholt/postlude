@@ -137,6 +137,32 @@ it('lists every day of a range, written or not', async () => {
   });
 });
 
+it('finds the first day with a rating or a report, up to today', async () => {
+  const found = await withEvening(({ areas, entries, ratings }) =>
+    Effect.gen(function* () {
+      const empty = yield* areas.earliestRatedOrMeasured('2026-10-31');
+      yield* entries.save(draft('2026-10-20', 'Written, not rated.'));
+      yield* ratings.save({ date: '2026-10-22', energy: 'okay' });
+      yield* ratings.save({ date: '2026-10-22', energy: null });
+      yield* ratings.save({ date: '2026-10-25', repeatDay: 'yes' });
+      const rated = yield* areas.earliestRatedOrMeasured('2026-10-31');
+      yield* areas.putWrap('2026-10-23', wrapFor('2026-10-23'));
+      return {
+        empty,
+        rated,
+        measured: yield* areas.earliestRatedOrMeasured('2026-10-31'),
+        before: yield* areas.earliestRatedOrMeasured('2026-10-22'),
+      };
+    }),
+  );
+  expect(found).toEqual({
+    empty: undefined,
+    rated: '2026-10-25',
+    measured: '2026-10-23',
+    before: undefined,
+  });
+});
+
 it('lists a range across a daylight-saving change one day per date', async () => {
   const days = await withEvening(({ areas }) =>
     areas.listDays('2026-10-24', '2026-10-26'),

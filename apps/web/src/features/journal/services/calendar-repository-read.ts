@@ -58,7 +58,8 @@ const listCalendarEntriesBetween = (
       scripture_book,
       scripture_chapter,
       scripture_verse_start,
-      scripture_verse_end
+      scripture_verse_end,
+      scripture_topic
     from entry
     where entry_date between ${from} and ${to}
       and ${exportableStoredEntry(sql)}

@@ -5,7 +5,10 @@ import type { SqlClient } from 'effect/sql';
 import { activityDayOf } from '../activity.ts';
 import { anniversaryLimit, anniversaryMonthDays } from '../anniversary.ts';
 import { journalDateAt, shiftJournalDate } from '../journal-day.ts';
-import { parseScriptureReference } from '../scripture-reference.ts';
+import {
+  parseScriptureReference,
+  scriptureTopicOf,
+} from '../scripture-reference.ts';
 import { searchDocumentOf } from '../search-document.ts';
 import { searchTerms } from '../search-query.ts';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
@@ -68,7 +71,7 @@ const readSeededJournal = () =>
         evidence: yield* evidenceOf(sql, daysAgo(2)),
         entry: yield* entries.read(daysAgo(2)),
         found: yield* search.search(searchTerms('Sauerteig'), 50),
-        archive: yield* entries.readArchive({ today }),
+        history: yield* entries.readHistory({ today }),
         calendar: yield* entries.readCalendar({
           from: daysAgo(30),
           to: today,
@@ -138,6 +141,7 @@ describe('a seeded journal', () => {
           scriptureReference: parseScriptureReference(
             stale?.scriptureReference ?? '',
           ),
+          scriptureTopic: scriptureTopicOf(stale?.scriptureReference ?? ''),
         }),
       ),
     ].sort(
@@ -152,8 +156,8 @@ describe('a seeded journal', () => {
   });
 
   it('has streaks, a calendar and earlier years on this day', () => {
-    const history = read.archive.summaries.map(activityDayOf(berlin));
-    expect(read.archive.earliest).toBe(plan.days.at(-1)?.date ?? '');
+    const history = read.history.summaries.map(activityDayOf(berlin));
+    expect(read.history.earliest).toBe(plan.days.at(-1)?.date ?? '');
     expect(journalStreak(history, today).current).toBe(5);
     expect(scriptureStreak(history, today).current).toBe(4);
     expect(journalStreak(history, today).longest).toBeGreaterThan(5);

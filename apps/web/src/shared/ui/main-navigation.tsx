@@ -4,18 +4,16 @@ import { NavigationLink } from '#/shared/ui/navigation-link.tsx';
 const navItems = [
   { to: '/', label: 'Today' },
   { to: '/calendar', label: 'Calendar', preload: false },
-  { to: '/review', label: 'Review', preload: false },
-  { to: '/on-this-day', label: 'On this day', preload: false },
-  { to: '/archive', label: 'Archive', preload: false },
+  { to: '/insights', label: 'Insights', preload: false },
   { to: '/search', label: 'Search' },
 ] as const;
 
 type MainNavigationProps = {
-  readonly archivePending: boolean;
-  readonly onOpenArchive: (
+  readonly insightsPending: boolean;
+  readonly onOpenInsights: (
     event: MouseEvent<HTMLAnchorElement>,
   ) => Promise<void>;
-  readonly onPrepareArchive: () => void;
+  readonly onPrepareInsights: () => void;
 };
 
 type NavigationItemProps = MainNavigationProps & {
@@ -23,31 +21,31 @@ type NavigationItemProps = MainNavigationProps & {
 };
 
 const NavigationItem = ({
-  archivePending,
+  insightsPending,
   item,
-  onOpenArchive,
-  onPrepareArchive,
+  onOpenInsights,
+  onPrepareInsights,
 }: NavigationItemProps) => {
-  const archive = item.to === '/archive';
+  const insights = item.to === '/insights';
   return (
-    <li className={archive ? 'relative' : undefined}>
+    <li className={insights ? 'relative' : undefined}>
       <NavigationLink
         activeOptions={{ exact: item.to === '/' }}
-        aria-busy={archive && archivePending ? true : undefined}
-        onClick={archive ? onOpenArchive : undefined}
-        onFocus={archive ? onPrepareArchive : undefined}
-        onPointerEnter={archive ? onPrepareArchive : undefined}
+        aria-busy={insights && insightsPending ? true : undefined}
+        onClick={insights ? onOpenInsights : undefined}
+        onFocus={insights ? onPrepareInsights : undefined}
+        onPointerEnter={insights ? onPrepareInsights : undefined}
         preload={'preload' in item ? item.preload : undefined}
         to={item.to}
       >
         {item.label}
       </NavigationLink>
-      {archive ? (
+      {insights ? (
         <span
           aria-hidden="true"
           className={[
             'absolute top-0 left-full whitespace-nowrap',
-            archivePending ? 'visible' : 'invisible',
+            insightsPending ? 'visible' : 'invisible',
           ].join(' ')}
         >
           &nbsp;…
@@ -58,9 +56,9 @@ const NavigationItem = ({
 };
 
 export const MainNavigation = ({
-  archivePending,
-  onOpenArchive,
-  onPrepareArchive,
+  insightsPending,
+  onOpenInsights,
+  onPrepareInsights,
 }: MainNavigationProps) => (
   // The places wrap onto a second line on a phone rather than scroll sideways,
   // where the last of them would sit past the edge with nothing to say so.
@@ -68,11 +66,11 @@ export const MainNavigation = ({
     <ul className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-1">
       {navItems.map((item) => (
         <NavigationItem
-          archivePending={archivePending}
+          insightsPending={insightsPending}
           item={item}
           key={item.to}
-          onOpenArchive={onOpenArchive}
-          onPrepareArchive={onPrepareArchive}
+          onOpenInsights={onOpenInsights}
+          onPrepareInsights={onPrepareInsights}
         />
       ))}
     </ul>

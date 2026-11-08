@@ -155,6 +155,28 @@ export const parseScriptureReference = (
     : { book: book.english, chapter, verseStart, verseEnd };
 };
 
+/**
+ * A character that leaves a mark on the page. Whitespace, control characters,
+ * and the invisible format characters — a zero-width space, a soft hyphen, a
+ * joiner — leave none, so a line made only of them is blank however long it is.
+ */
+const visibleCharacter =
+  /[^\p{White_Space}\p{Cc}\p{Default_Ignorable_Code_Point}]/u;
+
+/**
+ * The topic a morning studied when its line names no passage: "Forgiveness",
+ * "The Sermon on the Mount", or "🙏". Any line with something visible in it
+ * that does not read as a passage is a topic, kept as written apart from the
+ * spaces around it; only a blank line is neither.
+ */
+export const scriptureTopicOf = (text: string): string | undefined => {
+  const topic = text.trim();
+  return visibleCharacter.test(topic) &&
+    parseScriptureReference(topic) === undefined
+    ? topic
+    : undefined;
+};
+
 /** The one house style: "Proverbs 12:5-13", "Proverbs 12:5", "Psalms 23". */
 export const formatScriptureReference = ({
   book,
@@ -169,6 +191,21 @@ export const formatScriptureReference = ({
     verseEnd === undefined ? verseStart : `${verseStart}-${verseEnd}`;
   return `${book} ${chapter}:${verses}`;
 };
+
+/**
+ * The line a stored day shows in its passage-or-topic field: the passage in
+ * the house style, or else the topic as it was written.
+ */
+export const scriptureLineOf = ({
+  scriptureReference,
+  scriptureTopic,
+}: {
+  readonly scriptureReference?: ScriptureReference | undefined;
+  readonly scriptureTopic?: string | undefined;
+}): string =>
+  scriptureReference === undefined
+    ? (scriptureTopic ?? '')
+    : formatScriptureReference(scriptureReference);
 
 /**
  * Where the reference opens. The NeÜ is the translation Postlude reads, and

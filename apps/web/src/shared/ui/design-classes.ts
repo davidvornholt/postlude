@@ -11,10 +11,19 @@
  */
 
 /**
- * Eyebrows are typed as sentence case and uppercased by CSS, so the words stay
- * readable in the source and in anything that reads the page aloud.
+ * The name of a part of a page, such as the morning or the end of the day: the
+ * one step between the page's own title and the labels inside each part. It is
+ * set well above both, so the parts of a long page can be told apart at a
+ * glance without a rule between them.
  */
-export const eyebrowClass = 'text-xs uppercase tracking-widest';
+export const sectionHeadingClass = 'font-display text-2xl sm:text-3xl';
+
+/**
+ * A small label: a field's name, a note's source, a quiet action. It keeps the
+ * sentence case it is written in, because a page where every label is set in
+ * capitals makes each one shout at the same volume as the writing it frames.
+ */
+export const eyebrowClass = 'text-sm';
 
 export const focusRingClass =
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';

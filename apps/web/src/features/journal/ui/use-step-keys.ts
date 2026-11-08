@@ -21,6 +21,9 @@ const ownsArrowKeys = [
   'select',
   '[contenteditable]:not([contenteditable="false"])',
   '[role="combobox"]',
+  // The calendar under the date is a popover rather than a modal, so it is
+  // named here as well as by the open-dialog check below.
+  '[role="dialog"]',
   '[role="grid"]',
   '[role="listbox"]',
   '[role="menu"]',

@@ -9,7 +9,10 @@ import { searchTokenText as tokenTextOf } from './search-query.ts';
 export type SearchDocument = {
   readonly journalText: string;
   readonly scriptureText: string;
-  /** One rendered reference per accepted book spelling, separated by lines. */
+  /**
+   * One rendered reference per accepted book spelling, separated by lines, or
+   * the topic a morning studied instead of a passage.
+   */
   readonly scriptureReferenceText: string;
   /** Canonical tokens consumed by the database index. */
   readonly searchTokenText: string;
@@ -29,10 +32,12 @@ export const searchDocumentOf = (input: {
   readonly journalMarkdown: string;
   readonly scriptureMarkdown: string;
   readonly scriptureReference: ScriptureReference | undefined;
+  readonly scriptureTopic: string | undefined;
 }): SearchDocument => {
   const journalText = journalMarkdownText(input.journalMarkdown);
   const scriptureText = journalMarkdownText(input.scriptureMarkdown);
-  const scriptureReferenceText = referenceLabels(input.scriptureReference);
+  const scriptureReferenceText =
+    input.scriptureTopic ?? referenceLabels(input.scriptureReference);
   return {
     journalText,
     scriptureText,

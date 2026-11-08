@@ -1,12 +1,13 @@
 import { expect, test } from '@playwright/test';
 
-import { mountArchiveNavigation } from './archive-navigation-test-support.ts';
+import { mountInsightsNavigation } from './insights-navigation-test-support.ts';
 
 const writingDayUrl = /\/$/u;
-const namedArchiveUrl = /\/archive\?year=2026$/u;
+const thisWeekUrl = /\/insights\?range=week$/u;
+const previousWeekUrl = /\/insights\?range=week&week=2026-08-17$/u;
 
 const expectWritingDay = async (
-  page: Parameters<typeof mountArchiveNavigation>[0],
+  page: Parameters<typeof mountInsightsNavigation>[0],
 ): Promise<void> => {
   await expect(page).toHaveURL(writingDayUrl);
   await expect(
@@ -19,12 +20,14 @@ test('activity squares open their day with a pointer or the keyboard', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 844, width: 390 });
-  await mountArchiveNavigation(page);
+  await mountInsightsNavigation(page);
   await page
     .getByRole('textbox', { name: 'Evening journal' })
-    .fill('Open this archive day.');
-  await page.getByRole('link', { name: 'Archive' }).click();
-  await expect(page.getByRole('heading', { name: 'Archive' })).toBeVisible();
+    .fill('Open this day from Insights.');
+  await page.getByRole('link', { name: 'Insights' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Insights: 2026' }),
+  ).toBeVisible();
 
   const targets = page.locator('[data-activity-date]');
   const targetSizes = await targets.evaluateAll((elements) =>
@@ -42,7 +45,9 @@ test('activity squares open their day with a pointer or the keyboard', async ({
   await expectWritingDay(page);
 
   await page.goBack();
-  await expect(page.getByRole('heading', { name: 'Archive' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Insights: 2026' }),
+  ).toBeVisible();
   const activity = page.getByRole('region', {
     name: 'Journal activity grid',
   });
@@ -76,31 +81,48 @@ test('activity squares open their day with a pointer or the keyboard', async ({
   await expectWritingDay(page);
 });
 
-test('changing the activity year keeps the reader at the selector', async ({
+/*
+ * Changing the range is a change of the numbers, not of the page: the reader
+ * stays on the control they used, and the controls stay where they were.
+ */
+test('switching and stepping the range keeps the reader on the control', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 640, width: 390 });
-  await mountArchiveNavigation(page);
+  await mountInsightsNavigation(page);
   await page
     .getByRole('textbox', { name: 'Evening journal' })
-    .fill('Keep the archive in place.');
-  await page.getByRole('link', { name: 'Archive' }).click();
-  const year = page.getByRole('link', { exact: true, name: '2026' });
-  await year.evaluate((element) => element.scrollIntoView({ block: 'center' }));
-  const before = await page.evaluate(() => globalThis.scrollY);
-  expect(before).toBeGreaterThan(0);
+    .fill('Keep Insights in place.');
+  await page.getByRole('link', { name: 'Insights' }).click();
+  const ranges = page.getByRole('navigation', { name: 'Insights range' });
+  await expect(ranges).toBeVisible();
+  const rangesBefore = await ranges.boundingBox();
 
-  await year.click();
+  const week = ranges.getByRole('link', { exact: true, name: 'Week' });
+  await week.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(thisWeekUrl);
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Insights: August 24 – 30, 2026',
+    }),
+  ).toBeVisible();
+  await expect(week).toHaveAttribute('aria-current', 'page');
+  await expect(week).toBeFocused();
+  expect(await ranges.boundingBox()).toEqual(rangesBefore);
 
-  await expect(page).toHaveURL(namedArchiveUrl);
-  await expect(year).toHaveAttribute('aria-current', 'page');
-  const after = await page.evaluate(() => globalThis.scrollY);
-  const position = await year.evaluate((element) => {
-    const { bottom, top } = element.getBoundingClientRect();
-    return { bottom, top };
-  });
-  const viewportHeight = await page.evaluate(() => innerHeight);
-  expect(after).toBeGreaterThan(0);
-  expect(position.top).toBeGreaterThanOrEqual(0);
-  expect(position.bottom).toBeLessThanOrEqual(viewportHeight);
+  const previous = page.getByRole('link', { name: 'Previous week' });
+  const previousBefore = await previous.boundingBox();
+  await previous.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(previousWeekUrl);
+  await expect(
+    page.getByRole('heading', {
+      level: 1,
+      name: 'Insights: August 17 – 23, 2026',
+    }),
+  ).toBeVisible();
+  await expect(previous).toBeFocused();
+  expect(await previous.boundingBox()).toEqual(previousBefore);
 });

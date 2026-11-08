@@ -1,3 +1,5 @@
+import type { Anniversary } from '../src/features/journal/anniversary.ts';
+import type { JournalDate } from '../src/features/journal/journal-day.ts';
 import type {
   AgentNoteView,
   WrapArea,
@@ -6,11 +8,11 @@ import type { DayRating } from '../src/features/journal/schemas/day-rating.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import type { EveningView } from '../src/features/journal/services/evening-fns.ts';
 import { emptyEvening } from '../src/features/journal/testing/evening-view.ts';
+import type { ReadWrittenDays } from '../src/features/journal/ui/day-picker.tsx';
 
 export type SaveOutcome =
   | 'stored'
   | 'failed'
-  | 'validation'
   | 'authentication'
   | 'conflict'
   | 'pending';
@@ -56,7 +58,18 @@ export type DayPageFixtureConfig = {
   readonly saveOutcomes: ReadonlyArray<SaveOutcome>;
   /** The day's evening; an empty one when absent. */
   readonly evening?: FixtureEvening | 'unavailable';
+  /** The same date in earlier years; none when absent. */
+  readonly anniversaries?: ReadonlyArray<Anniversary>;
+  /** The days the calendar under the date marks as written. */
+  readonly writtenDays?: ReadonlyArray<JournalDate>;
 };
+
+export const writtenDaysFromFixture =
+  (config: DayPageFixtureConfig): ReadWrittenDays =>
+  (month) =>
+    Promise.resolve(
+      (config.writtenDays ?? []).filter((date) => date.startsWith(month)),
+    );
 
 export const journalEntryFromFixture = (entry: FixtureEntry): JournalEntry => ({
   ...entry,

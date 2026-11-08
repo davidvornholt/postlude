@@ -11,12 +11,14 @@
 import type { RefObject, SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 import { Button } from '#/shared/ui/action.tsx';
-
 import {
   eyebrowClass,
-  focusRingClass,
   readingMeasureClass,
 } from '#/shared/ui/design-classes.ts';
+import {
+  SegmentedTrack,
+  SegmentRadio,
+} from '#/shared/ui/segmented-control.tsx';
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 import { type ExportGrouping, exportGroupings } from '../export-period.ts';
 
@@ -46,6 +48,23 @@ const exportLabel: Record<ExportState, string> = {
 
 const groupingDescriptionId = (grouping: ExportGrouping): string =>
   `export-${grouping}-description`;
+
+const groupingInputId = (grouping: ExportGrouping): string =>
+  `export-${grouping}`;
+
+// Each grouping's description shows while its radio is checked, read from the
+// radio itself so it follows the choice before the script runs too. Written
+// out in full so the stylesheet generator can find each class.
+//
+// All four lie in one grid cell and the others are only made invisible, so
+// the cell is always as tall as the longest description wraps to at the
+// current width, and switching never moves the button below.
+const descriptionShown: Record<ExportGrouping, string> = {
+  day: 'group-has-[#export-day:checked]:visible',
+  week: 'group-has-[#export-week:checked]:visible',
+  month: 'group-has-[#export-month:checked]:visible',
+  year: 'group-has-[#export-year:checked]:visible',
+};
 
 type ExportControlProps = {
   readonly settleAutosaves?: SettleAutosaves;
@@ -87,7 +106,7 @@ export const ExportControl = ({
 
   return (
     <form
-      action="/archive/export"
+      action="/insights/export"
       aria-busy={settling}
       method="post"
       onSubmit={submitAfterSettling}
@@ -104,32 +123,40 @@ export const ExportControl = ({
         <legend className={[eyebrowClass, 'text-ink-faint'].join(' ')}>
           One reading-copy file per
         </legend>
-        <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3">
-          {exportGroupings.map((option) => (
-            <div className="group contents" key={option}>
-              <label className="flex items-center gap-2 text-ink-muted has-checked:text-ink">
-                <input
-                  aria-describedby={groupingDescriptionId(option)}
-                  checked={grouping === option}
-                  className={['accent-primary', focusRingClass].join(' ')}
-                  name="grouping"
-                  onChange={() => setGrouping(option)}
-                  type="radio"
-                  value={option}
-                />
+        <div className="group mt-3">
+          <SegmentedTrack
+            className="w-full max-w-md"
+            count={exportGroupings.length}
+          >
+            {exportGroupings.map((option) => (
+              <SegmentRadio
+                aria-describedby={groupingDescriptionId(option)}
+                checked={grouping === option}
+                id={groupingInputId(option)}
+                key={option}
+                name="grouping"
+                onChange={() => setGrouping(option)}
+                value={option}
+              >
                 {groupingLabels[option]}
-              </label>
+              </SegmentRadio>
+            ))}
+          </SegmentedTrack>
+          <div className="mt-3 grid">
+            {exportGroupings.map((option) => (
               <p
                 className={[
                   readingMeasureClass,
-                  'order-last hidden basis-full text-ink-faint group-has-[:checked]:block',
+                  'invisible col-start-1 row-start-1 text-ink-faint',
+                  descriptionShown[option],
                 ].join(' ')}
                 id={groupingDescriptionId(option)}
+                key={option}
               >
                 {groupingDescriptions[option]}
               </p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </fieldset>
       <Button

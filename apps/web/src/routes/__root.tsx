@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router';
 import { applicationIconLinks } from '../shared/ui/application-icons.ts';
 import { applicationStyleSheetHrefs } from '../shared/ui/application-style-sheets.ts';
+import { IconDefaults } from '../shared/ui/icon-defaults.tsx';
 import { NavigationFocus } from '../shared/ui/navigation-focus';
 import { viewportContent } from '../shared/ui/viewport.ts';
 
@@ -20,7 +21,7 @@ const RootDocument = ({ children }: { readonly children: React.ReactNode }) => (
       <HeadContent />
     </head>
     <body>
-      {children}
+      <IconDefaults>{children}</IconDefaults>
       <Scripts />
     </body>
   </html>

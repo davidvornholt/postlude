@@ -52,8 +52,8 @@ const PreviewWords = ({
   if (day.snippet === '') {
     return (
       <p className="text-ink-muted">
-        {day.hasScriptureReference
-          ? 'A scripture passage was noted.'
+        {day.hasScripture
+          ? 'A scripture passage or topic was noted.'
           : 'This day contains Markdown without readable prose.'}
       </p>
     );

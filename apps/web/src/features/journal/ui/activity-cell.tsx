@@ -45,7 +45,7 @@ export const ActivityCellView = ({
         aria-hidden="true"
         className={[
           'absolute inset-1.5',
-          activityCellClass[cell.level],
+          activityCellClass[cell.shade],
           cell.date === activeDate
             ? 'outline outline-1 outline-ink outline-offset-1'
             : '',

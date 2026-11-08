@@ -1,23 +1,12 @@
 /**
- * The archive activity map's dates, word volume, and heat steps.
+ * The activity map's word volume and heat steps.
  * Today is decided once in `journal-day.ts` against the configured zone.
- *
- * The window uses whole Sunday-to-Saturday weeks except where year 0001 meets
- * the journal's lower bound. The grid pads that first column's missing Sunday.
  */
 
-import {
-  earliestJournalDate,
-  formatJournalDate,
-  type JournalDate,
-  journalDateAt,
-  journalDateWeekday,
-  parseJournalDate,
-  shiftJournalDate,
-} from './journal-day.ts';
+import { type JournalDate, journalDateAt } from './journal-day.ts';
 import type { EntrySummary } from './schemas/entry-summary.ts';
 
-/** One archive day without the prose bodies the map does not draw. */
+/** One written day without the prose bodies, as the streaks count it. */
 export type ActivityDay = {
   readonly date: JournalDate;
   readonly journalWords: number;
@@ -31,7 +20,7 @@ export type ActivityDay = {
 };
 
 /**
- * A stored day as the archive counts it. Whether each section was first used
+ * A stored day as Insights counts it. Whether each section was first used
  * on its own day is decided against the journal's zone, which the server knows
  * and a browser carried abroad doesn't.
  */
@@ -41,7 +30,7 @@ export const activityDayOf =
     date: summary.date,
     journalWords: summary.journalWordCount,
     scriptureWords: summary.scriptureWordCount,
-    hasScripture: summary.hasScriptureReference,
+    hasScripture: summary.hasScripture,
     journalWrittenOnTheDay:
       summary.journalFirstUsedAt !== null &&
       journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,
@@ -55,92 +44,30 @@ export type HeatLevel = 'none' | 'q1' | 'q2' | 'q3' | 'q4';
 /** The three word counts that split the written days into four groups. */
 export type Quartiles = readonly [number, number, number];
 
-export type ActivityWindow = {
-  readonly from: JournalDate;
-  readonly to: JournalDate;
-};
-
-const daysPerWeek = 7;
-const saturday = 6;
-/** How many week columns a rolling year shows, which is what a year needs. */
-const rollingWeeks = 53;
-const firstMonth = 1;
-const lastMonth = 12;
-const firstDayOfMonth = 1;
-const lastDayOfDecember = 31;
+/** The two word counts a day is weighed by. */
+export type WordCounts = Pick<ActivityDay, 'journalWords' | 'scriptureWords'>;
 
 /** How much of the day's writing the map weighs: all of it, both sections. */
-export const dayWords = (day: ActivityDay): number =>
+export const dayWords = (day: WordCounts): number =>
   day.journalWords + day.scriptureWords;
 
-/** The last Saturday on or after a date, so a window ends on a whole week. */
-const weekEnd = (date: JournalDate): JournalDate =>
-  shiftJournalDate(date, saturday - journalDateWeekday(date));
-
-/** The Sunday on or before a date, clamped to the journal's first day. */
-const weekStart = (date: JournalDate): JournalDate =>
-  date === earliestJournalDate
-    ? earliestJournalDate
-    : shiftJournalDate(date, -journalDateWeekday(date));
-
-/**
- * The days the map covers. With no year it is the rolling year ending this
- * week, which is what the writer wants nine times in ten; with one it is that
- * calendar year, so a journal that has run for years can be looked back through
- * rather than only forward from a year ago.
- */
-export const activityWindow = (
-  today: JournalDate,
-  year?: number,
-): ActivityWindow => {
-  if (year === undefined) {
-    const to = weekEnd(today);
-    return { from: shiftJournalDate(to, 1 - rollingWeeks * daysPerWeek), to };
-  }
-  return {
-    from: weekStart(
-      formatJournalDate({ year, month: firstMonth, day: firstDayOfMonth }),
-    ),
-    to: weekEnd(
-      formatJournalDate({ year, month: lastMonth, day: lastDayOfDecember }),
-    ),
-  };
-};
-
-/** The year a window is about, which is the year most of its days fall in. */
-export const windowYear = (window: ActivityWindow): number =>
-  parseJournalDate(window.to).year;
-
-export const writtenDays = (
-  days: ReadonlyArray<ActivityDay>,
-): ReadonlyArray<ActivityDay> => days.filter((day) => dayWords(day) > 0);
-
-export type ActivityTotals = {
-  readonly daysWritten: number;
-  readonly words: number;
-};
-
-/** What a stretch of the journal holds, counted over whatever it is given. */
-export const activityTotals = (
-  days: ReadonlyArray<ActivityDay>,
-): ActivityTotals => ({
-  daysWritten: writtenDays(days).length,
-  words: days.reduce((total, day) => total + dayWords(day), 0),
-});
+export const writtenDays = <Day extends WordCounts>(
+  days: ReadonlyArray<Day>,
+): ReadonlyArray<Day> => days.filter((day) => dayWords(day) > 0);
 
 const firstQuartileFraction = 0.25;
 const medianFraction = 0.5;
 const thirdQuartileFraction = 0.75;
 
 /**
- * The word counts that split the written days into four equal-sized groups, by
- * nearest rank. Bucketing on the days that exist rather than on a fixed word
+ * The values that split the ones above zero into four equal-sized groups, by
+ * nearest rank. Bucketing on the values that exist rather than on a fixed
  * scale is what keeps the darkest cells rare in a quiet year and common in a
  * heavy one.
  */
-export const quartiles = (days: ReadonlyArray<ActivityDay>): Quartiles => {
-  const counts = writtenDays(days)
-    .map(dayWords)
+export const quartilesOf = (values: ReadonlyArray<number>): Quartiles => {
+  const counts = values
+    .filter((value) => value > 0)
     .sort((first, second) => first - second);
   const rankOf = (fraction: number) =>
     counts[Math.max(Math.ceil(fraction * counts.length) - 1, 0)] ?? 0;
@@ -150,6 +77,10 @@ export const quartiles = (days: ReadonlyArray<ActivityDay>): Quartiles => {
     rankOf(thirdQuartileFraction),
   ];
 };
+
+/** The word counts that split the written days into four equal-sized groups. */
+export const quartiles = (days: ReadonlyArray<WordCounts>): Quartiles =>
+  quartilesOf(days.map(dayWords));
 
 /** Which step of the ramp a day sits on. Boundaries fall to the lower step. */
 export const heatLevel = (words: number, thresholds: Quartiles): HeatLevel => {

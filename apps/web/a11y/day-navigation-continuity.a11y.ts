@@ -89,7 +89,15 @@ test('Previous and Next preserve the app shell and keep focus on the arrow', asy
     'Monday, August 24, 2026',
     dayLink(page, 'Next day'),
   );
+  // A day turns with a short slide, and focus is back on the arrow once the
+  // new day is in place, so each further step is one more press.
   await page.keyboard.press('Enter');
+  await expectDay(
+    page,
+    '/day/2026-08-25',
+    'Tuesday, August 25, 2026',
+    dayLink(page, 'Next day'),
+  );
   await page.keyboard.press('Enter');
   await expectDay(
     page,
@@ -123,7 +131,7 @@ test('browser Back and Forward preserve the app shell and focus the page', async
   await expect(appShell(page)).toHaveAttribute('data-app-shell', 'same');
 });
 
-test('the step at the end of a day opens the next one at its top', async ({
+test('a step taken far down a day opens the next one at its top', async ({
   page,
 }) => {
   await mountDayNavigation(page);
@@ -138,15 +146,9 @@ test('the step at the end of a day opens the next one at its top', async ({
   });
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 
-  const turns = page.getByRole('navigation', { name: 'Day before and after' });
-  await expect(
-    turns.getByRole('link', { name: 'Day after Wednesday, August 26, 2026' }),
-  ).toHaveAttribute('href', '/');
-  const before = turns.getByRole('link', {
-    name: 'Day before Monday, August 24, 2026',
-  });
-  await before.focus();
-  await page.keyboard.press('Enter');
+  // The arrows are at the top of the day, and the arrow keys step from
+  // anywhere on it.
+  await page.keyboard.press('ArrowLeft');
   await expectDay(page, '/day/2026-08-24', 'Monday, August 24, 2026');
   await expectMainFocusInViewport(page);
 

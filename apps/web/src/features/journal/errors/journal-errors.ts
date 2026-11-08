@@ -18,9 +18,6 @@ export const journalWriteMessage =
 export const journalWriteConflictMessage =
   'This entry changed in another tab. Your unsaved words are still here; copy them before reloading.';
 
-export const invalidScriptureReferenceMessage =
-  'Check the scripture reference and use a form such as Proverbs 12:5-13.';
-
 export class JournalReadError extends Schema.TaggedError<JournalReadError>()(
   'JournalReadError',
   { message: Schema.String, cause: Schema.Defect() },
@@ -56,11 +53,6 @@ export const journalWriteError = (cause: unknown): JournalWriteError =>
 export const journalWriteConflictError = (): JournalWriteConflictError =>
   new JournalWriteConflictError({
     message: journalWriteConflictMessage,
-  });
-
-export const invalidScriptureReferenceError = (): JournalValidationError =>
-  new JournalValidationError({
-    message: invalidScriptureReferenceMessage,
   });
 
 /**

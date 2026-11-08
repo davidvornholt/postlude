@@ -7,7 +7,18 @@
 
 import { expect, it } from 'bun:test';
 
-import { journalDateLabel, journalDayRelation } from './day-label.ts';
+import {
+  journalDateLabel,
+  journalDateLabelParts,
+  journalDayRelation,
+} from './day-label.ts';
+
+it('splits the heading after the weekday, where a phone breaks it', () => {
+  expect(journalDateLabelParts('2026-09-30')).toEqual({
+    weekday: 'Wednesday',
+    calendarDate: 'September 30, 2026',
+  });
+});
 
 it('does not slip a day at either end of the year', () => {
   expect(journalDateLabel('2026-01-01')).toBe('Thursday, January 1, 2026');

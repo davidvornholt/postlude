@@ -1,3 +1,4 @@
+import { ImagePlus } from 'lucide-react';
 import {
   type KeyboardEvent,
   type ReactNode,
@@ -6,14 +7,13 @@ import {
   useRef,
   useState,
 } from 'react';
-import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { formattingActions } from './formatting-actions.ts';
 import {
   type ActiveEditor,
   FormattingContext,
   useFormattingToolbar,
 } from './formatting-context.ts';
-import { JournalIconButton } from './journal-icon-button.tsx';
+import { JournalIconButton, type WritingTone } from './journal-icon-button.tsx';
 
 const navigateToolbar = (
   event: KeyboardEvent<HTMLElement>,
@@ -48,7 +48,13 @@ const navigateToolbar = (
   buttons[(next + buttons.length) % buttons.length]?.focus();
 };
 
-export const FormattingToolbar = () => {
+/**
+ * The formatting tools for one writing area. They sit in that area's section
+ * bar (`writing-section.tsx`) and act only on its editor, which takes them
+ * over as soon as it is on the page, so the tools are never disabled while
+ * there is something to write in.
+ */
+export const FormattingToolbar = ({ tone }: { readonly tone: WritingTone }) => {
   const context = useFormattingToolbar();
   const active = context?.active;
   const [, render] = useState(0);
@@ -63,69 +69,58 @@ export const FormattingToolbar = () => {
   const disabled = !active?.editor.isEditable || active.editor.isDestroyed;
   return (
     <div
-      className="sticky top-0 z-30 mt-6 border-border border-y bg-background text-ink"
-      data-formatting-toolbar=""
+      aria-label={active ? `Formatting ${active.label}` : 'Formatting'}
+      className="flex min-w-0 items-center justify-between sm:w-88"
+      data-toolbar-actions=""
+      role="toolbar"
     >
-      <PageFrame className="flex flex-col gap-1 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-        {/* Which area the tools act on. On a phone the caret already says
-            so, and a second row would make the pinned bar cover more of the
-            writing; the toolbar's own name still carries it. */}
-        <span className="hidden min-h-5 text-ink-muted text-xs sm:block">
-          {active?.label ?? 'Writing tools'}
-        </span>
-        <div
-          aria-label={active ? `Formatting ${active.label}` : 'Formatting'}
-          className="flex min-w-0 items-center justify-between sm:w-88"
-          data-toolbar-actions=""
-          role="toolbar"
-        >
-          {formattingActions.map((action) => (
-            <JournalIconButton
-              aria-pressed={active?.editor.isActive(action.mark) ?? false}
-              divider={action.mark === 'bulletList'}
-              inToolbar={true}
-              hintAlign={
-                ['bold', 'italic', 'heading'].includes(action.mark)
-                  ? 'start'
-                  : 'end'
-              }
-              disabled={disabled}
-              hint={action.hint}
-              icon={action.mark}
-              key={action.label}
-              label={action.label}
-              onClick={(event) => {
-                if (active && !disabled) {
-                  const chain = active.editor.chain();
-                  action.run(
-                    event.detail === 0
-                      ? chain
-                      : chain.focus(undefined, { scrollIntoView: false }),
-                  );
-                }
-              }}
-              onKeyDown={(event) => navigateToolbar(event, active)}
-              onFocus={() => setFocused(action.label)}
-              onMouseDown={(event) => event.preventDefault()}
-              tabIndex={focused === action.label ? 0 : -1}
-            />
-          ))}
-          <JournalIconButton
-            divider={true}
-            inToolbar={true}
-            hintAlign="end"
-            disabled={disabled}
-            hint="Or paste a photo"
-            icon="image"
-            label="Add image"
-            onClick={active?.addImage}
-            onKeyDown={(event) => navigateToolbar(event, active)}
-            onFocus={() => setFocused('Add image')}
-            onMouseDown={(event) => event.preventDefault()}
-            tabIndex={focused === 'Add image' ? 0 : -1}
-          />
-        </div>
-      </PageFrame>
+      {formattingActions.map((action) => (
+        <JournalIconButton
+          aria-pressed={active?.editor.isActive(action.mark) ?? false}
+          divider={action.mark === 'bulletList'}
+          inToolbar={true}
+          hintAlign={
+            ['bold', 'italic', 'heading'].includes(action.mark)
+              ? 'start'
+              : 'end'
+          }
+          disabled={disabled}
+          hint={action.hint}
+          icon={action.icon}
+          key={action.label}
+          label={action.label}
+          onClick={(event) => {
+            if (active && !disabled) {
+              const chain = active.editor.chain();
+              action.run(
+                event.detail === 0
+                  ? chain
+                  : chain.focus(undefined, { scrollIntoView: false }),
+              );
+            }
+          }}
+          onKeyDown={(event) => navigateToolbar(event, active)}
+          onFocus={() => setFocused(action.label)}
+          onMouseDown={(event) => event.preventDefault()}
+          tabIndex={focused === action.label ? 0 : -1}
+          tone={tone}
+        />
+      ))}
+      <JournalIconButton
+        divider={true}
+        inToolbar={true}
+        hintAlign="end"
+        disabled={disabled}
+        hint="Or paste a photo"
+        icon={ImagePlus}
+        label="Add image"
+        onClick={active?.addImage}
+        onKeyDown={(event) => navigateToolbar(event, active)}
+        onFocus={() => setFocused('Add image')}
+        onMouseDown={(event) => event.preventDefault()}
+        tabIndex={focused === 'Add image' ? 0 : -1}
+        tone={tone}
+      />
     </div>
   );
 };

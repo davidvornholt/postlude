@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 import {
-  archiveFixtureConfigs,
-  mountArchivePage,
-} from './archive-page-test-support';
+  insightsFixtureConfigs,
+  mountInsightsPage,
+} from './insights-page-test-support.ts';
 
-// Each fixture bundles the real archive and editor dependency graph on a cold worker.
+// Each fixture bundles the real Insights and editor dependency graph on a cold worker.
 const fixtureBuildTimeout = 60_000;
 test.setTimeout(fixtureBuildTimeout);
 
@@ -18,10 +18,12 @@ for (const window of windows) {
   test(`month labels follow the plotted interval ending ${window.to}`, async ({
     page,
   }, testInfo) => {
-    await mountArchivePage(page, {
-      ...archiveFixtureConfigs.filled,
-      view: { ...archiveFixtureConfigs.filled.view, today: window.to, window },
+    // The year's entry length is drawn from its first day to today.
+    await mountInsightsPage(page, {
+      ...insightsFixtureConfigs.year,
+      view: { ...insightsFixtureConfigs.year.view, today: window.to },
     });
+    await page.locator('summary').filter({ hasText: 'Entry length' }).click();
     const chart = page.getByRole('region', { name: 'Entry size chart' });
     const labels = chart.locator('svg + div > span');
     const march = labels.filter({ hasText: 'Mar' });

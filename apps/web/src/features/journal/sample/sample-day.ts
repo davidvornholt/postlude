@@ -4,7 +4,7 @@
  *
  * Every time on a day is a time on that day's wall clock in the journal's zone,
  * because the streaks count a section only when it was first used on the day
- * it is about, and the archive and the review pages read those times back.
+ * it is about, and Insights reads those times back.
  */
 
 import type { JournalDate } from '../journal-day.ts';

@@ -21,6 +21,7 @@ const entry = (parts: Partial<ExportEntry> = {}): ExportEntry => ({
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: null,
+  scriptureTopic: null,
   journalFirstUsedAt: null,
   scriptureFirstUsedAt: null,
   createdAt,

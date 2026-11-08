@@ -12,28 +12,28 @@ const view: CalendarView = {
   days: [
     {
       date: '2026-08-19',
-      hasScriptureReference: false,
+      hasScripture: false,
       revision: 2,
       snippet: 'A quiet kind of progress.',
       words: 120,
     },
     {
       date: '2026-08-20',
-      hasScriptureReference: false,
+      hasScripture: false,
       revision: 1,
       snippet: '',
       words: 0,
     },
     {
       date: '2026-08-25',
-      hasScriptureReference: true,
+      hasScripture: true,
       revision: 1,
       snippet: '',
       words: 0,
     },
     {
       date: '2026-08-27',
-      hasScriptureReference: false,
+      hasScripture: false,
       revision: 1,
       snippet: 'A day I am looking forward to.',
       words: 42,
@@ -117,4 +117,37 @@ it('completes the first and last calendar weeks with inert ruled cells', async (
   expect(html.match(/data-calendar-padding="true"/gu)).toHaveLength(
     augustPaddingCells,
   );
+});
+
+const monthStep = (html: string, label: string): string =>
+  html.match(new RegExp(`<a[^>]*aria-label="${label}"[^>]*>`, 'u'))?.[0] ?? '';
+
+it('dims the step before the first written month instead of dropping it', async () => {
+  const html = await renderInRouter(
+    <CalendarPage
+      requestedDay={undefined}
+      view={{ ...view, days: [], month: '2025-03' }}
+    />,
+  );
+  const previous = monthStep(html, 'Previous month');
+
+  expect(previous).toContain('aria-disabled="true"');
+  expect(previous).not.toContain('href=');
+  expect(monthStep(html, 'Next month')).toContain('month=2025-04');
+});
+
+it('offers the way back to today only away from the current month', async () => {
+  const away = await renderInRouter(
+    <CalendarPage
+      requestedDay={undefined}
+      view={{ ...view, days: [], month: '2026-05' }}
+    />,
+  );
+  const current = await renderInRouter(
+    <CalendarPage requestedDay={undefined} view={view} />,
+  );
+
+  expect(plainText(away)).toContain('Go to today');
+  expect(away).toContain('href="/calendar?day=2026-08-26&amp;month=2026-08"');
+  expect(plainText(current)).not.toContain('Go to today');
 });

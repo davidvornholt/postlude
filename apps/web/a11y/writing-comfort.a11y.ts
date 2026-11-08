@@ -15,16 +15,18 @@ const readingSize = '18px';
 const readingLeading = '28px';
 // In page order, which is the order their settings are read in.
 const writingAreas = [
-  { label: 'Morning scripture notes', minHeight: '64px' },
-  { label: 'Evening journal', minHeight: '192px' },
+  { label: 'Morning scripture notes', minHeight: '112px' },
+  { label: 'Evening journal', minHeight: '384px' },
 ] as const;
 
 const caretGeometry = (page: playwright.Page) =>
   page.evaluate(() => {
     const range = getSelection()?.getRangeAt(0);
     const caret = range?.getClientRects()[0] ?? range?.getBoundingClientRect();
-    const bar = document
-      .querySelector('[data-formatting-toolbar]')
+    // The bar of the part being written in, which is the one pinned over it.
+    const bar = document.activeElement
+      ?.closest('section')
+      ?.querySelector('[data-formatting-toolbar]')
       ?.getBoundingClientRect();
     return {
       barBottom: bar?.bottom ?? Number.NaN,
@@ -71,15 +73,16 @@ test('the pinned writing tools stay one row on every screen', async ({
   page,
 }) => {
   await mountDayPage(page, ['stored']);
-  const bar = page.locator('[data-formatting-toolbar]');
-  const tools = page.getByRole('toolbar');
+  const evening = page.getByRole('region', { name: 'Evening', exact: true });
+  const bar = evening.locator('[data-formatting-toolbar]');
+  const tools = evening.getByRole('toolbar');
   const [barBox, toolsBox] = await Promise.all([
     bar.boundingBox(),
     tools.boundingBox(),
   ]);
   // The bar is the row of tools plus its padding and rules. On a phone the
-  // name of the area they act on would be a second row above them, and the
-  // bar would cover that much more of the writing it is pinned over.
+  // name of the part they act on gives way to them rather than taking a second
+  // row, which would cover that much more of the writing it is pinned over.
   const toolsHeight = toolsBox?.height ?? 0;
   expect(toolsHeight).toBeGreaterThan(0);
   expect((barBox?.height ?? 0) - toolsHeight).toBeLessThan(toolsHeight / 2);

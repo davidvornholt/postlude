@@ -58,16 +58,47 @@
 
     /*
      * The activity ramp is sequential: one hue, lightness moving one way only, so
-     * q1 through q4 move toward more activity. `heat-none` is the unwritten day
-     * and deliberately sits with the surfaces rather than on the ramp. Its
+     * q1 through q4 move toward more activity. Neighbouring steps sit at least
+     * 0.1 apart in lightness, enough to tell apart in a 12px square. The light
+     * ramp leans a little toward blue-green as it darkens, which keeps its
+     * darkest steps inside sRGB. `heat-none` is the unwritten day and
+     * deliberately sits with the surfaces rather than on the ramp. Its
      * contrasting outline, not this fill, is what marks it as empty.
      */
     --pl-heat-none: oklch(0.93 0.015 85);
     --pl-heat-none-mark: oklch(0.6 0.02 80);
-    --pl-heat-q1: oklch(0.6 0.07 155);
-    --pl-heat-q2: oklch(0.52 0.085 155);
-    --pl-heat-q3: oklch(0.44 0.09 155);
-    --pl-heat-q4: oklch(0.36 0.085 155);
+    --pl-heat-q1: oklch(0.61 0.1 152);
+    --pl-heat-q2: oklch(0.5 0.11 155);
+    --pl-heat-q3: oklch(0.39 0.085 160);
+    --pl-heat-q4: oklch(0.28 0.06 162);
+
+    /*
+     * Every rating of the day is three steps on one scale, and each step has
+     * one color wherever an answer shows: energy runs drained, okay, fresh;
+     * progress little, solid, a lot; the repeat question no, partly, yes. Told
+     * by color rather than by steps of the ramp, because in a 12px square
+     * three shades of one green read as one. Low is a spent umber rather than
+     * the critical red, because a low day is not an error. The middle is
+     * ochre. High is the app's own green, at the primary hue.
+     *
+     * At the primary's own lightness the green would be the umber's twin for a
+     * reader without red-green vision, so it is lifted, just as far as it
+     * takes, to sit between the umber and the ochre. That lift also keeps it
+     * apart from `--pl-primary`, and a rating is only ever a filled mark among
+     * its siblings, while focus and the current place are outlines and
+     * underlines, so a green answer never reads as where you are.
+     * `theme-audit.ts` measures each pair under simulation, and each mark
+     * against the page.
+     *
+     * A chosen answer on the day page is filled with its step, and its label
+     * is set in that step's `on-rating` color, which clears 4.5:1 on it.
+     */
+    --pl-rating-low: oklch(0.44 0.1 50);
+    --pl-rating-middle: oklch(0.61 0.12 84);
+    --pl-rating-high: oklch(0.52 0.09 155);
+    --pl-on-rating-low: oklch(0.96 0.015 85);
+    --pl-on-rating-middle: oklch(0.2 0.02 50);
+    --pl-on-rating-high: oklch(0.96 0.015 85);
 
     /* The deep register: the one separate surface, an ink-ground under light
        type, kept to a section or two a page. */
@@ -119,9 +150,19 @@
       --pl-heat-none: oklch(0.2 0.014 55);
       --pl-heat-none-mark: oklch(0.52 0.022 65);
       --pl-heat-q1: oklch(0.52 0.08 155);
-      --pl-heat-q2: oklch(0.6 0.085 155);
-      --pl-heat-q3: oklch(0.68 0.09 155);
-      --pl-heat-q4: oklch(0.76 0.095 155);
+      --pl-heat-q2: oklch(0.63 0.095 155);
+      --pl-heat-q3: oklch(0.74 0.1 155);
+      --pl-heat-q4: oklch(0.85 0.095 155);
+
+      /* Lifted just clear of the dark page, and no further: a brighter mark
+         would glare in a square this small. The green climbs a little past
+         the primary's lightness, to clear the ochre beneath it. */
+      --pl-rating-low: oklch(0.53 0.105 50);
+      --pl-rating-middle: oklch(0.67 0.13 88);
+      --pl-rating-high: oklch(0.77 0.09 155);
+      --pl-on-rating-low: oklch(0.97 0.012 85);
+      --pl-on-rating-middle: oklch(0.2 0.014 55);
+      --pl-on-rating-high: oklch(0.2 0.014 55);
 
       /* Lifted off the page rather than inverted: a ground a little lighter than
          the background reads as a band edge to edge without glare, and the ink
@@ -182,6 +223,12 @@
   --color-heat-q2: var(--pl-heat-q2);
   --color-heat-q3: var(--pl-heat-q3);
   --color-heat-q4: var(--pl-heat-q4);
+  --color-rating-low: var(--pl-rating-low);
+  --color-rating-middle: var(--pl-rating-middle);
+  --color-rating-high: var(--pl-rating-high);
+  --color-on-rating-low: var(--pl-on-rating-low);
+  --color-on-rating-middle: var(--pl-on-rating-middle);
+  --color-on-rating-high: var(--pl-on-rating-high);
   --color-deep-ground: var(--pl-deep-ground);
   --color-deep-ink: var(--pl-deep-ink);
   --color-deep-ink-muted: var(--pl-deep-ink-muted);

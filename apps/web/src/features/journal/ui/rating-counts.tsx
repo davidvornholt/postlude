@@ -1,32 +1,33 @@
+import { ratingCounts } from '../day-measures.ts';
 import {
   energyOptions,
   progressOptions,
+  type RatingOption,
+  type RatingStep,
   repeatDayOptions,
 } from '../evening-labels.ts';
+import type { InsightsDay } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
-import { ratingCounts } from '../review-summary.ts';
-import type { ReviewDay } from '../review-view.ts';
+import { RatingSwatch } from './rating-swatch.tsx';
 
 type Row = {
   readonly name: string;
   readonly answers: ReadonlyArray<{
     readonly label: string;
     readonly count: number;
+    readonly step: RatingStep;
   }>;
   readonly unrated: number;
 };
 
 const rowOf = <Value extends string>(
-  days: ReadonlyArray<ReviewDay>,
+  days: ReadonlyArray<InsightsDay>,
   today: JournalDate,
   rating: {
     readonly name: string;
-    readonly options: ReadonlyArray<{
-      readonly value: Value;
-      readonly label: string;
-    }>;
-    readonly pick: (day: ReviewDay) => Value | null;
+    readonly options: ReadonlyArray<RatingOption<Value>>;
+    readonly pick: (day: InsightsDay) => Value | null;
   },
 ): Row => {
   const { name, options, pick } = rating;
@@ -41,6 +42,7 @@ const rowOf = <Value extends string>(
     answers: options.map((option) => ({
       label: option.label,
       count: counts.get(option.value) ?? 0,
+      step: option.step,
     })),
     unrated,
   };
@@ -50,7 +52,7 @@ export const RatingCounts = ({
   days,
   today,
 }: {
-  readonly days: ReadonlyArray<ReviewDay>;
+  readonly days: ReadonlyArray<InsightsDay>;
   readonly today: JournalDate;
 }) => {
   const rows = [
@@ -77,7 +79,8 @@ export const RatingCounts = ({
           <dt className="text-ink-muted">{row.name}</dt>
           <dd className="flex flex-wrap gap-x-4 gap-y-1 text-ink tabular-nums">
             {row.answers.map((answer) => (
-              <span key={answer.label}>
+              <span className="flex items-center gap-2" key={answer.label}>
+                <RatingSwatch step={answer.step} />
                 {answer.label} {journalNumberLabel(answer.count)}
               </span>
             ))}

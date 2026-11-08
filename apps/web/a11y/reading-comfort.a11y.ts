@@ -1,12 +1,12 @@
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
-import {
-  archiveFixtureConfigs,
-  mountArchivePage,
-  scanArchive,
-} from './archive-page-test-support.ts';
 import { mountDayPage, scan } from './day-page-test-support.ts';
+import {
+  insightsFixtureConfigs,
+  mountInsightsPage,
+  scanInsights,
+} from './insights-page-test-support.ts';
 import {
   expectContainedGeometry,
   expectPageFrameGeometry,
@@ -17,7 +17,7 @@ import { mountSearchPage, scanSearch } from './search-page-test-support.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
 const deepGround = /^oklch\(0\.[0-4]/u;
-const writtenSummary = /days written, .* words in all/u;
+const writtenSummary = /written on \d+ of \d+ days, .* words in all/u;
 
 const expectKeyboardFocus = async (
   page: playwright.Page,
@@ -56,28 +56,27 @@ for (const colorScheme of colorSchemes) {
       page.getByRole('link', { name: 'Previous day' }),
     );
 
-    const dateLayout = await date.evaluate((element) => {
+    const dateLines = await date.evaluate((element) => {
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
       const lines = new Set<number>();
       let text = walker.nextNode();
       while (text !== null) {
         const range = document.createRange();
         range.selectNodeContents(text);
-        for (const rectangle of range.getClientRects()) {
+        // A phone leaves the comma after the weekday to screen readers, in a
+        // one-pixel box that is not a line anyone reads.
+        const shown =
+          (text.parentElement?.getBoundingClientRect().width ?? 0) > 1;
+        for (const rectangle of shown ? range.getClientRects() : []) {
           lines.add(Math.round(rectangle.top));
         }
         text = walker.nextNode();
       }
-      const style = getComputedStyle(element);
-      return {
-        lines: lines.size,
-        wrapping: style.textWrapStyle || style.textWrap,
-      };
+      return lines.size;
     });
-    expect(dateLayout.wrapping).toContain('balance');
-    expect(dateLayout.lines).toBe(
-      testInfo.project.name.includes('mobile') ? 2 : 1,
-    );
+    // The date's halves never break inside themselves: one line beside the
+    // arrows from a tablet up, and the weekday over the rest on a phone.
+    expect(dateLines).toBe(testInfo.project.name.includes('mobile') ? 2 : 1);
 
     const register = page
       .getByRole('heading', {
@@ -97,20 +96,20 @@ for (const colorScheme of colorSchemes) {
     await scan(page);
   });
 
-  test(`the archive keeps the shared frame and reading measure in ${colorScheme} mode`, async ({
+  test(`Insights keeps the shared frame and reading measure in ${colorScheme} mode`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountArchivePage(page, archiveFixtureConfigs.filled);
-    const heading = page.getByRole('heading', { name: 'Archive' });
-    await expect(heading).toBeVisible();
-    await expectPageFrameGeometry(heading.locator('..'));
+    await mountInsightsPage(page, insightsFixtureConfigs.year);
+    const ranges = page.getByRole('navigation', { name: 'Insights range' });
+    await expect(ranges).toBeVisible();
+    await expectPageFrameGeometry(ranges.locator('..'));
     await expectReadingMeasureGeometry(page, page.getByText(writtenSummary));
     await expectKeyboardFocus(
       page,
-      page.getByRole('link', { name: 'Past year' }),
+      page.getByRole('link', { name: 'Previous year' }),
     );
-    await scanArchive(page);
+    await scanInsights(page);
   });
 
   test(`search keeps the shared frame and reading measure in ${colorScheme} mode`, async ({

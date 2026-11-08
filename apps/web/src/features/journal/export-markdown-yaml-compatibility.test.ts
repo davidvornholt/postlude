@@ -13,6 +13,7 @@ const entry = (date: string): ExportEntry => ({
   journalMarkdown: '',
   scriptureMarkdown: '',
   scriptureReference: null,
+  scriptureTopic: null,
   journalFirstUsedAt: null,
   scriptureFirstUsedAt: null,
   createdAt: timestamp,

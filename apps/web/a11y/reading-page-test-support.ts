@@ -2,10 +2,6 @@ import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 
-import {
-  sampleReviewMonth,
-  sampleReviewWeek,
-} from '../src/features/journal/testing/review-view.ts';
 import { viewportContent } from '../src/shared/ui/viewport.ts';
 import { buildReadingPageFixture } from './reading-page-fixture-build.ts';
 import type {
@@ -14,17 +10,15 @@ import type {
 } from './reading-page-fixture-contract.ts';
 
 const today = '2026-08-26';
-const longMemoryWordRepeats = 160;
 
 export const readingPageFixtureConfigs = {
   calendar: {
-    kind: 'calendar',
     requestedDay: '2026-08-19',
     view: {
       days: [
         {
           date: '2026-08-19',
-          hasScriptureReference: false,
+          hasScripture: false,
           revision: 2,
           snippet: 'A quiet kind of progress.',
           words: 120,
@@ -35,38 +29,6 @@ export const readingPageFixtureConfigs = {
       today,
     },
   },
-  onThisDay: {
-    kind: 'on-this-day',
-    view: {
-      anniversaries: [
-        {
-          date: '2025-08-26',
-          journalMarkdown:
-            'Moved the desk under the window.\n\nThe room felt easier to work in.',
-          scriptureMarkdown: 'Patience makes room to notice what is growing.',
-          scriptureReference: {
-            book: 'James',
-            chapter: 5,
-            verseStart: 7,
-            verseEnd: 8,
-          },
-          yearsAgo: 1,
-          words: 210,
-        },
-        {
-          date: '2024-08-26',
-          journalMarkdown: `A-long-unbroken-memory-${'word'.repeat(longMemoryWordRepeats)}`,
-          scriptureMarkdown: '',
-          yearsAgo: 2,
-          words: 89,
-        },
-      ],
-      date: today,
-      today,
-    },
-  },
-  reviewWeek: { kind: 'review', view: sampleReviewWeek },
-  reviewMonth: { kind: 'review', view: sampleReviewMonth },
 } satisfies Record<string, ReadingPageFixtureConfig>;
 
 const assets = new Map<

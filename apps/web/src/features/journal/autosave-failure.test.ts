@@ -14,11 +14,6 @@ const networkFailure = {
   kind: 'network',
   message: 'Could not save. Check your connection.',
 } as const;
-const validationFailure = {
-  kind: 'validation',
-  field: 'scriptureReference',
-  message: 'Check the passage.',
-} as const;
 const blank: EntryDraft = {
   date: '2026-08-26',
   journalMarkdown: '',
@@ -105,68 +100,4 @@ it('ignores a failed reply after undo returned to the stored draft', () => {
   ]);
   expect(state.failure).toBeUndefined();
   expect(saveStatus(state)).toBe('saved');
-});
-
-it('keeps passage validation until the changed passage is locally valid', () => {
-  const invalid = { ...blank, scriptureReference: 'Proverbs 12:' };
-  const { state } = run([
-    { _tag: 'edited', draft: invalid },
-    { _tag: 'quiet' },
-    { _tag: 'failed', failure: validationFailure },
-    {
-      _tag: 'edited',
-      draft: { ...invalid, scriptureReference: 'still not a passage' },
-    },
-  ]);
-  expect(state.failure).toBe(validationFailure);
-  expect(saveStatus(state)).toBe('failed');
-
-  const corrected = run(
-    [
-      {
-        _tag: 'edited',
-        draft: { ...invalid, scriptureReference: 'Proverbs 12:5' },
-      },
-    ],
-    state,
-  ).state;
-  expect(corrected.failure).toBeUndefined();
-  expect(saveStatus(corrected)).toBe('unsaved');
-});
-
-it('saves a corrected passage when the old validation reply arrives late', () => {
-  const invalid = { ...blank, scriptureReference: 'Proverbs 12:' };
-  const corrected = { ...blank, scriptureReference: 'Proverbs 12:5' };
-  const { state, commands } = run([
-    { _tag: 'edited', draft: invalid },
-    { _tag: 'quiet' },
-    { _tag: 'edited', draft: corrected },
-    { _tag: 'quiet' },
-    { _tag: 'failed', failure: validationFailure },
-  ]);
-
-  expect(commands.filter((command) => command._tag === 'save')).toEqual([
-    { _tag: 'save', draft: invalid },
-    { _tag: 'save', draft: corrected },
-  ]);
-  expect(state.failure).toBeUndefined();
-  expect(state.inFlight).toEqual(corrected);
-  expect(saveStatus(state)).toBe('saving');
-});
-
-it('does not retry a newer passage that is still invalid', () => {
-  const first = { ...blank, scriptureReference: 'Proverbs 12:' };
-  const second = { ...blank, scriptureReference: 'still not a passage' };
-  const { state, commands } = run([
-    { _tag: 'edited', draft: first },
-    { _tag: 'quiet' },
-    { _tag: 'edited', draft: second },
-    { _tag: 'failed', failure: validationFailure },
-  ]);
-
-  expect(commands.filter((command) => command._tag === 'save')).toEqual([
-    { _tag: 'save', draft: first },
-  ]);
-  expect(state.failure).toBe(validationFailure);
-  expect(saveStatus(state)).toBe('failed');
 });

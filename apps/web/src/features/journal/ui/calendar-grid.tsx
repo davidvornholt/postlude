@@ -1,33 +1,12 @@
 import { Link } from '@tanstack/react-router';
 
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
-import {
-  calendarWeekdayIndex,
-  datesInMonth,
-  type JournalMonth,
-} from '../calendar.ts';
+import { calendarWeeks, type JournalMonth } from '../calendar.ts';
 import { journalDateLabel } from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import type { CalendarDay } from '../services/calendar-fns.ts';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
-const weekLength = weekdays.length;
-
-const rowsOf = (
-  month: JournalMonth,
-): ReadonlyArray<ReadonlyArray<JournalDate | undefined>> => {
-  const dates = datesInMonth(month);
-  const leading = new Array<undefined>(
-    calendarWeekdayIndex(dates[0] ?? `${month}-01`),
-  ).fill(undefined);
-  const cells: Array<JournalDate | undefined> = [...leading, ...dates];
-  while (cells.length % weekLength !== 0) {
-    cells.push(undefined);
-  }
-  return Array.from({ length: cells.length / weekLength }, (_unused, index) =>
-    cells.slice(index * weekLength, (index + 1) * weekLength),
-  );
-};
 
 const dayLinkClass = [
   'group relative flex min-h-16 w-full flex-col px-2 py-2 text-left sm:min-h-24 sm:px-3',
@@ -127,7 +106,7 @@ export const CalendarGrid = ({
         </tr>
       </thead>
       <tbody>
-        {rowsOf(month).map((week) => (
+        {calendarWeeks(month).map((week) => (
           <tr
             className="border-border border-b"
             key={week.find((date) => date !== undefined) ?? `leading-${month}`}

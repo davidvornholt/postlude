@@ -24,27 +24,5 @@ export const buildReadingPageFixture = (
         ).pathname,
         exportNames: ['CalendarPage'],
       },
-      {
-        fixtureModulePath: new URL(
-          './on-this-day-page-fixture-module.ts',
-          import.meta.url,
-        ).pathname,
-        productionModulePath: new URL(
-          '../src/features/journal/ui/on-this-day-page.tsx',
-          import.meta.url,
-        ).pathname,
-        exportNames: ['OnThisDayPage'],
-      },
-      {
-        fixtureModulePath: new URL(
-          './review-page-fixture-module.ts',
-          import.meta.url,
-        ).pathname,
-        productionModulePath: new URL(
-          '../src/features/journal/ui/review-page.tsx',
-          import.meta.url,
-        ).pathname,
-        exportNames: ['ReviewPage'],
-      },
     ],
   });

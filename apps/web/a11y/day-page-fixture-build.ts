@@ -53,8 +53,8 @@ const sessionFnPath = new URL(
   '../src/shared/auth/session-fn.ts',
   import.meta.url,
 ).pathname;
-const archiveFunctionsPath = new URL(
-  '../src/features/journal/services/archive-fns.ts',
+const insightsFunctionsPath = new URL(
+  '../src/features/journal/services/insights-fns.ts',
   import.meta.url,
 ).pathname;
 
@@ -67,8 +67,8 @@ const navigationFixturePlugin = (): Plugin => ({
     if (id === sessionFnPath) {
       return 'export const hasAuthorizedSessionFn = () => Promise.resolve(true);';
     }
-    return id === archiveFunctionsPath
-      ? 'export const readArchiveFn = () => Promise.reject(new Error("The day navigation fixture has no archive route."));'
+    return id === insightsFunctionsPath
+      ? 'export const readInsightsFn = () => Promise.reject(new Error("The day navigation fixture has no Insights route."));'
       : undefined;
   },
 });

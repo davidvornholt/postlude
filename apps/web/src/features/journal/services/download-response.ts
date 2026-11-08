@@ -19,8 +19,8 @@ const unavailableResponse = (
   styleSheetHrefs: ApplicationStyleSheetHrefs,
 ): Response =>
   privateHtmlRecoveryResponse({
-    actionHref: '/archive',
-    actionLabel: 'Return to archive',
+    actionHref: '/insights',
+    actionLabel: 'Return to Insights',
     heading: 'Export unavailable',
     message: exportUnavailableMessage,
     styleSheetHrefs,

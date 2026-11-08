@@ -26,6 +26,7 @@ describe('dated journal day service boundary', () => {
       <A>() =>
         Promise.resolve({
           entry: entryOn('2026-08-27'),
+          anniversaries: [],
           today,
         }) as Promise<A>,
     );
@@ -37,21 +38,34 @@ describe('dated journal day service boundary', () => {
       disposition: 'readable',
       view: {
         entry: entryOn('2026-08-27'),
+        anniversaries: [],
         today,
       },
     });
   });
 
-  it('reads only the requested past day', async () => {
+  it('reads the requested past day and the same date in the years before it', async () => {
     const readDates: Array<string> = [];
+    const anniversaryReads: Array<unknown> = [];
     const repository = EntryRepository.of({
       read: (date) => {
         readDates.push(date);
         return Effect.succeed(entryOn(date));
       },
-      readAnniversaries: () =>
-        Effect.die('Anniversary access is outside this read.'),
-      readArchive: () => Effect.die('Archive access is outside this read.'),
+      readAnniversaries: (monthDays, before, limit) => {
+        anniversaryReads.push({ monthDays, before, limit });
+        return Effect.succeed([
+          {
+            date: '2024-08-25',
+            journalMarkdown: 'Two years back.',
+            journalWordCount: 3,
+            revision: 0,
+            scriptureMarkdown: '',
+            scriptureWordCount: 0,
+          },
+        ]);
+      },
+      readHistory: () => Effect.die('History access is outside this read.'),
       readCalendar: () => Effect.die('Calendar access is outside this read.'),
       save: () => Effect.die('Write access is outside this read.'),
     });
@@ -69,10 +83,23 @@ describe('dated journal day service boundary', () => {
       disposition: 'readable',
       view: {
         entry: entryOn('2026-08-25'),
+        anniversaries: [
+          {
+            date: '2024-08-25',
+            journalMarkdown: 'Two years back.',
+            scriptureMarkdown: '',
+            yearsAgo: 2,
+            words: 3,
+          },
+        ],
         today,
       },
     });
     expect(acquisitions).toBe(1);
     expect(readDates).toEqual(['2026-08-25']);
+    // The years are counted back from the day being read, not from today.
+    expect(anniversaryReads).toEqual([
+      { monthDays: ['08-25'], before: '2026-08-25', limit: 4 },
+    ]);
   });
 });

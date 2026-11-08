@@ -59,18 +59,16 @@ const publicServerFunctions = [
  * prevents a journal function from returning cacheable private data.
  */
 const privateServerFunctions = [
-  ['archive-fns.ts', 'readArchiveFn'],
   ['calendar-fns.ts', 'readCalendarFn'],
   ['evening-fns.ts', 'closeDayFn'],
   ['evening-fns.ts', 'readEveningFn'],
   ['evening-fns.ts', 'regenerateAgentNoteFn'],
   ['evening-fns.ts', 'reopenDayFn'],
   ['evening-fns.ts', 'saveDayRatingFn'],
+  ['insights-fns.ts', 'readInsightsFn'],
   ['journal-fns.ts', 'readDatedJournalDayFn'],
   ['journal-fns.ts', 'readTodayJournalDayFn'],
   ['journal-fns.ts', 'saveEntryFn'],
-  ['on-this-day-fns.ts', 'readOnThisDayFn'],
-  ['review-fns.ts', 'readReviewFn'],
   ['search-fns.ts', 'searchJournalFn'],
 ].map(([path, name]) => ({ path: `features/journal/services/${path}`, name }));
 
@@ -89,7 +87,7 @@ const publicRouteHandlers = [
 ];
 
 const privateRouteHandlers = [
-  { path: 'routes/_app/archive_.export.ts', name: 'POST' },
+  { path: 'routes/_app/insights_.export.ts', name: 'POST' },
   { path: 'routes/_app/search.tsx', name: 'POST' },
   { path: 'routes/api/journal-images/$key.ts', name: 'GET' },
   { path: 'routes/api/journal-images/index.ts', name: 'POST' },

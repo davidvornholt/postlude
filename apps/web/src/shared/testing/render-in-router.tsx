@@ -31,16 +31,9 @@ import {
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 
-const appPaths = [
-  '/',
-  '/archive',
-  '/calendar',
-  '/day/$date',
-  '/on-this-day',
-  '/review',
-  '/review/month',
-  '/review/week',
-] as const;
+import { IconDefaults } from '../ui/icon-defaults.tsx';
+
+const appPaths = ['/', '/calendar', '/day/$date', '/insights'] as const;
 
 const emptyComponent = () => null;
 
@@ -51,7 +44,9 @@ export const createRenderingRouter = (element: ReactNode) => {
   // rendered and the placeholder pages below never appear in the markup.
   const rootRoute = createRootRoute({
     component: () => (
-      <QueryClientProvider client={queryClient}>{element}</QueryClientProvider>
+      <QueryClientProvider client={queryClient}>
+        <IconDefaults>{element}</IconDefaults>
+      </QueryClientProvider>
     ),
   });
   return createRouter({

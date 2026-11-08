@@ -3,7 +3,9 @@ import { describe, expect, it } from 'bun:test';
 import {
   formatScriptureReference,
   parseScriptureReference,
+  scriptureLineOf,
   scriptureReferenceUrl,
+  scriptureTopicOf,
 } from './scripture-reference.ts';
 
 describe('parseScriptureReference', () => {
@@ -144,6 +146,41 @@ describe('formatScriptureReference', () => {
         parseScriptureReference(formatScriptureReference(reference)),
       ).toEqual(reference);
     }
+  });
+});
+
+describe('scriptureTopicOf', () => {
+  it('keeps any visible line that names no passage, symbols included', () => {
+    expect(scriptureTopicOf('  Forgiveness ')).toBe('Forgiveness');
+    expect(scriptureTopicOf('🙏')).toBe('🙏');
+    expect(scriptureTopicOf(' — ')).toBe('—');
+    expect(scriptureTopicOf('Jubilees 23')).toBe('Jubilees 23');
+  });
+
+  it('finds no topic in a passage or a blank line', () => {
+    expect(scriptureTopicOf('Psalms 23')).toBeUndefined();
+    for (const blank of [
+      '',
+      '   ',
+      '\t\n',
+      '\u00a0',
+      '\u200b',
+      '\u00ad\u2060',
+    ]) {
+      expect(scriptureTopicOf(blank)).toBeUndefined();
+    }
+  });
+});
+
+describe('scriptureLineOf', () => {
+  it('shows a stored passage in the house style and a topic as written', () => {
+    expect(
+      scriptureLineOf({
+        scriptureReference: { book: 'Proverbs', chapter: 12, verseStart: 5 },
+      }),
+    ).toBe('Proverbs 12:5');
+    expect(scriptureLineOf({ scriptureTopic: '🙏' })).toBe('🙏');
+    expect(scriptureLineOf({})).toBe('');
   });
 });
 

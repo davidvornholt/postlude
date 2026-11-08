@@ -17,7 +17,7 @@ const appearance = (variant: ActionVariant, size: 'default' | 'dialog') => {
     case 'plain':
       return 'min-h-11 px-3';
     default:
-      return 'inline-flex h-11 w-11 items-center justify-center text-2xl text-ink-muted leading-none hover:text-ink active:text-ink';
+      return 'inline-flex h-11 w-11 items-center justify-center text-ink-muted hover:text-ink active:text-ink';
   }
 };
 

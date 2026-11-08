@@ -8,21 +8,10 @@ import {
 import { journalWriteConflictMessage } from './errors/journal-errors.ts';
 
 describe('autosave failure boundary', () => {
-  it('recognizes authentication and the one safe validation message', () => {
+  it('recognizes an ended sign-in', () => {
     expect(autosaveFailureOf(new Response('', { status: 401 }))).toEqual({
       kind: 'authentication',
       message: authenticationSaveMessage,
-    });
-    expect(
-      autosaveFailureOf({
-        message:
-          'FiberFailure: Check the scripture reference and use a form such as Proverbs 12:5-13.',
-      }),
-    ).toEqual({
-      kind: 'validation',
-      field: 'scriptureReference',
-      message:
-        'Check the scripture reference and use a form such as Proverbs 12:5-13.',
     });
   });
 

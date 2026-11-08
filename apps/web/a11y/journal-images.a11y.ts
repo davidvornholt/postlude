@@ -45,7 +45,9 @@ for (const colorScheme of ['light', 'dark'] as const) {
     await toolbar.getByRole('button', { name: 'Bold', exact: true }).click();
     await expect(evening.locator('strong')).toHaveText('A quiet evening.');
     await page.keyboard.press('ArrowRight');
-    await page.getByRole('button', { name: 'Add image', exact: true }).click();
+    await toolbar
+      .getByRole('button', { name: 'Add image', exact: true })
+      .click();
     const form = page.getByRole('form', {
       name: 'Add image to Evening journal',
     });
@@ -144,7 +146,10 @@ test('failed image uploads retain the writing and offer retry', async ({
   );
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
   await evening.fill('Keep these words.');
-  await page.getByRole('button', { name: 'Add image', exact: true }).click();
+  await page
+    .getByRole('toolbar', { name: 'Formatting Evening journal' })
+    .getByRole('button', { name: 'Add image', exact: true })
+    .click();
   const form = page.getByRole('form', { name: 'Add image to Evening journal' });
   await form.getByLabel('Image file').setInputFiles(image);
   await form.getByRole('button', { name: 'Insert image' }).click();

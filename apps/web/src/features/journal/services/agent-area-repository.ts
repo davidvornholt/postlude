@@ -23,12 +23,16 @@ import {
   type WrapPut,
 } from '../schemas/agent-area.ts';
 import { DayOverviewFromRow, dayRangeLimit } from '../schemas/day-overview.ts';
+import { EarliestDateFromRow } from '../schemas/entry.ts';
 
 const decodeWrapRows = Schema.decodeUnknownEffect(
   Schema.Array(WrapAreaFromRow),
 );
 const decodeNoteRows = Schema.decodeUnknownEffect(
   Schema.Array(StoredAgentNoteFromRow),
+);
+const decodeEarliestDates = Schema.decodeUnknownEffect(
+  Schema.Array(EarliestDateFromRow),
 );
 const decodeOverviewRows = Schema.decodeUnknownEffect(
   Schema.Array(DayOverviewFromRow),
@@ -39,6 +43,27 @@ const decodeRequestRows = Schema.decodeUnknownEffect(Schema.Array(RequestRow));
 export const metricsDayMismatchMessage =
   'dayMetrics.day must be the day the report is stored for.';
 export const dayRangeMessage = `Give a range whose start is not after its end and that spans at most ${dayRangeLimit} days.`;
+
+/** The first day up to `today` with a rating or a /wrap report. */
+const readEarliestRatedOrMeasured =
+  (sql: SqlClient.SqlClient) => (today: string) =>
+    sql`
+      select min(entry_date) as entry_date
+      from (
+        select entry_date
+        from day_rating
+        where energy is not null
+          or progress is not null
+          or repeat_day is not null
+        union all
+        select entry_date from agent_area where day_metrics is not null
+      ) as stored
+      where entry_date <= ${today}
+    `.pipe(
+      Effect.flatMap(decodeEarliestDates),
+      Effect.map((rows) => rows[0]?.date ?? undefined),
+      Effect.mapError(journalReadError),
+    );
 
 /**
  * Identifies one request for a note: the time it was made, as the database
@@ -253,6 +278,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
       return {
         readWrap,
         putWrap,
+        earliestRatedOrMeasured: readEarliestRatedOrMeasured(sql),
         listDays,
         readNote,
         markNotePending,

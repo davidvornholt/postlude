@@ -3,9 +3,9 @@
  * compare lengths and nothing has to be read off it. One series, so one colour.
  */
 
+import type { CategoryTotal } from '../day-measures.ts';
+import { durationLabel } from '../insights-labels.ts';
 import { journalCountLabel } from '../journal-labels.ts';
-import { durationLabel } from '../review-labels.ts';
-import type { CategoryTotal } from '../review-summary.ts';
 
 const barScale = 100;
 

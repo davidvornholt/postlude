@@ -2,44 +2,33 @@ import { expect, it } from 'bun:test';
 
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import { plainText } from '#/shared/testing/rendered-html.ts';
-import { activityWindow } from '../activity.ts';
-import type { ArchiveView } from '../services/archive-fns.ts';
-import { ArchivePage } from './archive-page.tsx';
+import { shiftJournalDate } from '../journal-day.ts';
+import {
+  allTimeOf,
+  blankDay,
+  sampleInsightsView,
+} from '../testing/insights-view.ts';
 import { EntryCounts } from './entry-counts.tsx';
+import { InsightsLead } from './insights-lead.tsx';
 import { OnThisDay } from './on-this-day.tsx';
 
 const today = '2026-08-26';
-const todayYear = 2026;
 const thousand = 1000;
 const million = 1_000_000;
 
-const view: ArchiveView = {
-  today,
-  window: activityWindow(today),
-  days: [
-    {
-      date: today,
-      journalWords: 1,
-      scriptureWords: 0,
-      hasScripture: false,
-      journalWrittenOnTheDay: true,
-      scriptureUsedOnTheDay: false,
-    },
-  ],
-  years: [todayYear],
-  exportAvailable: true,
-  journalStreak: { current: 1, longest: 1 },
-  scriptureStreak: { current: 0, longest: 0 },
-  totals: { daysWritten: thousand, words: million },
-};
-
-it('groups archive totals in the journal convention', async () => {
+it('groups the Insights totals in the journal convention', async () => {
+  const journal = [
+    { ...blankDay(shiftJournalDate(today, 1 - thousand)), journalWords: 1 },
+    { ...blankDay(today), journalWords: million - 1 },
+  ];
   const html = await renderInRouter(
-    <ArchivePage selectedYear={undefined} view={view} />,
+    <InsightsLead
+      view={sampleInsightsView(journal, allTimeOf(journal, today), today)}
+    />,
   );
 
   expect(plainText(html)).toContain(
-    '1,000 days written, 1,000,000 words in all.',
+    'You have written on 2 of 1,000 days, 1,000,000 words in all.',
   );
 });
 

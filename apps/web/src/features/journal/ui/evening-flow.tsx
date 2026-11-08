@@ -1,12 +1,14 @@
 /**
- * The end of the day, under the evening's writing: rate it, read what /wrap
+ * The end of the day, after the evening's writing: rate it, read what /wrap
  * measured, close it, and read what an agent made of it.
  *
- * The order is the order it is done in. Energy comes first, before the report
- * is open, so the numbers can't change how the day felt. The report opens
- * once energy is rated, and progress and the optional "would you repeat it"
- * follow, now with the numbers at hand. Closing the day needs energy and
- * progress and asks an agent for its note, which appears last.
+ * It comes after the writing because writing is what the page is for; the
+ * look back is one calm step once that is done, not a set of controls the
+ * writing has to get past. Its order is the order it is done in. Energy comes
+ * first, before the report is open, so the numbers can't change how the day
+ * felt. The report opens once energy is rated, and progress and the optional
+ * "would you repeat it" follow, now with the numbers at hand. Closing the day
+ * needs energy and progress and asks an agent for its note, which appears last.
  *
  * A day that hasn't begun by the server's clock can't be rated at all.
  */
@@ -15,8 +17,8 @@ import { useId } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
 import {
-  eyebrowClass,
   readingMeasureClass,
+  sectionHeadingClass,
 } from '#/shared/ui/design-classes.ts';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import {
@@ -48,6 +50,8 @@ type EveningStepsProps = Omit<EveningFlowProps, 'evening' | 'today'> & {
   readonly evening: EveningView;
 };
 
+const LONGEST_CLOSE_HINT = 'Rate energy and progress to close the day.';
+
 const closeHint = (energy: boolean, progress: boolean): string | undefined => {
   if (energy && progress) {
     return;
@@ -55,47 +59,57 @@ const closeHint = (energy: boolean, progress: boolean): string | undefined => {
   if (energy) {
     return 'Rate progress to close the day.';
   }
-  return progress
-    ? 'Rate energy to close the day.'
-    : 'Rate energy and progress to close the day.';
+  return progress ? 'Rate energy to close the day.' : LONGEST_CLOSE_HINT;
 };
 
+/**
+ * The button that closes the day, or reopens it, and a line under it saying
+ * what is still to rate. The line is always as tall as its longest wording
+ * wraps to, so rating the day never moves the note below it.
+ */
 const DayClosing = ({ evening }: { readonly evening: Evening }) => {
   const hintId = useId();
   const { rating, busy } = evening;
-  if (rating.closedAt !== null) {
-    return (
-      <div className="flex flex-wrap items-baseline gap-x-6 gap-y-3">
-        <p className="font-display text-ink text-xl">This day is closed.</p>
-        <Button
-          aria-busy={busy === 'reopening'}
-          disabled={busy !== undefined}
-          onClick={evening.reopen}
-          variant="quiet"
-        >
-          {busy === 'reopening' ? 'Reopening…' : 'Reopen the day'}
-        </Button>
-      </div>
-    );
-  }
-  const hint = closeHint(rating.energy !== null, rating.progress !== null);
+  const closed = rating.closedAt !== null;
+  const hint = closed
+    ? undefined
+    : closeHint(rating.energy !== null, rating.progress !== null);
   return (
-    <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-      <Button
-        aria-busy={busy === 'closing'}
-        aria-describedby={hint === undefined ? undefined : hintId}
-        className="border border-transparent disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-ink-muted disabled:hover:bg-transparent"
-        disabled={!canCloseDay(rating) || busy !== undefined}
-        onClick={evening.close}
-      >
-        {busy === 'closing' ? 'Closing…' : 'Close the day'}
-      </Button>
-      {hint === undefined ? null : (
-        <p className="text-ink-muted text-sm" id={hintId}>
+    <>
+      <div className="flex min-h-11 flex-wrap items-center gap-x-6 gap-y-3">
+        {closed ? (
+          <>
+            <p className="text-ink">This day is closed.</p>
+            <Button
+              aria-busy={busy === 'reopening'}
+              disabled={busy !== undefined}
+              onClick={evening.reopen}
+              variant="quiet"
+            >
+              {busy === 'reopening' ? 'Reopening…' : 'Reopen the day'}
+            </Button>
+          </>
+        ) : (
+          <Button
+            aria-busy={busy === 'closing'}
+            aria-describedby={hint === undefined ? undefined : hintId}
+            className="border border-transparent disabled:cursor-not-allowed disabled:border-border disabled:bg-transparent disabled:text-ink-muted disabled:hover:bg-transparent"
+            disabled={!canCloseDay(rating) || busy !== undefined}
+            onClick={evening.close}
+          >
+            {busy === 'closing' ? 'Closing…' : 'Close the day'}
+          </Button>
+        )}
+      </div>
+      <p className="mt-2 grid text-ink-muted text-sm">
+        <span aria-hidden="true" className="invisible col-start-1 row-start-1">
+          {LONGEST_CLOSE_HINT}
+        </span>
+        <span className="col-start-1 row-start-1" id={hintId}>
           {hint}
-        </p>
-      )}
-    </div>
+        </span>
+      </p>
+    </>
   );
 };
 
@@ -112,7 +126,7 @@ const EveningSteps = ({
   const locked = closed || busy === 'closing' || busy === 'reopening';
 
   return (
-    <div className="mt-6 flex flex-col gap-10">
+    <div className="mt-8">
       <RatingScale
         disabled={locked}
         legend="Energy"
@@ -133,18 +147,15 @@ const EveningSteps = ({
         value={rating.progress}
       />
       <RatingScale
-        clear={{
-          label: 'Clear this answer',
-          run: () => evening.rate({ repeatDay: null }),
-        }}
         disabled={locked}
-        hint="Optional."
+        hint="Optional. Choose it again to clear it."
         legend="Would you repeat this day?"
         onChange={(repeatDay) => evening.rate({ repeatDay })}
+        onClear={() => evening.rate({ repeatDay: null })}
         options={repeatDayOptions}
         value={rating.repeatDay}
       />
-      <div>
+      <div className="mt-5 sm:pl-44">
         <DayClosing evening={evening} />
         <div aria-live="polite" role="status">
           {evening.failure === undefined ? null : (
@@ -152,7 +163,7 @@ const EveningSteps = ({
           )}
         </div>
       </div>
-      <div className="border-border border-t pt-8">
+      <div className="mt-12">
         <AgentNote
           blocked={busy !== undefined && busy !== 'regenerating'}
           closed={closed}
@@ -173,36 +184,31 @@ export const EveningFlow = ({ today, ...props }: EveningFlowProps) => {
   const headingId = useId();
   const { date, evening } = props;
   let content = (
-    <p className="mt-6 text-ink-muted">
+    <p className="mt-8 text-ink-muted">
       This day has not begun yet. Rate and close it once it has.
     </p>
   );
   if (date <= today) {
     content =
       evening === undefined ? (
-        <p className="mt-6 text-ink-muted">{unavailableMessage}</p>
+        <p className="mt-8 text-ink-muted">{unavailableMessage}</p>
       ) : (
         <EveningSteps {...props} evening={evening} />
       );
   }
 
   return (
-    <PageFrame
-      aria-labelledby={headingId}
-      as="section"
-      className="mt-14 sm:mt-20"
-    >
-      <div
-        className={[readingMeasureClass, 'border-border border-t pt-10'].join(
-          ' ',
-        )}
-      >
+    <PageFrame aria-labelledby={headingId} as="section" className="pt-12">
+      <div className={readingMeasureClass}>
         <h2
-          className={[eyebrowClass, 'text-ink-muted'].join(' ')}
+          className={[sectionHeadingClass, 'text-ink'].join(' ')}
           id={headingId}
         >
-          Looking back
+          End of the day
         </h2>
+        <p className="mt-2 text-pretty text-ink-muted">
+          When the writing is done, rate the day and close it.
+        </p>
         {content}
       </div>
     </PageFrame>

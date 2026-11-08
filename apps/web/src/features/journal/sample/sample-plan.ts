@@ -1,7 +1,7 @@
 /**
  * The whole made-up journal a pull request preview starts with, counted back
  * from the journal day `now` falls on: the last ten days laid out by hand, and
- * three years of ordinary history before them, so the calendar, the archive,
+ * three years of ordinary history before them, so the calendar, Insights,
  * search and "On this day" all have something to show.
  *
  * Nothing in it is anyone's journal. Every sentence comes from the templates

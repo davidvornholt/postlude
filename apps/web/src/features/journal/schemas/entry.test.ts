@@ -15,6 +15,7 @@ const columnNames = {
   scriptureChapter: 'scripture_chapter',
   scriptureVerseStart: 'scripture_verse_start',
   scriptureVerseEnd: 'scripture_verse_end',
+  scriptureTopic: 'scripture_topic',
   revision: 'revision',
   createdAt: 'created_at',
   updatedAt: 'updated_at',
@@ -32,6 +33,7 @@ const baseRow = {
   scriptureChapter: null,
   scriptureVerseStart: null,
   scriptureVerseEnd: null,
+  scriptureTopic: null,
   revision: 1,
   createdAt: new Date('2026-08-25T12:00:00Z'),
   updatedAt: new Date('2026-08-25T12:00:00Z'),
@@ -86,6 +88,15 @@ describe('EntryFromRow', () => {
     expect(decodeEntrySync(databaseRow(columns)).scriptureReference).toEqual(
       reference,
     );
+  });
+
+  it('decodes a topic studied in place of a passage', () => {
+    const entry = decodeEntrySync(
+      databaseRow({ scriptureTopic: 'Forgiveness' }),
+    );
+
+    expect(entry.scriptureTopic).toBe('Forgiveness');
+    expect(entry.scriptureReference).toBeUndefined();
   });
 
   it.each([

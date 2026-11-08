@@ -15,8 +15,10 @@ import type { JournalDate } from '../src/features/journal/journal-day.ts';
 import type { JournalEntry } from '../src/features/journal/schemas/entry.ts';
 import {
   emptyEvening,
+  noWrittenDays,
   unansweredEveningActions,
 } from '../src/features/journal/testing/evening-view.ts';
+import { IconDefaults } from '../src/shared/ui/icon-defaults.tsx';
 import { NavigationFocus } from '../src/shared/ui/navigation-focus';
 import { pageTitle } from '../src/shared/ui/page-title.ts';
 import { AppShell, DayPage } from './day-navigation-fixture-module.ts';
@@ -47,20 +49,22 @@ const useFixtureDay = (): FixtureDay =>
   useLoaderData({ strict: false }) as FixtureDay;
 
 export const NavigationRoot = () => (
-  <>
+  <IconDefaults>
     <HeadContent />
     <NavigationFocus />
     <Outlet />
-  </>
+  </IconDefaults>
 );
 
 export const TodayPage = () => {
   const loaded = useFixtureDay();
   return (
     <DayPage
+      anniversaries={[]}
       entry={loaded.entry}
       evening={emptyEvening(loaded.entry.date, loaded.entry.revision)}
       eveningActions={unansweredEveningActions}
+      readWrittenDays={noWrittenDays}
       save={save}
       today={loaded.today}
     />
@@ -71,9 +75,11 @@ export const DatedPage = () => {
   const loaded = useFixtureDay();
   return (
     <DayPage
+      anniversaries={[]}
       entry={loaded.entry}
       evening={emptyEvening(loaded.entry.date, loaded.entry.revision)}
       eveningActions={unansweredEveningActions}
+      readWrittenDays={noWrittenDays}
       save={save}
       today={loaded.today}
     />
