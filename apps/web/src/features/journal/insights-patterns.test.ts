@@ -197,11 +197,15 @@ describe('energyWords', () => {
         }),
         day('2026-10-23', { energy: 'drained', journalWords: 120 }),
         day('2026-10-24', { energy: 'drained', journalWords: 180 }),
+        day('2026-10-25', { energy: 'drained', journalWords: 150 }),
+        day('2026-10-26', { energy: 'okay', journalWords: 9900 }),
+        day('2026-10-27', { energy: 'okay', journalWords: 100 }),
       ],
       today,
     );
+    // Two okay days are too few: either one would set their middle.
     expect(rows).toEqual([
-      { energy: 'drained', days: 2, typicalWords: 150 },
+      { energy: 'drained', days: 3, typicalWords: 150 },
       { energy: 'fresh', days: 3, typicalWords: 400 },
     ]);
   });
@@ -209,14 +213,16 @@ describe('energyWords', () => {
   it('counts only written, rated days up to today', () => {
     const rows = energyWords(
       [
-        day('2026-10-20', { energy: 'okay' }),
+        day('2026-10-18', { energy: 'fresh', journalWords: 200 }),
+        day('2026-10-19', { energy: 'fresh', journalWords: 300 }),
+        day('2026-10-20', { energy: 'fresh' }),
         day('2026-10-21', { journalWords: 500 }),
         day('2026-10-22', { energy: 'fresh', journalWords: 250 }),
-        day('2026-10-29', { energy: 'drained', journalWords: 800 }),
+        day('2026-10-29', { energy: 'fresh', journalWords: 800 }),
       ],
       today,
     );
-    expect(rows).toEqual([{ energy: 'fresh', days: 1, typicalWords: 250 }]);
+    expect(rows).toEqual([{ energy: 'fresh', days: 3, typicalWords: 250 }]);
   });
 });
 

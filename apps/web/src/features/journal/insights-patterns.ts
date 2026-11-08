@@ -182,10 +182,13 @@ export type EnergyWords = {
   readonly typicalWords: number;
 };
 
+/** With three days or more, no single evening sets a feeling's middle length. */
+const energyWordsMinimumDays = 3;
+
 /**
  * How much got written on the days that felt each way, low energy first. Only
- * days that were both written and rated count, and a feeling without such a
- * day is left out rather than shown as no words at all.
+ * days that were both written and rated count, and a feeling with fewer than
+ * three such days is left out rather than given a typical length.
  */
 export const energyWords = (
   days: ReadonlyArray<InsightsDay>,
@@ -198,7 +201,7 @@ export const energyWords = (
       .map(dayWords)
       .filter((count) => count > 0);
     const typical = median(words);
-    return typical === undefined
+    return typical === undefined || words.length < energyWordsMinimumDays
       ? []
       : [{ energy, days: words.length, typicalWords: typical }];
   });
