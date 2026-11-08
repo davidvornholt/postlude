@@ -17,10 +17,17 @@
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
 import type { ActivityCell } from '../activity-cells.ts';
 import { journalDateLabel } from '../day-label.ts';
+import {
+  energyOptions,
+  progressOptions,
+  type RatingOption,
+  ratingStepOf,
+} from '../evening-labels.ts';
 import { energyLabel, progressLabel } from '../insights-labels.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
 import { DayLink } from './day-link.tsx';
+import { RatingSwatch } from './rating-swatch.tsx';
 
 const summaryClass = [
   'w-fit cursor-pointer text-ink-muted underline decoration-1 underline-offset-4 hover:text-ink',
@@ -36,6 +43,28 @@ type ActivityTableProps = {
   readonly cells: ReadonlyArray<ActivityCell>;
   readonly today: JournalDate;
 };
+
+/** An answer in words, after the square the map draws it in. */
+const RatingCell = <Value extends string>({
+  value,
+  options,
+  label,
+}: {
+  readonly value: Value | null;
+  readonly options: ReadonlyArray<RatingOption<Value>>;
+  readonly label: (value: Value) => string;
+}) => (
+  <td className="px-3 py-2 text-ink-muted">
+    {value === null ? (
+      'Not rated'
+    ) : (
+      <span className="flex items-center gap-2">
+        <RatingSwatch step={ratingStepOf(options, value)} />
+        {label(value)}
+      </span>
+    )}
+  </td>
+);
 
 export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
   // Newest first: the journal is read backwards from now, not forwards from
@@ -107,16 +136,16 @@ export const ActivityTable = ({ cells, today }: ActivityTableProps) => {
                 <td className="px-3 py-2 text-right text-ink tabular-nums">
                   {journalNumberLabel(cell.words)}
                 </td>
-                <td className="px-3 py-2 text-ink-muted">
-                  {cell.energy === null
-                    ? 'Not rated'
-                    : energyLabel(cell.energy)}
-                </td>
-                <td className="px-3 py-2 text-ink-muted">
-                  {cell.progress === null
-                    ? 'Not rated'
-                    : progressLabel(cell.progress)}
-                </td>
+                <RatingCell
+                  label={energyLabel}
+                  options={energyOptions}
+                  value={cell.energy}
+                />
+                <RatingCell
+                  label={progressLabel}
+                  options={progressOptions}
+                  value={cell.progress}
+                />
               </tr>
             ))}
           </tbody>

@@ -9,11 +9,11 @@
 import { dayWords, heatLevel, quartiles, type WordCounts } from './activity.ts';
 import { calendarWeekdayIndex } from './calendar.ts';
 import {
-  type InsightsMeasure,
-  progressScore,
-  ratingLevel,
-  type Shade,
-} from './insights-measure.ts';
+  energyOptions,
+  progressOptions,
+  ratingStepOf,
+} from './evening-labels.ts';
+import type { InsightsMeasure, Shade } from './insights-measure.ts';
 import { type JournalDate, shiftJournalDate } from './journal-day.ts';
 import type { Energy, Progress } from './schemas/day-rating.ts';
 
@@ -53,11 +53,9 @@ const shadeOf = (
 ): Shade => {
   switch (measure) {
     case 'energy':
-      return day?.energy ?? 'none';
-    case 'progress': {
-      const progress = day?.progress ?? null;
-      return ratingLevel(progress === null ? null : progressScore(progress));
-    }
+      return ratingStepOf(energyOptions, day?.energy ?? null) ?? 'none';
+    case 'progress':
+      return ratingStepOf(progressOptions, day?.progress ?? null) ?? 'none';
     default:
       return heatLevel(words, thresholds);
   }

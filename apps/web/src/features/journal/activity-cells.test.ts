@@ -74,9 +74,9 @@ it('clips the first week to the stretch and keeps the rest whole', () => {
 });
 
 /*
- * Progress has three answers on the ramp's four steps, and the answer a writer
- * hopes for takes the darkest one. Energy's answers each take their own color.
- * A day without an answer takes none.
+ * Energy and progress share one scale: the low answer takes the low step, the
+ * middle the middle and the hoped-for answer the high one. A day without an
+ * answer takes none.
  */
 it('colours a day by its energy or progress when asked to', () => {
   const stretch = { from: '2025-03-03', to: '2025-03-06' } as const;
@@ -91,6 +91,6 @@ it('colours a day by its energy or progress when asked to', () => {
       cell.kind === 'day' ? cell.shade : undefined,
     );
 
-  expect(shades('energy')).toEqual(['drained', 'okay', 'fresh', 'none']);
-  expect(shades('progress')).toEqual(['q1', 'q2', 'q4', 'none']);
+  expect(shades('energy')).toEqual(['low', 'middle', 'high', 'none']);
+  expect(shades('progress')).toEqual(['low', 'middle', 'high', 'none']);
 });

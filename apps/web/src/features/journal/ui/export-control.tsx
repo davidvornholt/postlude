@@ -55,11 +55,15 @@ const groupingInputId = (grouping: ExportGrouping): string =>
 // Each grouping's description shows while its radio is checked, read from the
 // radio itself so it follows the choice before the script runs too. Written
 // out in full so the stylesheet generator can find each class.
+//
+// All four lie in one grid cell and the others are only made invisible, so
+// the cell is always as tall as the longest description wraps to at the
+// current width, and switching never moves the button below.
 const descriptionShown: Record<ExportGrouping, string> = {
-  day: 'group-has-[#export-day:checked]:block',
-  week: 'group-has-[#export-week:checked]:block',
-  month: 'group-has-[#export-month:checked]:block',
-  year: 'group-has-[#export-year:checked]:block',
+  day: 'group-has-[#export-day:checked]:visible',
+  week: 'group-has-[#export-week:checked]:visible',
+  month: 'group-has-[#export-month:checked]:visible',
+  year: 'group-has-[#export-year:checked]:visible',
 };
 
 type ExportControlProps = {
@@ -138,19 +142,21 @@ export const ExportControl = ({
               </SegmentRadio>
             ))}
           </SegmentedTrack>
-          {exportGroupings.map((option) => (
-            <p
-              className={[
-                readingMeasureClass,
-                'mt-3 hidden text-ink-faint',
-                descriptionShown[option],
-              ].join(' ')}
-              id={groupingDescriptionId(option)}
-              key={option}
-            >
-              {groupingDescriptions[option]}
-            </p>
-          ))}
+          <div className="mt-3 grid">
+            {exportGroupings.map((option) => (
+              <p
+                className={[
+                  readingMeasureClass,
+                  'invisible col-start-1 row-start-1 text-ink-faint',
+                  descriptionShown[option],
+                ].join(' ')}
+                id={groupingDescriptionId(option)}
+                key={option}
+              >
+                {groupingDescriptions[option]}
+              </p>
+            ))}
+          </div>
         </div>
       </fieldset>
       <Button

@@ -19,7 +19,6 @@ import {
 } from './calendar.ts';
 import { comparisonVersion } from './day-measures.ts';
 import { energyOptions, progressOptions } from './evening-labels.ts';
-import { energyScore, progressScore } from './insights-measure.ts';
 import type { InsightsDay } from './insights-view.ts';
 import { type JournalDate, parseJournalDate } from './journal-day.ts';
 import type { Energy, Progress } from './schemas/day-rating.ts';
@@ -248,18 +247,15 @@ export const scriptureBookCounts = (
     );
 };
 
-/** How many days gave each answer of a rating, and the answers' average. */
+/** How many days gave each answer of a rating. */
 export type AnswerTally<Answer extends string> = {
   readonly counts: Readonly<Record<Answer, number>>;
   readonly rated: number;
-  /** From 1 at the low end to 3 at the high end; undefined with no answer. */
-  readonly average: number | undefined;
 };
 
 const answerTally = <Answer extends string>(
   answers: ReadonlyArray<{ readonly value: Answer }>,
   given: ReadonlyArray<Answer>,
-  score: (answer: Answer) => number,
 ): AnswerTally<Answer> => {
   const counts = Object.fromEntries(
     answers.map(({ value }) => [
@@ -267,11 +263,7 @@ const answerTally = <Answer extends string>(
       given.filter((answer) => answer === value).length,
     ]),
   ) as Record<Answer, number>;
-  return {
-    counts,
-    rated: given.length,
-    average: average(given.map(score)),
-  };
+  return { counts, rated: given.length };
 };
 
 export type MonthSummary = {
@@ -295,12 +287,10 @@ const monthSummaryOf = (
   energy: answerTally(
     energyOptions,
     days.flatMap((day) => (day.energy === null ? [] : [day.energy])),
-    energyScore,
   ),
   progress: answerTally(
     progressOptions,
     days.flatMap((day) => (day.progress === null ? [] : [day.progress])),
-    progressScore,
   ),
 });
 

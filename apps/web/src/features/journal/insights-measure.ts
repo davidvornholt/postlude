@@ -2,25 +2,26 @@
  * What the year and all-time pictures can be coloured by: how much was
  * written, or how the days were rated.
  *
- * Writing and progress use the one green ramp the activity map already draws
- * with, because each runs from less to more — fewer words, less progress —
- * and a ramp says "more" without a legend having to. A rating spans three
- * steps and the ramp four: little takes the lightest step and a lot the
- * darkest, with some on the lighter of the two between, so the end a writer
- * hopes for stands out most.
+ * Writing uses the green ramp the activity map already draws with, because
+ * it runs from fewer words to more, and a ramp says "more" without a legend
+ * having to.
  *
- * Energy is not more or less of one thing: a drained day, an okay one and a
- * fresh one are three kinds of day, and three greens a step apart read as one
- * in a square this small. Each answer has a color of its own instead, which
- * the theme keeps apart for every common kind of color vision.
+ * A rating takes the scale every rating shares instead: umber for the low
+ * answer, ochre for the middle and green for the high, the colors the day
+ * page gives a chosen answer. Three greens a step apart read as one in a
+ * square this small, and a drained day should look the same kind of day as a
+ * day of little progress, wherever either shows.
  *
  * A day without an answer is the outlined square in every picture, so a gap
  * never reads as the lowest answer.
  */
 
 import { type HeatLevel, heatLevel, quartilesOf } from './activity.ts';
-import { energyOptions, progressOptions } from './evening-labels.ts';
-import type { Energy, Progress } from './schemas/day-rating.ts';
+import {
+  energyOptions,
+  progressOptions,
+  type RatingStep,
+} from './evening-labels.ts';
 
 export type InsightsMeasure = 'writing' | 'energy' | 'progress';
 
@@ -36,54 +37,10 @@ export const measureOptions = [
 export type RatingMeasure = Exclude<InsightsMeasure, 'writing'>;
 
 /**
- * An answer's place on its scale, from 1 at the low end, read from the order
- * the evening lists the answers in.
+ * What a square is filled with: a step of the writing ramp, or the step of
+ * the rating scale a day's answer sits on.
  */
-const scoreIn = <Answer extends string>(
-  options: ReadonlyArray<{ readonly value: Answer }>,
-  answer: Answer,
-): number => options.findIndex((option) => option.value === answer) + 1;
-
-export const energyScore = (energy: Energy): number =>
-  scoreIn(energyOptions, energy);
-
-export const progressScore = (progress: Progress): number =>
-  scoreIn(progressOptions, progress);
-
-/**
- * What a square is filled with: a step of the ramp, or an energy answer's own
- * color.
- */
-export type Shade = HeatLevel | Energy;
-
-/** The ramp step for each score, the lowest score at the lightest step. */
-const scoreLevels: ReadonlyArray<HeatLevel> = ['none', 'q1', 'q2', 'q4'];
-
-/** The ramp step a single day's answer takes, or none when it has none. */
-export const ratingLevel = (score: number | null): HeatLevel =>
-  score === null ? 'none' : (scoreLevels[score] ?? 'none');
-
-const lowAverage = 1.5;
-const middleAverage = 2;
-const highAverage = 2.5;
-
-/**
- * The ramp step an average answer takes, for a month of rated days. A month
- * of nothing but some days takes the step a single such day does, and only a
- * month leaning toward the top of the scale reaches the steps above it.
- */
-export const averageLevel = (average: number | undefined): HeatLevel => {
-  if (average === undefined) {
-    return 'none';
-  }
-  if (average < lowAverage) {
-    return 'q1';
-  }
-  if (average <= middleAverage) {
-    return 'q2';
-  }
-  return average < highAverage ? 'q3' : 'q4';
-};
+export type Shade = HeatLevel | RatingStep;
 
 /** What a month's writing is weighed by: its words, over its days so far. */
 export type MonthWriting = {
@@ -112,12 +69,7 @@ export const monthWritingLevel = (
 export const ratingAnswers = (
   measure: RatingMeasure,
 ): ReadonlyArray<{ readonly label: string; readonly shade: Shade }> =>
-  measure === 'energy'
-    ? energyOptions.map((option) => ({
-        label: option.label,
-        shade: option.value,
-      }))
-    : progressOptions.map((option) => ({
-        label: option.label,
-        shade: ratingLevel(progressScore(option.value)),
-      }));
+  (measure === 'energy' ? energyOptions : progressOptions).map((option) => ({
+    label: option.label,
+    shade: option.step,
+  }));
