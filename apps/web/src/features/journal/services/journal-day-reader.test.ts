@@ -65,6 +65,7 @@ describe('dated journal day service boundary', () => {
           },
         ]);
       },
+      listChangedSince: () => Effect.die('Changed days are outside this read.'),
       readHistory: () => Effect.die('History access is outside this read.'),
       readCalendar: () => Effect.die('Calendar access is outside this read.'),
       save: () => Effect.die('Write access is outside this read.'),
