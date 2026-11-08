@@ -12,6 +12,8 @@ const authenticationMessage =
 
 const colorSchemes = ['light', 'dark'] as const;
 const dayName = 'Wednesday, August 26, 2026';
+/** Long enough for the save line's few seconds of patience, and some slack. */
+const slowSaveWait = 10_000;
 
 type Page = Parameters<typeof scan>[0];
 
@@ -88,6 +90,12 @@ for (const colorScheme of colorSchemes) {
     await mountDayPage(page, ['pending']);
     await editAndLeave(page, 'Evening journal', 'Still being saved.');
     await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
+    await scan(page);
+    // A save that is still on its way after a few seconds says so, in full ink.
+    await expect(page.getByText('Still saving …', { exact: true })).toBeVisible(
+      { timeout: slowSaveWait },
+    );
+    await expect(page.getByText('Autosave on', { exact: true })).toHaveCount(0);
     await scan(page);
   });
 
