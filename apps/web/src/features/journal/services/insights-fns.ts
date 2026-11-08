@@ -25,7 +25,7 @@ import { Effect } from 'effect';
 
 import { sessionRequired } from '#/shared/auth/auth-middleware.ts';
 import { env } from '#/shared/env.ts';
-import type { ActivityDay } from '../activity.ts';
+import { activityDayOf } from '../activity.ts';
 import { categoryTotals, comparableDays, measuresOf } from '../day-measures.ts';
 import { rangeOfSearch } from '../insights-address.ts';
 import { rangeDates } from '../insights-range.ts';
@@ -35,7 +35,7 @@ import {
   yearAgoOf,
 } from '../insights-records.ts';
 import type { InsightsDay, InsightsView } from '../insights-view.ts';
-import { type JournalDate, journalDateAt } from '../journal-day.ts';
+import type { JournalDate } from '../journal-day.ts';
 import { type DayOverview, dayRangeLimit } from '../schemas/day-overview.ts';
 import type { EntrySummary } from '../schemas/entry-summary.ts';
 import { decodeInsightsQuery } from '../schemas/insights-query.ts';
@@ -44,21 +44,6 @@ import { AgentAreaRepository } from './agent-area-repository.ts';
 import { EntryRepository } from './entry-repository.ts';
 import { currentJournalDate } from './journal-fns.ts';
 import { runJournalEffect } from './journal-runtime.ts';
-
-const activityDayOf =
-  (timeZone: string) =>
-  (summary: EntrySummary): ActivityDay => ({
-    date: summary.date,
-    journalWords: summary.journalWordCount,
-    scriptureWords: summary.scriptureWordCount,
-    hasScripture: summary.hasScripture,
-    journalWrittenOnTheDay:
-      summary.journalFirstUsedAt !== null &&
-      journalDateAt(summary.journalFirstUsedAt, timeZone) === summary.date,
-    scriptureUsedOnTheDay:
-      summary.scriptureFirstUsedAt !== null &&
-      journalDateAt(summary.scriptureFirstUsedAt, timeZone) === summary.date,
-  });
 
 /** The range's dates in pieces the day listing accepts in one call. */
 const chunksOf = (

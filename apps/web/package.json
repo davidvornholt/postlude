@@ -12,6 +12,7 @@
     "start": "bun run scripts/serve.ts",
     "db:migrate": "bun --env-file=.env.local run scripts/migrate.ts",
     "db:migrate:deploy": "bun run scripts/migrate.ts",
+    "db:seed:preview": "bun run scripts/seed-preview.ts",
     "import:journals": "bun run scripts/import-journals.ts",
     "cli": "bun scripts/cli.ts",
     "check-types": "tsc --noEmit",
