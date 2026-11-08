@@ -22,7 +22,27 @@ const config = createA11yPlaywrightConfig({
 // than a gigabyte in all, so stop at eight on larger machines.
 const maximumWorkers = 8;
 
+// availableParallelism() sees CPU affinity but not a container's cgroup CPU
+// quota, which would otherwise give a two-CPU container on a large host eight
+// workers and exhaust its memory.
+const cgroupCpuLimit = (): number => {
+  try {
+    const [quota = 'max', period = ''] = readFileSync(
+      '/sys/fs/cgroup/cpu.max',
+      'utf8',
+    )
+      .trim()
+      .split(' ');
+    const cores = Math.floor(Number(quota) / Number(period));
+    return Number.isFinite(cores)
+      ? Math.max(1, cores)
+      : Number.POSITIVE_INFINITY;
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+};
+
 export default {
   ...config,
-  workers: Math.min(availableParallelism(), maximumWorkers),
+  workers: Math.min(availableParallelism(), cgroupCpuLimit(), maximumWorkers),
 };
