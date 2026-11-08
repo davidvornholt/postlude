@@ -79,6 +79,15 @@ describe('reading a command', () => {
     expect(commandOf('days changed --since=2026-11-08T04:30:00+01:00')).toEqual(
       { kind: 'days-changed', since: '2026-11-08T04:30:00+01:00' },
     );
+    for (const since of [
+      '2026-11-08T19:30:00+15:59',
+      '2026-11-07T11:31:00-15:59',
+    ]) {
+      expect(commandOf(`days changed --since ${since}`)).toEqual({
+        kind: 'days-changed',
+        since,
+      });
+    }
     expect(commandOf('agent-area get 2026-10-30')).toEqual({
       kind: 'agent-area-get',
       date: '2026-10-30',
@@ -141,6 +150,8 @@ describe('reading a command', () => {
       '2026-11-08T24:00:00Z',
       '2026-11-08T03:30:00.1234567Z',
       '2026-11-08T03:30:00ZT',
+      '2026-11-08T19:30:00+16:00',
+      '2026-11-07T11:30:00-16:00',
     ]) {
       expect(commandOf(`days changed --since '${since}'`)).toBeInstanceOf(
         UsageError,
