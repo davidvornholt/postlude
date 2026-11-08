@@ -132,6 +132,35 @@ test('a non-default grouping stays described and posts without JavaScript', asyn
   expect(download.suggestedFilename()).toBe(year.fileName);
 });
 
+test('choosing a grouping never moves the download button, even where a description wraps', async ({
+  page,
+}) => {
+  await mountInsightsPage(page, insightsFixtureConfigs.year);
+  const download = exportButton(page);
+  // Measured on the page rather than in the window, which scrolls as each
+  // choice is brought into view.
+  const pageTop = () =>
+    download.evaluate(
+      (button) => button.getBoundingClientRect().top + window.scrollY,
+    );
+  // The descriptions run from one line to several, and at a phone's width
+  // even the shortest wraps, so each width is a different tallest one.
+  for (const width of [1280, 767, 390, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.getByRole('radio', { name: exportCases.day.label }).check();
+    const top = await pageTop();
+    for (const { label } of [
+      exportCases.month,
+      exportCases.year,
+      exportCases.week,
+      exportCases.day,
+    ]) {
+      await page.getByRole('radio', { name: label }).check();
+      expect(await pageTop(), `${label} at ${width}px`).toBe(top);
+    }
+  }
+});
+
 test('a failed settlement keeps the grouping and retries the download', async ({
   page,
 }) => {
