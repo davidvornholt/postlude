@@ -20,6 +20,7 @@ import {
 } from '../errors/journal-errors.ts';
 import type { JournalDate } from '../journal-day.ts';
 import {
+  ChangedDayFromRow,
   EarliestDateFromRow,
   type EntryDraft,
   EntryFromRow,
@@ -58,6 +59,9 @@ const decodeEarliestDates = Schema.decodeUnknownEffect(
 );
 const decodeSummaries = Schema.decodeUnknownEffect(
   Schema.Array(EntrySummaryFromRow),
+);
+const decodeChangedDays = Schema.decodeUnknownEffect(
+  Schema.Array(ChangedDayFromRow),
 );
 /**
  * The columns a stored entry decodes from, which `EntryFromRow` names.
@@ -141,6 +145,30 @@ const persistSavedEvidence =
     rows[0] === undefined
       ? Effect.void
       : replaceSearchEvidence(sql, date, storedSearchEvidence(document));
+
+const readEarliestDate = (sql: SqlClient.SqlClient) => (today: JournalDate) =>
+  sql`
+    select min(entry_date) as entry_date
+    from entry
+    where ${archiveActivityEntry(sql)}
+      and entry_date <= ${today}
+  `.pipe(
+    Effect.flatMap(decodeEarliestDates),
+    Effect.map((rows) => rows[0]?.date ?? undefined),
+  );
+
+const readChangedSince = (sql: SqlClient.SqlClient) => (since: string) =>
+  sql`
+    select
+      entry_date,
+      revision,
+      journal_word_count,
+      scripture_word_count,
+      updated_at
+    from entry
+    where updated_at > ${since}::timestamptz
+    order by entry_date
+  `.pipe(Effect.flatMap(decodeChangedDays), Effect.mapError(journalReadError));
 
 /** The stored day, locked until the transaction that read it ends. */
 const readLockedEntry = (sql: SqlClient.SqlClient, date: string) =>
@@ -437,18 +465,6 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           Effect.mapError(journalReadError),
         );
 
-      /** The oldest day that still has something for Insights to show. */
-      const earliestDate = (today: JournalDate) =>
-        sql`
-          select min(entry_date) as entry_date
-          from entry
-          where ${archiveActivityEntry(sql)}
-            and entry_date <= ${today}
-        `.pipe(
-          Effect.flatMap(decodeEarliestDates),
-          Effect.map((rows) => rows[0]?.date ?? undefined),
-        );
-
       const readHistory = ({
         today,
       }: HistoryReadRequest): Effect.Effect<
@@ -459,7 +475,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           sql,
           Effect.gen(function* () {
             const canExport = yield* readExportAvailability(sql);
-            const earliest = yield* earliestDate(today);
+            const earliest = yield* readEarliestDate(sql)(today);
             const summaries =
               earliest === undefined ? [] : yield* listBetween(earliest, today);
             return {
@@ -472,6 +488,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
 
       return {
         read,
+        listChangedSince: readChangedSince(sql),
         readAnniversaries,
         readCalendar: makeCalendarReader(sql),
         save,

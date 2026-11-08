@@ -103,6 +103,10 @@ it('runs every CLI command', async () => {
           { kind: 'days-list', from: '2026-10-29', to: day },
           noStdin,
         ),
+        changed: yield* runCliCommand(
+          { kind: 'days-changed', since: '2000-01-01T00:00:00Z' },
+          noStdin,
+        ),
         search: yield* runCliCommand(
           { kind: 'search', query: 'grace', limit: 5 },
           noStdin,
@@ -129,6 +133,12 @@ it('runs every CLI command', async () => {
   expect(Object.keys(outcome.day as object)).not.toContain('agentNote');
   expect(outcome.days).toMatchObject({
     days: [{ date: '2026-10-29' }, { date: day, journalWordCount: 8 }],
+  });
+  expect(outcome.changed).toEqual({
+    since: '2000-01-01T00:00:00Z',
+    days: [
+      expect.objectContaining({ date: day, revision: 1, journalWordCount: 8 }),
+    ],
   });
   expect(outcome.search).toMatchObject({
     hits: [{ date: day, sources: [{ source: 'evening' }] }],

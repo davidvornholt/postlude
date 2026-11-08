@@ -150,6 +150,21 @@ export const EntryFromRow = EntryRow.pipe(
   }),
 );
 
+export const ChangedDayFromRow = Schema.Struct({
+  date: JournalDateSchema,
+  revision: RevisionSchema,
+  journalWordCount: WordCountSchema,
+  scriptureWordCount: WordCountSchema,
+  updatedAt: Schema.Date,
+}).pipe(
+  Schema.encodeKeys({
+    date: 'entry_date',
+    journalWordCount: 'journal_word_count',
+    scriptureWordCount: 'scripture_word_count',
+    updatedAt: 'updated_at',
+  }),
+);
+
 /** The nullable aggregate row returned by `min(entry_date)`. */
 export const EarliestDateFromRow = Schema.Struct({
   date: Schema.NullOr(JournalDateSchema),
