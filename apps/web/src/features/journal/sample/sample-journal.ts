@@ -3,9 +3,9 @@
  *
  * The run-and-gap shape comes from a two-state walk — writing tends to continue
  * and a lapse tends to last a few days — because a flat coin toss per day
- * produces neither a streak nor an empty week, which are the two things the
- * archive exists to show. Tests render an archive from it, and the preview
- * sample data writes its history along it.
+ * produces neither a streak nor an empty week, which are the two things
+ * Insights most needs to show. The preview sample data writes its history
+ * along it.
  */
 
 import type { ActivityDay } from '../activity.ts';

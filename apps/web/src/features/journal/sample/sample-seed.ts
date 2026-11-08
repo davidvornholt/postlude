@@ -6,7 +6,7 @@
  * so their word counts, search columns and search evidence are exactly what
  * the app would have stored for the same text. Saving stamps the database
  * clock, so the times the sample says each day was written are set afterwards;
- * the streaks and the archive read those. Ratings and what agents added have
+ * the streaks and Insights read those. Ratings and what agents added have
  * no derived columns, so they are inserted with their times as they are.
  */
 
