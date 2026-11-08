@@ -70,11 +70,7 @@ export const RangeSwitcher = ({
   const requested = useRequestedKind(range.kind);
   return (
     <nav aria-label="Insights range">
-      <SegmentedTrack
-        className="w-full max-w-md"
-        count={kinds.length}
-        selected={kinds.findIndex(({ kind }) => kind === requested)}
-      >
+      <SegmentedTrack className="w-full max-w-md" count={kinds.length}>
         {kinds.map(({ kind, label }) => (
           <SegmentLink
             key={kind}

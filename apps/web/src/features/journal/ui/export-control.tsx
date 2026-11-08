@@ -11,13 +11,14 @@
 import type { RefObject, SyntheticEvent } from 'react';
 import { useRef, useState } from 'react';
 import { Button } from '#/shared/ui/action.tsx';
-
 import {
-  checkedSegmentClass,
   eyebrowClass,
   readingMeasureClass,
-  segmentTrackClass,
 } from '#/shared/ui/design-classes.ts';
+import {
+  SegmentedTrack,
+  SegmentRadio,
+} from '#/shared/ui/segmented-control.tsx';
 import { settleBrowserAutosaves } from '../browser-autosaves.ts';
 import { type ExportGrouping, exportGroupings } from '../export-period.ts';
 
@@ -119,23 +120,24 @@ export const ExportControl = ({
           One reading-copy file per
         </legend>
         <div className="group mt-3">
-          <div className={[segmentTrackClass, 'w-full max-w-md'].join(' ')}>
+          <SegmentedTrack
+            className="w-full max-w-md"
+            count={exportGroupings.length}
+          >
             {exportGroupings.map((option) => (
-              <label className={checkedSegmentClass} key={option}>
-                <input
-                  aria-describedby={groupingDescriptionId(option)}
-                  checked={grouping === option}
-                  className="absolute inset-0 m-0 cursor-pointer appearance-none opacity-0 disabled:cursor-default"
-                  id={groupingInputId(option)}
-                  name="grouping"
-                  onChange={() => setGrouping(option)}
-                  type="radio"
-                  value={option}
-                />
+              <SegmentRadio
+                aria-describedby={groupingDescriptionId(option)}
+                checked={grouping === option}
+                id={groupingInputId(option)}
+                key={option}
+                name="grouping"
+                onChange={() => setGrouping(option)}
+                value={option}
+              >
                 {groupingLabels[option]}
-              </label>
+              </SegmentRadio>
             ))}
-          </div>
+          </SegmentedTrack>
           {exportGroupings.map((option) => (
             <p
               className={[
