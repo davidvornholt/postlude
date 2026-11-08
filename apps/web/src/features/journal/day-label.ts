@@ -24,10 +24,25 @@ import {
   journalWeekdayLabel,
 } from './journal-labels.ts';
 
+/**
+ * The two halves of a day's heading, "Wednesday" and "August 26, 2026". A
+ * phone sets them on two lines, so the heading breaks where a reader would
+ * break it rather than wherever the width runs out.
+ */
+export const journalDateLabelParts = (
+  date: JournalDate,
+): { readonly weekday: string; readonly calendarDate: string } => {
+  const { year, month, day } = parseJournalDate(date);
+  return {
+    weekday: journalWeekdayLabel(journalDateWeekday(date)),
+    calendarDate: `${journalMonthLabel(month)} ${day}, ${year}`,
+  };
+};
+
 /** The heading a day's page carries: "Wednesday, August 26, 2026". */
 export const journalDateLabel = (date: JournalDate): string => {
-  const { year, month, day } = parseJournalDate(date);
-  return `${journalWeekdayLabel(journalDateWeekday(date))}, ${journalMonthLabel(month)} ${day}, ${year}`;
+  const { weekday, calendarDate } = journalDateLabelParts(date);
+  return `${weekday}, ${calendarDate}`;
 };
 
 const yesterday = 1;

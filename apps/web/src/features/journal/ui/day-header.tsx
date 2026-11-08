@@ -4,10 +4,14 @@
  *
  * The date is the way to any other day. Pressed, it opens the calendar
  * popover; before the page has hydrated it is a link to the full calendar,
- * which works without a script. Beside it, the arrows step a day at a time.
- * They line up with the date's first line, so a long date that wraps on a
- * narrow screen never moves them under a pointer. On any day but today, the
- * line above the date offers the way back to it.
+ * which works without a script. Beside it, the arrows step a day at a time. On
+ * any day but today, the line above the date offers the way back to it.
+ *
+ * From a tablet up, the date stays on one line beside the arrows. Its size
+ * follows the room the arrows leave, so the longest date there is fits and
+ * every other date is set at the same size, rather than each date choosing its
+ * own. A phone has no room for that, so there the arrows move up beside the
+ * line above, and the date breaks after the weekday on purpose.
  */
 
 import { ChevronDown } from 'lucide-react';
@@ -20,12 +24,15 @@ import {
   useSyncExternalStore,
 } from 'react';
 
-import { ActionAnchor } from '#/shared/ui/action.tsx';
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
 import { PageFrame } from '#/shared/ui/page-frame.tsx';
 import { journalMonthOf } from '../calendar.ts';
 import type { CopyableJournalDay } from '../day-copy-markdown.ts';
-import { journalDateLabel, journalDayRelation } from '../day-label.ts';
+import {
+  journalDateLabel,
+  journalDateLabelParts,
+  journalDayRelation,
+} from '../day-label.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { CopyDayControl } from './copy-day-control.tsx';
 import { DayLink } from './day-link.tsx';
@@ -42,7 +49,17 @@ const useHydrated = (): boolean =>
     () => false,
   );
 
-const dateClass = 'font-display text-4xl text-ink leading-tight sm:text-5xl';
+/*
+ * The date's size is worked out from the width of the heading it sits in,
+ * which is a size container for that reason. The divisors are the widths of the
+ * longest text measured in Fraunces, with a little to spare: on a phone,
+ * "September 30, 2026" is 9.4em, and the 2rem chevron follows it; from a
+ * tablet up, "Wednesday, September 30, 2026" is 15.1em at most, and the 2.25rem
+ * chevron follows it. The sizes stop at 2.25rem and 3rem, where the date
+ * already fits with room to spare.
+ */
+const dateClass =
+  'group text-left font-display text-[length:min(2.25rem,calc((100cqi_-_2rem)/9.6))] text-ink leading-tight md:text-[length:min(3rem,calc((100cqi_-_2.25rem)/15.3))]';
 
 /**
  * The mark after the date that says it opens. The link the date is before
@@ -52,11 +69,39 @@ const dateClass = 'font-display text-4xl text-ink leading-tight sm:text-5xl';
 const DateChevron = ({ open }: { readonly open: boolean }) => (
   <ChevronDown
     className={[
-      'ml-2 inline size-6 align-middle text-ink-muted transition-[rotate,color] duration-200 ease-standard group-hover:text-ink motion-reduce:transition-none sm:size-7',
+      'ml-2 inline size-6 align-middle text-ink-muted transition-[rotate,color] duration-200 ease-standard group-hover:text-ink motion-reduce:transition-none md:size-7',
       open ? 'rotate-180' : '',
     ].join(' ')}
   />
 );
+
+/**
+ * The date and its chevron. Each half keeps to one line, and the chevron stays
+ * with the second, so the only place the date can break is after the weekday.
+ * A phone breaks it there and leaves the comma to screen readers, where it
+ * keeps the date read as one phrase.
+ */
+const DateLabel = ({
+  date,
+  open,
+}: {
+  readonly date: JournalDate;
+  readonly open: boolean;
+}) => {
+  const { weekday, calendarDate } = journalDateLabelParts(date);
+  return (
+    <>
+      <span className="whitespace-nowrap max-md:block">
+        {weekday}
+        <span className="max-md:sr-only">,</span>
+      </span>{' '}
+      <span className="whitespace-nowrap">
+        {calendarDate}
+        <DateChevron open={open} />
+      </span>
+    </>
+  );
+};
 
 const DateTrigger = ({
   date,
@@ -72,17 +117,15 @@ const DateTrigger = ({
   readonly onToggle: () => void;
 }) => {
   const hydrated = useHydrated();
-  const label = journalDateLabel(date);
   if (!hydrated) {
     return (
-      <ActionAnchor
-        className={`group ${dateClass} text-left`}
+      <a
+        aria-label={journalDateLabel(date)}
+        className={`${dateClass} ${focusRingClass}`}
         href={`/calendar?month=${journalMonthOf(date)}&day=${date}`}
-        variant="plain"
       >
-        {label}
-        <DateChevron open={false} />
-      </ActionAnchor>
+        <DateLabel date={date} open={false} />
+      </a>
     );
   }
   return (
@@ -90,14 +133,14 @@ const DateTrigger = ({
       aria-controls={open ? pickerId : undefined}
       aria-expanded={open}
       aria-haspopup="dialog"
-      className={`group text-left ${dateClass} ${focusRingClass}`}
+      aria-label={journalDateLabel(date)}
+      className={`${dateClass} ${focusRingClass}`}
       onClick={onToggle}
       ref={triggerRef}
       title="Choose a day"
       type="button"
     >
-      {label}
-      <DateChevron open={open} />
+      <DateLabel date={date} open={open} />
     </button>
   );
 };
@@ -166,7 +209,7 @@ export const DayHeader = ({
       <h1
         aria-atomic="true"
         aria-live="polite"
-        className="col-span-2 row-start-2 text-balance sm:col-span-1"
+        className="@container col-span-2 row-start-2 md:col-span-1"
         id={headingId}
       >
         <DateTrigger
@@ -177,9 +220,7 @@ export const DayHeader = ({
           triggerRef={triggerRef}
         />
       </h1>
-      {/* Beside the date, the 2.75rem arrows are centred on its first line,
-          which is 3.75rem tall. */}
-      <div className="col-start-2 row-start-1 -mr-3 flex items-center sm:row-start-2 sm:mt-2 sm:self-start">
+      <div className="col-start-2 row-start-1 -mr-3 flex items-center md:row-start-2">
         <nav aria-label="Nearby days" className="flex items-center">
           {previous === undefined ? (
             <UnavailableStep direction={-1} label="Previous day" />

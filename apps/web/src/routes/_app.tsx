@@ -103,7 +103,14 @@ const AppShell = () => {
         Skip to content
       </a>
       <header className="border-border border-b">
-        <PageFrame className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 pt-4.5 pb-5">
+        {/* The wordmark and the places share a baseline, so their letters
+            cannot both be centred in the bar: the wordmark's reach from that
+            baseline to the top of its ascenders, 18.5px, is centred 3.75px
+            higher than the places' 11px capitals. The padding puts the bar's
+            centre between the two, so the wordmark sits 2px above it and the
+            places 1.5px below, measured on the rendered ink. The current
+            page's underline hangs below and is left out of the reckoning. */}
+        <PageFrame className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 pt-5.5 pb-4">
           <p className="font-display text-2xl text-ink">
             <BrandLink />
           </p>

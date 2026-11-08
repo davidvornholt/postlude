@@ -56,28 +56,27 @@ for (const colorScheme of colorSchemes) {
       page.getByRole('link', { name: 'Previous day' }),
     );
 
-    const dateLayout = await date.evaluate((element) => {
+    const dateLines = await date.evaluate((element) => {
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
       const lines = new Set<number>();
       let text = walker.nextNode();
       while (text !== null) {
         const range = document.createRange();
         range.selectNodeContents(text);
-        for (const rectangle of range.getClientRects()) {
+        // A phone leaves the comma after the weekday to screen readers, in a
+        // one-pixel box that is not a line anyone reads.
+        const shown =
+          (text.parentElement?.getBoundingClientRect().width ?? 0) > 1;
+        for (const rectangle of shown ? range.getClientRects() : []) {
           lines.add(Math.round(rectangle.top));
         }
         text = walker.nextNode();
       }
-      const style = getComputedStyle(element);
-      return {
-        lines: lines.size,
-        wrapping: style.textWrapStyle || style.textWrap,
-      };
+      return lines.size;
     });
-    expect(dateLayout.wrapping).toContain('balance');
-    expect(dateLayout.lines).toBe(
-      testInfo.project.name.includes('mobile') ? 2 : 1,
-    );
+    // The date's halves never break inside themselves: one line beside the
+    // arrows from a tablet up, and the weekday over the rest on a phone.
+    expect(dateLines).toBe(testInfo.project.name.includes('mobile') ? 2 : 1);
 
     const register = page
       .getByRole('heading', {

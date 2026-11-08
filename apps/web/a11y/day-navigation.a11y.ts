@@ -154,35 +154,67 @@ test('before the page hydrates the date is a link to the calendar', async ({
   await scan(page);
 });
 
-const arrowAlignment = (page: Page) =>
-  page.evaluate(() => {
+// The widest date there is, measured in Fraunces across the years around now.
+// The fixture's own date is a Wednesday too, the longest weekday.
+const widestCalendarDate = 'September 20, 2028';
+
+const dateLayout = (page: Page) =>
+  page.evaluate((widest) => {
     const date = document.querySelector('h1 button');
+    const [weekday, calendarDate] = date?.children ?? [];
     const arrow = document.querySelector('a[data-focus-key="previous-day"]');
-    if (date === null || arrow === null) {
+    const text = calendarDate?.firstChild;
+    if (
+      date === null ||
+      weekday === undefined ||
+      calendarDate === undefined ||
+      arrow === null ||
+      text === null ||
+      text === undefined
+    ) {
       return;
     }
+    text.textContent = widest;
     const line = Number.parseFloat(getComputedStyle(date).lineHeight);
     const dateBox = date.getBoundingClientRect();
     const arrowBox = arrow.getBoundingClientRect();
+    const heading = date.parentElement?.getBoundingClientRect();
     return {
       lines: Math.round(dateBox.height / line),
+      weekdayAlone:
+        weekday.getBoundingClientRect().bottom <=
+        calendarDate.getBoundingClientRect().top + 1,
+      // Inside its heading, and clear of the arrows when they share a row.
+      fits:
+        heading !== undefined &&
+        dateBox.right <= heading.right + 0.5 &&
+        (arrowBox.bottom <= dateBox.top || dateBox.right <= arrowBox.left),
       offset: arrowBox.top + arrowBox.height / 2 - (dateBox.top + line / 2),
     };
-  });
+  }, widestCalendarDate);
 
-test('the arrows sit on the first line of the date, however many it takes', async ({
+test('the widest date keeps to one line beside the arrows from a tablet up', async ({
   page,
 }) => {
   await mountDayPage(page, ['stored']);
-  // A wide window keeps the date on one line, a narrower one wraps it. Below
-  // these widths the arrows move up to the line above the date.
-  for (const [width, lines] of [
-    [1280, 1],
-    [700, 2],
-  ] as const) {
+  for (const width of [2000, 1280, 1024, 768]) {
     await page.setViewportSize({ width, height: 800 });
-    await expect.poll(() => arrowAlignment(page)).toMatchObject({ lines });
-    const { offset } = (await arrowAlignment(page)) ?? { offset: Number.NaN };
-    expect(Math.abs(offset)).toBeLessThan(1);
+    const layout = await dateLayout(page);
+    expect(layout, `at ${width}px`).toMatchObject({ lines: 1, fits: true });
+    expect(Math.abs(layout?.offset ?? Number.NaN)).toBeLessThan(1);
+  }
+});
+
+test('on a phone the date breaks after the weekday and nowhere else', async ({
+  page,
+}) => {
+  await mountDayPage(page, ['stored']);
+  for (const width of [767, 430, 390, 375, 320]) {
+    await page.setViewportSize({ width, height: 800 });
+    expect(await dateLayout(page), `at ${width}px`).toMatchObject({
+      lines: 2,
+      weekdayAlone: true,
+      fits: true,
+    });
   }
 });
