@@ -289,15 +289,15 @@ describe('monthGrid', () => {
     });
   });
 
-  it('tallies the answers and averages them from one at the low end', () => {
+  it('tallies how many days gave each answer', () => {
     const january = years[0]?.months[0];
     expect(january?.energy).toEqual({
       counts: { drained: 0, okay: 1, fresh: 1 },
       rated: 2,
-      average: 2.5,
     });
-    expect(january?.progress.average).toBe(3);
-    expect(years[1]?.months[11]?.energy.average).toBeUndefined();
+    expect(january?.progress.counts.a_lot).toBe(1);
+    expect(january?.progress.rated).toBe(1);
+    expect(years[1]?.months[11]?.energy.rated).toBe(0);
   });
 
   describe('monthAfterKey', () => {

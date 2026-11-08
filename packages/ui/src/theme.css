@@ -73,20 +73,32 @@
     --pl-heat-q4: oklch(0.28 0.06 162);
 
     /*
-     * Energy is told by color, not by a step of the ramp: a drained day, an
-     * okay one and a fresh one are three different kinds of day, and in a 12px
-     * square three shades of one green read as one. The hues run from a spent
-     * umber through ochre to a cool petrol, warm to cool as the evening's
-     * answer runs from low to high, and stay as quiet as the rest of the
-     * paper. Drained is earth rather than the critical red, because a drained
-     * day is not an error. Hue alone fails a reader without red-green vision,
-     * so the answers also differ in lightness and along the blue-yellow axis
-     * that survives every common color-vision deficiency. `theme-audit.ts`
-     * measures each pair under simulation, and each mark against the page.
+     * Every rating of the day is three steps on one scale, and each step has
+     * one color wherever an answer shows: energy runs drained, okay, fresh;
+     * progress little, solid, a lot; the repeat question no, partly, yes. Told
+     * by color rather than by steps of the ramp, because in a 12px square
+     * three shades of one green read as one. Low is a spent umber rather than
+     * the critical red, because a low day is not an error. The middle is
+     * ochre. High is the app's own green, at the primary hue.
+     *
+     * At the primary's own lightness the green would be the umber's twin for a
+     * reader without red-green vision, so it is lifted, just as far as it
+     * takes, to sit between the umber and the ochre. That lift also keeps it
+     * apart from `--pl-primary`, and a rating is only ever a filled mark among
+     * its siblings, while focus and the current place are outlines and
+     * underlines, so a green answer never reads as where you are.
+     * `theme-audit.ts` measures each pair under simulation, and each mark
+     * against the page.
+     *
+     * A chosen answer on the day page is filled with its step, and its label
+     * is set in that step's `on-rating` color, which clears 4.5:1 on it.
      */
-    --pl-energy-drained: oklch(0.44 0.1 50);
-    --pl-energy-okay: oklch(0.61 0.12 84);
-    --pl-energy-fresh: oklch(0.56 0.1 220);
+    --pl-rating-low: oklch(0.44 0.1 50);
+    --pl-rating-middle: oklch(0.61 0.12 84);
+    --pl-rating-high: oklch(0.52 0.09 155);
+    --pl-on-rating-low: oklch(0.96 0.015 85);
+    --pl-on-rating-middle: oklch(0.2 0.02 50);
+    --pl-on-rating-high: oklch(0.96 0.015 85);
 
     /* The deep register: the one separate surface, an ink-ground under light
        type, kept to a section or two a page. */
@@ -143,10 +155,14 @@
       --pl-heat-q4: oklch(0.85 0.095 155);
 
       /* Lifted just clear of the dark page, and no further: a brighter mark
-         would glare in a square this small. */
-      --pl-energy-drained: oklch(0.53 0.105 50);
-      --pl-energy-okay: oklch(0.67 0.13 88);
-      --pl-energy-fresh: oklch(0.62 0.1 220);
+         would glare in a square this small. The green climbs a little past
+         the primary's lightness, to clear the ochre beneath it. */
+      --pl-rating-low: oklch(0.53 0.105 50);
+      --pl-rating-middle: oklch(0.67 0.13 88);
+      --pl-rating-high: oklch(0.77 0.09 155);
+      --pl-on-rating-low: oklch(0.97 0.012 85);
+      --pl-on-rating-middle: oklch(0.2 0.014 55);
+      --pl-on-rating-high: oklch(0.2 0.014 55);
 
       /* Lifted off the page rather than inverted: a ground a little lighter than
          the background reads as a band edge to edge without glare, and the ink
@@ -207,9 +223,12 @@
   --color-heat-q2: var(--pl-heat-q2);
   --color-heat-q3: var(--pl-heat-q3);
   --color-heat-q4: var(--pl-heat-q4);
-  --color-energy-drained: var(--pl-energy-drained);
-  --color-energy-okay: var(--pl-energy-okay);
-  --color-energy-fresh: var(--pl-energy-fresh);
+  --color-rating-low: var(--pl-rating-low);
+  --color-rating-middle: var(--pl-rating-middle);
+  --color-rating-high: var(--pl-rating-high);
+  --color-on-rating-low: var(--pl-on-rating-low);
+  --color-on-rating-middle: var(--pl-on-rating-middle);
+  --color-on-rating-high: var(--pl-on-rating-high);
   --color-deep-ground: var(--pl-deep-ground);
   --color-deep-ink: var(--pl-deep-ink);
   --color-deep-ink-muted: var(--pl-deep-ink-muted);

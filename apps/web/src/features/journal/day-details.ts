@@ -8,6 +8,8 @@ import { metricsStateOf, screenTimeSplit } from './day-measures.ts';
 import {
   energyOptions,
   progressOptions,
+  type RatingStep,
+  ratingStepOf,
   repeatDayOptions,
 } from './evening-labels.ts';
 import {
@@ -18,62 +20,38 @@ import {
 } from './insights-labels.ts';
 import type { InsightsDay } from './insights-view.ts';
 import type { JournalDate } from './journal-day.ts';
-import type { Energy } from './schemas/day-rating.ts';
 
 export type RatingScale = {
   readonly name: string;
   readonly short: string;
-  /** How many answers the scale has, one step of the meter each. */
-  readonly steps: number;
-  /** How many steps a day's rating fills, or null when it has none. */
-  readonly filled: (day: InsightsDay) => number | null;
   /**
-   * The answer whose own color fills the meter. Only energy has one: its
-   * answers are three kinds of day rather than more or less of one thing, and
-   * they wear the colors they wear in the year's picture. The other scales
-   * fill in the one green.
+   * Where the day's answer sits on the scale every rating shares, which sets
+   * both how far its meter fills and the color it fills in; null when the
+   * day has no answer.
    */
-  readonly coloredAnswer: (day: InsightsDay) => Energy | undefined;
+  readonly step: (day: InsightsDay) => RatingStep | null;
   readonly said: (day: InsightsDay) => string;
 };
-
-const stepOf = <Value extends string>(
-  options: ReadonlyArray<{ readonly value: Value }>,
-  value: Value | null,
-): number | null =>
-  value === null
-    ? null
-    : options.findIndex((option) => option.value === value) + 1;
 
 export const ratingScales: ReadonlyArray<RatingScale> = [
   {
     name: 'Energy',
     short: 'Energy',
-    steps: energyOptions.length,
-    filled: (day) => stepOf(energyOptions, day.energy),
-    coloredAnswer: (day) => day.energy ?? undefined,
+    step: (day) => ratingStepOf(energyOptions, day.energy),
     said: (day) =>
       day.energy === null ? 'not rated' : energyLabel(day.energy),
   },
   {
     name: 'Progress',
     short: 'Progress',
-    steps: progressOptions.length,
-    filled: (day) => stepOf(progressOptions, day.progress),
-    coloredAnswer: () => undefined,
+    step: (day) => ratingStepOf(progressOptions, day.progress),
     said: (day) =>
       day.progress === null ? 'not rated' : progressLabel(day.progress),
   },
   {
     name: 'Would repeat',
     short: 'Repeat',
-    steps: repeatDayOptions.length,
-    // The options run from yes to no, and yes is the high end.
-    filled: (day) => {
-      const step = stepOf(repeatDayOptions, day.repeatDay);
-      return step === null ? null : repeatDayOptions.length + 1 - step;
-    },
-    coloredAnswer: () => undefined,
+    step: (day) => ratingStepOf(repeatDayOptions, day.repeatDay),
     said: (day) =>
       day.repeatDay === null ? 'not rated' : repeatDayLabel(day.repeatDay),
   },

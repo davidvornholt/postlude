@@ -9,10 +9,11 @@
  * rather than shown as no time at all.
  */
 
+import { energyOptions, ratingStepOf } from '../evening-labels.ts';
 import { durationLabel, energyLabel } from '../insights-labels.ts';
 import type { EnergyScreenTime } from '../insights-patterns.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
-import { EnergySwatch } from './energy-swatch.tsx';
+import { RatingSwatch } from './rating-swatch.tsx';
 
 export const EnergyScreenTimeTable = ({
   rows,
@@ -44,7 +45,7 @@ export const EnergyScreenTimeTable = ({
         <tr className="border-border border-t" key={row.energy}>
           <th className="py-2 pr-4 text-left font-normal text-ink" scope="row">
             <span className="flex items-center gap-2">
-              <EnergySwatch energy={row.energy} />
+              <RatingSwatch step={ratingStepOf(energyOptions, row.energy)} />
               {energyLabel(row.energy)}
             </span>
           </th>

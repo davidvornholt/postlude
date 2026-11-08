@@ -3,10 +3,16 @@
  *
  * The choices are native radio buttons, so the arrow keys move between them
  * and a screen reader names the group and the choice, and each one wears its
- * label as a square target wide enough for a thumb. The chosen one is set in
- * ink, the page's own colour, rather than in a colour that would judge it:
- * "Drained" is not a failure, and green would say it was the good answer.
- * Its label stays the same words, so the choice never rests on colour alone.
+ * label as a square target wide enough for a thumb. The chosen one fills with
+ * its step of the scale every rating shares, umber, ochre or green, the color
+ * Insights draws the same answer in, so a day looks the same kind of day in
+ * both places. The low end is umber rather than the critical red, because a
+ * drained day is not a mistake to correct. Its label stays the same words, so
+ * the choice never rests on color alone, and the green answer is a fill while
+ * focus is the primary outline around it, so the two never read as one.
+ *
+ * Until something is chosen the row stays in ink and outline, so the colors
+ * only ever say an answer, not which one to give.
  *
  * An optional rating is cleared by choosing its answer again, with a press or
  * with Space, so undoing a choice adds no control that appears and moves the
@@ -16,14 +22,13 @@
 
 import { type ReactNode, useId } from 'react';
 
+import type { RatingOption, RatingStep } from '../evening-labels.ts';
+
 type RatingScaleProps<Value extends string> = {
   readonly legend: string;
   /** Said under the choices, such as that the rating is optional. */
   readonly hint?: string;
-  readonly options: ReadonlyArray<{
-    readonly value: Value;
-    readonly label: string;
-  }>;
+  readonly options: ReadonlyArray<RatingOption<Value>>;
   readonly value: Value | null;
   readonly onChange: (value: Value) => void;
   /** A closed day keeps its ratings on show without letting them change. */
@@ -37,12 +42,22 @@ const choiceClass = [
   'border border-border-strong text-ink',
   'transition-colors duration-200 ease-standard motion-reduce:transition-none',
   'hover:bg-surface-sunken',
-  'has-[:checked]:z-10 has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-background',
+  'has-[:checked]:z-10',
   'has-[:focus-visible]:z-20 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary',
   'has-[:disabled]:cursor-default has-[:disabled]:hover:bg-transparent',
   'has-[:disabled:not(:checked)]:text-ink-muted',
-  'has-[:checked:disabled]:hover:bg-ink',
 ].join(' ');
+
+/**
+ * The fill a chosen answer takes, written out for each step so the stylesheet
+ * holds every class. A closed day keeps the fill under the pointer too.
+ */
+const chosenClass: Readonly<Record<RatingStep, string>> = {
+  low: 'has-[:checked]:border-rating-low has-[:checked]:bg-rating-low has-[:checked]:text-on-rating-low has-[:checked:disabled]:hover:bg-rating-low',
+  middle:
+    'has-[:checked]:border-rating-middle has-[:checked]:bg-rating-middle has-[:checked]:text-on-rating-middle has-[:checked:disabled]:hover:bg-rating-middle',
+  high: 'has-[:checked]:border-rating-high has-[:checked]:bg-rating-high has-[:checked]:text-on-rating-high has-[:checked:disabled]:hover:bg-rating-high',
+};
 
 /**
  * The name a row of the end of the day stands under on a phone and beside on
@@ -90,7 +105,10 @@ export const RatingScale = <Value extends string>({
       <RowLabel as="legend">{legend}</RowLabel>
       <div className="clear-left flex max-w-md -space-x-px sm:clear-none">
         {options.map((option) => (
-          <label className={choiceClass} key={option.value}>
+          <label
+            className={[choiceClass, chosenClass[option.step]].join(' ')}
+            key={option.value}
+          >
             <input
               checked={value === option.value}
               className="sr-only appearance-none"

@@ -13,9 +13,9 @@ export const heatFillClass: Record<Shade, string> = {
   q2: 'bg-heat-q2',
   q3: 'bg-heat-q3',
   q4: 'bg-heat-q4',
-  drained: 'bg-energy-drained',
-  okay: 'bg-energy-okay',
-  fresh: 'bg-energy-fresh',
+  low: 'bg-rating-low',
+  middle: 'bg-rating-middle',
+  high: 'bg-rating-high',
 };
 
 const fadeClass =
@@ -27,9 +27,9 @@ export const activityCellClass: Record<Shade, string> = {
   q2: `size-3 ${heatFillClass.q2} ${fadeClass}`,
   q3: `size-3 ${heatFillClass.q3} ${fadeClass}`,
   q4: `size-3 ${heatFillClass.q4} ${fadeClass}`,
-  drained: `size-3 ${heatFillClass.drained} ${fadeClass}`,
-  okay: `size-3 ${heatFillClass.okay} ${fadeClass}`,
-  fresh: `size-3 ${heatFillClass.fresh} ${fadeClass}`,
+  low: `size-3 ${heatFillClass.low} ${fadeClass}`,
+  middle: `size-3 ${heatFillClass.middle} ${fadeClass}`,
+  high: `size-3 ${heatFillClass.high} ${fadeClass}`,
 };
 
 export const heatSquareClass = (shade: Shade): string =>

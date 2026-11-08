@@ -4,9 +4,9 @@
  * season can be compared with itself.
  *
  * A square is shaded by how much the month was written against the other
- * months or by its average progress. By energy it is split instead, into the
- * share of its rated days that were drained, okay and fresh, low to high: an
- * average of three kinds of day would put nearly every month in the middle,
+ * months. By energy or progress it is split instead, into the share of its
+ * rated days at each answer, low to high, in the colors every rating shares:
+ * an average of three answers would put nearly every month in the middle,
  * and the mix is what changes with the seasons. Its label says the counts
  * behind the shade, and it opens that month, as each year's name opens that
  * year.
@@ -26,12 +26,14 @@ import {
 } from 'react';
 
 import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
-import type { HeatLevel } from '../activity.ts';
 import { type JournalMonth, journalMonthLabel } from '../calendar.ts';
-import { energyOptions, progressOptions } from '../evening-labels.ts';
+import {
+  energyOptions,
+  progressOptions,
+  type RatingOption,
+} from '../evening-labels.ts';
 import { insightsSearch } from '../insights-address.ts';
 import {
-  averageLevel,
   type InsightsMeasure,
   monthWritingLevel,
 } from '../insights-measure.ts';
@@ -49,7 +51,6 @@ import {
   journalCountLabel,
   journalMonthLabel as monthName,
 } from '../journal-labels.ts';
-import type { Energy } from '../schemas/day-rating.ts';
 import { heatSquareClass } from './activity-cell-classes.ts';
 import { HeatLegend } from './heat-legend.tsx';
 
@@ -60,30 +61,37 @@ const monthNumbers = Array.from(
   (_, index) => index + 1,
 );
 
-const levelsOf = (
-  years: ReadonlyArray<YearOfMonths>,
-  measure: Exclude<InsightsMeasure, 'energy'>,
-): ((summary: MonthSummary) => HeatLevel) =>
-  measure === 'progress'
-    ? (summary) => averageLevel(summary.progress.average)
-    : monthWritingLevel(
-        years
-          .flatMap((year) => year.months)
-          .filter((summary) => summary !== undefined),
-      );
+/** The answers a month is split into, and its tally of them, by measure. */
+type RatingMixOf = (summary: MonthSummary) => {
+  readonly tally: AnswerTally<string>;
+  readonly options: ReadonlyArray<RatingOption<string>>;
+};
+
+const ratingMixOf = (
+  measure: Exclude<InsightsMeasure, 'writing'>,
+): RatingMixOf =>
+  measure === 'energy'
+    ? (summary) => ({ tally: summary.energy, options: energyOptions })
+    : (summary) => ({ tally: summary.progress, options: progressOptions });
 
 /**
- * A month's energy as a strip for each answer it had, as wide as that
+ * A month's answers as a strip for each answer it had, as wide as that
  * answer's share of the rated days. Each strip keeps two pixels at least, so
  * one drained day in a month of okay ones still shows. A month with nothing
  * rated has no strips and stays the outlined square.
  */
-const EnergyMix = ({ tally }: { readonly tally: AnswerTally<Energy> }) =>
-  energyOptions
+const RatingMix = <Answer extends string>({
+  tally,
+  options,
+}: {
+  readonly tally: AnswerTally<Answer>;
+  readonly options: ReadonlyArray<RatingOption<Answer>>;
+}) =>
+  options
     .filter((option) => tally.counts[option.value] > 0)
     .map((option) => (
       <span
-        className={['min-w-0.5 basis-0', heatSquareClass(option.value)].join(
+        className={['min-w-0.5 basis-0', heatSquareClass(option.step)].join(
           ' ',
         )}
         key={option.value}
@@ -186,12 +194,17 @@ export const MonthGrid = ({
   const captionId = useId();
   const years = monthGrid(days, today);
   const { active, choose, moveFrom, register } = useActiveMonth(years);
-  const levelOf = measure === 'energy' ? undefined : levelsOf(years, measure);
+  const mixOf = measure === 'writing' ? undefined : ratingMixOf(measure);
+  const writingLevel = monthWritingLevel(
+    years
+      .flatMap((year) => year.months)
+      .filter((summary) => summary !== undefined),
+  );
   const fillOf = (summary: MonthSummary): string => {
-    if (levelOf !== undefined) {
-      return `block ${heatSquareClass(levelOf(summary))}`;
+    if (mixOf === undefined) {
+      return `block ${heatSquareClass(writingLevel(summary))}`;
     }
-    return summary.energy.rated === 0
+    return mixOf(summary).tally.rated === 0
       ? `block ${heatSquareClass('none')}`
       : 'flex gap-px';
   };
@@ -249,9 +262,9 @@ export const MonthGrid = ({
                       tabIndex={summary.month === active?.month ? 0 : -1}
                       to="/insights"
                     >
-                      {levelOf === undefined ? (
-                        <EnergyMix tally={summary.energy} />
-                      ) : null}
+                      {mixOf === undefined ? null : (
+                        <RatingMix {...mixOf(summary)} />
+                      )}
                     </Link>
                   )}
                 </td>

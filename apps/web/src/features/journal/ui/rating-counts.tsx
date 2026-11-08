@@ -2,21 +2,21 @@ import { ratingCounts } from '../day-measures.ts';
 import {
   energyOptions,
   progressOptions,
+  type RatingOption,
+  type RatingStep,
   repeatDayOptions,
 } from '../evening-labels.ts';
 import type { InsightsDay } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
-import type { Energy } from '../schemas/day-rating.ts';
-import { EnergySwatch } from './energy-swatch.tsx';
+import { RatingSwatch } from './rating-swatch.tsx';
 
 type Row = {
   readonly name: string;
   readonly answers: ReadonlyArray<{
     readonly label: string;
     readonly count: number;
-    /** The answer's own color, for energy, the one scale that has them. */
-    readonly swatch: Energy | undefined;
+    readonly step: RatingStep;
   }>;
   readonly unrated: number;
 };
@@ -26,15 +26,11 @@ const rowOf = <Value extends string>(
   today: JournalDate,
   rating: {
     readonly name: string;
-    readonly options: ReadonlyArray<{
-      readonly value: Value;
-      readonly label: string;
-    }>;
+    readonly options: ReadonlyArray<RatingOption<Value>>;
     readonly pick: (day: InsightsDay) => Value | null;
-    readonly swatch?: (value: Value) => Energy;
   },
 ): Row => {
-  const { name, options, pick, swatch } = rating;
+  const { name, options, pick } = rating;
   const { counts, unrated } = ratingCounts(
     days,
     today,
@@ -46,7 +42,7 @@ const rowOf = <Value extends string>(
     answers: options.map((option) => ({
       label: option.label,
       count: counts.get(option.value) ?? 0,
-      swatch: swatch?.(option.value),
+      step: option.step,
     })),
     unrated,
   };
@@ -64,7 +60,6 @@ export const RatingCounts = ({
       name: 'Energy',
       options: energyOptions,
       pick: (day) => day.energy,
-      swatch: (energy) => energy,
     }),
     rowOf(days, today, {
       name: 'Progress',
@@ -85,9 +80,7 @@ export const RatingCounts = ({
           <dd className="flex flex-wrap gap-x-4 gap-y-1 text-ink tabular-nums">
             {row.answers.map((answer) => (
               <span className="flex items-center gap-2" key={answer.label}>
-                {answer.swatch === undefined ? null : (
-                  <EnergySwatch energy={answer.swatch} />
-                )}
+                <RatingSwatch step={answer.step} />
                 {answer.label} {journalNumberLabel(answer.count)}
               </span>
             ))}

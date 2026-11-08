@@ -6,6 +6,13 @@
 import { focusRingClass } from '#/shared/ui/design-classes.ts';
 import { type DayMeasures, versionChanges } from '../day-measures.ts';
 import {
+  energyOptions,
+  progressOptions,
+  type RatingOption,
+  ratingStepOf,
+  repeatDayOptions,
+} from '../evening-labels.ts';
+import {
   durationLabel,
   energyLabel,
   progressLabel,
@@ -16,6 +23,7 @@ import type { InsightsDay } from '../insights-view.ts';
 import { type JournalDate, parseJournalDate } from '../journal-day.ts';
 import { journalNumberLabel } from '../journal-labels.ts';
 import { DayLink } from './day-link.tsx';
+import { RatingSwatch } from './rating-swatch.tsx';
 
 const ratingHeaders = ['Energy', 'Progress', 'Would repeat'];
 const cellClass =
@@ -90,29 +98,45 @@ const metricColumns: ReadonlyArray<{
   },
 ];
 
+/** An answer in words, after the square the charts draw it in. */
+const RatingCell = <Value extends string>({
+  value,
+  options,
+  label,
+}: {
+  readonly value: Value | null;
+  readonly options: ReadonlyArray<RatingOption<Value>>;
+  readonly label: (value: Value) => string;
+}) => (
+  <td className={cellClass}>
+    {value === null ? (
+      <Missing what="Not rated" />
+    ) : (
+      <span className="inline-flex items-center gap-2">
+        <RatingSwatch step={ratingStepOf(options, value)} />
+        {label(value)}
+      </span>
+    )}
+  </td>
+);
+
 const RatingCells = ({ day }: { readonly day: InsightsDay }) => (
   <>
-    <td className={cellClass}>
-      {day.energy === null ? (
-        <Missing what="Not rated" />
-      ) : (
-        energyLabel(day.energy)
-      )}
-    </td>
-    <td className={cellClass}>
-      {day.progress === null ? (
-        <Missing what="Not rated" />
-      ) : (
-        progressLabel(day.progress)
-      )}
-    </td>
-    <td className={cellClass}>
-      {day.repeatDay === null ? (
-        <Missing what="Not rated" />
-      ) : (
-        repeatDayLabel(day.repeatDay)
-      )}
-    </td>
+    <RatingCell
+      label={energyLabel}
+      options={energyOptions}
+      value={day.energy}
+    />
+    <RatingCell
+      label={progressLabel}
+      options={progressOptions}
+      value={day.progress}
+    />
+    <RatingCell
+      label={repeatDayLabel}
+      options={repeatDayOptions}
+      value={day.repeatDay}
+    />
   </>
 );
 

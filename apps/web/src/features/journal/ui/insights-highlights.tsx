@@ -12,6 +12,7 @@ import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 import { eyebrowClass } from '#/shared/ui/design-classes.ts';
+import { energyOptions, ratingStepOf } from '../evening-labels.ts';
 import { insightsSearch } from '../insights-address.ts';
 import { energyLabel } from '../insights-labels.ts';
 import type { EnergyWords } from '../insights-patterns.ts';
@@ -21,7 +22,7 @@ import type { YearAgo } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
 import { journalCountLabel, journalNumberLabel } from '../journal-labels.ts';
 import { DayLink } from './day-link.tsx';
-import { EnergySwatch } from './energy-swatch.tsx';
+import { RatingSwatch } from './rating-swatch.tsx';
 
 const linkClass =
   'text-ink underline decoration-border underline-offset-4 hover:decoration-current';
@@ -226,7 +227,7 @@ export const EnergyWordsTable = ({
         <tr className="border-border border-t" key={row.energy}>
           <th className="py-2 pr-4 text-left font-normal text-ink" scope="row">
             <span className="flex items-center gap-2">
-              <EnergySwatch energy={row.energy} />
+              <RatingSwatch step={ratingStepOf(energyOptions, row.energy)} />
               {energyLabel(row.energy)}
             </span>
           </th>

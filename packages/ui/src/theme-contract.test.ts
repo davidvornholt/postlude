@@ -4,9 +4,9 @@ import {
   activityMarkNames,
   colorTokenNames,
   deepRegisterFindings,
-  energyFindings,
-  energyMarkNames,
   rampFindings,
+  ratingFindings,
+  ratingMarkNames,
   schemeDeclarations,
   shadowTokenNames,
   textPairFindings,
@@ -155,38 +155,47 @@ it('rejects activity marks that blend into the page', () => {
   }
 });
 
-it('keeps the energy answers apart for every common kind of color vision', () => {
+it('keeps the rating steps apart for every common kind of color vision', () => {
   expect([
-    ...energyFindings('light', light, '--pl-background'),
-    ...energyFindings('light', light, '--pl-surface-sunken'),
-    ...energyFindings('dark', dark, '--pl-background'),
-    ...energyFindings('dark', dark, '--pl-surface-sunken'),
+    ...ratingFindings('light', light, '--pl-background'),
+    ...ratingFindings('light', light, '--pl-surface-sunken'),
+    ...ratingFindings('dark', dark, '--pl-background'),
+    ...ratingFindings('dark', dark, '--pl-surface-sunken'),
   ]).toEqual([]);
 });
 
-it('rejects energy drawn as shades of one green', () => {
-  // The ramp's own steps, which is how energy was drawn before it had colors
-  // of its own: far enough apart in lightness to order, too close to name.
+it('rejects ratings drawn as shades of one green', () => {
+  // The ramp's own steps, which is how progress was drawn before the ratings
+  // shared a scale: far enough apart in lightness to order, too close to name.
   const shades = {
     ...light,
-    '--pl-energy-drained': light['--pl-heat-q1'] ?? '',
-    '--pl-energy-okay': light['--pl-heat-q2'] ?? '',
-    '--pl-energy-fresh': light['--pl-heat-q4'] ?? '',
+    '--pl-rating-low': light['--pl-heat-q1'] ?? '',
+    '--pl-rating-middle': light['--pl-heat-q2'] ?? '',
+    '--pl-rating-high': light['--pl-heat-q4'] ?? '',
   };
-  expect(energyFindings('shades', shades, '--pl-background')).toEqual([
-    'shades: --pl-energy-drained and --pl-energy-okay are 11.0 apart with full color vision',
+  expect(ratingFindings('shades', shades, '--pl-background')).toEqual([
+    'shades: --pl-rating-low and --pl-rating-middle are 11.0 apart with full color vision',
   ]);
 });
 
-it('rejects energy marks that blend into the page', () => {
+it('rejects a high step at the primary green, which red-green deficiency reads as the umber', () => {
+  const primary = { ...light, '--pl-rating-high': light['--pl-primary'] ?? '' };
+  expect(ratingFindings('primary', primary, '--pl-background')).toEqual([
+    'primary: --pl-rating-low and --pl-rating-high are 14.7 apart with full color vision',
+    'primary: --pl-rating-low and --pl-rating-high are 6.0 apart under protanopia',
+    'primary: --pl-rating-low and --pl-rating-high are 5.5 apart under deuteranopia',
+  ]);
+});
+
+it('rejects rating marks that blend into the page', () => {
   for (const [scheme, palette] of [
     ['light', light],
     ['dark', dark],
   ] as const) {
-    for (const token of energyMarkNames) {
+    for (const token of ratingMarkNames) {
       const mutated = { ...palette, [token]: palette['--pl-background'] };
       expect(
-        energyFindings(`mutated ${scheme}`, mutated, '--pl-background'),
+        ratingFindings(`mutated ${scheme}`, mutated, '--pl-background'),
       ).toContain(`mutated ${scheme}: ${token} on --pl-background = 1.000:1`);
     }
   }

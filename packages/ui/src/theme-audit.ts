@@ -1,6 +1,6 @@
 /**
  * The audit machinery `theme-contract.test.ts` runs over the tokens in
- * `theme.css`: contrast, the sequential activity ramp, the energy marks that
+ * `theme.css`: contrast, the sequential activity ramp, the rating marks that
  * are told apart by color, and which tokens have to exist in both color
  * schemes. Postlude has one palette: the `--pl-*` tokens declared at `:root`,
  * in a light and a dark color scheme. The rules sit apart from the test so
@@ -91,8 +91,9 @@ export const shadowTokenNames = (palette: Palette): ReadonlyArray<string> =>
  * Every surface text can sit on, against every color text can be set in. The
  * only pairings left out are the ones the palette makes impossible:
  * `on-primary` exists solely for the filled primary control, and a filled
- * primary control carries no other text color; the deep register is its own
- * two-color surface.
+ * primary control carries no other text color; each `on-rating` color is set
+ * only on its own step's fill, as the label of a chosen answer; the deep
+ * register is its own two-color surface.
  */
 const textBackgrounds = [
   '--pl-background',
@@ -113,6 +114,7 @@ const textForegrounds = [
   '--pl-critical',
 ] as const;
 const filledBackgrounds = ['--pl-primary', '--pl-primary-strong'] as const;
+const ratingSteps = ['low', 'middle', 'high'] as const;
 const deepForegrounds = ['--pl-deep-ink', '--pl-deep-ink-muted'] as const;
 
 const textPairs: ReadonlyArray<readonly [string, string]> = [
@@ -124,6 +126,13 @@ const textPairs: ReadonlyArray<readonly [string, string]> = [
   ...filledBackgrounds.map(
     (background) =>
       ['--pl-on-primary', background] as readonly [string, string],
+  ),
+  ...ratingSteps.map(
+    (step) =>
+      [`--pl-on-rating-${step}`, `--pl-rating-${step}`] as readonly [
+        string,
+        string,
+      ],
   ),
   ...deepForegrounds.map(
     (foreground) =>
@@ -227,10 +236,10 @@ export const rampFindings = (
   return [...order, ...contrast];
 };
 
-export const energyMarkNames = [
-  '--pl-energy-drained',
-  '--pl-energy-okay',
-  '--pl-energy-fresh',
+export const ratingMarkNames = [
+  '--pl-rating-low',
+  '--pl-rating-middle',
+  '--pl-rating-high',
 ] as const;
 
 /*
@@ -244,18 +253,18 @@ const deficientVisionMinimum = 8;
 const distanceDecimals = 1;
 
 /**
- * The energy answers are categories, so they are judged on being told apart
- * rather than on order: every pair has to stay far enough apart with full
- * color vision and under each simulated dichromacy, and every mark has to
- * clear WCAG's non-text minimum against the ground it is drawn on, as the
- * ramp's steps do.
+ * The rating steps are ordered, but each is named by its color rather than by
+ * a step of lightness, so they are judged on being told apart: every pair has
+ * to stay far enough apart with full color vision and under each simulated
+ * dichromacy, and every mark has to clear WCAG's non-text minimum against the
+ * ground it is drawn on, as the ramp's steps do.
  */
-export const energyFindings = (
+export const ratingFindings = (
   label: string,
   palette: Palette,
   ground: string,
 ): ReadonlyArray<string> => {
-  const contrast = energyMarkNames.flatMap((mark) => {
+  const contrast = ratingMarkNames.flatMap((mark) => {
     const measured = ratio(palette, mark, ground);
     return measured >= markMinimum
       ? []
@@ -263,8 +272,8 @@ export const energyFindings = (
           `${label}: ${mark} on ${ground} = ${measured.toFixed(reportedDecimals)}:1`,
         ];
   });
-  const pairs = energyMarkNames.flatMap((first, index) =>
-    energyMarkNames.slice(index + 1).map((second) => [first, second] as const),
+  const pairs = ratingMarkNames.flatMap((first, index) =>
+    ratingMarkNames.slice(index + 1).map((second) => [first, second] as const),
   );
   const separation = pairs.flatMap(([first, second]) =>
     visions.flatMap((vision) => {
