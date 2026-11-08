@@ -123,6 +123,31 @@ export const buildHydratedFixture = async (
   return assets;
 };
 
+// The browser bundle depends only on its entry and module replacements: each
+// configuration reaches the browser through a window global, not the bundle.
+// A worker process therefore builds each bundle once, however many fixtures
+// and test files use it.
+const browserBundles = new Map<string, Promise<BrowserFixtureAssets>>();
+
+const sharedBrowserBundle = (
+  options: HydratedFixtureOptions,
+): Promise<BrowserFixtureAssets> => {
+  const key = JSON.stringify([options.clientEntryPath, options.replacements]);
+  const existing = browserBundles.get(key);
+  if (existing !== undefined) {
+    return existing;
+  }
+  const bundle = buildBrowserFixture({
+    clientEntryPath: options.clientEntryPath,
+    plugins: [fixtureModules(options.replacements)],
+  }).catch((error: unknown) => {
+    browserBundles.delete(key);
+    throw error;
+  });
+  browserBundles.set(key, bundle);
+  return bundle;
+};
+
 /**
  * Several server renderings that share one browser bundle, for fixtures whose
  * configurations differ only in what the server renders first.
@@ -131,10 +156,7 @@ export const buildHydratedFixtures = async (
   configs: ReadonlyArray<unknown>,
   options: HydratedFixtureOptions,
 ): Promise<ReadonlyArray<FixtureAssets>> => {
-  const browserAssets = await buildBrowserFixture({
-    clientEntryPath: options.clientEntryPath,
-    plugins: [fixtureModules(options.replacements)],
-  });
+  const browserAssets = await sharedBrowserBundle(options);
   const markup = await renderFixtures(configs, options);
   return markup.map((rendered) => ({ markup: rendered, ...browserAssets }));
 };
