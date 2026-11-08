@@ -5,7 +5,10 @@ import type { SqlClient } from 'effect/sql';
 import { activityDayOf } from '../activity.ts';
 import { anniversaryLimit, anniversaryMonthDays } from '../anniversary.ts';
 import { journalDateAt, shiftJournalDate } from '../journal-day.ts';
-import { parseScriptureReference } from '../scripture-reference.ts';
+import {
+  parseScriptureReference,
+  scriptureTopicOf,
+} from '../scripture-reference.ts';
 import { searchDocumentOf } from '../search-document.ts';
 import { searchTerms } from '../search-query.ts';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
@@ -138,6 +141,7 @@ describe('a seeded journal', () => {
           scriptureReference: parseScriptureReference(
             stale?.scriptureReference ?? '',
           ),
+          scriptureTopic: scriptureTopicOf(stale?.scriptureReference ?? ''),
         }),
       ),
     ].sort(
