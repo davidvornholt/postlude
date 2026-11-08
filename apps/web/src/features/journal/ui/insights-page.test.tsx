@@ -119,6 +119,18 @@ const unsortedWeek = await render(
   ),
 );
 
+/** A journal begun this month, with two short entries and nothing rated. */
+const sparseMonth = await render(
+  sampleInsightsView(
+    [
+      { ...blankDay('2026-10-07'), journalWords: 140 },
+      { ...blankDay('2026-10-21'), journalWords: 60 },
+    ],
+    { kind: 'month', month: '2026-10' },
+    insightsToday,
+  ),
+);
+
 /** The opening tag of the link a screen reader names `label`. */
 const anchorLabelled = (html: string, label: string): string =>
   html.match(new RegExp(`<a\\b[^>]*aria-label="${label}"[^>]*>`, 'u'))?.[0] ??
@@ -186,6 +198,7 @@ it('folds the detail away and keeps only what has something to say', () => {
   expect(foldTitles(week)).toEqual([
     'Ratings',
     'Streaks',
+    'Records',
     'Scripture',
     'Screen time',
     'Where it went',
@@ -201,6 +214,48 @@ it('folds the detail away and keeps only what has something to say', () => {
   expect(plainText(month)).toContain('Most of it: Writing');
   expect(plainText(pastYear)).not.toContain('Streaks');
   expect(plainText(allTime)).not.toContain('Day by day');
+});
+
+/*
+ * The highlights: a record, the same range a year earlier, and the words on
+ * days that felt each way. Each waits until the journal holds enough to say it.
+ */
+it('picks out records, the year before and the words by energy', () => {
+  expect(foldTitles(year)).toEqual([
+    'Ratings',
+    'Streaks',
+    'Records',
+    'A year ago',
+    'Weekdays',
+    'Entry length',
+    'Energy and words',
+    'Scripture',
+    'Screen time',
+    'Where it went',
+    'Energy and screens',
+  ]);
+  expect(plainText(year)).toContain(
+    'Your longest entry yet: 939 words on February 11',
+  );
+  expect(plainText(year)).toContain('Written on 198 of 365 days in 2025');
+  expect(year).toContain('href="/insights?year=2025"');
+  expect(plainText(year)).toContain('Typically 588 words on fresh days');
+  expect(plainText(pastYear)).toContain(
+    'Longest of all: 939 words, on February 11, 2026',
+  );
+  expect(plainText(allTime)).toContain('Fullest month');
+  expect(foldTitles(allTime)).not.toContain('A year ago');
+});
+
+it('keeps a sparse journal to the one highlight it has', () => {
+  const titles = foldTitles(sparseMonth);
+  expect(titles).toContain('Records');
+  expect(titles).not.toContain('A year ago');
+  expect(titles).not.toContain('Energy and words');
+  expect(plainText(sparseMonth)).toContain(
+    'Longest entry: 140 words on October 7',
+  );
+  expect(plainText(sparseMonth)).not.toContain('longest entry yet');
 });
 
 /*

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'bun:test';
 import { measuresOf } from './day-measures.ts';
 import {
   energyScreenTime,
+  energyWords,
   monthAfterKey,
   monthGrid,
   mostWrittenWeekday,
@@ -180,6 +181,42 @@ describe('energyScreenTime', () => {
       day('2026-10-02', { energy: 'fresh' }),
     ]);
     expect(rows.map((row) => row.energy)).toEqual(['okay']);
+  });
+});
+
+describe('energyWords', () => {
+  it('takes the middle length of the written days at each energy, low energy first', () => {
+    const rows = energyWords(
+      [
+        day('2026-10-20', { energy: 'fresh', journalWords: 200 }),
+        day('2026-10-21', { energy: 'fresh', journalWords: 900 }),
+        day('2026-10-22', {
+          energy: 'fresh',
+          journalWords: 300,
+          scriptureWords: 100,
+        }),
+        day('2026-10-23', { energy: 'drained', journalWords: 120 }),
+        day('2026-10-24', { energy: 'drained', journalWords: 180 }),
+      ],
+      today,
+    );
+    expect(rows).toEqual([
+      { energy: 'drained', days: 2, typicalWords: 150 },
+      { energy: 'fresh', days: 3, typicalWords: 400 },
+    ]);
+  });
+
+  it('counts only written, rated days up to today', () => {
+    const rows = energyWords(
+      [
+        day('2026-10-20', { energy: 'okay' }),
+        day('2026-10-21', { journalWords: 500 }),
+        day('2026-10-22', { energy: 'fresh', journalWords: 250 }),
+        day('2026-10-29', { energy: 'drained', journalWords: 800 }),
+      ],
+      today,
+    );
+    expect(rows).toEqual([{ energy: 'fresh', days: 1, typicalWords: 250 }]);
   });
 });
 

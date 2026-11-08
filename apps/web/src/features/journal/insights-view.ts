@@ -25,6 +25,21 @@ export type InsightsDay = {
   readonly metrics: DayMeasures | null;
 };
 
+/** One day and how much was written on it. */
+export type DayRecord = {
+  readonly date: JournalDate;
+  readonly words: number;
+};
+
+/** What was written in the same stretch a year earlier. */
+export type YearAgo = {
+  readonly range: InsightsRange;
+  /** Days of that range up to today. */
+  readonly elapsed: number;
+  readonly written: number;
+  readonly words: number;
+};
+
 export type InsightsView = {
   readonly range: InsightsRange;
   /** The server's journal day, so the days after it read as still to come. */
@@ -38,6 +53,10 @@ export type InsightsView = {
   /** Counted over the whole journal: a run is the one the writer is on. */
   readonly journalStreak: Streak;
   readonly scriptureStreak: Streak;
+  /** The day with the most words in the whole journal, for the range's own to stand beside. */
+  readonly longestEntry: DayRecord | undefined;
+  /** The same week, month or year one year earlier, when anything was written in it. */
+  readonly yearAgo: YearAgo | undefined;
   /** Stored source exists even when no day shows any writing. */
   readonly exportAvailable: boolean;
 };

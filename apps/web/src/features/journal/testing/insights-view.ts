@@ -22,6 +22,7 @@ import type { ActivityDay } from '../activity.ts';
 import { calendarWeekdayIndex } from '../calendar.ts';
 import { categoryTotals, comparableDays, measuresOf } from '../day-measures.ts';
 import { type InsightsRange, rangeDates } from '../insights-range.ts';
+import { longestEntry, yearAgoOf } from '../insights-records.ts';
 import type { InsightsDay, InsightsView } from '../insights-view.ts';
 import { type JournalDate, shiftJournalDate } from '../journal-day.ts';
 import type { DayMetrics } from '../schemas/day-metrics.ts';
@@ -115,6 +116,8 @@ export const sampleInsightsView = (
     ),
     journalStreak: journalStreak(history, today),
     scriptureStreak: scriptureStreak(history, today),
+    longestEntry: longestEntry(history, today),
+    yearAgo: yearAgoOf(range, history, today),
     exportAvailable: journal.some(isWritten),
   };
 };

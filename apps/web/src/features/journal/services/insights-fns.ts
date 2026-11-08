@@ -9,7 +9,9 @@
  *
  * The streaks are counted over the whole history rather than over the range,
  * because a run that started before the range is still the run the writer is
- * on. Whether each section was first used on the day it is about is decided
+ * on. The longest entry and the same range a year earlier come from that
+ * history too, so a record is measured against the whole journal and last
+ * year's writing needs no second read. Whether each section was first used on the day it is about is decided
  * here rather than in the browser, because the comparison needs the configured
  * zone — and the browser's zone is whatever a phone was carried into last week.
  *
@@ -27,6 +29,7 @@ import type { ActivityDay } from '../activity.ts';
 import { categoryTotals, comparableDays, measuresOf } from '../day-measures.ts';
 import { rangeOfSearch } from '../insights-address.ts';
 import { rangeDates } from '../insights-range.ts';
+import { longestEntry, yearAgoOf } from '../insights-records.ts';
 import type { InsightsDay, InsightsView } from '../insights-view.ts';
 import { type JournalDate, journalDateAt } from '../journal-day.ts';
 import { type DayOverview, dayRangeLimit } from '../schemas/day-overview.ts';
@@ -135,6 +138,8 @@ export const readInsightsFn = createServerFn({ method: 'GET' })
           ),
           journalStreak: journalStreak(history, today),
           scriptureStreak: scriptureStreak(history, today),
+          longestEntry: longestEntry(history, today),
+          yearAgo: yearAgoOf(range, history, today),
           exportAvailable,
         };
       }),
