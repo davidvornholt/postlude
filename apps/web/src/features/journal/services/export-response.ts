@@ -8,7 +8,7 @@ import { decodeExportFormData } from '../schemas/export-input.ts';
 import { exportDownloadResponse } from './download-response.ts';
 
 export const invalidExportRequestMessage =
-  'The export request was not valid. Return to the archive and try again.';
+  'The export request was not valid. Return to Insights and try again.';
 
 type PrepareExportResponse = (
   request: Request,

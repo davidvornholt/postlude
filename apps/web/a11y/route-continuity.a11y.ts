@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-import { mountArchiveNavigation } from './archive-navigation-test-support.ts';
+import { mountInsightsNavigation } from './insights-navigation-test-support.ts';
 
-type BrowserPage = Parameters<typeof mountArchiveNavigation>[0];
+type BrowserPage = Parameters<typeof mountInsightsNavigation>[0];
 
 const beginContentOpacitySampling = async (
   page: BrowserPage,
@@ -67,7 +67,7 @@ const openViewWithoutBlankingContent = async (
 test('navigation keeps the page content opaque between views', async ({
   page,
 }) => {
-  await mountArchiveNavigation(page);
+  await mountInsightsNavigation(page);
 
   await openViewWithoutBlankingContent(page, 'Calendar', 'August 2026');
   await openViewWithoutBlankingContent(

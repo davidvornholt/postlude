@@ -12,15 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppArchiveRouteImport } from './routes/_app/archive'
 import { Route as AppCalendarRouteImport } from './routes/_app/calendar'
+import { Route as AppInsightsRouteImport } from './routes/_app/insights'
 import { Route as AppSearchRouteImport } from './routes/_app/search'
 import { Route as ApiHealthzRouteImport } from './routes/api/healthz'
-import { Route as AppArchiveExportRouteImport } from './routes/_app/archive_.export'
 import { Route as AppDayDateRouteImport } from './routes/_app/day.$date'
-import { Route as AppReviewIndexRouteImport } from './routes/_app/review.index'
-import { Route as AppReviewMonthRouteImport } from './routes/_app/review.month'
-import { Route as AppReviewWeekRouteImport } from './routes/_app/review.week'
+import { Route as AppInsightsExportRouteImport } from './routes/_app/insights_.export'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiJournalImagesIndexRouteImport } from './routes/api/journal-images/index'
 import { Route as ApiJournalImagesKeyRouteImport } from './routes/api/journal-images/$key'
@@ -39,14 +36,14 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const AppArchiveRoute = AppArchiveRouteImport.update({
-  id: '/archive',
-  path: '/archive',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppCalendarRoute = AppCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInsightsRoute = AppInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
   getParentRoute: () => AppRoute,
 } as any)
 const AppSearchRoute = AppSearchRouteImport.update({
@@ -59,29 +56,14 @@ const ApiHealthzRoute = ApiHealthzRouteImport.update({
   path: '/api/healthz',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppArchiveExportRoute = AppArchiveExportRouteImport.update({
-  id: '/archive_/export',
-  path: '/archive/export',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppDayDateRoute = AppDayDateRouteImport.update({
   id: '/day/$date',
   path: '/day/$date',
   getParentRoute: () => AppRoute,
 } as any)
-const AppReviewIndexRoute = AppReviewIndexRouteImport.update({
-  id: '/review/',
-  path: '/review/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReviewMonthRoute = AppReviewMonthRouteImport.update({
-  id: '/review/month',
-  path: '/review/month',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppReviewWeekRoute = AppReviewWeekRouteImport.update({
-  id: '/review/week',
-  path: '/review/week',
+const AppInsightsExportRoute = AppInsightsExportRouteImport.update({
+  id: '/insights_/export',
+  path: '/insights/export',
   getParentRoute: () => AppRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -103,51 +85,42 @@ const ApiJournalImagesKeyRoute = ApiJournalImagesKeyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/login': typeof LoginRoute
-  '/archive': typeof AppArchiveRoute
   '/calendar': typeof AppCalendarRoute
+  '/insights': typeof AppInsightsRoute
   '/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
-  '/archive/export': typeof AppArchiveExportRoute
   '/day/$date': typeof AppDayDateRoute
-  '/review/month': typeof AppReviewMonthRoute
-  '/review/week': typeof AppReviewWeekRoute
+  '/insights/export': typeof AppInsightsExportRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
-  '/review/': typeof AppReviewIndexRoute
   '/api/journal-images/': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
-  '/archive': typeof AppArchiveRoute
   '/calendar': typeof AppCalendarRoute
+  '/insights': typeof AppInsightsRoute
   '/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/': typeof AppIndexRoute
-  '/archive/export': typeof AppArchiveExportRoute
   '/day/$date': typeof AppDayDateRoute
-  '/review/month': typeof AppReviewMonthRoute
-  '/review/week': typeof AppReviewWeekRoute
+  '/insights/export': typeof AppInsightsExportRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
-  '/review': typeof AppReviewIndexRoute
   '/api/journal-images': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/_app/archive': typeof AppArchiveRoute
   '/_app/calendar': typeof AppCalendarRoute
+  '/_app/insights': typeof AppInsightsRoute
   '/_app/search': typeof AppSearchRoute
   '/api/healthz': typeof ApiHealthzRoute
   '/_app/': typeof AppIndexRoute
-  '/_app/archive_/export': typeof AppArchiveExportRoute
   '/_app/day/$date': typeof AppDayDateRoute
-  '/_app/review/month': typeof AppReviewMonthRoute
-  '/_app/review/week': typeof AppReviewWeekRoute
+  '/_app/insights_/export': typeof AppInsightsExportRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/journal-images/$key': typeof ApiJournalImagesKeyRoute
-  '/_app/review/': typeof AppReviewIndexRoute
   '/api/journal-images/': typeof ApiJournalImagesIndexRoute
 }
 export interface FileRouteTypes {
@@ -155,50 +128,41 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
-    | '/archive'
     | '/calendar'
+    | '/insights'
     | '/search'
     | '/api/healthz'
-    | '/archive/export'
     | '/day/$date'
-    | '/review/month'
-    | '/review/week'
+    | '/insights/export'
     | '/api/auth/$'
     | '/api/journal-images/$key'
-    | '/review/'
     | '/api/journal-images/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/login'
-    | '/archive'
     | '/calendar'
+    | '/insights'
     | '/search'
     | '/api/healthz'
     | '/'
-    | '/archive/export'
     | '/day/$date'
-    | '/review/month'
-    | '/review/week'
+    | '/insights/export'
     | '/api/auth/$'
     | '/api/journal-images/$key'
-    | '/review'
     | '/api/journal-images'
   id:
     | '__root__'
     | '/_app'
     | '/login'
-    | '/_app/archive'
     | '/_app/calendar'
+    | '/_app/insights'
     | '/_app/search'
     | '/api/healthz'
     | '/_app/'
-    | '/_app/archive_/export'
     | '/_app/day/$date'
-    | '/_app/review/month'
-    | '/_app/review/week'
+    | '/_app/insights_/export'
     | '/api/auth/$'
     | '/api/journal-images/$key'
-    | '/_app/review/'
     | '/api/journal-images/'
   fileRoutesById: FileRoutesById
 }
@@ -234,18 +198,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/archive': {
-      id: '/_app/archive'
-      path: '/archive'
-      fullPath: '/archive'
-      preLoaderRoute: typeof AppArchiveRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/calendar': {
       id: '/_app/calendar'
       path: '/calendar'
       fullPath: '/calendar'
       preLoaderRoute: typeof AppCalendarRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/insights': {
+      id: '/_app/insights'
+      path: '/insights'
+      fullPath: '/insights'
+      preLoaderRoute: typeof AppInsightsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/search': {
@@ -262,13 +226,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthzRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/archive_/export': {
-      id: '/_app/archive_/export'
-      path: '/archive/export'
-      fullPath: '/archive/export'
-      preLoaderRoute: typeof AppArchiveExportRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/day/$date': {
       id: '/_app/day/$date'
       path: '/day/$date'
@@ -276,25 +233,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDayDateRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/review/': {
-      id: '/_app/review/'
-      path: '/review'
-      fullPath: '/review/'
-      preLoaderRoute: typeof AppReviewIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/review/month': {
-      id: '/_app/review/month'
-      path: '/review/month'
-      fullPath: '/review/month'
-      preLoaderRoute: typeof AppReviewMonthRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/review/week': {
-      id: '/_app/review/week'
-      path: '/review/week'
-      fullPath: '/review/week'
-      preLoaderRoute: typeof AppReviewWeekRouteImport
+    '/_app/insights_/export': {
+      id: '/_app/insights_/export'
+      path: '/insights/export'
+      fullPath: '/insights/export'
+      preLoaderRoute: typeof AppInsightsExportRouteImport
       parentRoute: typeof AppRoute
     }
     '/api/auth/$': {
@@ -322,27 +265,21 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
-  AppArchiveRoute: typeof AppArchiveRoute
   AppCalendarRoute: typeof AppCalendarRoute
+  AppInsightsRoute: typeof AppInsightsRoute
   AppSearchRoute: typeof AppSearchRoute
   AppIndexRoute: typeof AppIndexRoute
-  AppArchiveExportRoute: typeof AppArchiveExportRoute
   AppDayDateRoute: typeof AppDayDateRoute
-  AppReviewMonthRoute: typeof AppReviewMonthRoute
-  AppReviewWeekRoute: typeof AppReviewWeekRoute
-  AppReviewIndexRoute: typeof AppReviewIndexRoute
+  AppInsightsExportRoute: typeof AppInsightsExportRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppArchiveRoute: AppArchiveRoute,
   AppCalendarRoute: AppCalendarRoute,
+  AppInsightsRoute: AppInsightsRoute,
   AppSearchRoute: AppSearchRoute,
   AppIndexRoute: AppIndexRoute,
-  AppArchiveExportRoute: AppArchiveExportRoute,
   AppDayDateRoute: AppDayDateRoute,
-  AppReviewMonthRoute: AppReviewMonthRoute,
-  AppReviewWeekRoute: AppReviewWeekRoute,
-  AppReviewIndexRoute: AppReviewIndexRoute,
+  AppInsightsExportRoute: AppInsightsExportRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

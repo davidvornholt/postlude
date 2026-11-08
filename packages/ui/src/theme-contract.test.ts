@@ -5,6 +5,8 @@ import {
   colorTokenNames,
   deepRegisterFindings,
   rampFindings,
+  ratingFindings,
+  ratingMarkNames,
   schemeDeclarations,
   shadowTokenNames,
   textPairFindings,
@@ -92,6 +94,21 @@ it('the activity ramp stays readable as a sequence', () => {
   ]).toEqual([]);
 });
 
+it('rejects ramp steps too close to tell apart', () => {
+  const crowded = {
+    ...light,
+    '--pl-heat-q1': 'oklch(0.6 0.07 155)',
+    '--pl-heat-q2': 'oklch(0.52 0.085 155)',
+    '--pl-heat-q3': 'oklch(0.44 0.09 155)',
+    '--pl-heat-q4': 'oklch(0.36 0.085 155)',
+  };
+  expect(rampFindings('crowded', 'light', crowded, '--pl-background')).toEqual([
+    'crowded: --pl-heat-q2 steps only 0.080 in lightness',
+    'crowded: --pl-heat-q3 steps only 0.080 in lightness',
+    'crowded: --pl-heat-q4 steps only 0.080 in lightness',
+  ]);
+});
+
 it('keeps the deep register rule visible against its ground', () => {
   expect([
     ...deepRegisterFindings('light', light),
@@ -134,6 +151,52 @@ it('rejects activity marks that blend into the page', () => {
       ).toContain(
         `mutated ${scheme} ${token}: ${token} on --pl-background = 1.000:1`,
       );
+    }
+  }
+});
+
+it('keeps the rating steps apart for every common kind of color vision', () => {
+  expect([
+    ...ratingFindings('light', light, '--pl-background'),
+    ...ratingFindings('light', light, '--pl-surface-sunken'),
+    ...ratingFindings('dark', dark, '--pl-background'),
+    ...ratingFindings('dark', dark, '--pl-surface-sunken'),
+  ]).toEqual([]);
+});
+
+it('rejects ratings drawn as shades of one green', () => {
+  // The ramp's own steps, which is how progress was drawn before the ratings
+  // shared a scale: far enough apart in lightness to order, too close to name.
+  const shades = {
+    ...light,
+    '--pl-rating-low': light['--pl-heat-q1'] ?? '',
+    '--pl-rating-middle': light['--pl-heat-q2'] ?? '',
+    '--pl-rating-high': light['--pl-heat-q4'] ?? '',
+  };
+  expect(ratingFindings('shades', shades, '--pl-background')).toEqual([
+    'shades: --pl-rating-low and --pl-rating-middle are 11.0 apart with full color vision',
+  ]);
+});
+
+it('rejects a high step at the primary green, which red-green deficiency reads as the umber', () => {
+  const primary = { ...light, '--pl-rating-high': light['--pl-primary'] ?? '' };
+  expect(ratingFindings('primary', primary, '--pl-background')).toEqual([
+    'primary: --pl-rating-low and --pl-rating-high are 14.7 apart with full color vision',
+    'primary: --pl-rating-low and --pl-rating-high are 6.0 apart under protanopia',
+    'primary: --pl-rating-low and --pl-rating-high are 5.5 apart under deuteranopia',
+  ]);
+});
+
+it('rejects rating marks that blend into the page', () => {
+  for (const [scheme, palette] of [
+    ['light', light],
+    ['dark', dark],
+  ] as const) {
+    for (const token of ratingMarkNames) {
+      const mutated = { ...palette, [token]: palette['--pl-background'] };
+      expect(
+        ratingFindings(`mutated ${scheme}`, mutated, '--pl-background'),
+      ).toContain(`mutated ${scheme}: ${token} on --pl-background = 1.000:1`);
     }
   }
 });

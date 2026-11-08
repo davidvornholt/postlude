@@ -15,8 +15,8 @@ const styleSheetCount = 3;
 
 const recoveryResponse = (): Response =>
   privateHtmlRecoveryResponse({
-    actionHref: '/archive',
-    actionLabel: 'Return to archive',
+    actionHref: '/insights',
+    actionLabel: 'Return to Insights',
     heading: 'Export unavailable',
     message: 'The export could not be prepared.',
     styleSheetHrefs: [
@@ -75,7 +75,7 @@ describe('approved private recovery responses', () => {
 
   it('escapes recovery text and attributes when rendering the shared controls', async () => {
     const response = privateHtmlRecoveryResponse({
-      actionHref: '/archive?q=" onmouseover="alert(1)',
+      actionHref: '/insights?q=" onmouseover="alert(1)',
       actionLabel: '<img src=x onerror=alert(1)>',
       heading: '<script>alert(1)</script>',
       message: 'A & B < C',
@@ -88,7 +88,7 @@ describe('approved private recovery responses', () => {
     expect(document).not.toContain('" onmouseover="');
     expect(document).toContain('A &amp; B &lt; C');
     expect(document).toContain(
-      'href="/archive?q=&quot; onmouseover=&quot;alert(1)"',
+      'href="/insights?q=&quot; onmouseover=&quot;alert(1)"',
     );
     expect(document).toContain('autofocus=""');
   });

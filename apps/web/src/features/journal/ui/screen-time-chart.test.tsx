@@ -2,9 +2,10 @@ import { describe, expect, it } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import { attributeValue, openingTag } from '#/shared/testing/rendered-html.ts';
+import { measuresOf } from '../day-measures.ts';
 import type { DayMetrics } from '../schemas/day-metrics.ts';
 import { sampleDayMetrics } from '../testing/evening-view.ts';
-import { unratedDay } from '../testing/review-view.ts';
+import { unratedDay } from '../testing/insights-view.ts';
 import { ScreenTimeChart } from './screen-time-chart.tsx';
 
 const minutesPerHour = 60;
@@ -17,7 +18,10 @@ const renderDay = (changes: Partial<DayMetrics>) => {
       days={[
         {
           ...unratedDay('2026-10-27'),
-          metrics: { ...sampleDayMetrics('2026-10-27'), ...changes },
+          metrics: measuresOf({
+            ...sampleDayMetrics('2026-10-27'),
+            ...changes,
+          }),
         },
       ]}
       today="2026-10-30"

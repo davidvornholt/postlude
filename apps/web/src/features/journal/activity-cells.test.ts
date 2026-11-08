@@ -1,96 +1,96 @@
 import { expect, it } from 'bun:test';
 
-import type { ActivityDay } from './activity.ts';
-import { activityWindow } from './activity.ts';
-import { activityCells, activityWeeks } from './activity-cells.ts';
+import {
+  type ActivitySource,
+  activityCells,
+  activityWeeks,
+} from './activity-cells.ts';
 import { daysBetweenJournalDates } from './journal-day.ts';
-import { lastArchiveYear } from './schemas/archive-query.ts';
+import type { Energy, Progress } from './schemas/day-rating.ts';
 
-const day = (date: string, journalWords: number): ActivityDay => ({
+const day = (
+  date: string,
+  journalWords: number,
+  energy: Energy | null = null,
+  progress: Progress | null = null,
+): ActivitySource => ({
   date,
   journalWords,
   scriptureWords: 0,
-  hasScripture: false,
-  journalWrittenOnTheDay: true,
-  scriptureUsedOnTheDay: true,
+  energy,
+  progress,
 });
 
 const daysPerWeek = 7;
-const firstClippedWeekDays = 6;
-const rollingWeeksShown = 53;
 const today = '2026-08-26';
-const namedYear = 2025;
-const currentNamedYear = 2026;
+const year2025 = { from: '2025-01-01', to: '2025-12-31' } as const;
+const year2026 = { from: '2026-01-01', to: '2026-12-31' } as const;
 const mostWords = 400;
+/* 2025 opens on a Wednesday, so its first Monday-to-Sunday week has five days. */
+const firstWeekDays2025 = 5;
 
-it('keeps the first supported year inside the journal date range', () => {
-  const window = activityWindow(today, 1);
-  const weeks = activityWeeks(activityCells([], window, today));
-
-  expect(window).toEqual({ from: '0001-01-01', to: '0002-01-05' });
-  expect(weeks[0]?.[0]?.date).toBe('0001-01-01');
-  expect(weeks[0]).toHaveLength(firstClippedWeekDays);
-  expect(weeks.slice(1).every((week) => week.length === daysPerWeek)).toBe(
-    true,
-  );
-});
-
-it('draws the maximum named year as 53 complete four-digit weeks', () => {
-  const window = activityWindow(today, lastArchiveYear);
-  const weeks = activityWeeks(activityCells([], window, today));
-
-  expect(window).toEqual({ from: '9997-12-28', to: '9999-01-02' });
-  expect(weeks).toHaveLength(rollingWeeksShown);
-  expect(weeks.every((week) => week.length === daysPerWeek)).toBe(true);
-});
-
-it('draws a square for every day of the window, written or not', () => {
-  const window = activityWindow(today, namedYear);
-  const cells = activityCells([day('2025-06-01', mostWords)], window, today);
+it('draws a square for every day of the stretch, written or not', () => {
+  const cells = activityCells([day('2025-06-01', mostWords)], year2025, today);
 
   expect(cells.length).toBe(
-    daysBetweenJournalDates(window.from, window.to) + 1,
+    daysBetweenJournalDates(year2025.from, year2025.to) + 1,
   );
   expect(
-    cells.filter((cell) => cell.kind === 'day' && cell.level !== 'none').length,
+    cells.filter((cell) => cell.kind === 'day' && cell.shade !== 'none').length,
   ).toBe(1);
 });
 
-it('leaves days outside the window off the grid', () => {
-  const window = activityWindow(today, namedYear);
-  const cells = activityCells([day('2023-06-01', mostWords)], window, today);
+it('leaves days outside the stretch off the grid', () => {
+  const cells = activityCells([day('2023-06-01', mostWords)], year2025, today);
 
   expect(cells.every((cell) => cell.kind === 'day' && cell.words === 0)).toBe(
     true,
   );
 });
 
-it('keeps the rest of the rolling week as future padding', () => {
-  const firstFutureDate = '2026-08-27';
-  const cells = activityCells(
-    [day(firstFutureDate, mostWords)],
-    activityWindow(today),
-    today,
-  );
+it('keeps the rest of the current year as future padding', () => {
+  const cells = activityCells([day('2026-08-27', mostWords)], year2026, today);
   const future = cells.filter((cell) => cell.kind === 'future-padding');
 
-  expect(future.map((cell) => cell.date)).toEqual([
-    firstFutureDate,
-    '2026-08-28',
-    '2026-08-29',
-  ]);
-  expect(future[0]).toEqual({ kind: 'future-padding', date: firstFutureDate });
+  expect(future[0]).toEqual({ kind: 'future-padding', date: '2026-08-27' });
+  expect(future.at(-1)?.date).toBe('2026-12-31');
+  expect(future.every((cell) => cell.date > today)).toBe(true);
 });
 
-it('keeps the rest of the current named year as future padding', () => {
-  const cells = activityCells(
-    [],
-    activityWindow(today, currentNamedYear),
-    today,
-  );
-  const future = cells.filter((cell) => cell.kind === 'future-padding');
+/*
+ * The weeks run Monday to Sunday, as the calendar's rows do, so a year that
+ * opens mid-week opens on a short column rather than on days of the year before.
+ */
+it('clips the first week to the stretch and keeps the rest whole', () => {
+  const weeks = activityWeeks(activityCells([], year2025, today));
 
-  expect(future[0]?.date).toBe('2026-08-27');
-  expect(future.at(-1)?.date).toBe('2027-01-02');
-  expect(future.every((cell) => cell.date > today)).toBe(true);
+  expect(weeks[0]?.[0]?.date).toBe('2025-01-01');
+  expect(weeks[0]).toHaveLength(firstWeekDays2025);
+  expect(weeks[1]?.[0]?.date).toBe('2025-01-06');
+  expect(weeks.slice(1, -1).every((week) => week.length === daysPerWeek)).toBe(
+    true,
+  );
+  expect(weeks.at(-1)?.at(-1)?.date).toBe('2025-12-31');
+});
+
+/*
+ * Energy and progress share one scale: the low answer takes the low step, the
+ * middle the middle and the hoped-for answer the high one. A day without an
+ * answer takes none.
+ */
+it('colours a day by its energy or progress when asked to', () => {
+  const stretch = { from: '2025-03-03', to: '2025-03-06' } as const;
+  const days = [
+    day('2025-03-03', mostWords, 'drained', 'little'),
+    day('2025-03-04', mostWords, 'okay', 'solid'),
+    day('2025-03-05', mostWords, 'fresh', 'a_lot'),
+    day('2025-03-06', mostWords),
+  ];
+  const shades = (measure: 'energy' | 'progress') =>
+    activityCells(days, stretch, today, measure).map((cell) =>
+      cell.kind === 'day' ? cell.shade : undefined,
+    );
+
+  expect(shades('energy')).toEqual(['low', 'middle', 'high', 'none']);
+  expect(shades('progress')).toEqual(['low', 'middle', 'high', 'none']);
 });

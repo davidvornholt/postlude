@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { mountArchiveNavigation } from './archive-navigation-test-support.ts';
+import { mountInsightsNavigation } from './insights-navigation-test-support.ts';
 
 const calendarUrl = /\/calendar(?:\?.*)?$/u;
 const currentCalendarDay = /day=2026-08-19/u;
@@ -11,7 +11,7 @@ const selectedCalendarDay = /Wednesday, August 19, 2026, entry available/u;
 test('Calendar keeps selected days and months in browser history', async ({
   page,
 }) => {
-  await mountArchiveNavigation(page);
+  await mountInsightsNavigation(page);
   await page.getByRole('link', { name: 'Calendar' }).click();
 
   await expect(page).toHaveURL(calendarUrl);
@@ -58,7 +58,7 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     await page.setViewportSize({ height: 800, width });
-    await mountArchiveNavigation(page);
+    await mountInsightsNavigation(page);
     await page.getByRole('link', { name: 'Calendar' }).click();
     await expect(
       page.getByRole('heading', { name: 'August 2026' }),

@@ -1,16 +1,18 @@
 /**
  * The audit machinery `theme-contract.test.ts` runs over the tokens in
- * `theme.css`: contrast, the sequential activity ramp, and which tokens have to
- * exist in both color schemes. Postlude has one palette: the `--pl-*` tokens
- * declared at `:root`, in a light and a dark color scheme. The rules sit apart
- * from the test so each reads as a stated contract rather than as an assertion
- * buried in a case, and so a failure names the rule it broke.
+ * `theme.css`: contrast, the sequential activity ramp, the rating marks that
+ * are told apart by color, and which tokens have to exist in both color
+ * schemes. Postlude has one palette: the `--pl-*` tokens declared at `:root`,
+ * in a light and a dark color scheme. The rules sit apart from the test so
+ * each reads as a stated contract rather than as an assertion buried in a
+ * case, and so a failure names the rule it broke.
  *
  * The reader of a failure gets the whole list at once, so every check returns
  * findings as strings instead of asserting: a caller compares the list to `[]`
  * and one run names every pair that is out.
  */
 
+import { perceivedDistance, visions } from './color-vision.ts';
 import { contrastRatio, oklchLightness } from './oklch-contrast.ts';
 
 export type Scheme = 'light' | 'dark';
@@ -89,8 +91,9 @@ export const shadowTokenNames = (palette: Palette): ReadonlyArray<string> =>
  * Every surface text can sit on, against every color text can be set in. The
  * only pairings left out are the ones the palette makes impossible:
  * `on-primary` exists solely for the filled primary control, and a filled
- * primary control carries no other text color; the deep register is its own
- * two-color surface.
+ * primary control carries no other text color; each `on-rating` color is set
+ * only on its own step's fill, as the label of a chosen answer; the deep
+ * register is its own two-color surface.
  */
 const textBackgrounds = [
   '--pl-background',
@@ -111,6 +114,7 @@ const textForegrounds = [
   '--pl-critical',
 ] as const;
 const filledBackgrounds = ['--pl-primary', '--pl-primary-strong'] as const;
+const ratingSteps = ['low', 'middle', 'high'] as const;
 const deepForegrounds = ['--pl-deep-ink', '--pl-deep-ink-muted'] as const;
 
 const textPairs: ReadonlyArray<readonly [string, string]> = [
@@ -122,6 +126,13 @@ const textPairs: ReadonlyArray<readonly [string, string]> = [
   ...filledBackgrounds.map(
     (background) =>
       ['--pl-on-primary', background] as readonly [string, string],
+  ),
+  ...ratingSteps.map(
+    (step) =>
+      [`--pl-on-rating-${step}`, `--pl-rating-${step}`] as readonly [
+        string,
+        string,
+      ],
   ),
   ...deepForegrounds.map(
     (foreground) =>
@@ -172,7 +183,7 @@ const rampSteps = [
   '--pl-heat-q4',
 ] as const;
 export const activityMarkNames = ['--pl-heat-none-mark', ...rampSteps] as const;
-const minimumLightnessStep = 0.06;
+const minimumLightnessStep = 0.1;
 const markMinimum = nonTextMinimum;
 const stepDecimals = 3;
 
@@ -223,4 +234,62 @@ export const rampFindings = (
         ];
   });
   return [...order, ...contrast];
+};
+
+export const ratingMarkNames = [
+  '--pl-rating-low',
+  '--pl-rating-middle',
+  '--pl-rating-high',
+] as const;
+
+/*
+ * The thresholds of the dataviz palette check, in OKLab ×100: 15 is the least
+ * two neighbouring categories can differ by and still be told apart at a
+ * glance with full color vision, and 8 is the target under a simulated
+ * deficiency, where a smaller gap is legal only with a second encoding.
+ */
+const normalVisionMinimum = 15;
+const deficientVisionMinimum = 8;
+const distanceDecimals = 1;
+
+/**
+ * The rating steps are ordered, but each is named by its color rather than by
+ * a step of lightness, so they are judged on being told apart: every pair has
+ * to stay far enough apart with full color vision and under each simulated
+ * dichromacy, and every mark has to clear WCAG's non-text minimum against the
+ * ground it is drawn on, as the ramp's steps do.
+ */
+export const ratingFindings = (
+  label: string,
+  palette: Palette,
+  ground: string,
+): ReadonlyArray<string> => {
+  const contrast = ratingMarkNames.flatMap((mark) => {
+    const measured = ratio(palette, mark, ground);
+    return measured >= markMinimum
+      ? []
+      : [
+          `${label}: ${mark} on ${ground} = ${measured.toFixed(reportedDecimals)}:1`,
+        ];
+  });
+  const pairs = ratingMarkNames.flatMap((first, index) =>
+    ratingMarkNames.slice(index + 1).map((second) => [first, second] as const),
+  );
+  const separation = pairs.flatMap(([first, second]) =>
+    visions.flatMap((vision) => {
+      const distance = perceivedDistance(
+        palette[first] ?? '',
+        palette[second] ?? '',
+        vision,
+      );
+      const minimum =
+        vision === 'normal' ? normalVisionMinimum : deficientVisionMinimum;
+      return distance >= minimum
+        ? []
+        : [
+            `${label}: ${first} and ${second} are ${distance.toFixed(distanceDecimals)} apart ${vision === 'normal' ? 'with full color vision' : `under ${vision}`}`,
+          ];
+    }),
+  );
+  return [...contrast, ...separation];
 };

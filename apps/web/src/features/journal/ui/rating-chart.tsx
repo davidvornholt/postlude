@@ -1,55 +1,67 @@
 /**
  * The scales are short and ordered, so a meter of three steps says a rating at
- * a glance: one step for the low end, three for the high end, and the same
- * green throughout, because more of it means more and not something else. A day
- * without a rating is a dashed outline, so it reads as a gap rather than as the
- * lowest answer.
+ * a glance: one step for the low end, three for the high end. Every scale
+ * shares one set of colors, and the meter fills in its answer's: umber for
+ * the low answer, ochre for the middle and green for the high, the colors the
+ * year's picture and the day page give the same answers. The height says how
+ * far up the scale a day sat and the color says it again, so a drained day,
+ * a day of little progress and a day not worth repeating look the same kind
+ * of day wherever they show. A day without a rating is a dashed outline, so
+ * it reads as a gap rather than as the lowest answer.
  */
 
 import { useId } from 'react';
 
 import { eyebrowClass, focusRingClass } from '#/shared/ui/design-classes.ts';
+import { ratingDetails, ratingScales } from '../day-details.ts';
 import { journalDateLabel } from '../day-label.ts';
+import { type RatingStep, ratingSteps } from '../evening-labels.ts';
+import type { InsightsDay } from '../insights-view.ts';
 import type { JournalDate } from '../journal-day.ts';
-import { ratingDetails, ratingScales } from '../review-day-details.ts';
-import type { ReviewDay } from '../review-view.ts';
-import { ChartRow, DayAxis } from './review-day-axis.tsx';
-import { dayColumnsClass } from './review-day-columns.ts';
+import { heatFillClass } from './activity-cell-classes.ts';
+import { ChartRow, DayAxis } from './day-axis.tsx';
+import { dayColumnsClass } from './day-columns.ts';
+import { RatingSwatch } from './rating-swatch.tsx';
 import { useDaySelection } from './use-day-selection.ts';
 
 const Meter = ({
-  steps,
-  filled,
+  answer,
   upcoming,
 }: {
-  readonly steps: number;
-  readonly filled: number | null;
+  readonly answer: RatingStep | null;
   readonly upcoming: boolean;
 }) => {
   const shape = 'mx-auto h-9 w-3/5 max-w-6';
   if (upcoming) {
     return <div className={shape} />;
   }
-  if (filled === null) {
+  if (answer === null) {
     return (
       <div
         className={[shape, 'border border-ink-faint border-dashed'].join(' ')}
       />
     );
   }
+  const filled = ratingSteps.indexOf(answer);
   return (
     <div className={[shape, 'flex flex-col-reverse gap-0.5'].join(' ')}>
-      {Array.from({ length: steps }, (_, index) => index + 1).map((step) => (
+      {ratingSteps.map((step, index) => (
         <span
           className={[
             'flex-1',
-            step <= filled ? 'bg-primary' : 'bg-border',
+            index <= filled ? heatFillClass[answer] : 'bg-border',
           ].join(' ')}
           key={step}
         />
       ))}
     </div>
   );
+};
+
+const stepNames: Readonly<Record<RatingStep, string>> = {
+  low: 'One step: drained, little, no',
+  middle: 'Two steps: okay, solid, partly',
+  high: 'Three steps: fresh, a lot, yes',
 };
 
 const ScaleNames = () => (
@@ -66,7 +78,7 @@ export const RatingChart = ({
   days,
   today,
 }: {
-  readonly days: ReadonlyArray<ReviewDay>;
+  readonly days: ReadonlyArray<InsightsDay>;
   readonly today: JournalDate;
 }) => {
   const detailsId = useId();
@@ -106,9 +118,8 @@ export const RatingChart = ({
               >
                 {ratingScales.map((scale) => (
                   <Meter
-                    filled={scale.filled(day)}
+                    answer={scale.step(day)}
                     key={scale.name}
-                    steps={scale.steps}
                     upcoming={day.date > today}
                   />
                 ))}
@@ -142,8 +153,12 @@ export const RatingChart = ({
           'mt-3 flex flex-wrap items-center gap-x-6 gap-y-3 text-ink-faint',
         ].join(' ')}
       >
-        <span>One step: drained, little, no</span>
-        <span>Three steps: fresh, a lot, yes</span>
+        {ratingSteps.map((step) => (
+          <span className="flex items-center gap-2" key={step}>
+            <RatingSwatch step={step} />
+            {stepNames[step]}
+          </span>
+        ))}
         <span className="flex items-center gap-2">
           <span
             aria-hidden="true"

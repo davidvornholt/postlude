@@ -213,9 +213,43 @@
   .journal-prose em {
     font-style: italic;
   }
+
+  /* A fold on Insights opens by growing to its height instead of appearing at
+     once, and the page below it slides down with it. */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (interpolate-size: allow-keywords) {
+      details {
+        interpolate-size: allow-keywords;
+      }
+    }
+
+    details::details-content {
+      block-size: 0;
+      overflow: clip;
+      transition:
+        block-size 250ms var(--ease-standard),
+        content-visibility 250ms allow-discrete;
+    }
+
+    details[open]::details-content {
+      block-size: auto;
+    }
+
+    /* A year of days fills in from January onward, a week at a time, where
+       the browser can count the weeks; elsewhere it fades in at once. */
+    .activity-week {
+      animation: activity-week-in 420ms var(--ease-standard) both;
+    }
+
+    @supports (animation-delay: calc(sibling-index() * 1ms)) {
+      .activity-week {
+        animation-delay: calc((sibling-index() - 1) * 8ms);
+      }
+    }
+  }
 }
 
-/* A step to another day or month fades the page across in place
+/* A step to another day, month or Insights range fades the page across in place
    (`page-turn.ts`). Nothing on the page is named, so the whole page is one
    picture: whatever both days share, the frame, the header and the controls,
    is the same on both sides of the fade and stands still, and only what
@@ -236,5 +270,12 @@
     ::view-transition-new(*) {
       animation: none;
     }
+  }
+}
+
+@keyframes activity-week-in {
+  from {
+    opacity: 0;
+    translate: 0 0.25rem;
   }
 }

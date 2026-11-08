@@ -98,14 +98,14 @@ const todayRoute = createRoute({
   path: '/',
 });
 
-const archiveRoute = createRoute({
+const insightsRoute = createRoute({
   component: pageComponent,
   getParentRoute: () => shellRoute,
-  path: '/archive',
+  path: '/insights',
 });
 
 const routeTree = rootRoute.addChildren([
-  shellRoute.addChildren([todayRoute, archiveRoute]),
+  shellRoute.addChildren([todayRoute, insightsRoute]),
 ]);
 
 const renderAt = async (
@@ -139,13 +139,13 @@ const navLink = (html: string, label: string): string =>
 it('marks the page you are on by more than its colour', async () => {
   const html = await renderAt('/');
   const current = navLink(html, 'Today');
-  const other = navLink(html, 'Archive');
+  const other = navLink(html, 'Insights');
 
   expect(current).toContain('aria-current="page"');
   expect(classNames(current).has(ruleAtFullWidth)).toBe(true);
   expect(classNames(current).has(ruleAtZeroWidth)).toBe(false);
 
-  expect(other).toContain('href="/archive"');
+  expect(other).toContain('href="/insights"');
   expect(other).not.toContain('aria-current');
   expect(classNames(other).has(ruleAtZeroWidth)).toBe(true);
   expect(classNames(other).has(ruleAtFullWidth)).toBe(false);
@@ -159,8 +159,8 @@ it('marks the page you are on by more than its colour', async () => {
  * once.
  */
 it('marks only one page as current away from home', async () => {
-  const html = await renderAt('/archive');
-  const current = navLink(html, 'Archive');
+  const html = await renderAt('/insights');
+  const current = navLink(html, 'Insights');
   const other = navLink(html, 'Today');
 
   expect(current).toContain('aria-current="page"');

@@ -1,7 +1,7 @@
 /**
  * The words the activity map is read by rather than looked at: the month names
  * above the columns, the weekday hints beside the rows, and the summary and
- * monthly breakdown that stand in for 371 unlabelled squares.
+ * monthly breakdown that stand in for a year of unlabelled squares.
  *
  * Month names are a fixed list rather than `Intl.DateTimeFormat`, because the
  * server rendering the page and the browser hydrating it have to agree on every
@@ -9,30 +9,29 @@
  * The number formatter is fixed to one locale for the same reason.
  */
 
-import type { HeatLevel } from './activity.ts';
 import type { ActivityCell } from './activity-cells.ts';
 import { journalDateLabel } from './day-label.ts';
+import { energyOptions, progressOptions } from './evening-labels.ts';
+import { energyLabel, progressLabel } from './insights-labels.ts';
+import type { InsightsMeasure } from './insights-measure.ts';
 import { type JournalDate, parseJournalDate } from './journal-day.ts';
-import { journalCountLabel, journalMonthLabel } from './journal-labels.ts';
+import {
+  journalCountLabel,
+  journalMonthLabel,
+  journalNumberLabel,
+} from './journal-labels.ts';
 
-type MonthActivity = {
-  readonly date: JournalDate;
-  readonly days: number;
-  readonly written: number;
-  readonly words: number;
-};
+type ActivityDayCell = Extract<ActivityCell, { readonly kind: 'day' }>;
 
 const isoMonthEnd = 7;
 const isoDayStart = 8;
 const firstDayOfMonth = '01';
 const monthAbbreviationLength = 3;
 
-export const heatLevelLabels: Record<HeatLevel, string> = {
-  none: 'Nothing written',
-  q1: 'Lowest quarter',
-  q2: 'Lower-middle quarter',
-  q3: 'Upper-middle quarter',
-  q4: 'Highest quarter',
+const measureNames: Record<InsightsMeasure, string> = {
+  writing: 'words written',
+  energy: 'energy',
+  progress: 'progress',
 };
 
 const monthNameOf = (date: JournalDate): string =>
@@ -46,7 +45,7 @@ export const monthYearLabel = (date: JournalDate): string => {
 /**
  * The label each week column carries: the name of the month whose first day is
  * in that week, and nothing on the rest. When a week crosses a month boundary,
- * the first day wins over the month containing the Sunday that opened it.
+ * the first day wins over the month containing the Monday that opened it.
  */
 export const monthColumnLabels = (
   weeks: ReadonlyArray<ReadonlyArray<ActivityCell>>,
@@ -61,7 +60,10 @@ export const monthColumnLabels = (
   });
 
 /** What the grid says when it is read rather than looked at. */
-export const activitySummary = (cells: ReadonlyArray<ActivityCell>): string => {
+export const activitySummary = (
+  cells: ReadonlyArray<ActivityCell>,
+  measure: InsightsMeasure = 'writing',
+): string => {
   const days = cells.filter((cell) => cell.kind === 'day');
   const [first] = days;
   const last = days.at(-1);
@@ -69,63 +71,105 @@ export const activitySummary = (cells: ReadonlyArray<ActivityCell>): string => {
     return 'Journal activity: this range has not started';
   }
   const written = days.filter((cell) => cell.words > 0).length;
-  return `Journal activity from ${monthYearLabel(first.date)} to ${monthYearLabel(last.date)}: ${journalCountLabel(written, 'day')} written`;
+  return `Journal activity from ${monthYearLabel(first.date)} to ${monthYearLabel(last.date)}, shaded by ${measureNames[measure]}: ${journalCountLabel(written, 'day')} written`;
 };
 
-export const activityDayDetails = (
-  cell: Extract<ActivityCell, { readonly kind: 'day' }>,
-): string =>
-  `${journalDateLabel(cell.date)} · ${cell.words === 0 ? 'No writing' : journalCountLabel(cell.words, 'word')}`;
+/** A day in one line: its date, its words, and whatever it was rated. */
+export const activityDayDetails = (cell: ActivityDayCell): string =>
+  [
+    journalDateLabel(cell.date),
+    cell.words === 0 ? 'No writing' : journalCountLabel(cell.words, 'word'),
+    cell.energy === null
+      ? undefined
+      : `Energy ${energyLabel(cell.energy).toLowerCase()}`,
+    cell.progress === null
+      ? undefined
+      : `Progress ${progressLabel(cell.progress).toLowerCase()}`,
+  ]
+    .filter((part) => part !== undefined)
+    .join(' · ');
 
-/** Monthly distribution and volume, compact enough to replace 371 cells. */
-export const activityDescription = (
+const monthsOf = (
   cells: ReadonlyArray<ActivityCell>,
-): string => {
-  const months: Array<MonthActivity> = [];
+): ReadonlyArray<ReadonlyArray<ActivityDayCell>> => {
+  const months: Array<Array<ActivityDayCell>> = [];
   for (const cell of cells) {
     if (cell.kind === 'day') {
-      const month = cell.date.slice(0, isoMonthEnd);
       const open = months.at(-1);
-      if (open?.date.slice(0, isoMonthEnd) === month) {
-        months[months.length - 1] = {
-          ...open,
-          days: open.days + 1,
-          written: open.written + Number(cell.words > 0),
-          words: open.words + cell.words,
-        };
+      if (
+        open?.[0]?.date.slice(0, isoMonthEnd) ===
+        cell.date.slice(0, isoMonthEnd)
+      ) {
+        open.push(cell);
       } else {
-        months.push({
-          date: cell.date,
-          days: 1,
-          written: Number(cell.words > 0),
-          words: cell.words,
-        });
+        months.push([cell]);
       }
     }
   }
+  return months;
+};
 
+const answerCounts = <Value extends string>(
+  days: ReadonlyArray<ActivityDayCell>,
+  options: ReadonlyArray<{ readonly value: Value; readonly label: string }>,
+  pick: (day: ActivityDayCell) => Value | null,
+): string => {
+  const unrated = days.filter((day) => pick(day) === null).length;
+  return [
+    ...[...options]
+      .reverse()
+      .map(
+        (option) =>
+          `${option.label.toLowerCase()} ${journalNumberLabel(days.filter((day) => pick(day) === option.value).length)}`,
+      ),
+    `not rated ${journalNumberLabel(unrated)}`,
+  ].join(', ');
+};
+
+const monthLine = (
+  days: ReadonlyArray<ActivityDayCell>,
+  measure: InsightsMeasure,
+): string => {
+  const written = days.filter((day) => day.words > 0).length;
+  const words = days.reduce((total, day) => total + day.words, 0);
+  switch (measure) {
+    case 'energy':
+      return `energy ${answerCounts(days, energyOptions, (day) => day.energy)}`;
+    case 'progress':
+      return `progress ${answerCounts(days, progressOptions, (day) => day.progress)}`;
+    default:
+      return `${journalCountLabel(written, 'day')} written out of ${journalCountLabel(days.length, 'day')}, ${journalCountLabel(words, 'word')}`;
+  }
+};
+
+/** The month-by-month breakdown that stands in for the squares. */
+export const activityDescription = (
+  cells: ReadonlyArray<ActivityCell>,
+  measure: InsightsMeasure = 'writing',
+): string => {
+  const months = monthsOf(cells);
   if (months.length === 0) {
     return 'This range has not started.';
   }
-
   return `Monthly breakdown. ${months
     .map(
-      (month) =>
-        `${monthYearLabel(month.date)}: ${journalCountLabel(month.written, 'day')} written out of ${journalCountLabel(month.days, 'day')}, ${journalCountLabel(month.words, 'word')}`,
+      (days) =>
+        `${monthYearLabel(days[0]?.date ?? '')}: ${monthLine(days, measure)}`,
     )
     .join('. ')}.`;
 };
 
 /**
- * Rows are Sunday to Saturday. Only every other weekday is named — seven labels
- * at this size collide, and three are enough to read the column by.
+ * Rows are Monday to Sunday, as on the calendar. Only every other weekday is
+ * named — seven labels at this size collide, and three are enough to read the
+ * column by.
  */
 export const weekdayRows = [
-  { name: 'Sunday', hint: '' },
   { name: 'Monday', hint: 'Mon' },
   { name: 'Tuesday', hint: '' },
   { name: 'Wednesday', hint: 'Wed' },
   { name: 'Thursday', hint: '' },
   { name: 'Friday', hint: 'Fri' },
   { name: 'Saturday', hint: '' },
+  { name: 'Sunday', hint: '' },
 ] as const;

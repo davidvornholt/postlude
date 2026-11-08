@@ -1,5 +1,5 @@
 /**
- * What the writer is told they have written, and what the archive buckets a day
+ * What the writer is told they have written, and what Insights buckets a day
  * by. Both read the prose rather than the markdown that carries it: a heading is
  * one word, not two, and a fenced code block's fence is not a word at all.
  *

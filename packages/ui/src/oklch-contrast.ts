@@ -141,10 +141,16 @@ export const srgbHex = (value: string): string =>
     )
     .join('')}`;
 
+/**
+ * The linear-light sRGB of what a browser paints for an `oklch(L C H)` value:
+ * the 8-bit channels decoded again, so a color outside the gamut is measured
+ * as the color that reaches the screen rather than the one that was asked for.
+ */
+export const paintedLinearSrgb = (value: string): ReadonlyArray<number> =>
+  srgbChannels(value).map((channel) => decodeGamma(channel / channelMaximum));
+
 const relativeLuminance = (value: string): number => {
-  const [red, green, blue] = srgbChannels(value).map((channel) =>
-    decodeGamma(channel / channelMaximum),
-  );
+  const [red, green, blue] = paintedLinearSrgb(value);
   return (
     luminanceWeights.red * red +
     luminanceWeights.green * green +

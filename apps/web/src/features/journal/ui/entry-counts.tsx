@@ -3,7 +3,7 @@
  *
  * The number is the writer's own, not a target: nothing here says whether it is
  * enough. It is counted from the markdown by the same code the server counts
- * with, so the figure under the editor is the figure the archive will shade the
+ * with, so the figure under the editor is the figure Insights will shade the
  * day by, and it does not change when the save lands.
  *
  * Counting on every keystroke is cheap enough at journal length — a long entry

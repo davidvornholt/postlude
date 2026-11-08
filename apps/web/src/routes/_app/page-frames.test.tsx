@@ -9,7 +9,7 @@
  *
  * The production-route browser scan stops at the sign-in page because getting
  * past it needs a real GitHub OAuth round trip. The isolated writing-page
- * fixture renders the real day component, but it does not own the archive's
+ * fixture renders the real day component, but it does not own the Insights page's
  * measure or count the exact wrappers on either page. Those contracts stay
  * here.
  *
@@ -21,16 +21,16 @@
 import { expect, it } from 'bun:test';
 import type { JournalEntry } from '#/features/journal/schemas/entry.ts';
 import {
-  sampleArchiveView,
-  sampleJournal,
-} from '#/features/journal/testing/archive-view.ts';
-import {
   emptyEvening,
   noWrittenDays,
   unansweredEveningActions,
 } from '#/features/journal/testing/evening-view.ts';
-import { ArchivePage } from '#/features/journal/ui/archive-page.tsx';
+import {
+  sampleInsightsView,
+  sampleJournal,
+} from '#/features/journal/testing/insights-view.ts';
 import { DayPage } from '#/features/journal/ui/day-page.tsx';
+import { InsightsPage } from '#/features/journal/ui/insights-page.tsx';
 import { renderInRouter } from '#/shared/testing/render-in-router.tsx';
 import { countRecipe } from '#/shared/testing/rendered-html.ts';
 
@@ -63,13 +63,13 @@ const today = await renderInRouter(
     today={emptyDay.date}
   />,
 );
-const archiveSeed = 20_260_826;
+const insightsSeed = 20_260_826;
 const sampleDays = 400;
-const archive = await renderInRouter(
-  <ArchivePage
-    selectedYear={undefined}
-    view={sampleArchiveView(
-      sampleJournal(emptyDay.date, sampleDays, archiveSeed),
+const insights = await renderInRouter(
+  <InsightsPage
+    view={sampleInsightsView(
+      sampleJournal(emptyDay.date, sampleDays, insightsSeed),
+      { kind: 'year', year: 2026 },
       emptyDay.date,
     )}
   />,
@@ -105,6 +105,6 @@ it('renders the deep register on its own ground', () => {
  * its own frame would move the brand under the reader as they walk from one to
  * the other. That is the complaint this frame was made one to answer.
  */
-it('wraps the archive in the frame the writing page uses', () => {
-  expect(countRecipe(archive, expectedPageFrame)).toBe(1);
+it('wraps Insights in the frame the writing page uses', () => {
+  expect(countRecipe(insights, expectedPageFrame)).toBe(1);
 });

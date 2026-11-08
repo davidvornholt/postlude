@@ -7,7 +7,7 @@
  * writer's own, and a journal that grades its writer is a journal that gets
  * avoided.
  *
- * A run that ended is a plain zero rather than a hidden figure. The archive is
+ * A run that ended is a plain zero rather than a hidden figure. Insights is
  * where the writer goes to see how it has actually been going, and a panel that
  * disappears when the answer is "not lately" is a panel that only ever agrees.
  */

@@ -3,7 +3,7 @@
  *
  * The label is assembled from the calendar date's own parts, so it never
  * becomes an instant that a time zone can shift to yesterday. Its weekday is
- * calculated through the same year-safe calendar helper used by the archive.
+ * calculated through the same year-safe calendar helper Insights uses.
  *
  * The locale is fixed rather than taken from the browser. Postlude has one
  * reader and the interface is English, and a date that switched between
