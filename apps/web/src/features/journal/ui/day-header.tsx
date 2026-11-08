@@ -30,6 +30,7 @@ import { CopyDayControl } from './copy-day-control.tsx';
 import { DayLink } from './day-link.tsx';
 import { DayPicker, type ReadWrittenDays } from './day-picker.tsx';
 import { JournalIcon } from './journal-icons.tsx';
+import { StepGlyph, UnavailableStep } from './period-heading.tsx';
 
 const subscribeToNothing = () => () => undefined;
 
@@ -154,7 +155,7 @@ export const DayHeader = ({
             <DayLink
               className="-mb-1"
               date={today}
-              from={date}
+              turnsPage={true}
               today={today}
               variant="quiet"
             >
@@ -182,37 +183,37 @@ export const DayHeader = ({
       <div className="col-start-2 row-start-1 -mr-3 flex items-center sm:row-start-2 sm:mt-2 sm:self-start">
         <nav aria-label="Nearby days" className="flex items-center">
           {previous === undefined ? (
-            <span className="size-11" />
+            <UnavailableStep direction={-1} label="Previous day" />
           ) : (
             <DayLink
               aria-describedby={headingId}
               aria-keyshortcuts="ArrowLeft"
               data-focus-key="previous-day"
               date={previous}
-              from={date}
+              turnsPage={true}
               label="Previous day"
               title="Previous day (←)"
               today={today}
               variant="icon"
             >
-              <JournalIcon name="previous" />
+              <StepGlyph direction={-1} />
             </DayLink>
           )}
           {next === undefined ? (
-            <span className="size-11" />
+            <UnavailableStep direction={1} label="Next day" />
           ) : (
             <DayLink
               aria-describedby={headingId}
               aria-keyshortcuts="ArrowRight"
               data-focus-key="next-day"
               date={next}
-              from={date}
+              turnsPage={true}
               label="Next day"
               title="Next day (→)"
               today={today}
               variant="icon"
             >
-              <JournalIcon name="next" />
+              <StepGlyph direction={1} />
             </DayLink>
           )}
         </nav>
