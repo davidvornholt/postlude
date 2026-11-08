@@ -6,8 +6,6 @@ import {
   scanSearch,
 } from './search-page-test-support.ts';
 
-test.describe.configure({ mode: 'serial' });
-
 const colorSchemes = ['light', 'dark'] as const;
 const resultLink = /Sunday, March 1, 2026/u;
 const limitedLabel = /The first 1 day holding/u;
