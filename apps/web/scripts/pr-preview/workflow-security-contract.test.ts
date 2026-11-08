@@ -22,15 +22,15 @@ describe('preview producer trust boundary', () => {
     expect(pullRequestJob).not.toContain('gh api');
   });
 
-  it('checks out and gates the exact pull request head before packaging', () => {
+  it('checks out and smoke-tests the exact pull request head before packaging', () => {
     const checkout = pullRequestJob.indexOf(
       `ref: ${githubExpression('github.event.pull_request.head.sha')}`,
     );
     const assertion = pullRequestJob.indexOf(
       'test "$(git rev-parse HEAD)" = "$HEAD_SHA"',
     );
-    const gate = pullRequestJob.indexOf(
-      'name: Run the full exact-head repository gate',
+    const smokeTest = pullRequestJob.indexOf(
+      'name: Verify idempotent migrations and container health',
     );
     const packageArtifact = pullRequestJob.indexOf(
       'name: Package the eligible exact-head preview artifact',
@@ -38,9 +38,8 @@ describe('preview producer trust boundary', () => {
 
     expect(checkout).toBeGreaterThan(0);
     expect(assertion).toBeGreaterThan(checkout);
-    expect(gate).toBeGreaterThan(assertion);
-    expect(packageArtifact).toBeGreaterThan(gate);
-    expect(pullRequestJob).toContain('bun run check');
+    expect(smokeTest).toBeGreaterThan(assertion);
+    expect(packageArtifact).toBeGreaterThan(smokeTest);
   });
 
   it('builds every eligible edit so a retarget into main is not missed', () => {
@@ -96,7 +95,7 @@ describe('trusted preview consumer boundary', () => {
   );
   const artifact = extractRunScript(
     consumer,
-    'Fetch and validate the exact gated artifact',
+    'Fetch and validate the exact smoke-tested artifact',
   );
 
   it('binds runs to the base-owned producer identity', () => {
@@ -125,16 +124,16 @@ describe('trusted preview consumer boundary', () => {
     expect(selector).toContain('.github/workflows/pr-preview-host-command.yml');
   });
 
-  it('discovers Standards independently and binds the exact producer gate step', () => {
+  it('binds the exact producer smoke test without waiting for Standards', () => {
+    const smokeTestStep =
+      'select(.name == "Verify idempotent migrations and container health")';
+
     expect(artifact).toContain(
       'actions/runs/$RUN_ID/attempts/$RUN_ATTEMPT/jobs?per_page=100',
     );
-    expect(artifact).toContain(
-      'select(.name == "Run the full exact-head repository gate")',
-    );
-    expect(artifact).toContain('actions/workflows/standards.yml');
-    expect(artifact).toContain('select(.name == "check")');
-    expect(artifact).not.toContain('.standards.runId');
+    expect(selector).toContain(smokeTestStep);
+    expect(artifact).toContain(smokeTestStep);
+    expect(consumer).not.toContain('actions/workflows/standards.yml');
   });
 
   it('rejects oversized, malformed, or structurally unexpected artifacts', () => {
