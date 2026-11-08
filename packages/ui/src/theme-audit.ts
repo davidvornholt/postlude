@@ -172,7 +172,7 @@ const rampSteps = [
   '--pl-heat-q4',
 ] as const;
 export const activityMarkNames = ['--pl-heat-none-mark', ...rampSteps] as const;
-const minimumLightnessStep = 0.06;
+const minimumLightnessStep = 0.1;
 const markMinimum = nonTextMinimum;
 const stepDecimals = 3;
 

@@ -92,6 +92,21 @@ it('the activity ramp stays readable as a sequence', () => {
   ]).toEqual([]);
 });
 
+it('rejects ramp steps too close to tell apart', () => {
+  const crowded = {
+    ...light,
+    '--pl-heat-q1': 'oklch(0.6 0.07 155)',
+    '--pl-heat-q2': 'oklch(0.52 0.085 155)',
+    '--pl-heat-q3': 'oklch(0.44 0.09 155)',
+    '--pl-heat-q4': 'oklch(0.36 0.085 155)',
+  };
+  expect(rampFindings('crowded', 'light', crowded, '--pl-background')).toEqual([
+    'crowded: --pl-heat-q2 steps only 0.080 in lightness',
+    'crowded: --pl-heat-q3 steps only 0.080 in lightness',
+    'crowded: --pl-heat-q4 steps only 0.080 in lightness',
+  ]);
+});
+
 it('keeps the deep register rule visible against its ground', () => {
   expect([
     ...deepRegisterFindings('light', light),
