@@ -20,29 +20,10 @@ const config = createA11yPlaywrightConfig({
 // The browser tests are independent and scale with cores, so run one worker
 // per core. Each worker holds Vite, its fixture bundles and a browser, more
 // than a gigabyte in all, so stop at eight on larger machines.
+// availableParallelism() already respects a container's cgroup CPU quota.
 const maximumWorkers = 8;
-
-// availableParallelism() sees CPU affinity but not a container's cgroup CPU
-// quota, which would otherwise give a two-CPU container on a large host eight
-// workers and exhaust its memory.
-const cgroupCpuLimit = (): number => {
-  try {
-    const [quota = 'max', period = ''] = readFileSync(
-      '/sys/fs/cgroup/cpu.max',
-      'utf8',
-    )
-      .trim()
-      .split(' ');
-    const cores = Math.floor(Number(quota) / Number(period));
-    return Number.isFinite(cores)
-      ? Math.max(1, cores)
-      : Number.POSITIVE_INFINITY;
-  } catch {
-    return Number.POSITIVE_INFINITY;
-  }
-};
 
 export default {
   ...config,
-  workers: Math.min(availableParallelism(), cgroupCpuLimit(), maximumWorkers),
+  workers: Math.min(availableParallelism(), maximumWorkers),
 };
