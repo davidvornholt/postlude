@@ -147,6 +147,36 @@ const persistSavedEvidence =
       : replaceSearchEvidence(sql, date, storedSearchEvidence(document));
 
 /** The stored day, locked until the transaction that read it ends. */
+/** The first day up to `today` with something the archive shows. */
+const readEarliestDate = (sql: SqlClient.SqlClient) => (today: JournalDate) =>
+  sql`
+    select min(entry_date) as entry_date
+    from entry
+    where ${archiveActivityEntry(sql)}
+      and entry_date <= ${today}
+  `.pipe(
+    Effect.flatMap(decodeEarliestDates),
+    Effect.map((rows) => rows[0]?.date ?? undefined),
+  );
+
+/**
+ * Every stored day saved after `since`, an ISO 8601 instant, by date. A save of
+ * either section counts. An agent that remembers when it last looked asks for
+ * this instead of a date range, so it also sees late edits to days long past.
+ */
+const readChangedSince = (sql: SqlClient.SqlClient) => (since: string) =>
+  sql`
+    select
+      entry_date,
+      revision,
+      journal_word_count,
+      scripture_word_count,
+      updated_at
+    from entry
+    where updated_at > ${since}::timestamptz
+    order by entry_date
+  `.pipe(Effect.flatMap(decodeChangedDays), Effect.mapError(journalReadError));
+
 const readLockedEntry = (sql: SqlClient.SqlClient, date: string) =>
   sql`
     select ${storedEntryColumns(sql)}
@@ -404,28 +434,6 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         `.pipe(Effect.flatMap(decodeSummaries));
 
       /**
-       * Every stored day saved after `since`, an ISO 8601 instant, by date. A
-       * save of either section counts. An agent that remembers when it last
-       * looked asks for this instead of a date range, so it also sees late
-       * edits to days long past.
-       */
-      const listChangedSince = (since: string) =>
-        sql`
-          select
-            entry_date,
-            revision,
-            journal_word_count,
-            scripture_word_count,
-            updated_at
-          from entry
-          where updated_at > ${since}::timestamptz
-          order by entry_date
-        `.pipe(
-          Effect.flatMap(decodeChangedDays),
-          Effect.mapError(journalReadError),
-        );
-
-      /**
        * Earlier days on any of the given `MM-DD` days, newest first, from the
        * nearest `limit` years that have one. The limit counts years rather than
        * rows, because February 28 can also read a leap day from the same year.
@@ -464,17 +472,6 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
         );
 
       /** The oldest day that still has something for Insights to show. */
-      const earliestDate = (today: JournalDate) =>
-        sql`
-          select min(entry_date) as entry_date
-          from entry
-          where ${archiveActivityEntry(sql)}
-            and entry_date <= ${today}
-        `.pipe(
-          Effect.flatMap(decodeEarliestDates),
-          Effect.map((rows) => rows[0]?.date ?? undefined),
-        );
-
       const readHistory = ({
         today,
       }: HistoryReadRequest): Effect.Effect<
@@ -485,7 +482,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
           sql,
           Effect.gen(function* () {
             const canExport = yield* readExportAvailability(sql);
-            const earliest = yield* earliestDate(today);
+            const earliest = yield* readEarliestDate(sql)(today);
             const summaries =
               earliest === undefined ? [] : yield* listBetween(earliest, today);
             return {
@@ -498,7 +495,7 @@ export class EntryRepository extends Context.Service<EntryRepository>()(
 
       return {
         read,
-        listChangedSince,
+        listChangedSince: readChangedSince(sql),
         readAnniversaries,
         readCalendar: makeCalendarReader(sql),
         save,
