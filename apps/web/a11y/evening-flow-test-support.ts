@@ -193,10 +193,7 @@ export const releaseEveningCalls = (
     );
   }, call);
 
-/**
- * Reads the day again behind the open page, as the router does in the
- * background, with its evening read anew or, this time, not at all.
- */
+/** See `postludeReloadDay` in `day-page-fixture-contract.ts`. */
 export const reloadDay = (
   page: playwright.Page,
   evening: 'read' | 'unavailable',

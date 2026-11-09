@@ -1,14 +1,9 @@
 /**
  * One journal day, as a page.
  *
- * The page runs in the order the evening is spent. Under the date comes the
- * morning scripture, in the deep register. Then the day is rated and the
- * report /wrap leaves is read, a detailed log of the time at the computer.
- * The evening's writing follows on the parchment, for what that log can't
- * know: why, what was thought and felt, and what happened away from the
- * screen. After the writing the day is closed and an agent's note on it
- * appears (`evening-flow.tsx`), and the page ends on the same date in earlier
- * years.
+ * Under the date comes the morning scripture, in the deep register, then the
+ * evening around the writing on the parchment (`evening-flow.tsx` says why it
+ * runs in that order), and the page ends on the same date in earlier years.
  *
  * There is no save button and no edit mode: the page opens on the words and
  * the words are already editable, because a journal that asks to be unlocked

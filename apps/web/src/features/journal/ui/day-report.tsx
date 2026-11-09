@@ -1,12 +1,7 @@
 /**
- * The day's /wrap report, folded away until energy and progress are rated.
- *
- * Both ratings are how the day felt and went as it was lived, and they are
- * given before the report is read so its numbers can't talk either into
- * something else.
- *
- * The writing comes after the report, and picks up what it can't know, so the
- * open report ends with a way straight on to the editor.
+ * The day's /wrap report, folded away until energy and progress are rated
+ * (`evening-flow.tsx` says why). The open report ends with a way straight on
+ * to the writing below it.
  *
  * The report and the line that says why it is locked both grow and shrink to
  * their height rather than appearing at once, so the writing below slides out

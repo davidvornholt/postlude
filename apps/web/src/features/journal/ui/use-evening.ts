@@ -41,7 +41,6 @@ type RatingValues = Pick<DayRating, 'energy' | 'progress' | 'repeatDay'>;
 
 export type EveningBusy = 'closing' | 'reopening' | 'regenerating';
 
-/** A call that failed, and which part of the page made it. */
 export type EveningFailure = {
   readonly message: string;
   readonly part: 'ratings' | 'closing';

@@ -1,15 +1,13 @@
 /**
- * The evening around the writing: the ratings and the day's report above it,
- * and the close and the agent note below it.
+ * The ratings and the day's report above the writing, and the close and the
+ * agent note below it, in the order the evening is spent.
  *
- * The page follows the evening as it is lived. /wrap is started first, and
- * while it works the day is rated: energy, progress, and the optional "would
- * you repeat it". The report /wrap leaves opens only once energy and progress
- * are rated, so its numbers can't colour either rating. The report is a
- * detailed log of the time at the computer, so the writing that follows it is
- * for what the report can't know: why, what was thought and felt, and what
- * happened away from the screen. When the writing is done the day is closed,
- * which needs energy and progress and asks an agent for its note, shown last.
+ * /wrap is started first, and the day is rated while it works. Its report
+ * opens only once energy and progress are rated, so its numbers can't colour
+ * either rating. The report logs the time at the computer, so the writing
+ * after it is for what the report can't know: why, what was thought and felt,
+ * and what happened away from the screen. Closing needs energy and progress
+ * and asks an agent for its note.
  *
  * A day that hasn't begun by the server's clock can't be rated at all, and an
  * evening that couldn't be read leaves a line saying so where the ratings go.
@@ -98,7 +96,6 @@ const CloseButton = ({ evening }: { readonly evening: Evening }) => {
   );
 };
 
-/** Says why a call made from one part of the page didn't go through. */
 const FailureLine = ({
   failure,
   part,
@@ -192,7 +189,6 @@ const ratingsIntro =
 const unavailableMessage =
   'The ratings, report and agent note could not be loaded. Your writing is not affected. Reload the page to try again.';
 
-/** The ratings and the report, above the writing. */
 export const EveningRatings = ({
   begun,
   evening,
@@ -229,7 +225,6 @@ export const EveningRatings = ({
   );
 };
 
-/** The close and the agent note, below the writing. */
 export const EveningClosing = ({
   evening,
   journalIsEmpty,
