@@ -251,11 +251,6 @@ export const dayRating = pgTable(
  * or their report, and a note's status always comes with what that status
  * needs to be shown. A note that is being rewritten, or whose rewrite failed,
  * keeps the previous note and the revision that note was written from.
- *
- * `day_log` is /wrap's plain-text log of the day at the computer, stored with
- * its report. Days wrapped before /wrap wrote one have none. It is searched
- * like an entry, through its own tokens and evidence, but it is the agent's
- * text, never David's, so nothing that reads his words reads it.
  */
 export const agentArea = pgTable(
   'agent_area',
@@ -268,11 +263,6 @@ export const agentArea = pgTable(
     reportGeneratedAt: timestamp('report_generated_at', {
       withTimezone: true,
     }),
-    dayLog: text('day_log'),
-    dayLogSearchTokenText: text('day_log_search_token_text'),
-    dayLogSearchVector: tsvector('day_log_search_vector').generatedAlwaysAs(
-      sql`case when day_log_search_token_text = '' then ''::tsvector else array_to_tsvector(string_to_array(day_log_search_token_text, ' ')) end`,
-    ),
     agentNote: text('agent_note'),
     agentNoteModel: text('agent_note_model'),
     agentNoteRevision: integer('agent_note_revision'),
@@ -284,27 +274,34 @@ export const agentArea = pgTable(
     agentNoteGeneratedAt: timestamp('agent_note_generated_at', {
       withTimezone: true,
     }),
+    /**
+     * The report's text as a reader sees it, for search. The database derives
+     * it with `report_plain_text`, defined in migration 0013, whenever the
+     * report changes, so the app and /wrap's role write nothing for it and
+     * reports stored before it existed have it too.
+     */
+    reportText: text('report_text').generatedAlwaysAs(
+      sql`report_plain_text(report_html)`,
+    ),
+    /**
+     * The report's words, folded the way `search-query.ts` folds a query:
+     * lowercased without changing the text's length, so search can find a
+     * word's place in `report_text` by the same fold, and split at every
+     * character that is not a letter or a digit. `pg_c_utf8` makes both the
+     * same in every locale.
+     */
+    reportSearchVector: tsvector('report_search_vector').generatedAlwaysAs(
+      sql`to_tsvector('simple', regexp_replace(translate(lower(report_plain_text(report_html) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))`,
+    ),
   },
   (table) => [
+    index('agent_area_report_search_vector_index').using(
+      'gin',
+      table.reportSearchVector,
+    ),
     check(
       'agent_area_wrap_complete',
       sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, ${table.reportHtml}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 5)`,
-    ),
-    check(
-      'agent_area_day_log_with_wrap',
-      sql`${table.dayLog} is null or ${table.reportHtml} is not null`,
-    ),
-    check(
-      'agent_area_day_log_bounded',
-      sql`${table.dayLog} is null or (char_length(${table.dayLog}) <= 20000 and ${table.dayLog} ~ '[^[:space:]]')`,
-    ),
-    check(
-      'agent_area_day_log_indexed',
-      sql`num_nonnulls(${table.dayLog}, ${table.dayLogSearchTokenText}) in (0, 2)`,
-    ),
-    index('agent_area_day_log_search_vector_index').using(
-      'gin',
-      table.dayLogSearchVector,
     ),
     check(
       'agent_area_day_metrics_object',
@@ -337,39 +334,6 @@ export const agentArea = pgTable(
     check(
       'agent_area_note_failed',
       sql`${table.agentNoteStatus} is distinct from 'failed' or ${table.agentNoteError} is not null`,
-    ),
-  ],
-);
-
-/**
- * The day log's search windows, in a table of their own so /wrap's role never
- * writes `entry_search_evidence`, which holds David's words.
- */
-export const dayLogSearchEvidence = pgTable(
-  'day_log_search_evidence',
-  {
-    entryDate: date('entry_date')
-      .notNull()
-      .references(() => agentArea.entryDate, { onDelete: 'cascade' }),
-    token: text('token').notNull(),
-    position: integer('position').notNull(),
-    excerpt: text('excerpt').notNull(),
-    matchStart: integer('match_start').notNull(),
-    matchLength: integer('match_length').notNull(),
-    anchorLength: integer('anchor_length').notNull(),
-  },
-  (table) => [
-    uniqueIndex('day_log_search_evidence_prefix').on(
-      table.entryDate,
-      sql`${table.token} collate "C"`,
-    ),
-    check(
-      'day_log_search_evidence_bounded',
-      sql`octet_length(${table.excerpt}) <= 960`,
-    ),
-    check(
-      'day_log_search_evidence_range',
-      sql`${table.matchStart} >= 0 and ${table.matchLength} >= 1 and ${table.anchorLength} >= 1 and ${table.anchorLength} <= ${table.matchLength} and ${table.matchStart} + ${table.matchLength} <= char_length(${table.excerpt})`,
     ),
   ],
 );

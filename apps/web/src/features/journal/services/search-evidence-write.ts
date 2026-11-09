@@ -39,22 +39,3 @@ export const replaceSearchEvidenceWithClient = async (
     [date, JSON.stringify(evidence)],
   );
 };
-
-/**
- * Replaces a day log's search windows. Runs in the transaction that stores the
- * log, as /wrap's role, which may write these and nothing of David's.
- */
-export const replaceDayLogEvidence = (
-  sql: SqlClient.SqlClient,
-  date: string,
-  evidence: ReadonlyArray<StoredSearchEvidence>,
-) =>
-  Effect.gen(function* () {
-    yield* sql`delete from day_log_search_evidence where entry_date = ${date}::date`;
-    yield* sql`
-    insert into day_log_search_evidence (entry_date, token, position, excerpt, match_start, match_length, anchor_length)
-    select ${date}::date, token, position, excerpt, "matchStart", "matchLength", "anchorLength"
-    from jsonb_to_recordset(${JSON.stringify(evidence)}::jsonb)
-      as evidence(token text, position integer, excerpt text, "matchStart" integer, "matchLength" integer, "anchorLength" integer)
-  `;
-  });

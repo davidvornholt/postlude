@@ -15,7 +15,7 @@ const foundLabel = (results: Results): string => {
   const count = results.hits.length;
   const days = `${count} day${count === one ? '' : 's'}`;
   return results.limited
-    ? `The first ${days} holding all of those words, newest first.`
+    ? `The first ${days} holding all of those words, newest first, with the days found through their day report after the rest.`
     : `${days} hold${count === one ? 's' : ''} all of those words.`;
 };
 

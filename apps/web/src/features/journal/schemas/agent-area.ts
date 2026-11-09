@@ -5,11 +5,6 @@
  * The two are separate shapes because they have separate readers. The CLI
  * reads and writes the /wrap columns only, and its database role can't read
  * the note at all.
- *
- * The day log is a /wrap column too, but `WrapArea` leaves it out. The page and
- * the agent note read `WrapArea`, and the log is the agent's account of the
- * day, built from window titles anyone can set, so it reaches only search,
- * marked as the agent's, and `agent-area get`.
  */
 
 import { Schema } from 'effect';
@@ -32,34 +27,6 @@ const ReportHtml = Schema.String.check(
   ),
 );
 
-/** The longest day log, in UTF-16 code units: what JavaScript's `length` counts. */
-export const dayLogLengthLimit = 20_000;
-
-/**
- * A control character other than the line feed and the tab: whatever isn't a
- * non-control character, a line feed, or a tab. That includes the carriage
- * return, so a log's lines end the one way search and the page expect.
- */
-const controlCharacter = /[^\P{Cc}\n\t]/u;
-
-/**
- * Plain text, never HTML: Postlude only ever reads it as text. /wrap separates
- * its paragraphs with one blank line and may begin one with a time range, such
- * as `09:10–11:45`; nothing here depends on that shape.
- */
-const DayLog = Schema.String.check(
-  Schema.makeFilter(
-    (value: string) =>
-      value.trim() !== '' &&
-      value.length <= dayLogLengthLimit &&
-      !controlCharacter.test(value),
-    {
-      identifier: 'DayLog',
-      description: `non-empty plain text of at most ${dayLogLengthLimit} characters, without control characters other than line feeds and tabs`,
-    },
-  ),
-);
-
 const modelNameLengthLimit = 200;
 
 const ModelName = Schema.String.check(
@@ -77,7 +44,6 @@ export const WrapPutSchema = Schema.Struct({
   metricsVersion: MetricsVersionSchema,
   reportHtml: ReportHtml,
   reportModel: ModelName,
-  dayLog: DayLog,
 }).check(
   Schema.makeFilter(
     (input) => input.dayMetrics.metricsVersion === input.metricsVersion,

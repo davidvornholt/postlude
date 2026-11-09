@@ -1,5 +1,5 @@
 {
-  "id": "bd84dd31-f66c-4b93-a624-eb0d886c3f86",
+  "id": "cc70395c-3656-49fb-84f0-2b81b506696c",
   "prevId": "80bf2ea5-329b-4d6d-a76e-a737da82b5d8",
   "version": "7",
   "dialect": "postgresql",
@@ -44,28 +44,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "day_log": {
-          "name": "day_log",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "day_log_search_token_text": {
-          "name": "day_log_search_token_text",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "day_log_search_vector": {
-          "name": "day_log_search_vector",
-          "type": "tsvector",
-          "primaryKey": false,
-          "notNull": false,
-          "generated": {
-            "as": "case when day_log_search_token_text = '' then ''::tsvector else array_to_tsvector(string_to_array(day_log_search_token_text, ' ')) end",
-            "type": "stored"
-          }
-        },
         "agent_note": {
           "name": "agent_note",
           "type": "text",
@@ -107,14 +85,34 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "report_text": {
+          "name": "report_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "report_plain_text(report_html)",
+            "type": "stored"
+          }
+        },
+        "report_search_vector": {
+          "name": "report_search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "to_tsvector('simple', regexp_replace(translate(lower(report_plain_text(report_html) collate \"pg_c_utf8\"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))",
+            "type": "stored"
+          }
         }
       },
       "indexes": {
-        "agent_area_day_log_search_vector_index": {
-          "name": "agent_area_day_log_search_vector_index",
+        "agent_area_report_search_vector_index": {
+          "name": "agent_area_report_search_vector_index",
           "columns": [
             {
-              "expression": "day_log_search_vector",
+              "expression": "report_search_vector",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -134,18 +132,6 @@
         "agent_area_wrap_complete": {
           "name": "agent_area_wrap_complete",
           "value": "num_nonnulls(\"agent_area\".\"day_metrics\", \"agent_area\".\"metrics_version\", \"agent_area\".\"report_html\", \"agent_area\".\"report_model\", \"agent_area\".\"report_generated_at\") in (0, 5)"
-        },
-        "agent_area_day_log_with_wrap": {
-          "name": "agent_area_day_log_with_wrap",
-          "value": "\"agent_area\".\"day_log\" is null or \"agent_area\".\"report_html\" is not null"
-        },
-        "agent_area_day_log_bounded": {
-          "name": "agent_area_day_log_bounded",
-          "value": "\"agent_area\".\"day_log\" is null or (char_length(\"agent_area\".\"day_log\") <= 20000 and \"agent_area\".\"day_log\" ~ '[^[:space:]]')"
-        },
-        "agent_area_day_log_indexed": {
-          "name": "agent_area_day_log_indexed",
-          "value": "num_nonnulls(\"agent_area\".\"day_log\", \"agent_area\".\"day_log_search_token_text\") in (0, 2)"
         },
         "agent_area_day_metrics_object": {
           "name": "agent_area_day_metrics_object",
@@ -178,106 +164,6 @@
         "agent_area_note_failed": {
           "name": "agent_area_note_failed",
           "value": "\"agent_area\".\"agent_note_status\" is distinct from 'failed' or \"agent_area\".\"agent_note_error\" is not null"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.day_log_search_evidence": {
-      "name": "day_log_search_evidence",
-      "schema": "",
-      "columns": {
-        "entry_date": {
-          "name": "entry_date",
-          "type": "date",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token": {
-          "name": "token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "position": {
-          "name": "position",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "excerpt": {
-          "name": "excerpt",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "match_start": {
-          "name": "match_start",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "match_length": {
-          "name": "match_length",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "anchor_length": {
-          "name": "anchor_length",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "day_log_search_evidence_prefix": {
-          "name": "day_log_search_evidence_prefix",
-          "columns": [
-            {
-              "expression": "entry_date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "\"token\" collate \"C\"",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "day_log_search_evidence_entry_date_agent_area_entry_date_fk": {
-          "name": "day_log_search_evidence_entry_date_agent_area_entry_date_fk",
-          "tableFrom": "day_log_search_evidence",
-          "tableTo": "agent_area",
-          "columnsFrom": [
-            "entry_date"
-          ],
-          "columnsTo": [
-            "entry_date"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "day_log_search_evidence_bounded": {
-          "name": "day_log_search_evidence_bounded",
-          "value": "octet_length(\"day_log_search_evidence\".\"excerpt\") <= 960"
-        },
-        "day_log_search_evidence_range": {
-          "name": "day_log_search_evidence_range",
-          "value": "\"day_log_search_evidence\".\"match_start\" >= 0 and \"day_log_search_evidence\".\"match_length\" >= 1 and \"day_log_search_evidence\".\"anchor_length\" >= 1 and \"day_log_search_evidence\".\"anchor_length\" <= \"day_log_search_evidence\".\"match_length\" and \"day_log_search_evidence\".\"match_start\" + \"day_log_search_evidence\".\"match_length\" <= char_length(\"day_log_search_evidence\".\"excerpt\")"
         }
       },
       "isRLSEnabled": false

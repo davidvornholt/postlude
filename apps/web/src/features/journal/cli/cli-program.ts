@@ -3,10 +3,8 @@
  *
  * The CLI connects as `postlude_agent`, so every query here stays inside that
  * role's grants: it reads entries, ratings, and the /wrap columns, and writes
- * only the /wrap columns. The agent note, the report, and the day log are never
- * part of a day's output or a search's; the report and the log are read on
- * their own, through `agent-area get`. Agents read the other commands as
- * David's words, and the log is /wrap's.
+ * only the /wrap columns. The agent note and the report are never part of a
+ * day's output; the report is read on its own, through `agent-area get`.
  */
 
 import { Effect, Schema } from 'effect';
@@ -24,7 +22,7 @@ import { searchTerms } from '../search-query.ts';
 import { AgentAreaRepository } from '../services/agent-area-repository.ts';
 import { DayRatingRepository } from '../services/day-rating-repository.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
-import { EntrySearch, writingOnly } from '../services/entry-search.ts';
+import { EntrySearch } from '../services/entry-search.ts';
 import { type CliCommand, UsageError, usage } from './command-line.ts';
 
 /**
@@ -141,7 +139,7 @@ const search = (query: string, limit: number) =>
       return { query, terms, limited: false, hits: [] };
     }
     const entrySearch = yield* EntrySearch;
-    const matches = yield* entrySearch.search(terms, limit, writingOnly);
+    const matches = yield* entrySearch.search(terms, limit);
     return {
       query,
       terms,
@@ -189,21 +187,19 @@ export const runCliCommand = <E>(
       return search(command.query, command.limit);
     case 'agent-area-get':
       return AgentAreaRepository.pipe(
-        Effect.flatMap((areas) => areas.readWrapWithDayLog(command.date)),
+        Effect.flatMap((areas) => areas.readWrap(command.date)),
       );
     case 'agent-area-put':
       return Effect.gen(function* () {
         const input = yield* readStdin.pipe(Effect.flatMap(wrapPutOf));
         const areas = yield* AgentAreaRepository;
         const stored = yield* areas.putWrap(command.date, input);
-        // The report and the log go in but don't come back out: the report
-        // can be a megabyte.
+        // The report goes in but doesn't come back out: it can be a megabyte.
         const { reportHtml, ...rest } = stored;
         return {
           ...rest,
           reportHtmlBytes: new TextEncoder().encode(reportHtml ?? '')
             .byteLength,
-          dayLogLength: input.dayLog.length,
         };
       });
     default:

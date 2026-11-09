@@ -42,7 +42,6 @@ const wrap: WrapPut = {
   metricsVersion: 1,
   reportHtml: '<p>The day.</p>',
   reportModel: 'wrap-model',
-  dayLog: '09:10–11:45 Wrote the plan.',
 };
 
 const noStdin = Effect.die('This command reads no stdin.');
@@ -72,16 +71,11 @@ it('holds exactly the grants the contract gives it', async () => {
     }),
   );
   expect(grants.tables).toEqual([
-    { table: 'day_log_search_evidence', privilege: 'DELETE' },
-    { table: 'day_log_search_evidence', privilege: 'INSERT' },
-    { table: 'day_log_search_evidence', privilege: 'SELECT' },
     { table: 'day_rating', privilege: 'SELECT' },
     { table: 'entry', privilege: 'SELECT' },
     { table: 'entry_search_evidence', privilege: 'SELECT' },
   ]);
   const wrapColumns = [
-    'day_log',
-    'day_log_search_token_text',
     'day_metrics',
     'metrics_version',
     'report_generated_at',
@@ -149,62 +143,37 @@ it('runs every CLI command', async () => {
   expect(outcome.search).toMatchObject({
     hits: [{ date: day, sources: [{ source: 'evening' }] }],
   });
-  expect(outcome.put).toMatchObject({
-    date: day,
-    reportHtmlBytes: 15,
-    dayLogLength: wrap.dayLog.length,
-  });
-  expect(Object.keys(outcome.put as object)).not.toContain('dayLog');
+  expect(outcome.put).toMatchObject({ date: day, reportHtmlBytes: 15 });
   expect(outcome.get).toMatchObject({
     date: day,
     reportHtml: '<p>The day.</p>',
     reportModel: 'wrap-model',
-    dayLog: '09:10–11:45 Wrote the plan.',
   });
 });
 
-it('keeps the day log out of every command but agent-area get', async () => {
-  const marker = 'Daylogmarker';
-  const outcome = await withEvening(({ sql, entries, ratings }) =>
+// Agents read a search hit as David's words, so the CLI never searches the
+// report /wrap wrote.
+it('searches David’s writing and not the day report', async () => {
+  const searches = await withEvening(({ sql, entries, areas }) =>
     Effect.gen(function* () {
       yield* entries.save(draft(day, 'Grace at the end of a long day.'));
-      yield* ratings.save({ date: day, energy: 'okay', progress: 'solid' });
+      yield* areas.putWrap(day, {
+        ...wrap,
+        reportHtml: '<p>Grace, and the parser merged.</p>',
+      });
       yield* asAgent(sql);
-      yield* runCliCommand(
-        { kind: 'agent-area-put', date: day },
-        Effect.succeed(
-          JSON.stringify({ ...wrap, dayLog: `09:00–10:00 Grace ${marker}.` }),
-        ),
-      );
+      const search = (query: string) =>
+        runCliCommand({ kind: 'search', query, limit: 5 }, noStdin);
       return {
-        day: yield* runCliCommand({ kind: 'day-get', date: day }, noStdin),
-        days: yield* runCliCommand(
-          { kind: 'days-list', from: '2026-10-29', to: day },
-          noStdin,
-        ),
-        changed: yield* runCliCommand(
-          { kind: 'days-changed', since: '2000-01-01T00:00:00Z' },
-          noStdin,
-        ),
-        logOnly: yield* runCliCommand(
-          { kind: 'search', query: marker, limit: 5 },
-          noStdin,
-        ),
-        both: yield* runCliCommand(
-          { kind: 'search', query: 'grace', limit: 5 },
-          noStdin,
-        ),
+        reportOnly: yield* search('parser'),
+        both: yield* search('grace'),
       };
     }),
   );
-  const { logOnly, ...rest } = outcome;
-  // The search echoes the query, so only its hits can show a leak.
-  expect(logOnly).toMatchObject({ hits: [] });
-  expect(outcome.both).toMatchObject({
+  expect(searches.reportOnly).toMatchObject({ hits: [] });
+  expect(searches.both).toMatchObject({
     hits: [{ date: day, sources: [{ source: 'evening' }] }],
   });
-  expect(JSON.stringify(rest)).not.toContain(marker);
-  expect(JSON.stringify(rest)).not.toContain('day-log');
 });
 
 it('cannot change the journal or the ratings', async () => {

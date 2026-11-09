@@ -154,7 +154,6 @@ export const journalDatabase = () => {
         search: EntrySearch,
         ratings: DayRatingRepository,
         areas: AgentAreaRepository,
-        exports: EntryExport,
       }),
     ),
   } as const;

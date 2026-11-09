@@ -1,12 +1,13 @@
 /**
- * The days a search found, newest first.
+ * The days a search found, newest first, with the days found through their
+ * day report after the rest.
  *
  * Each result reads the way "on this day" does: the date as an eyebrow, then
  * the attributed lines that explain the match. A query can span the evening,
- * morning notes, passage reference, and the day log /wrap wrote, so a result
+ * morning notes, passage reference, and the report /wrap wrote, so a result
  * never hides the source that contributed one of its terms.
  *
- * The day log is the agent's account of the day, not David's words, so it is
+ * The report is the agent's account of the day, not David's words, so it is
  * labelled and set apart from them.
  *
  * The marks are `<mark>` elements rather than a colour on a span. A reader who
@@ -41,7 +42,7 @@ const sourceLabels = {
   evening: 'Evening',
   'passage-reference': 'Passage reference',
   'scripture-notes': 'Morning notes',
-  'day-log': 'From the day report',
+  'day-report': 'From the day report',
 } as const;
 
 const excerptLanguages = {
@@ -49,8 +50,8 @@ const excerptLanguages = {
   // A passage reference is shown in the app's English house style.
   'passage-reference': undefined,
   'scripture-notes': journalLanguage,
-  // /wrap writes the log in English.
-  'day-log': undefined,
+  // /wrap writes the report in English.
+  'day-report': undefined,
 } as const;
 
 const excerptKey = (segments: ReadonlyArray<ExcerptSegment>): string =>
@@ -86,7 +87,7 @@ const Excerpt = ({
 );
 
 const SourceEvidence = ({ source }: { readonly source: SearchHitSource }) => {
-  const agent = source.kind === 'day-log';
+  const agent = source.kind === 'day-report';
   return (
     <span
       className={[

@@ -159,7 +159,7 @@ it("sets the found writing in the journal's language and its labels and passage 
   expect(html.match(languageAttribute)?.length).toBe(one);
 });
 
-it("marks a day log's words as the agent's", async () => {
+it("marks a day report's words as the agent's", async () => {
   const evening = hit(
     '2026-03-01',
     'The rain fell.',
@@ -172,7 +172,7 @@ it("marks a day log's words as the agent's", async () => {
         sources: [
           ...evening.sources,
           {
-            kind: 'day-log',
+            kind: 'day-report',
             excerpts: [
               [
                 { at: 0, match: false, text: '09:10–11:45 Fixed the ' },
@@ -190,9 +190,9 @@ it("marks a day log's words as the agent's", async () => {
     'EveningThe rain fell.From the day report09:10–11:45 Fixed the kestrel build.',
   );
   expect(html.match(languageAttribute)?.length).toBe(one);
-  const [, log = ''] = html.split('From the day report');
-  expect(log).toContain('text-ink-muted');
-  expect(log).not.toContain(`lang="${journalLanguage}"`);
+  const [, report = ''] = html.split('From the day report');
+  expect(report).toContain('text-ink-muted');
+  expect(report).not.toContain(`lang="${journalLanguage}"`);
 });
 
 it('counts one day as a day', async () => {
