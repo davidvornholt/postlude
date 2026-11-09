@@ -125,4 +125,9 @@ export type DayPageFixtureWindow = Window & {
   postludeReleaseEveningCalls: (call: string) => void;
   /** Leaves the day and opens it again, reading its evening anew. */
   postludeRevisitDay: () => Promise<void>;
+  /**
+   * Reads the day again behind the open page, as the router does in the
+   * background, with its evening read anew or, this time, not at all.
+   */
+  postludeReloadDay: (evening: 'read' | 'unavailable') => Promise<void>;
 };

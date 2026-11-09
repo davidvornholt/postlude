@@ -1,7 +1,7 @@
 /**
- * What the day page renders under the evening's writing, before any script
- * runs: the ratings, the folded report, the closing and the agent note, in
- * each state the server can hand over.
+ * What the day page renders around the evening's writing, before any script
+ * runs: the ratings and the folded report above it, the closing and the agent
+ * note below it, in each state the server can hand over.
  */
 
 import { expect, it } from 'bun:test';
@@ -85,13 +85,24 @@ const closeHintOf = (html: string): string => {
     : plainText(html.split(`id="${id}">`)[1]?.split('<')[0] ?? '');
 };
 
-it('asks for energy first and keeps the closing shut until both ratings are in', async () => {
-  const html = await renderEvening(eveningWith());
-  const text = plainText(html);
+const writingPlaceholder = 'Why you did what you did';
 
-  expect(text).toContain('End of the day');
-  expect(text.indexOf('Energy')).toBeLessThan(text.indexOf('Day report'));
-  expect(text.indexOf('Day report')).toBeLessThan(text.indexOf('Progress'));
+it('asks for the ratings above the writing and keeps the closing below it shut until energy and progress are in', async () => {
+  const html = await renderEvening(eveningWith({ report: true }));
+  const text = plainText(html);
+  const inOrder = [
+    'Rate the day',
+    'Energy',
+    'Progress',
+    'Would you repeat this day?',
+    'Day report',
+    writingPlaceholder,
+    'End of the day',
+    'Agent note',
+  ].map((part) => text.indexOf(part));
+
+  expect(inOrder).not.toContain(-1);
+  expect(inOrder).toEqual([...inOrder].sort((a, b) => a - b));
   expect(text).toContain(
     'Would you repeat this day?YesPartlyNoOptional. Choose it again to clear it.',
   );
@@ -99,7 +110,9 @@ it('asks for energy first and keeps the closing shut until both ratings are in',
   expect(html).not.toContain('checked=""');
   const close = buttonAttributes(html, 'Close the day');
   expect(isDisabled(close)).toBe(true);
-  expect(closeHintOf(html)).toBe('Rate energy and progress to close the day.');
+  expect(closeHintOf(html)).toBe(
+    'Rate energy and progress above to close the day.',
+  );
 });
 
 it('says plainly when /wrap has written no report for the day', async () => {
@@ -111,29 +124,45 @@ it('says plainly when /wrap has written no report for the day', async () => {
   expect(buttonAttributes(html, 'Show the report')).toBe('');
 });
 
-it('keeps the report locked until energy is rated, with the reason beside it', async () => {
-  const html = await renderEvening(eveningWith({ report: true }));
-  const toggle = buttonAttributes(html, 'Show the report');
+const lockReason = 'Rate energy and progress first.';
 
-  expect(isDisabled(toggle)).toBe(true);
-  expect(attributeValue(toggle, 'aria-expanded')).toBe('false');
-  expect(plainText(html)).toContain('Rate your energy first.');
-  expect(html).not.toContain('<iframe');
-  expect(html).not.toContain(reportMarker);
-});
+it.each([
+  ['neither rating', {}, 'Rate energy and progress above to close the day.'],
+  ['only energy', { energy: 'okay' }, 'Rate progress above to close the day.'],
+  [
+    'only progress',
+    { progress: 'solid' },
+    'Rate energy above to close the day.',
+  ],
+] as const)(
+  'keeps the report locked with %s given, with the reason beside it',
+  async (_, rating, hint) => {
+    const html = await renderEvening(eveningWith({ rating, report: true }));
+    const toggle = buttonAttributes(html, 'Show the report');
 
-it('offers the report once energy is rated, still folded and with no numbers in the markup', async () => {
+    expect(isDisabled(toggle)).toBe(true);
+    expect(attributeValue(toggle, 'aria-expanded')).toBe('false');
+    expect(plainText(html)).toContain(lockReason);
+    expect(html).not.toContain('<iframe');
+    expect(html).not.toContain(reportMarker);
+    expect(closeHintOf(html)).toBe(hint);
+  },
+);
+
+it('offers the report once energy and progress are rated, still folded and with no numbers in the markup', async () => {
   const html = await renderEvening(
-    eveningWith({ rating: { energy: 'okay' }, report: true }),
+    eveningWith({
+      rating: { energy: 'okay', progress: 'solid' },
+      report: true,
+    }),
   );
   const toggle = buttonAttributes(html, 'Show the report');
 
   expect(isDisabled(toggle)).toBe(false);
-  expect(plainText(html)).not.toContain('Rate your energy first.');
+  expect(plainText(html)).not.toContain(lockReason);
   expect(plainText(html)).toContain('By Synthetic Model 1');
   expect(html).not.toContain(reportMarker);
   expect(html).not.toContain('412');
-  expect(closeHintOf(html)).toBe('Rate progress to close the day.');
 });
 
 it('opens the closing once energy and progress are rated', async () => {
@@ -155,7 +184,10 @@ it('shows a closed day with its ratings held and a way to reopen it', async () =
   );
   const text = plainText(html);
 
-  expect(text).toContain('This day is closed.');
+  expect(text).toContain(
+    'The day is closed. To change a rating, reopen it below the writing.',
+  );
+  expect(text).toContain('This day is closed.Reopen the day');
   expect(buttonAttributes(html, 'Reopen the day')).not.toBe('');
   expect(buttonAttributes(html, 'Close the day')).toBe('');
   expect(html.match(/<fieldset[^>]*\sdisabled=""/gu)?.length).toBe(3);
@@ -252,6 +284,8 @@ it('keeps the writing usable when the evening could not be read', async () => {
     'The ratings, report and agent note could not be loaded. Your writing is not affected.',
   );
   expect(html).not.toContain('type="radio"');
+  expect(plainText(html)).not.toContain('End of the day');
+  expect(buttonAttributes(html, 'Close the day')).toBe('');
 });
 
 it('waits for a day that has not begun', async () => {
@@ -259,4 +293,5 @@ it('waits for a day that has not begun', async () => {
 
   expect(plainText(html)).toContain('This day has not begun yet.');
   expect(html).not.toContain('type="radio"');
+  expect(plainText(html)).not.toContain('End of the day');
 });

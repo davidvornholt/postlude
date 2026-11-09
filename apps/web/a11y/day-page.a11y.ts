@@ -68,6 +68,19 @@ for (const colorScheme of colorSchemes) {
     await expect(morning).toBeFocused();
     await expect(morning).toHaveAttribute('aria-multiline', 'true');
     await page.keyboard.type('Mercy arrived this morning.');
+    // The day is rated before it is written about: one stop per scale.
+    for (const [scale, first] of [
+      ['Energy', 'Drained'],
+      ['Progress', 'Little'],
+      ['Would you repeat this day?', 'Yes'],
+    ] as const) {
+      await page.keyboard.press('Tab');
+      await expect(
+        page
+          .getByRole('group', { name: scale })
+          .getByRole('radio', { name: first }),
+      ).toBeFocused();
+    }
     await page.keyboard.press('Tab');
     await expectToolsFocused(page, 'Evening');
     await page.keyboard.press('Tab');

@@ -5,6 +5,8 @@ import { mountDayPage, scan } from './day-page-test-support.ts';
 
 const dayBefore = /\/day\/2026-08-24$/u;
 const startingDay = /\/day\/2026-08-25$/u;
+const writingPrompt =
+  'Why you did what you did, what you thought and felt, and what happened away from the screen.';
 
 test('the arrow keys step a day only where they mean nothing else', async ({
   page,
@@ -48,19 +50,16 @@ test('the arrow keys step a day only where they mean nothing else', async ({
   await expect(evening).toHaveText('Ein Tag');
 });
 
-test('an empty day opens with the evening writing above the fold', async ({
+test('an empty day opens with the evening’s first step above the fold', async ({
   page,
 }) => {
   await page.setViewportSize({ height: 800, width: 1280 });
   await mountDayNavigation(page);
-  const prompt = page.getByText('How did the day go?', { exact: true });
-  await expect(prompt).toBeInViewport();
-  const promptBox = await prompt.boundingBox();
-  const lineHeight = 28;
-  // The prompt and at least two lines of writing under it are on screen.
-  expect(
-    (promptBox?.y ?? Number.POSITIVE_INFINITY) + 3 * lineHeight,
-  ).toBeLessThanOrEqual(800);
+  // The evening starts by rating the day while /wrap works, so where that
+  // begins is on screen before anything is scrolled.
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Rate the day' }),
+  ).toBeInViewport({ ratio: 1 });
 });
 
 test('the writing prompt is English beside the German writing', async ({
@@ -69,8 +68,8 @@ test('the writing prompt is English beside the German writing', async ({
   await mountDayPage(page, ['stored']);
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
   await expect(evening).toHaveAttribute('lang', 'de');
-  await expect(evening).toHaveAccessibleDescription('How did the day go?');
-  const prompt = page.getByText('How did the day go?', { exact: true });
+  await expect(evening).toHaveAccessibleDescription(writingPrompt);
+  const prompt = page.getByText(writingPrompt, { exact: true });
   await expect(prompt).toBeVisible();
   const promptLanguage = await prompt.evaluate((element) =>
     element.closest('[lang]')?.getAttribute('lang'),
@@ -85,5 +84,5 @@ test('the writing prompt is English beside the German writing', async ({
   await page.keyboard.press('Control+A');
   await page.keyboard.press('Backspace');
   await expect(prompt).toBeVisible();
-  await expect(evening).toHaveAccessibleDescription('How did the day go?');
+  await expect(evening).toHaveAccessibleDescription(writingPrompt);
 });

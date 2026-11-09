@@ -55,7 +55,8 @@ const eveningActions = eveningFixtureActions(config);
 
 /**
  * The page as a route shows it. Leaving the day and coming back mounts it
- * anew, with the evening read again as the route's loader reads it.
+ * anew, with the evening read again as the route's loader reads it. Reading
+ * the day again behind the open page hands the same page the new evening.
  */
 export const VisitedDayPage = () => {
   const [visit, setVisit] = useState({
@@ -66,6 +67,13 @@ export const VisitedDayPage = () => {
     fixtureWindow.postludeRevisitDay = async () => {
       const evening = await eveningActions.readEvening(entry.date);
       setVisit(({ count }) => ({ count: count + 1, evening }));
+    };
+    fixtureWindow.postludeReloadDay = async (read) => {
+      const evening =
+        read === 'read'
+          ? await eveningActions.readEvening(entry.date)
+          : undefined;
+      setVisit(({ count }) => ({ count, evening }));
     };
   }, []);
   return (

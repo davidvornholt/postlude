@@ -3,7 +3,7 @@
  * `DayMetricsSchema` holds them to, and the sample report that shows them.
  *
  * Version 1 is an older way of measuring the same day that didn't split time
- * into categories or count scattered minutes, so the review pages have a
+ * into categories or count short stretches, so the review pages have a
  * change of version to show.
  */
 

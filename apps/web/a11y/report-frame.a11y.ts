@@ -20,9 +20,14 @@ const connectSourceViolation = /connect-src/u;
 const openReport = async (page: playwright.Page): Promise<void> => {
   const toggle = page.getByRole('button', { name: 'Show the report' });
   await expect(toggle).toBeDisabled();
-  await expect(page.getByText('Rate your energy first.')).toBeVisible();
+  const reason = page.getByText('Rate energy and progress first.');
+  await expect(reason).toBeVisible();
   await choose(page, 'Energy', 'Okay');
+  // Energy alone leaves it shut: progress would be rated with the numbers in view.
+  await expect(toggle).toBeDisabled();
+  await choose(page, 'Progress', 'Solid');
   await expect(toggle).toBeEnabled();
+  await expect(reason).toHaveCount(0);
   await toggle.click();
   await expect(
     page.getByRole('button', { name: 'Hide the report' }),
@@ -64,7 +69,7 @@ test('the hidden report leaves the page when reduced motion is switched on while
 for (const colorScheme of colorSchemes) {
   const otherScheme = colorScheme === 'light' ? 'dark' : 'light';
 
-  test(`the report opens after energy, sandboxed and fed its numbers, in ${colorScheme} mode`, async ({
+  test(`the report opens after energy and progress, sandboxed and fed its numbers, in ${colorScheme} mode`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
@@ -132,13 +137,15 @@ for (const colorScheme of colorSchemes) {
   });
 }
 
-test('the open report leads straight back to the writing', async ({ page }) => {
+test('the open report leads straight on to the writing below it', async ({
+  page,
+}) => {
   await mountEvening(page, 'report');
   await openReport(page);
-  const back = page.getByRole('button', { name: 'Back to writing' });
-  await expect(back).toHaveCount(1);
+  const onward = page.getByRole('button', { name: 'Go to the writing' });
+  await expect(onward).toHaveCount(1);
 
-  await back.click();
+  await onward.click();
   await expect(
     page.getByRole('textbox', { name: 'Evening journal' }),
   ).toBeFocused();

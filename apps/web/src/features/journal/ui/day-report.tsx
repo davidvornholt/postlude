@@ -1,15 +1,10 @@
 /**
- * The day's /wrap report, folded away until energy is rated.
- *
- * Energy is how the day felt, and it is rated before the report is read so
- * the numbers can't talk the feeling into something else. Progress comes after
- * the report, which is where the numbers help.
- *
- * Reading the report is often what starts the writing, so the open report ends
- * with a way straight back to the editor.
+ * The day's /wrap report, folded away until energy and progress are rated
+ * (`evening-flow.tsx` says why). The open report ends with a way straight on
+ * to the writing below it.
  *
  * The report and the line that says why it is locked both grow and shrink to
- * their height rather than appearing at once, so the ratings below slide out
+ * their height rather than appearing at once, so the writing below slides out
  * of the way instead of jumping. The report leaves the page once it is hidden,
  * so showing it again loads it afresh.
  */
@@ -24,19 +19,15 @@ import { ReportFrame } from './report-frame.tsx';
 
 type DayReportProps = {
   readonly wrap: WrapArea;
-  /** Whether energy is rated, which is what opens the report. */
+  /** Whether energy and progress are rated, which is what opens the report. */
   readonly unlocked: boolean;
-  readonly onBackToWriting: () => void;
+  readonly onToWriting: () => void;
 };
 
 const disabledQuietClass =
   'disabled:cursor-not-allowed disabled:text-ink-faint disabled:hover:text-ink-faint';
 
-export const DayReport = ({
-  wrap,
-  unlocked,
-  onBackToWriting,
-}: DayReportProps) => {
+export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   const [open, setOpen] = useState(false);
   const headingId = useId();
   const regionId = useId();
@@ -82,8 +73,7 @@ export const DayReport = ({
       </div>
       <Collapsible open={!unlocked} unmountWhenClosed={true}>
         <p className="mt-1 text-ink-muted text-sm sm:ml-44" id={lockId}>
-          Rate your energy first. The report opens once you have, so its numbers
-          don’t sway how the day felt.
+          Rate energy and progress first. The report opens once both are rated.
         </p>
       </Collapsible>
       <Collapsible
@@ -98,8 +88,8 @@ export const DayReport = ({
             metricsVersion={metricsVersion}
             reportHtml={reportHtml}
           />
-          <Button className="mt-4" onClick={onBackToWriting} variant="quiet">
-            Back to writing
+          <Button className="mt-4" onClick={onToWriting} variant="quiet">
+            Go to the writing
           </Button>
         </div>
       </Collapsible>

@@ -9,6 +9,7 @@ import {
   noteModel,
   readyNoteText,
   releaseEveningCalls,
+  reloadDay,
   revisitDay,
   scanPage,
 } from './evening-flow-test-support.ts';
@@ -52,7 +53,7 @@ for (const colorScheme of colorSchemes) {
       ),
     ).toBe(true);
     await expect(close).toHaveAccessibleDescription(
-      'Rate energy and progress to close the day.',
+      'Rate energy and progress above to close the day.',
     );
     await scanPage(page);
 
@@ -61,7 +62,7 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('radio', { name: 'Okay' })).toBeChecked();
     await expect(close).toHaveAccessibleDescription(
-      'Rate progress to close the day.',
+      'Rate progress above to close the day.',
     );
 
     await choose(page, 'Progress', 'Solid');
@@ -171,8 +172,19 @@ for (const colorScheme of colorSchemes) {
     await mountEvening(page, 'failingRatings');
 
     await choose(page, 'Energy', 'Fresh');
-    await expect(page.getByText(eveningConnectionMessage)).toBeVisible();
+    const failure = page.getByText(eveningConnectionMessage);
+    await expect(failure).toBeVisible();
     await expect(page.getByRole('radio', { name: 'Fresh' })).not.toBeChecked();
+    // It says so beside the ratings, above the writing, not by the close.
+    await expect(failure).toHaveCount(1);
+    const failureTop = (await failure.boundingBox())?.y ?? 0;
+    const writingTop =
+      (
+        await page
+          .getByRole('textbox', { name: 'Evening journal' })
+          .boundingBox()
+      )?.y ?? 0;
+    expect(failureTop).toBeLessThan(writingTop);
     await scanPage(page);
   });
 
@@ -189,6 +201,36 @@ for (const colorScheme of colorSchemes) {
     await scanPage(page);
   });
 }
+
+test('the evening comes and goes around the writing without building it anew', async ({
+  page,
+}) => {
+  await mountEvening(page, 'report');
+  const writing = page.getByRole('textbox', { name: 'Evening journal' });
+  await writing.click();
+  await page.keyboard.type('Still here');
+  await writing.evaluate((element) => {
+    element.dataset.mark = 'first';
+  });
+  await choose(page, 'Energy', 'Okay');
+
+  await reloadDay(page, 'unavailable');
+  await expect(
+    page.getByText('The ratings, report and agent note could not be loaded.'),
+  ).toBeVisible();
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(
+    page.getByRole('heading', { name: 'End of the day' }),
+  ).toHaveCount(0);
+
+  await reloadDay(page, 'read');
+  await expect(page.getByRole('radio', { name: 'Okay' })).toBeChecked();
+  await expect(
+    page.getByRole('button', { name: 'Close the day' }),
+  ).toHaveAccessibleDescription('Rate progress above to close the day.');
+  await expect(writing).toHaveText('Still here');
+  await expect(writing).toHaveAttribute('data-mark', 'first');
+});
 
 test('a rating chosen after coming back to the day outlasts the ones before it', async ({
   page,
