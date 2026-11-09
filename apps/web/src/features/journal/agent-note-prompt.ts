@@ -260,6 +260,8 @@ const schemelessAddress = new RegExp(
 const emailAddress =
   /(?<![\w%+.-])[\w%+.-]+@[\da-z-]+(?:\.[\da-z-]+)*\.[a-z][\da-z-]*/giu;
 const addressReadAhead = 2000;
+const lastWord = /(?:^|\s)\S*$/u;
+const unfinishedTarget = /\]\(<[^>\n]*$/u;
 
 /**
  * /wrap's report as the model reads it. A report built from window titles
@@ -267,14 +269,20 @@ const addressReadAhead = 2000;
  * does, and it can name the people David wrote to by their email addresses.
  * The patterns that hide them slow down sharply on long text, so they read the
  * report only a little past the limit: far enough to hide an address the cut
- * splits.
+ * splits. Where that read ends inside the report, it stops before the word and
+ * any angle-bracket link target it would split, because the patterns can't
+ * tell part of an address from a word.
  */
 const dayReportOf = (dayReport: string | null) => {
   const text = dayReport?.trim() ?? '';
   if (text === '') {
     return { dayReport: null, dayReportCut: false };
   }
-  const read = text.slice(0, dayReportLimit + addressReadAhead);
+  const ahead = text.slice(0, dayReportLimit + addressReadAhead);
+  const read =
+    ahead.length < text.length
+      ? ahead.replace(lastWord, '').replace(unfinishedTarget, ']')
+      : ahead;
   const shown = read
     .replace(linkTarget, ']')
     .replace(bareAddress, '[link]')

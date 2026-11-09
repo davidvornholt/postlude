@@ -17,6 +17,7 @@ const dataOpening = /^<day_data>\n/u;
 const dataClosing = /\n<\/day_data>$/u;
 // The addresses below carry these, in any letter case.
 const privatePart = /secret|api\/journal/iu;
+const addressPart = /zeb|quarry|wrap@/u;
 
 /** The JSON document the model is given, read back. */
 const dataOf = (prompt: ReturnType<typeof agentNotePromptOf>) =>
@@ -45,20 +46,6 @@ describe('the day report as the model is given it', () => {
     );
     expect(unreported.dayReport).toBeNull();
     expect({ ...unreported, dayReport: reported.dayReport }).toEqual(reported);
-  });
-
-  it('is cut when it is long, and says so', () => {
-    const dayReport = 'word '.repeat(dayReportLimit);
-    const data = dataOf(agentNotePromptOf(agentNoteInput({ dayReport })));
-    expect(data.dayReport).toHaveLength(dayReportLimit);
-    expect(data.dayReportCut).toBe(true);
-  });
-
-  it('hides an address the cut splits', () => {
-    const dayReport = `${'x'.repeat(dayReportLimit - 5)} kim.doe@mail.example.test`;
-    const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
-    expect(dataOf(prompt).dayReport).toEndWith(' [add');
-    expect(everythingSent(prompt)).not.toContain('kim');
   });
 
   it('cannot close the data tag', () => {
@@ -126,6 +113,41 @@ describe('the day report as the model is given it', () => {
       '09:00–10:00 Edited apps/web/src/main.ts, apps/web/src/widget.test/helpers.ts, /etc/conf.d/server and vite.config.ts; rated 3.5/5; moved 12:30/13:00; pinned react@18.3.1.';
     const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
     expect(dataOf(prompt).dayReport).toBe(dayReport);
+  });
+});
+
+describe('a long day report as the model is given it', () => {
+  it('is cut when it is long, and says so', () => {
+    const dayReport = 'word '.repeat(dayReportLimit);
+    const data = dataOf(agentNotePromptOf(agentNoteInput({ dayReport })));
+    expect(data.dayReport).toHaveLength(dayReportLimit);
+    expect(data.dayReportCut).toBe(true);
+  });
+
+  it('hides an address the cut splits', () => {
+    const dayReport = `${'x'.repeat(dayReportLimit - 5)} kim.doe@mail.example.test`;
+    const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
+    expect(dataOf(prompt).dayReport).toEndWith(' [add');
+    expect(everythingSent(prompt)).not.toContain('kim');
+  });
+
+  it('hides a link target the read splits before its closing bracket', () => {
+    const dayReport = `${'word '.repeat(3980)}[reset](</a SECRET-TOKEN${'x'.repeat(2200)}>)`;
+    const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
+    expect(dataOf(prompt).dayReport).toEndWith(' [reset]');
+    expect(everythingSent(prompt)).not.toMatch(privatePart);
+  });
+
+  it('leaves no part of an email address the read splits', () => {
+    // Hidden addresses shorten the text, so the end of the read falls within
+    // the limit. Each shift puts that end at another place in an address.
+    const address = 'zeb.quarry+wrap@mail.example.test';
+    const addresses = `${address} `.repeat(1000);
+    for (let shift = 0; shift <= address.length; shift += 1) {
+      const dayReport = `${'x'.repeat(shift)} ${addresses}`;
+      const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
+      expect(everythingSent(prompt)).not.toMatch(addressPart);
+    }
   });
 
   it.each([
