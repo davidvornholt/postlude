@@ -1,9 +1,6 @@
--- The text of /wrap's report as a reader sees it: the HTML without its
--- scripts, styles, title, drawings and tags, with its character references
--- decoded, in NFKC as the app's search text is, and with its white space
--- collapsed. Scripts go first, so markup quoted in one can't end a style or a
--- drawing early. The generated columns below are stored, so this must stay immutable:
--- changing what it returns needs a new function and new columns.
+-- Scripts go first, so markup quoted in one can't end a style or a drawing
+-- early. The generated columns below store what this returns, so it must stay
+-- immutable, and a change to it must recompute them.
 CREATE FUNCTION report_plain_text(html text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 RETURN btrim(regexp_replace(normalize(coalesce((
@@ -32,5 +29,5 @@ RETURN btrim(regexp_replace(normalize(coalesce((
   ) AS reference
 ), ''), NFKC), '\s+', ' ', 'g'));--> statement-breakpoint
 ALTER TABLE "agent_area" ADD COLUMN "report_text" text GENERATED ALWAYS AS (report_plain_text(report_html)) STORED;--> statement-breakpoint
-ALTER TABLE "agent_area" ADD COLUMN "report_search_vector" "tsvector" GENERATED ALWAYS AS (to_tsvector('simple', regexp_replace(translate(lower(report_plain_text(report_html) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))) STORED;--> statement-breakpoint
+ALTER TABLE "agent_area" ADD COLUMN "report_search_vector" "tsvector" GENERATED ALWAYS AS (to_tsvector('simple', regexp_replace(translate(lower(left(report_plain_text(report_html), 100000) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))) STORED;--> statement-breakpoint
 CREATE INDEX "agent_area_report_search_vector_index" ON "agent_area" USING gin ("report_search_vector");

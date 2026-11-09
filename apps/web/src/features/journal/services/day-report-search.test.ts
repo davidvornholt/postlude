@@ -23,7 +23,6 @@ type Day = {
   readonly report?: string;
 };
 
-/** Stores the days, then searches them the way the page or the CLI does. */
 const searched = (
   days: ReadonlyArray<Day>,
   query: string,
@@ -175,4 +174,18 @@ it('finds a day whose writing holds one word and its report the other', async ()
       { kind: 'day-report', excerpts: ['Merged the [parser].'] },
     ],
   ]);
+});
+
+it('stores and finds a report whose words would overflow a search vector', async () => {
+  // 90,000 distinct words, about 760 KB: under the 1 MiB a report may have,
+  // over the 1 MiB a tsvector may have.
+  const words = Array.from(
+    { length: 90_000 },
+    (_, index) => `word${index.toString(36)}`,
+  );
+  const hits = await searched(
+    [{ date: '2026-03-01', report: `<p>Kingfisher ${words.join(' ')}</p>` }],
+    'kingfisher',
+  );
+  expect(hits.map(({ date }) => date)).toEqual(['2026-03-01']);
 });

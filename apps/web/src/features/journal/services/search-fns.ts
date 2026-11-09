@@ -7,9 +7,6 @@
  *
  * The database returns bounded windows from stored search evidence. This boundary
  * highlights those windows without loading complete matching entry projections.
- *
- * The page searches the report /wrap stored as well, and each window says
- * which source it came from, so the page can mark the report's as the agent's.
  */
 
 import { createServerFn } from '@tanstack/react-start';

@@ -274,12 +274,6 @@ export const agentArea = pgTable(
     agentNoteGeneratedAt: timestamp('agent_note_generated_at', {
       withTimezone: true,
     }),
-    /**
-     * The report's text as a reader sees it, for search. The database derives
-     * it with `report_plain_text`, defined in migration 0013, whenever the
-     * report changes, so the app and /wrap's role write nothing for it and
-     * reports stored before it existed have it too.
-     */
     reportText: text('report_text').generatedAlwaysAs(
       sql`report_plain_text(report_html)`,
     ),
@@ -288,10 +282,11 @@ export const agentArea = pgTable(
      * lowercased without changing the text's length, so search can find a
      * word's place in `report_text` by the same fold, and split at every
      * character that is not a letter or a digit. `pg_c_utf8` makes both the
-     * same in every locale.
+     * same in every locale. It reads the first 100,000 characters, because a
+     * tsvector can't exceed 1 MiB and a report of many distinct words can.
      */
     reportSearchVector: tsvector('report_search_vector').generatedAlwaysAs(
-      sql`to_tsvector('simple', regexp_replace(translate(lower(report_plain_text(report_html) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))`,
+      sql`to_tsvector('simple', regexp_replace(translate(lower(left(report_plain_text(report_html), 100000) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))`,
     ),
   },
   (table) => [

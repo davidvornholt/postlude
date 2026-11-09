@@ -102,7 +102,7 @@
           "primaryKey": false,
           "notNull": false,
           "generated": {
-            "as": "to_tsvector('simple', regexp_replace(translate(lower(report_plain_text(report_html) collate \"pg_c_utf8\"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))",
+            "as": "to_tsvector('simple', regexp_replace(translate(lower(left(report_plain_text(report_html), 100000) collate \"pg_c_utf8\"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))",
             "type": "stored"
           }
         }

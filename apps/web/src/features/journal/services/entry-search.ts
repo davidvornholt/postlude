@@ -32,10 +32,6 @@ export type SearchMatch = Schema.Schema.Type<typeof SearchRow>;
 // decoding rather than returning blank evidence or exceeding the text budget.
 const decodeRows = Schema.decodeUnknownEffect(Schema.Array(SearchRow));
 
-/**
- * Where a search looks. David's own writing always; the report /wrap stored
- * for the day only when asked, since it is the agent's text and not his.
- */
 export type SearchScope = { readonly dayReport: boolean };
 
 /** David's writing alone: what the CLI's search returns. */

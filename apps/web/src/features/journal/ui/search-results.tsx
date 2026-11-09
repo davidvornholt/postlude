@@ -1,6 +1,5 @@
 /**
- * The days a search found, newest first, with the days found through their
- * day report after the rest.
+ * The days a search found.
  *
  * Each result reads the way "on this day" does: the date as an eyebrow, then
  * the attributed lines that explain the match. A query can span the evening,

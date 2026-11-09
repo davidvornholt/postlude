@@ -96,10 +96,7 @@ const excerptOf = (
   return segments;
 };
 
-/**
- * Only verified source coordinates are highlighted: a cropped suffix is not a
- * new token. David's own sources come first and the day report last.
- */
+/** Only verified source coordinates are highlighted: a cropped suffix is not a new token. */
 export const searchHitOf = (match: SearchMatch): SearchHit => ({
   date: match.date,
   words: match.words,
