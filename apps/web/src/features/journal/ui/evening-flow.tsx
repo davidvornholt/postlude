@@ -110,18 +110,37 @@ const FailureLine = ({
   </div>
 );
 
+/**
+ * The room above a part. The ratings open the evening, right under the morning
+ * scripture, and stand much further from it than the evening's parts stand
+ * from each other, so the evening reads as a later part of the day and not as
+ * the next thing to do in the morning. Still not so far that its heading
+ * leaves the first screen of an empty day. The room is the only divider,
+ * because the scripture's own ground already ends in an edge.
+ */
+const sectionSpace = {
+  opensEvening: 'pt-24 sm:pt-32',
+  follows: 'pt-12',
+} as const;
+
 const EveningSection = ({
   title,
   intro,
+  space,
   children,
 }: {
   readonly title: string;
   readonly intro: string;
+  readonly space: keyof typeof sectionSpace;
   readonly children: ReactNode;
 }) => {
   const headingId = useId();
   return (
-    <PageFrame aria-labelledby={headingId} as="section" className="pt-12">
+    <PageFrame
+      aria-labelledby={headingId}
+      as="section"
+      className={sectionSpace[space]}
+    >
       <div className={readingMeasureClass}>
         <h2
           className={[sectionHeadingClass, 'text-ink'].join(' ')}
@@ -202,7 +221,11 @@ export const EveningRatings = ({
 }) => {
   if (!begun || evening === undefined) {
     return (
-      <EveningSection intro={ratingsIntro} title="Rate the day">
+      <EveningSection
+        intro={ratingsIntro}
+        space="opensEvening"
+        title="Rate the day"
+      >
         <p className="mt-8 text-ink-muted">
           {begun
             ? unavailableMessage
@@ -218,6 +241,7 @@ export const EveningRatings = ({
           ? ratingsIntro
           : 'The day is closed. To change a rating, reopen it below the writing.'
       }
+      space="opensEvening"
       title="Rate the day"
     >
       <Ratings evening={evening} onToWriting={onToWriting} />
@@ -236,6 +260,7 @@ export const EveningClosing = ({
   return (
     <EveningSection
       intro="When the writing is done, close the day."
+      space="follows"
       title="End of the day"
     >
       <div className="mt-8">
