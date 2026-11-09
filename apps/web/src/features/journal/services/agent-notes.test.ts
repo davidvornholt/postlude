@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'bun:test';
+import Anthropic from '@anthropic-ai/sdk';
 import { Effect, Layer, Logger } from 'effect';
 import { AgentNoteGenerationError } from '../errors/journal-errors.ts';
 import {
@@ -19,9 +20,9 @@ import {
 } from './agent-note-generator.ts';
 import { AgentNotes, unexpectedFailureMessage } from './agent-notes.ts';
 import {
-  bedrockAgentNoteGenerator,
+  claudeAgentNoteGenerator,
   requestFailedMessage,
-} from './bedrock-agent-note-generator.ts';
+} from './claude-agent-note-generator.ts';
 
 const { withEvening } = journalDatabase();
 
@@ -175,14 +176,19 @@ describe('what a failed note leaves behind', () => {
       logged.push(Logger.formatSimple.log(options));
       logged.push(JSON.stringify(Logger.formatStructured.log(options)));
     });
-    const echoing = bedrockAgentNoteGenerator((request) =>
+    const echoing = claudeAgentNoteGenerator((request) =>
       Promise.reject(
-        Object.assign(
-          new Error(`Malformed input: ${JSON.stringify(request.messages)}`),
+        Anthropic.APIError.generate(
+          400,
           {
-            name: 'ValidationException',
-            $metadata: { httpStatusCode: 400, requestId: 'request-1' },
+            type: 'error',
+            error: {
+              type: 'invalid_request_error',
+              message: `Malformed input: ${JSON.stringify(request.messages)}`,
+            },
           },
+          undefined,
+          new Headers({ 'request-id': 'request-1' }),
         ),
       ),
     );
