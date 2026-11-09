@@ -82,23 +82,23 @@ export const screenTimeDetails = (
   const {
     activeMinutes: active,
     focusMinutes: focus,
-    scatteredMinutes: scattered,
+    scatteredMinutes: shortStretches,
   } = metrics;
   if (active === null) {
     return 'Screen time not measured';
   }
   const total = `${durationLabel(active)} at the screen`;
-  if (focus === null || scattered === null) {
+  if (focus === null || shortStretches === null) {
     return `${total} · focus not measured`;
   }
   const split = screenTimeSplit(metrics);
   if (split === undefined) {
-    return `${total} · ${durationLabel(focus)} focused and ${durationLabel(scattered)} scattered, more than the screen time`;
+    return `${total} · ${durationLabel(focus)} focused and ${durationLabel(shortStretches)} in short stretches, more than the screen time`;
   }
   return [
     total,
     `${durationLabel(focus)} focused`,
-    `${durationLabel(scattered)} scattered`,
+    `${durationLabel(shortStretches)} in short stretches`,
     ...(split.rest === 0 ? [] : [`${durationLabel(split.rest)} not split`]),
   ].join(' · ');
 };

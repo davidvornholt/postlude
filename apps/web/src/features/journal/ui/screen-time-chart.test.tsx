@@ -56,7 +56,7 @@ const renderDay = (changes: Partial<DayMetrics>) => {
 
 describe('ScreenTimeChart', () => {
   it('draws every bar as tall as the day’s screen time', () => {
-    // 412 minutes at the screen, 236 of them focused and 88 scattered.
+    // 412 minutes at the screen, 236 of them focused and 88 in short stretches.
     const underSplit = renderDay({});
     expect(underSplit.extentInMinutes).toBeCloseTo(412);
     expect(underSplit.parts).toEqual([

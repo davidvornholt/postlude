@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import { mountDayPage, scan } from './day-page-test-support.ts';
 
 const narrowWidth = 320;
+const shortHeight = 480;
 const addImageName = /^Add image/u;
 
 const nonSquareControls = (elements: Array<Element>) =>
@@ -170,17 +171,19 @@ test('writing tools fit a narrow screen, preserve selection, and support keyboar
 test('the writing tools scroll away once the writing ends', async ({
   page,
 }) => {
-  await page.setViewportSize({ width: narrowWidth, height: 800 });
+  // Little follows the writing now, so only a short window can scroll all of
+  // it out of view.
+  await page.setViewportSize({ width: narrowWidth, height: shortHeight });
   await mountDayPage(page, ['stored']);
   const toolbar = sectionTools(page, 'Evening');
   const evening = page.getByRole('textbox', { name: 'Evening journal' });
 
   await evening.scrollIntoViewIfNeeded();
   await expect(toolbar).toBeInViewport();
-  // Past the writing it no longer covers the evening's ratings.
+  // Past the writing it no longer covers closing the day below it.
   await page
     .getByRole('button', { name: 'Close the day' })
-    .scrollIntoViewIfNeeded();
+    .evaluate((button) => button.scrollIntoView({ block: 'start' }));
   await expect(toolbar).not.toBeInViewport();
 });
 

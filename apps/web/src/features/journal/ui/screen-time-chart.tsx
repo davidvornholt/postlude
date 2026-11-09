@@ -1,7 +1,7 @@
 /**
- * Focused and scattered are two parts of one amount rather than two things to
- * tell apart, so they are two steps of the journal's one green, the deeper step
- * for focus, with a sliver of page between them. Screen time that is neither,
+ * Focused time and short stretches are two parts of one amount rather than two
+ * things to tell apart, so they are two steps of the journal's one green, the
+ * deeper step for focus, with a sliver of page between them. Screen time that is neither,
  * or a whole day whose split is unknown, is an outline of the same green, so
  * every bar is as tall as the day's screen time. A day with no measurement is
  * a dashed outline the height of the chart: an empty slot, which a short bar
@@ -109,7 +109,7 @@ const DayBar = ({
       ? [{ className: unsplitClass, minutes: active }]
       : [
           { className: 'fill-primary', minutes: split.focus },
-          { className: 'fill-heat-q1', minutes: split.scattered },
+          { className: 'fill-heat-q1', minutes: split.shortStretches },
           { className: unsplitClass, minutes: split.rest },
         ].filter((part) => part.minutes > 0);
   return parts.map((part, position) => {
@@ -174,7 +174,7 @@ const ScreenTimeLegend = ({
     </span>
     <span className="flex items-center gap-2">
       <LegendSwatch className="bg-heat-q1" />
-      Scattered
+      Short stretches
     </span>
     <span className="flex items-center gap-2">
       <LegendSwatch className="border border-ink-faint border-dashed" />
@@ -282,9 +282,9 @@ export const ScreenTimeChart = ({
         </section>
       </ChartRow>
       <p hidden={true} id={summaryId}>
-        Time at the screen each day, split into focused and scattered time.
-        Screen time that is not split into either is drawn as an outline, and a
-        day without a measurement as a dashed outline.
+        Time at the screen each day, split into focused time and short
+        stretches. Screen time that is not split into either is drawn as an
+        outline, and a day without a measurement as a dashed outline.
       </p>
       <p hidden={true} id={instructionsId}>
         Use Left and Right to inspect days. Home and End move to the first and

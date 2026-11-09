@@ -36,7 +36,7 @@ export const sampleReportHtml = `<!doctype html>
   <dl>
     <div><dt>Active</dt><dd data-minutes="activeMinutes">…</dd></div>
     <div><dt>Focused</dt><dd data-minutes="focusMinutes">…</dd></div>
-    <div><dt>Scattered</dt><dd data-minutes="scatteredMinutes">…</dd></div>
+    <div><dt>Short stretches</dt><dd data-minutes="scatteredMinutes">…</dd></div>
     <div><dt>Away from the computer</dt><dd data-minutes="offComputerMinutes">…</dd></div>
     <div><dt>In appointments</dt><dd data-minutes="appointmentMinutes">…</dd></div>
     <div><dt>First and last activity</dt><dd data-span>…</dd></div>

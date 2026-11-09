@@ -100,7 +100,7 @@ const withEvening = (
 });
 
 const configs = {
-  /** Not yet rated, with a report waiting behind the energy rating. */
+  /** Not yet rated, with a report waiting behind energy and progress. */
   report: withEvening({
     rating: openRating,
     wrap: withReport,
@@ -192,6 +192,17 @@ export const releaseEveningCalls = (
       name,
     );
   }, call);
+
+/** See `postludeReloadDay` in `day-page-fixture-contract.ts`. */
+export const reloadDay = (
+  page: playwright.Page,
+  evening: 'read' | 'unavailable',
+): Promise<void> =>
+  page.evaluate(
+    (read) =>
+      (globalThis as unknown as DayPageFixtureWindow).postludeReloadDay(read),
+    evening,
+  );
 
 /** Leaves the day and comes back to it, as following a link away and back does. */
 export const revisitDay = (page: playwright.Page): Promise<void> =>

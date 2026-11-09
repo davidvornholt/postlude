@@ -66,7 +66,7 @@ const metricColumns: ReadonlyArray<{
         : durationLabel(metrics.focusMinutes),
   },
   {
-    name: 'Scattered',
+    name: 'Short stretches',
     value: (metrics) =>
       metrics.scatteredMinutes === null
         ? null

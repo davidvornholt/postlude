@@ -16,6 +16,14 @@
  * saved, because the note is written from the stored entry: closing a moment
  * after the last keystroke would otherwise write it from the text as it was a
  * few seconds earlier.
+ *
+ * The ratings sit above the writing and the closing below it, so one state
+ * serves both, held by the page rather than by either part. The page keeps it
+ * while the evening comes and goes, because the router can hand over a day
+ * read again whose evening could not be read this time, or now could be. The
+ * writing between the two parts must never be built anew for that, so the
+ * state starts over from the evening as read instead, as if the parts had
+ * just appeared. A failure is shown beside the part whose call failed.
  */
 
 import { useEffect, useState } from 'react';
@@ -33,6 +41,11 @@ type RatingValues = Pick<DayRating, 'energy' | 'progress' | 'repeatDay'>;
 
 export type EveningBusy = 'closing' | 'reopening' | 'regenerating';
 
+export type EveningFailure = {
+  readonly message: string;
+  readonly part: 'ratings' | 'closing';
+};
+
 export type Evening = {
   /** The stored ratings, with any choice still being saved shown over them. */
   readonly rating: DayRating;
@@ -40,7 +53,7 @@ export type Evening = {
   /** The note as the server reported it, stale once the entry moved on. */
   readonly agentNote: AgentNoteView;
   readonly busy: EveningBusy | undefined;
-  readonly failure: string | undefined;
+  readonly failure: EveningFailure | undefined;
   readonly rate: (change: Partial<RatingValues>) => void;
   readonly close: () => void;
   readonly reopen: () => void;
@@ -112,7 +125,7 @@ const currentNoteOf = (
     : note;
 
 const usePendingNote = (
-  note: AgentNoteView,
+  note: AgentNoteView | undefined,
   date: string,
   readEvening: EveningActions['readEvening'],
   update: (note: AgentNoteView) => void,
@@ -121,7 +134,7 @@ const usePendingNote = (
   // request by its time. A new request ends the old poll, and an answer still
   // on its way to that poll is dropped.
   const request =
-    note.status === 'pending' ? (note.requestedAt?.getTime() ?? 0) : undefined;
+    note?.status === 'pending' ? (note.requestedAt?.getTime() ?? 0) : undefined;
   useEffect(() => {
     if (request === undefined) {
       return;
@@ -163,21 +176,38 @@ const usePendingNote = (
   }, [request, date, readEvening, update]);
 };
 
+/**
+ * The evening of the day at `date`, or undefined while there is none to show:
+ * before the day has begun, or when it couldn't be read with the day.
+ */
 export const useEvening = (
-  initial: EveningView,
+  date: string,
+  initial: EveningView | undefined,
   actions: EveningActions,
   entryRevision: number,
-): Evening => {
-  const { date } = initial;
-  const [stored, setStored] = useState(initial.rating);
+): Evening | undefined => {
+  const [stored, setStored] = useState(initial?.rating);
   const [overlay, setOverlay] = useState<Partial<RatingValues>>({});
-  const [agentNote, setAgentNote] = useState(initial.agentNote);
+  const [agentNote, setAgentNote] = useState(initial?.agentNote);
   const [busy, setBusy] = useState<EveningBusy | undefined>();
-  const [failure, setFailure] = useState<string | undefined>();
+  const [failure, setFailure] = useState<EveningFailure | undefined>();
+  const available = initial !== undefined;
+  const [shown, setShown] = useState(available);
   const { readEvening } = actions;
 
+  if (shown !== available) {
+    setShown(available);
+    setStored(initial?.rating);
+    setAgentNote(initial?.agentNote);
+    setOverlay({});
+    setFailure(undefined);
+  }
+
+  const fail = (part: EveningFailure['part'], error: unknown): void =>
+    setFailure({ message: eveningFailureMessageOf(error), part });
+
   useEffect(() => {
-    if (!calledDays.has(date)) {
+    if (!(available && calledDays.has(date))) {
       return;
     }
     enqueue(date, async () => {
@@ -186,12 +216,23 @@ export const useEvening = (
         setStored(evening.rating);
         setAgentNote(evening.agentNote);
       } catch (error) {
-        setFailure(eveningFailureMessageOf(error));
+        setFailure({
+          message: eveningFailureMessageOf(error),
+          part: 'ratings',
+        });
       }
     });
-  }, [date, readEvening]);
+  }, [available, date, readEvening]);
 
   usePendingNote(agentNote, date, readEvening, setAgentNote);
+
+  if (
+    initial === undefined ||
+    stored === undefined ||
+    agentNote === undefined
+  ) {
+    return;
+  }
 
   const rate = (change: Partial<RatingValues>): void => {
     setFailure(undefined);
@@ -200,7 +241,7 @@ export const useEvening = (
       try {
         setStored(await actions.saveRating({ date, ...change }));
       } catch (error) {
-        setFailure(eveningFailureMessageOf(error));
+        fail('ratings', error);
       } finally {
         setOverlay((current) => withoutSettled(current, change));
       }
@@ -221,13 +262,13 @@ export const useEvening = (
           try {
             await settleBrowserAutosaves();
           } catch {
-            setFailure(unsavedWritingMessage);
+            setFailure({ message: unsavedWritingMessage, part: 'closing' });
             return;
           }
         }
         await run();
       } catch (error) {
-        setFailure(eveningFailureMessageOf(error));
+        fail('closing', error);
       } finally {
         setBusy(undefined);
       }

@@ -76,14 +76,14 @@ const insights = await renderInRouter(
 );
 
 /*
- * Seven frames: the date at the top; the morning's bar and its writing inside
- * the deep register's edge-to-edge ground; the evening's bar and its writing;
- * the end of the day; and the same date in earlier years. The register sets
- * its own rather than sharing the page's, which is the whole reason the shell
- * sets none — a ground that has to reach the viewport edges cannot do it from
- * inside a frame.
+ * Eight frames: the date at the top; the morning's bar and its writing inside
+ * the deep register's edge-to-edge ground; the day's ratings; the evening's
+ * bar and its writing; the end of the day; and the same date in earlier years.
+ * The register sets its own rather than sharing the page's, which is the whole
+ * reason the shell sets none — a ground that has to reach the viewport edges
+ * cannot do it from inside a frame.
  */
-const writingPageFrames = 7;
+const writingPageFrames = 8;
 
 it('wraps the writing page in the shared frame', () => {
   expect(countRecipe(today, expectedPageFrame)).toBe(writingPageFrames);
