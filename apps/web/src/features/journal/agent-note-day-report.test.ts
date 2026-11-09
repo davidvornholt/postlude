@@ -7,7 +7,11 @@
 import { describe, expect, it } from 'bun:test';
 
 import { agentNotePromptOf, dayReportLimit } from './agent-note-prompt.ts';
-import { agentNoteInput } from './testing/agent-note-input.ts';
+import {
+  agentNoteInput,
+  dayMetricsFor,
+  noteDay,
+} from './testing/agent-note-input.ts';
 
 const dataOpening = /^<day_data>\n/u;
 const dataClosing = /\n<\/day_data>$/u;
@@ -50,6 +54,13 @@ describe('the day report as the model is given it', () => {
     expect(data.dayReportCut).toBe(true);
   });
 
+  it('hides an address the cut splits', () => {
+    const dayReport = `${'x'.repeat(dayReportLimit - 5)} kim.doe@mail.example.test`;
+    const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
+    expect(dataOf(prompt).dayReport).toEndWith(' [add');
+    expect(everythingSent(prompt)).not.toContain('kim');
+  });
+
   it('cannot close the data tag', () => {
     const prompt = agentNotePromptOf(
       agentNoteInput({
@@ -68,6 +79,11 @@ describe('the day report as the model is given it', () => {
     ['www.secret.test/?token=SECRET-TOKEN', '[link]'],
     ['//secret.test/reset?token=SECRET-TOKEN', '[link]'],
     ['secret.test/reset?token=SECRET-TOKEN', '[link]'],
+    ['example.test:3000/reset?token=SECRET', '[link]'],
+    ['192.168.1.1:3000/reset?token=SECRET', '[link]'],
+    ['192.168.1.1/reset?token=SECRET', '[link]'],
+    ['localhost:3000/reset?token=SECRET', '[link]'],
+    ['//localhost:3000/reset?token=SECRET', '[link]'],
     ['[the reset page](/reset?token=SECRET-TOKEN)', '[the reset page]'],
     [
       '[the reset page](/reset?token=SECRET "Reset")',
@@ -86,10 +102,40 @@ describe('the day report as the model is given it', () => {
     expect(everythingSent(prompt)).not.toMatch(privatePart);
   });
 
-  it('keeps file names, paths and ratios', () => {
+  it('has no email address, in the report or the metrics', () => {
+    const address = 'kim.doe+wrap@mail.example.test';
+    const prompt = agentNotePromptOf(
+      agentNoteInput({
+        wrap: {
+          ...agentNoteInput().wrap,
+          dayMetrics: dayMetricsFor(noteDay, 2, {
+            sentMails: [{ mailbox: address, count: 2 }],
+          }),
+        },
+        dayReport: `09:00–10:00 Wrote to ${address} twice.`,
+      }),
+    );
+    expect(dataOf(prompt).dayReport).toBe(
+      '09:00–10:00 Wrote to [address] twice.',
+    );
+    expect(everythingSent(prompt)).not.toContain('kim.doe');
+  });
+
+  it('keeps file names, paths, ratios, times and package versions', () => {
     const dayReport =
-      '09:00–10:00 Edited apps/web/src/main.ts, apps/web/src/widget.test/helpers.ts, /etc/conf.d/server and vite.config.ts; rated 3.5/5.';
+      '09:00–10:00 Edited apps/web/src/main.ts, apps/web/src/widget.test/helpers.ts, /etc/conf.d/server and vite.config.ts; rated 3.5/5; moved 12:30/13:00; pinned react@18.3.1.';
     const prompt = agentNotePromptOf(agentNoteInput({ dayReport }));
     expect(dataOf(prompt).dayReport).toBe(dayReport);
+  });
+
+  it.each([
+    ['repeated dashes', 'a-'.repeat(500_000)],
+    ['unclosed link targets', '[x](< '.repeat(175_000)],
+  ])('reads a report of a mebibyte of %s quickly', (_, dayReport) => {
+    const started = performance.now();
+    const data = dataOf(agentNotePromptOf(agentNoteInput({ dayReport })));
+    const quickly = 500;
+    expect(performance.now() - started).toBeLessThan(quickly);
+    expect(data.dayReportCut).toBe(true);
   });
 });

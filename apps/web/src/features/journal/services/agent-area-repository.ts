@@ -71,10 +71,6 @@ const readEarliestRatedOrMeasured =
       Effect.mapError(journalReadError),
     );
 
-/**
- * The text the database derives from the day's report, for the agent note.
- * `postlude_agent` can't read it, and the CLI never asks.
- */
 const readReportText = (sql: SqlClient.SqlClient) => (date: string) =>
   sql`select report_text from agent_area where entry_date = ${date}`.pipe(
     Effect.flatMap(decodeReportTextRows),

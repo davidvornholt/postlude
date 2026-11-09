@@ -245,31 +245,46 @@ const journalTextOf = (markdown: string) => {
  */
 const linkTarget = /\]\((?:<[^>\n]*>\)?|\S*)/gu;
 /**
- * An address without a scheme: `//host…`, or `host.tld/…` that doesn't
- * continue a path, so `/etc/conf.d/` stays.
+ * A domain name or an IPv4 address, with or without a port, or a bare name
+ * with one, such as `localhost:3000`.
  */
-const schemelessAddress =
-  /\/\/[\da-z-]+(?:\.[\da-z-]+)+\S*|(?<![\w./-])[\da-z-]+(?:\.[\da-z-]+)*\.[a-z][\da-z-]*\/\S*/giu;
+const host = String.raw`(?:[\da-z-]+(?:\.[\da-z-]+)*\.[a-z][\da-z-]*|\d{1,3}(?:\.\d{1,3}){3})(?::\d+)?|[a-z][\da-z-]*:\d+`;
+/**
+ * An address without a scheme: `//host…`, or `host/…` that doesn't continue a
+ * path, so `/etc/conf.d/` stays.
+ */
+const schemelessAddress = new RegExp(
+  String.raw`\/\/(?:${host})\S*|(?<![\w./-])(?:${host})\/\S*`,
+  'giu',
+);
+const emailAddress =
+  /(?<![\w%+.-])[\w%+.-]+@[\da-z-]+(?:\.[\da-z-]+)*\.[a-z][\da-z-]*/giu;
+const addressReadAhead = 2000;
 
 /**
- * /wrap's report as the model reads it. Link targets can carry tokens, and a
- * report built from window titles writes them in more forms than the journal
- * does.
+ * /wrap's report as the model reads it. A report built from window titles
+ * writes link targets, which can carry tokens, in more forms than the journal
+ * does, and it can name the people David wrote to by their email addresses.
+ * The patterns that hide them slow down sharply on long text, so they read the
+ * report only a little past the limit: far enough to hide an address the cut
+ * splits.
  */
 const dayReportOf = (dayReport: string | null) => {
-  const text =
-    dayReport
-      ?.replace(linkTarget, ']')
-      .replace(bareAddress, '[link]')
-      .replace(schemelessAddress, '[link]')
-      .replace(storedImageAddress, '[image]')
-      .trim() ?? '';
+  const text = dayReport?.trim() ?? '';
   if (text === '') {
     return { dayReport: null, dayReportCut: false };
   }
-  return text.length > dayReportLimit
-    ? { dayReport: text.slice(0, dayReportLimit), dayReportCut: true }
-    : { dayReport: text, dayReportCut: false };
+  const read = text.slice(0, dayReportLimit + addressReadAhead);
+  const shown = read
+    .replace(linkTarget, ']')
+    .replace(bareAddress, '[link]')
+    .replace(schemelessAddress, '[link]')
+    .replace(emailAddress, '[address]')
+    .replace(storedImageAddress, '[image]');
+  return {
+    dayReport: shown.slice(0, dayReportLimit),
+    dayReportCut: read.length < text.length || shown.length > dayReportLimit,
+  };
 };
 
 const systemPrompt = `You write a note under David's evening journal entry in Postlude, his private journal.
