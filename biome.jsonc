@@ -44,6 +44,17 @@
       "linter": { "rules": { "correctness": { "noNodejsModules": "off" } } }
     },
     {
+      // The Claude API's request and response fields are protocol-owned
+      // snake_case names.
+      "includes": [
+        "apps/web/src/features/journal/services/claude-agent-note-generator.ts",
+        "apps/web/src/features/journal/services/claude-agent-note-generator.test.ts",
+        "apps/web/src/features/journal/services/claude-create-message.test.ts",
+        "apps/web/src/features/journal/testing/claude-message.ts"
+      ],
+      "linter": { "rules": { "style": { "useNamingConvention": "off" } } }
+    },
+    {
       // AWS's S3 command properties are protocol-owned PascalCase names.
       "includes": ["apps/web/src/features/journal/services/journal-images.ts"],
       "linter": { "rules": { "style": { "useNamingConvention": "off" } } }
