@@ -87,6 +87,7 @@ const makeAgentNotes = (launch: Launch) =>
             .pipe(Effect.map((entry) => entry ?? emptyJournalEntry(date))),
           rating: ratings.read(date),
           wrap: areas.readWrap(date),
+          dayReport: areas.readReportText(date),
           history: areas.listDays(
             shiftJournalDate(date, -agentNoteHistoryDays),
             shiftJournalDate(date, -1),

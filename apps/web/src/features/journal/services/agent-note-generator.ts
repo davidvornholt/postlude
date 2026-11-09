@@ -46,6 +46,11 @@ export type AgentNoteInput = {
   readonly rating: DayRating;
   /** The /wrap metrics and report; all null if /wrap hasn't run for the day. */
   readonly wrap: WrapArea;
+  /**
+   * The text of the day's /wrap report, which the database derives from its
+   * HTML; null for a day /wrap never ran on.
+   */
+  readonly dayReport: string | null;
   /** The days before, oldest first, without their prose. */
   readonly history: ReadonlyArray<DayOverview>;
 };

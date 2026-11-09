@@ -39,6 +39,12 @@ const decodeOverviewRows = Schema.decodeUnknownEffect(
 );
 const RequestRow = Schema.Struct({ request: Schema.String });
 const decodeRequestRows = Schema.decodeUnknownEffect(Schema.Array(RequestRow));
+const ReportTextRow = Schema.Struct({
+  reportText: Schema.NullOr(Schema.String),
+}).pipe(Schema.encodeKeys({ reportText: 'report_text' }));
+const decodeReportTextRows = Schema.decodeUnknownEffect(
+  Schema.Array(ReportTextRow),
+);
 
 export const metricsDayMismatchMessage =
   'dayMetrics.day must be the day the report is stored for.';
@@ -64,6 +70,17 @@ const readEarliestRatedOrMeasured =
       Effect.map((rows) => rows[0]?.date ?? undefined),
       Effect.mapError(journalReadError),
     );
+
+/**
+ * The text the database derives from the day's report, for the agent note.
+ * `postlude_agent` can't read it, and the CLI never asks.
+ */
+const readReportText = (sql: SqlClient.SqlClient) => (date: string) =>
+  sql`select report_text from agent_area where entry_date = ${date}`.pipe(
+    Effect.flatMap(decodeReportTextRows),
+    Effect.map((rows) => rows[0]?.reportText ?? null),
+    Effect.mapError(journalReadError),
+  );
 
 /**
  * Identifies one request for a note: the time it was made, as the database
@@ -277,6 +294,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
 
       return {
         readWrap,
+        readReportText: readReportText(sql),
         putWrap,
         earliestRatedOrMeasured: readEarliestRatedOrMeasured(sql),
         listDays,
