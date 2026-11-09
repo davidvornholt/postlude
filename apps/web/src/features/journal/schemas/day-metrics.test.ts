@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'bun:test';
 import { Schema } from 'effect';
 
-import { reportHtmlByteLimit, WrapPutSchema } from './agent-area.ts';
+import {
+  dayLogLengthLimit,
+  reportHtmlByteLimit,
+  WrapPutSchema,
+} from './agent-area.ts';
 import { type DayMetrics, DayMetricsSchema } from './day-metrics.ts';
 
 const metrics: DayMetrics = {
@@ -125,6 +129,7 @@ describe('agent area input', () => {
     metricsVersion: 1,
     reportHtml: '<!doctype html><p>The day.</p>',
     reportModel: 'gpt-6-astra',
+    dayLog: '09:10–11:45 Wrote the plan.\n\n14:00–15:30 Answered mail.',
   };
 
   it('accepts a report with its metrics', () => {
@@ -149,5 +154,53 @@ describe('agent area input', () => {
   it('refuses the columns only Postlude writes', () => {
     expect(putDecodes({ ...put, reportGeneratedAt: '2026-10-30' })).toBe(false);
     expect(putDecodes({ ...put, agentNote: 'Hello' })).toBe(false);
+  });
+
+  it('needs a day log', () => {
+    const { dayLog: _, ...withoutLog } = put;
+    expect(putDecodes(withoutLog)).toBe(false);
+    expect(putDecodes({ ...put, dayLog: null })).toBe(false);
+  });
+
+  it('refuses an empty or blank day log', () => {
+    expect(putDecodes({ ...put, dayLog: '' })).toBe(false);
+    expect(putDecodes({ ...put, dayLog: ' \n\n\t ' })).toBe(false);
+  });
+
+  it('takes a day log up to its length limit, counted as JavaScript counts', () => {
+    expect(putDecodes({ ...put, dayLog: 'x'.repeat(dayLogLengthLimit) })).toBe(
+      true,
+    );
+    expect(
+      putDecodes({ ...put, dayLog: 'x'.repeat(dayLogLengthLimit + 1) }),
+    ).toBe(false);
+    // An emoji is two UTF-16 code units.
+    expect(
+      putDecodes({ ...put, dayLog: '🙂'.repeat(dayLogLengthLimit / 2) }),
+    ).toBe(true);
+    expect(
+      putDecodes({ ...put, dayLog: `x${'🙂'.repeat(dayLogLengthLimit / 2)}` }),
+    ).toBe(false);
+  });
+
+  it('takes tabs, line feeds and markup as plain text', () => {
+    expect(
+      putDecodes({ ...put, dayLog: '09:10–11:45\tRead <b>the</b> & docs.' }),
+    ).toBe(true);
+  });
+
+  it('refuses other control characters', () => {
+    for (const control of [
+      '\r',
+      '\u0000',
+      '\u000b',
+      '\u001b',
+      '\u007f',
+      '\u0085',
+    ]) {
+      expect(putDecodes({ ...put, dayLog: `09:10–11:45 A${control}B` })).toBe(
+        false,
+      );
+    }
   });
 });

@@ -30,7 +30,7 @@ export const usage = [
   'days changed --since <instant>   (an ISO 8601 time with a zone, such as 2026-11-08T03:30:00Z)',
   `search <query> [--limit <1-${searchLimitMax}>]`,
   'agent-area get <date>',
-  'agent-area put <date>   (reads {dayMetrics, metricsVersion, reportHtml, reportModel} as JSON on stdin)',
+  'agent-area put <date>   (reads {dayMetrics, metricsVersion, reportHtml, reportModel, dayLog} as JSON on stdin)',
 ] as const;
 
 /** The command line could not be read as a command; the message says why. */

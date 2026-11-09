@@ -159,6 +159,47 @@ it("sets the found writing in the journal's language and its labels and passage 
   expect(html.match(languageAttribute)?.length).toBe(one);
 });
 
+/*
+ * The day log is /wrap's account of the day. Its words must never pass for
+ * David's: it says whose they are, comes after his, and is not set in his
+ * language.
+ */
+it("marks a day log's words as the agent's", async () => {
+  const evening = hit(
+    '2026-03-01',
+    'The rain fell.',
+    searchTerms('rain kestrel'),
+  );
+  const html = await render(
+    answered('rain kestrel', [
+      {
+        ...evening,
+        sources: [
+          ...evening.sources,
+          {
+            kind: 'day-log',
+            excerpts: [
+              [
+                { at: 0, match: false, text: '09:10–11:45 Fixed the ' },
+                { at: 22, match: true, text: 'kestrel' },
+                { at: 29, match: false, text: ' build.' },
+              ],
+            ],
+          },
+        ],
+      },
+    ]),
+  );
+  const text = plainText(html);
+  expect(text).toContain(
+    'EveningThe rain fell.From the day report09:10–11:45 Fixed the kestrel build.',
+  );
+  expect(html.match(languageAttribute)?.length).toBe(one);
+  const [, log = ''] = html.split('From the day report');
+  expect(log).toContain('text-ink-muted');
+  expect(log).not.toContain(`lang="${journalLanguage}"`);
+});
+
 it('counts one day as a day', async () => {
   const html = await render(
     answered('rain', [hit('2026-03-01', 'The rain fell.', rain)]),

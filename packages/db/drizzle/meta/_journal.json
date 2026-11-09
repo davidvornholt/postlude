@@ -92,6 +92,20 @@
       "when": 1794065086808,
       "tag": "0012_scripture_topic_symbols",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794243062930,
+      "tag": "0013_agent_day_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794243068040,
+      "tag": "0014_agent_day_log_grants",
+      "breakpoints": true
     }
   ]
 }

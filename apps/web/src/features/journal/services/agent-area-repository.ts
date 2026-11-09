@@ -3,9 +3,10 @@
  *
  * The /wrap columns are read and written here for both the CLI and the page.
  * Every query the CLI reaches stays inside what the `postlude_agent` role was
- * granted: the /wrap columns of `agent_area`, and reads of `entry` and
- * `day_rating`. The agent note's columns are read and written only by the
- * server's own role, through the methods below whose names say "note".
+ * granted: the /wrap columns of `agent_area` and the day log's search
+ * evidence, and reads of `entry` and `day_rating`. The agent note's columns
+ * are read and written only by the server's own role, through the methods
+ * below whose names say "note".
  */
 
 import { Context, Effect, Layer, Schema } from 'effect';
@@ -24,6 +25,9 @@ import {
 } from '../schemas/agent-area.ts';
 import { DayOverviewFromRow, dayRangeLimit } from '../schemas/day-overview.ts';
 import { EarliestDateFromRow } from '../schemas/entry.ts';
+import { searchTokenText } from '../search-query.ts';
+import { dayLogSearchEvidence } from '../search-stored-evidence.ts';
+import { replaceDayLogEvidence } from './search-evidence-write.ts';
 
 const decodeWrapRows = Schema.decodeUnknownEffect(
   Schema.Array(WrapAreaFromRow),
@@ -39,6 +43,10 @@ const decodeOverviewRows = Schema.decodeUnknownEffect(
 );
 const RequestRow = Schema.Struct({ request: Schema.String });
 const decodeRequestRows = Schema.decodeUnknownEffect(Schema.Array(RequestRow));
+const DayLogRow = Schema.Struct({ dayLog: Schema.NullOr(Schema.String) }).pipe(
+  Schema.encodeKeys({ dayLog: 'day_log' }),
+);
+const decodeDayLogRows = Schema.decodeUnknownEffect(Schema.Array(DayLogRow));
 
 export const metricsDayMismatchMessage =
   'dayMetrics.day must be the day the report is stored for.';
@@ -63,6 +71,70 @@ const readEarliestRatedOrMeasured =
       Effect.flatMap(decodeEarliestDates),
       Effect.map((rows) => rows[0]?.date ?? undefined),
       Effect.mapError(journalReadError),
+    );
+
+/**
+ * The /wrap columns with the day log, for `agent-area get` alone. The
+ * page and the agent note read `readWrap`, which leaves the log out.
+ */
+const readWrapWithDayLog = (sql: SqlClient.SqlClient) => (date: string) =>
+  sql`
+      select entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at, day_log
+      from agent_area
+      where entry_date = ${date}
+    `.pipe(
+    Effect.flatMap((rows) =>
+      Effect.all([decodeWrapRows(rows), decodeDayLogRows(rows)]),
+    ),
+    Effect.map(([wraps, logs]) => ({
+      ...(wraps[0] ?? emptyWrapArea(date)),
+      dayLog: logs[0]?.dayLog ?? null,
+    })),
+    Effect.mapError(journalReadError),
+  );
+
+const storeWrap =
+  (sql: SqlClient.SqlClient) => (date: string, input: WrapPut) =>
+    Effect.gen(function* () {
+      const rows = yield* sql`
+        insert into agent_area (
+          entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at,
+          day_log, day_log_search_token_text
+        )
+        values (
+          ${date},
+          ${JSON.stringify(input.dayMetrics)}::jsonb,
+          ${input.metricsVersion},
+          ${input.reportHtml},
+          ${input.reportModel},
+          now(),
+          ${input.dayLog},
+          ${searchTokenText(input.dayLog)}
+        )
+        on conflict (entry_date) do update set
+          day_metrics = excluded.day_metrics,
+          metrics_version = excluded.metrics_version,
+          report_html = excluded.report_html,
+          report_model = excluded.report_model,
+          report_generated_at = excluded.report_generated_at,
+          day_log = excluded.day_log,
+          day_log_search_token_text = excluded.day_log_search_token_text
+        returning entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at
+      `.pipe(Effect.flatMap(decodeWrapRows));
+      yield* replaceDayLogEvidence(
+        sql,
+        date,
+        dayLogSearchEvidence(input.dayLog),
+      );
+      return rows[0];
+    }).pipe(
+      sql.withTransaction,
+      Effect.mapError(journalWriteError),
+      Effect.flatMap((stored) =>
+        stored === undefined
+          ? Effect.fail(journalWriteError('The agent area returned no row.'))
+          : Effect.succeed(stored),
+      ),
     );
 
 /**
@@ -98,8 +170,9 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
         );
 
       /**
-       * Replaces the /wrap columns of a day together, and nothing else in its
-       * row. The report's time is the database clock's, not the caller's.
+       * Replaces the /wrap columns of a day together, with the day log's
+       * search index, and nothing else in its row. The report's time is the
+       * database clock's, not the caller's.
        */
       const putWrap = (date: string, input: WrapPut) =>
         Effect.gen(function* () {
@@ -108,33 +181,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
               message: metricsDayMismatchMessage,
             });
           }
-          const rows = yield* sql`
-            insert into agent_area (
-              entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at
-            )
-            values (
-              ${date},
-              ${JSON.stringify(input.dayMetrics)}::jsonb,
-              ${input.metricsVersion},
-              ${input.reportHtml},
-              ${input.reportModel},
-              now()
-            )
-            on conflict (entry_date) do update set
-              day_metrics = excluded.day_metrics,
-              metrics_version = excluded.metrics_version,
-              report_html = excluded.report_html,
-              report_model = excluded.report_model,
-              report_generated_at = excluded.report_generated_at
-            returning entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at
-          `.pipe(
-            Effect.flatMap(decodeWrapRows),
-            Effect.mapError(journalWriteError),
-          );
-          const [stored] = rows;
-          return stored === undefined
-            ? yield* journalWriteError('The agent area returned no row.')
-            : stored;
+          return yield* storeWrap(sql)(date, input);
         });
 
       /** Every day from `from` through `to`, including days with nothing stored. */
@@ -277,6 +324,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
 
       return {
         readWrap,
+        readWrapWithDayLog: readWrapWithDayLog(sql),
         putWrap,
         earliestRatedOrMeasured: readEarliestRatedOrMeasured(sql),
         listDays,

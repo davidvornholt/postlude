@@ -2,12 +2,16 @@ import { Context, Effect, Layer, Schema } from 'effect';
 import { SqlClient } from 'effect/sql';
 import { journalReadError } from '../errors/journal-errors.ts';
 import { JournalDateSchema } from '../schemas/entry.ts';
-import { searchTsQuery } from '../search-query.ts';
 
 /** Every hit returns at most 1,200 UTF-8 bytes, below 64 KiB for 50 hits. */
 export const searchResultByteBudget = 1200;
 export const SearchEvidence = Schema.Struct({
-  kind: Schema.Literals(['evening', 'scripture-notes', 'passage-reference']),
+  kind: Schema.Literals([
+    'evening',
+    'scripture-notes',
+    'passage-reference',
+    'day-log',
+  ]),
   textIndex: Schema.Number,
   termIndex: Schema.Number,
   matchStart: Schema.Number,
@@ -24,6 +28,24 @@ export type SearchMatch = Schema.Schema.Type<typeof SearchRow>;
 // decoding rather than returning blank evidence or exceeding the text budget.
 const decodeRows = Schema.decodeUnknownEffect(Schema.Array(SearchRow));
 
+/**
+ * Where a search looks. David's own writing always; the day log /wrap stored
+ * only when asked, since it is the agent's text and not his.
+ */
+export type SearchScope = { readonly dayLog: boolean };
+
+/** David's writing alone: what the CLI's search returns. */
+export const writingOnly: SearchScope = { dayLog: false };
+
+/**
+ * Finds the days that hold every term, each matched as a prefix. A term may
+ * match David's writing or, when the scope includes it, the day log, so one
+ * day can hold a word in each. Each term is looked up through its own index
+ * and the days that hold all of them are kept.
+ *
+ * Without the day log the query names none of its tables, so the CLI's role,
+ * which may read only the log's text and evidence, never needs more.
+ */
 export class EntrySearch extends Context.Service<EntrySearch>()(
   'journal/EntrySearch',
   {
@@ -32,32 +54,61 @@ export class EntrySearch extends Context.Service<EntrySearch>()(
       const search = (
         terms: ReadonlyArray<string>,
         limit: number,
+        scope: SearchScope = writingOnly,
       ): Effect.Effect<
         ReadonlyArray<SearchMatch>,
         ReturnType<typeof journalReadError>
-      > =>
-        sql`
-        with matched as materialized (
-          select entry_date, journal_word_count + scripture_word_count as words
-          from entry where search_vector @@ ${searchTsQuery(terms)}::tsquery
-          order by entry_date desc limit ${limit}
-        ), requested as (
+      > => {
+        const logDays = scope.dayLog
+          ? sql`
+            union
+            select entry_date from agent_area
+            where day_log_search_vector @@ (requested.term || ':*')::tsquery`
+          : sql``;
+        const logSource = scope.dayLog ? sql`, ('day-log')` : sql``;
+        const logEvidence = scope.dayLog
+          ? sql`
+            union all
+            (select 'day-log', evidence.excerpt, evidence.match_start, evidence.match_length, evidence.anchor_length
+            from day_log_search_evidence as evidence
+            where source.kind = 'day-log' and evidence.entry_date = matched.entry_date
+              and evidence.token collate "C" >= requested.term collate "C"
+              and evidence.token collate "C" < (requested.term || chr(1114111)) collate "C"
+            order by evidence.position limit 1)`
+          : sql``;
+        return sql`
+        with requested as (
           select value as term, (ordinality - 1)::integer as term_index
           from jsonb_array_elements_text(${JSON.stringify(terms)}::jsonb) with ordinality
+        ), found_days as (
+          select day.entry_date
+          from requested cross join lateral (
+            select entry_date from entry
+            where search_vector @@ (requested.term || ':*')::tsquery
+            ${logDays}
+          ) as day
+          group by day.entry_date
+          having count(*) = (select count(*) from requested)
+        ), matched as materialized (
+          select found_days.entry_date,
+            coalesce(entry.journal_word_count + entry.scripture_word_count, 0) as words
+          from found_days left join entry on entry.entry_date = found_days.entry_date
+          order by found_days.entry_date desc limit ${limit}
         ), windows as (
           select matched.entry_date, matched.words, requested.term_index, found.*,
             count(*) over (partition by matched.entry_date) as window_count,
             sum(octet_length(substring(found.excerpt from found.match_start + 1 for found.anchor_length)))
               over (partition by matched.entry_date) as minimum_bytes
           from matched cross join requested
-          cross join (values ('evening'), ('scripture-notes'), ('passage-reference')) as source(kind)
+          cross join (values ('evening'), ('scripture-notes'), ('passage-reference')${logSource}) as source(kind)
           cross join lateral (
-            select evidence.kind, evidence.excerpt, evidence.match_start, evidence.match_length, evidence.anchor_length
+            (select evidence.kind, evidence.excerpt, evidence.match_start, evidence.match_length, evidence.anchor_length
             from entry_search_evidence as evidence
             where evidence.entry_date = matched.entry_date and evidence.kind = source.kind
               and evidence.token collate "C" >= requested.term collate "C"
               and evidence.token collate "C" < (requested.term || chr(1114111)) collate "C"
-            order by evidence.position limit 1
+            order by evidence.position limit 1)
+            ${logEvidence}
           ) as found
         ), budgeted as (
           select *, case when minimum_bytes <= ${searchResultByteBudget}
@@ -89,6 +140,7 @@ export class EntrySearch extends Context.Service<EntrySearch>()(
         group by bounded.entry_date, words, text_rows.texts, text_rows.returned_bytes
         order by bounded.entry_date desc
       `.pipe(Effect.flatMap(decodeRows), Effect.mapError(journalReadError));
+      };
       return { search } as const;
     }),
   },

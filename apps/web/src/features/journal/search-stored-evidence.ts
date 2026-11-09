@@ -5,6 +5,8 @@ import { searchSourceTokens } from './search-source-scan.ts';
 const whitespaceRuns = /\s+/gu;
 const horizontalWhitespaceRuns = /[^\S\n]+/gu;
 const lineBreakRuns = /\n+/gu;
+/** A blank line, however much other whitespace surrounds it. */
+const paragraphBreaks = /\n[^\S\n]*\n\s*/gu;
 const leadingContext = 60;
 const excerptCharacters = 240;
 const maximumCodeUnitsPerCharacter = 2;
@@ -12,7 +14,11 @@ const lowSurrogateStart = 0xdc_00;
 const lowSurrogateEnd = 0xdf_ff;
 
 export type StoredSearchEvidence = {
-  readonly kind: 'evening' | 'scripture-notes' | 'passage-reference';
+  readonly kind:
+    | 'evening'
+    | 'scripture-notes'
+    | 'passage-reference'
+    | 'day-log';
   readonly token: string;
   readonly position: number;
   readonly excerpt: string;
@@ -20,6 +26,10 @@ export type StoredSearchEvidence = {
   readonly matchLength: number;
   readonly anchorLength: number;
 };
+
+/** Whether a window stays on the line its match is on. */
+const keepsLines = (kind: StoredSearchEvidence['kind']) =>
+  kind === 'passage-reference' || kind === 'day-log';
 
 const evidenceWindow = (
   text: string,
@@ -55,7 +65,7 @@ const evidenceWindow = (
       anchorLength: 1,
     };
   }
-  const hardLines = kind === 'passage-reference';
+  const hardLines = keepsLines(kind);
   const lineStart = hardLines ? text.lastIndexOf('\n', found.start) + 1 : 0;
   const nextLine = hardLines ? text.indexOf('\n', found.start) : -1;
   const lineEnd = nextLine === -1 ? text.length : nextLine;
@@ -84,18 +94,35 @@ const evidenceWindow = (
   };
 };
 
+/**
+ * The text whose windows are stored. A passage reference keeps one rendering
+ * per line, and a day log one paragraph per line, so a window never runs into
+ * the next one: a day log's paragraph may begin with its own time range.
+ */
+const evidenceText = (raw: string, kind: StoredSearchEvidence['kind']) => {
+  const normalized = normalizeSearchText(raw);
+  switch (kind) {
+    case 'passage-reference':
+      return normalized
+        .replace(horizontalWhitespaceRuns, ' ')
+        .replace(lineBreakRuns, '\n')
+        .trim();
+    case 'day-log':
+      return normalized
+        .split(paragraphBreaks)
+        .map((paragraph) => paragraph.replace(whitespaceRuns, ' ').trim())
+        .filter((paragraph) => paragraph !== '')
+        .join('\n');
+    default:
+      return normalized.replace(whitespaceRuns, ' ').trim();
+  }
+};
+
 const sourceEvidence = (
   raw: string,
   kind: StoredSearchEvidence['kind'],
 ): ReadonlyArray<StoredSearchEvidence> => {
-  const hardLines = kind === 'passage-reference';
-  const normalized = normalizeSearchText(raw);
-  const text = hardLines
-    ? normalized
-        .replace(horizontalWhitespaceRuns, ' ')
-        .replace(lineBreakRuns, '\n')
-        .trim()
-    : normalized.replace(whitespaceRuns, ' ').trim();
+  const text = evidenceText(raw, kind);
   const seen = new Set<string>();
   const result: Array<StoredSearchEvidence> = [];
   for (const found of searchSourceTokens(text)) {
@@ -118,3 +145,8 @@ export const storedSearchEvidence = (
   ...sourceEvidence(document.scriptureText, 'scripture-notes'),
   ...sourceEvidence(document.scriptureReferenceText, 'passage-reference'),
 ];
+
+/** The day log's windows, computed when /wrap stores the log. */
+export const dayLogSearchEvidence = (
+  dayLog: string,
+): ReadonlyArray<StoredSearchEvidence> => sourceEvidence(dayLog, 'day-log');

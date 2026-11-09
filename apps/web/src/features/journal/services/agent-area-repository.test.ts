@@ -36,6 +36,7 @@ const wrapFor = (date: string, activeMinutes = 312): WrapPut => ({
   metricsVersion: 1,
   reportHtml: `<!doctype html><p>${activeMinutes} minutes.</p>`,
   reportModel: 'test-model',
+  dayLog: `09:10–11:45 Worked ${activeMinutes} minutes on the plan.`,
 });
 
 it('reads a day /wrap has not written as empty', async () => {

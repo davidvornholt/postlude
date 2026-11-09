@@ -6,11 +6,13 @@ import {
   closedDayNeededMessage,
   notConfiguredMessage,
 } from '../evening-messages.ts';
+import { shiftJournalDate } from '../journal-day.ts';
 import {
   abandonedNoteMessage,
   agentNoteViewOf,
   type StoredAgentNote,
 } from '../schemas/agent-area.ts';
+import { dayMetricsFor } from '../testing/agent-note-input.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import {
   type AgentNoteDraft,
@@ -89,6 +91,37 @@ describe('closing a day', () => {
       entryRevision: outcome.entry.revision,
       error: null,
     });
+  });
+
+  it('never gives the model the day log /wrap stored', async () => {
+    const marker = 'Daylogmarker';
+    const inputs: Array<AgentNoteInput> = [];
+    await withEvening(({ entries, ratings, areas }) =>
+      Effect.gen(function* () {
+        const notes = yield* notesWith((input) => {
+          inputs.push(input);
+          return Effect.succeed({ note: 'A steady day.', model: 'note-model' });
+        });
+        for (const date of [shiftJournalDate(day, -1), day]) {
+          yield* areas.putWrap(date, {
+            dayMetrics: dayMetricsFor(date),
+            metricsVersion: 2,
+            reportHtml: '<p>The day.</p>',
+            reportModel: 'wrap-model',
+            dayLog: `09:00–10:00 ${marker} on ${date}.`,
+          });
+        }
+        yield* entries.save(draft(day, 'Long walk, then work.'));
+        yield* ratings.save({ date: day, energy: 'okay', progress: 'solid' });
+        yield* notes.closeDay(day);
+      }),
+    );
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]?.wrap.dayMetrics?.day).toBe(day);
+    expect(inputs[0]?.history.at(-1)?.dayMetrics?.day).toBe(
+      shiftJournalDate(day, -1),
+    );
+    expect(JSON.stringify(inputs)).not.toContain(marker);
   });
 
   it('writes a note for a day with no entry from revision 0', async () => {

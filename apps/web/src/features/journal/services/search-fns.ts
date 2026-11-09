@@ -7,6 +7,9 @@
  *
  * The database returns bounded windows from stored search evidence. This boundary
  * highlights those windows without loading complete matching entry projections.
+ *
+ * The page searches the day log /wrap stored as well, and each window says
+ * which source it came from, so the page can mark the log's as the agent's.
  */
 
 import { createServerFn } from '@tanstack/react-start';
@@ -43,7 +46,9 @@ export const searchJournalFn = createServerFn({ method: 'POST' })
       runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntrySearch;
-          const matches = yield* entries.search(terms, searchLimit);
+          const matches = yield* entries.search(terms, searchLimit, {
+            dayLog: true,
+          });
           return {
             query,
             today,

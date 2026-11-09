@@ -6,17 +6,22 @@
  * so their word counts, search columns and search evidence are exactly what
  * the app would have stored for the same text. Saving stamps the database
  * clock, so the times the sample says each day was written are set afterwards;
- * the streaks and Insights read those. Ratings and what agents added have
- * no derived columns, so they are inserted with their times as they are.
+ * the streaks and Insights read those. Ratings and what agents added are
+ * inserted with their times as they are, and a day log gets the search
+ * columns and evidence `agent-area put` would have stored for it.
  */
 
 import { Effect } from 'effect';
 import { SqlClient } from 'effect/sql';
 
 import { currentRatingVersion } from '../schemas/day-rating.ts';
+import { searchTokenText } from '../search-query.ts';
+import { dayLogSearchEvidence } from '../search-stored-evidence.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
+import { replaceDayLogEvidence } from '../services/search-evidence-write.ts';
 import { agentNoteModel } from './sample-agent-note.ts';
 import type { SampleDay, SampleEntry } from './sample-day.ts';
+import { sampleDayLog } from './sample-day-log.ts';
 import type { SamplePlan } from './sample-plan.ts';
 import { sampleReportHtml } from './sample-report.ts';
 import { reportModel } from './sample-wrap.ts';
@@ -152,21 +157,30 @@ const insertRatings = (
   `.pipe(Effect.as(ratings.length));
 };
 
-const agentAreaOf = ({ date, wrap, note }: SampleDay) => ({
-  date,
-  dayMetrics: wrap?.dayMetrics ?? null,
-  metricsVersion: wrap?.dayMetrics.metricsVersion ?? null,
-  reportHtml: wrap === undefined ? null : sampleReportHtml,
-  reportModel: wrap === undefined ? null : reportModel,
-  reportGeneratedAt: iso(wrap?.generatedAt ?? null),
-  noteStatus: note?.status ?? null,
-  note: note?.status === 'ready' ? note.note : null,
-  noteModel: note?.status === 'ready' ? agentNoteModel : null,
-  noteRevision: note?.status === 'ready' ? note.basedOnRevision : null,
-  noteError: note?.status === 'failed' ? note.error : null,
-  noteRequestedAt: iso(note?.requestedAt ?? null),
-  noteGeneratedAt: iso(note?.status === 'ready' ? note.generatedAt : null),
-});
+const dayLogOf = ({ wrap }: SampleDay) =>
+  wrap === undefined ? null : sampleDayLog(wrap.dayMetrics);
+
+const agentAreaOf = (day: SampleDay) => {
+  const { date, wrap, note } = day;
+  const dayLog = dayLogOf(day);
+  return {
+    date,
+    dayMetrics: wrap?.dayMetrics ?? null,
+    metricsVersion: wrap?.dayMetrics.metricsVersion ?? null,
+    reportHtml: wrap === undefined ? null : sampleReportHtml,
+    reportModel: wrap === undefined ? null : reportModel,
+    reportGeneratedAt: iso(wrap?.generatedAt ?? null),
+    dayLog,
+    dayLogSearchTokenText: dayLog === null ? null : searchTokenText(dayLog),
+    noteStatus: note?.status ?? null,
+    note: note?.status === 'ready' ? note.note : null,
+    noteModel: note?.status === 'ready' ? agentNoteModel : null,
+    noteRevision: note?.status === 'ready' ? note.basedOnRevision : null,
+    noteError: note?.status === 'failed' ? note.error : null,
+    noteRequestedAt: iso(note?.requestedAt ?? null),
+    noteGeneratedAt: iso(note?.status === 'ready' ? note.generatedAt : null),
+  };
+};
 
 const insertAgentAreas = (
   sql: SqlClient.SqlClient,
@@ -178,14 +192,15 @@ const insertAgentAreas = (
   return sql`
     insert into agent_area (
       entry_date, day_metrics, metrics_version, report_html, report_model,
-      report_generated_at, agent_note_status, agent_note, agent_note_model,
-      agent_note_revision, agent_note_error, agent_note_requested_at,
-      agent_note_generated_at
+      report_generated_at, day_log, day_log_search_token_text,
+      agent_note_status, agent_note, agent_note_model, agent_note_revision,
+      agent_note_error, agent_note_requested_at, agent_note_generated_at
     )
     select
       date, "dayMetrics", "metricsVersion", "reportHtml", "reportModel",
-      "reportGeneratedAt", "noteStatus", note, "noteModel", "noteRevision",
-      "noteError", "noteRequestedAt", "noteGeneratedAt"
+      "reportGeneratedAt", "dayLog", "dayLogSearchTokenText", "noteStatus",
+      note, "noteModel", "noteRevision", "noteError", "noteRequestedAt",
+      "noteGeneratedAt"
     from jsonb_to_recordset(${JSON.stringify(areas)}::jsonb)
       as area(
         date date,
@@ -194,6 +209,8 @@ const insertAgentAreas = (
         "reportHtml" text,
         "reportModel" text,
         "reportGeneratedAt" timestamptz,
+        "dayLog" text,
+        "dayLogSearchTokenText" text,
         "noteStatus" text,
         note text,
         "noteModel" text,
@@ -204,6 +221,21 @@ const insertAgentAreas = (
       )
   `.pipe(Effect.as(areas.length));
 };
+
+const insertDayLogEvidence = (
+  sql: SqlClient.SqlClient,
+  days: ReadonlyArray<SampleDay>,
+) =>
+  Effect.forEach(
+    days,
+    (day) => {
+      const dayLog = dayLogOf(day);
+      return dayLog === null
+        ? Effect.void
+        : replaceDayLogEvidence(sql, day.date, dayLogSearchEvidence(dayLog));
+    },
+    { discard: true },
+  );
 
 /**
  * Whether any journal day is stored. Sign-in rows don't count: the account
@@ -236,6 +268,7 @@ export const seedSampleJournal = (plan: SamplePlan) =>
       yield* backdateEntries(sql, written);
       const ratings = yield* insertRatings(sql, plan.days);
       const agentAreas = yield* insertAgentAreas(sql, plan.days);
+      yield* insertDayLogEvidence(sql, plan.days);
       return {
         seeded: true,
         today: plan.today,

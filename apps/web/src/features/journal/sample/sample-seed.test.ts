@@ -14,6 +14,7 @@ import { searchTerms } from '../search-query.ts';
 import { storedSearchEvidence } from '../search-stored-evidence.ts';
 import { journalStreak, scriptureStreak } from '../streaks.ts';
 import { journalDatabase } from '../testing/database-harness.ts';
+import { sampleDayLog } from './sample-day-log.ts';
 import { samplePlan } from './sample-plan.ts';
 import { seedSampleJournal } from './sample-seed.ts';
 
@@ -88,6 +89,11 @@ const readSeededJournal = () =>
         stale: yield* areas.readNote(daysAgo(2)),
         failed: yield* areas.readNote(daysAgo(3)),
         wrap: yield* areas.readWrap(daysAgo(1)),
+        logged: yield* areas.readWrapWithDayLog(daysAgo(1)),
+        fromLog: yield* search.search(searchTerms('importer'), 50, {
+          dayLog: true,
+        }),
+        fromWriting: yield* search.search(searchTerms('importer'), 50),
         recent: yield* areas.listDays(daysAgo(13), today),
       };
     }),
@@ -191,5 +197,17 @@ describe('a seeded journal', () => {
     expect(journalDateAt(read.wrap?.reportGeneratedAt ?? now, berlin)).toBe(
       daysAgo(1),
     );
+  });
+
+  it('has a day log on each day /wrap measured, which search finds as the agent’s', () => {
+    const measured = plan.days.find(({ date }) => date === daysAgo(1))?.wrap;
+    expect(read.logged.dayLog).toBe(
+      measured === undefined ? null : sampleDayLog(measured.dayMetrics),
+    );
+    expect(read.fromWriting).toEqual([]);
+    expect(read.fromLog.length).toBeGreaterThan(0);
+    for (const match of read.fromLog) {
+      expect(match.evidence.map(({ kind }) => kind)).toEqual(['day-log']);
+    }
   });
 });

@@ -3,8 +3,12 @@
  *
  * Each result reads the way "on this day" does: the date as an eyebrow, then
  * the attributed lines that explain the match. A query can span the evening,
- * morning notes, and passage reference, so a result never hides the source
- * that contributed one of its terms.
+ * morning notes, passage reference, and the day log /wrap wrote, so a result
+ * never hides the source that contributed one of its terms.
+ *
+ * The day log is the agent's account of the day, not David's words. It comes
+ * last, says "From the day report", sits behind a rule in quieter ink, and
+ * keeps the page's English rather than the journal's language.
  *
  * The marks are `<mark>` elements rather than a colour on a span. A reader who
  * cannot see the tint still hears the element, and the words are set a weight
@@ -38,22 +42,35 @@ const sourceLabels = {
   evening: 'Evening',
   'passage-reference': 'Passage reference',
   'scripture-notes': 'Morning notes',
+  'day-log': 'From the day report',
+} as const;
+
+const excerptLanguages = {
+  evening: journalLanguage,
+  // A passage reference is shown in the app's English house style.
+  'passage-reference': undefined,
+  'scripture-notes': journalLanguage,
+  // /wrap writes the log in English.
+  'day-log': undefined,
 } as const;
 
 const excerptKey = (segments: ReadonlyArray<ExcerptSegment>): string =>
   segments.map(({ match, text }) => `${match ? '1' : '0'}:${text}`).join();
 
 const Excerpt = ({
+  agent,
   lang,
   segments,
 }: {
+  readonly agent: boolean;
   readonly lang: string | undefined;
   readonly segments: ReadonlyArray<ExcerptSegment>;
 }) => (
   <span
     className={[
       readingMeasureClass,
-      'mt-3 block min-w-0 break-words text-ink text-lg',
+      'mt-3 block min-w-0 break-words',
+      agent ? 'text-base text-ink-muted' : 'text-ink text-lg',
     ].join(' ')}
     lang={lang}
   >
@@ -69,21 +86,29 @@ const Excerpt = ({
   </span>
 );
 
-const SourceEvidence = ({ source }: { readonly source: SearchHitSource }) => (
-  <span className="mt-4 block">
-    <span className={[eyebrowClass, 'block text-ink-faint'].join(' ')}>
-      {sourceLabels[source.kind]}
+const SourceEvidence = ({ source }: { readonly source: SearchHitSource }) => {
+  const agent = source.kind === 'day-log';
+  return (
+    <span
+      className={[
+        'mt-4 block',
+        agent ? 'border-border border-l-2 pl-4' : '',
+      ].join(' ')}
+    >
+      <span className={[eyebrowClass, 'block text-ink-faint'].join(' ')}>
+        {sourceLabels[source.kind]}
+      </span>
+      {source.excerpts.map((excerpt) => (
+        <Excerpt
+          agent={agent}
+          key={excerptKey(excerpt)}
+          lang={excerptLanguages[source.kind]}
+          segments={excerpt}
+        />
+      ))}
     </span>
-    {source.excerpts.map((excerpt) => (
-      <Excerpt
-        key={excerptKey(excerpt)}
-        // A passage reference is shown in the app's English house style.
-        lang={source.kind === 'passage-reference' ? undefined : journalLanguage}
-        segments={excerpt}
-      />
-    ))}
-  </span>
-);
+  );
+};
 
 type SearchResultsProps = {
   readonly hits: ReadonlyArray<SearchHit>;
