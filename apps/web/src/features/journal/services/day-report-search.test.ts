@@ -117,6 +117,7 @@ it('leaves the report out of a search of David’s writing alone', async () => {
 
 it('reads only the text a reader of the report sees', async () => {
   const report = [
+    '<title>Titlehidden</title>',
     '<style>.stylehidden { color: red }</style>',
     '<svg viewBox="0 0 1 1"><text>drawinghidden</text></svg>',
     '<script>const scripthidden = "</style>";</script>',

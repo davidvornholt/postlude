@@ -1,8 +1,8 @@
 -- The text of /wrap's report as a reader sees it: the HTML without its
--- scripts, styles, drawings and tags, with its character references decoded,
--- in NFKC as the app's search text is, and with its white space collapsed.
--- Scripts go first, so markup quoted in one can't end a style or a drawing
--- early. The generated columns below are stored, so this must stay immutable:
+-- scripts, styles, title, drawings and tags, with its character references
+-- decoded, in NFKC as the app's search text is, and with its white space
+-- collapsed. Scripts go first, so markup quoted in one can't end a style or a
+-- drawing early. The generated columns below are stored, so this must stay immutable:
 -- changing what it returns needs a new function and new columns.
 CREATE FUNCTION report_plain_text(html text) RETURNS text
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -19,9 +19,10 @@ RETURN btrim(regexp_replace(normalize(coalesce((
       ELSE chr(65533)
     END, '' ORDER BY place)
   FROM regexp_matches(
-    regexp_replace(regexp_replace(regexp_replace(regexp_replace(html,
+    regexp_replace(regexp_replace(regexp_replace(regexp_replace(regexp_replace(html,
       '<script\M.*?</script\s*>', ' ', 'gi'),
       '<style\M.*?</style\s*>', ' ', 'gi'),
+      '<title\M.*?</title\s*>', ' ', 'gi'),
       '<svg\M.*?</svg\s*>', ' ', 'gi'),
       '<[a-zA-Z/!?][^>]*>', ' ', 'g'),
     '&#([0-9]{1,7});|&#[xX]([0-9a-fA-F]{1,6});|&(amp|lt|gt|quot|apos|nbsp);|([^&]+|&)', 'g'
