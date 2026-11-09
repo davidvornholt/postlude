@@ -170,8 +170,9 @@ export const measuresOf = (metrics: DayMetrics): DayMeasures => ({
 
 export type ScreenTimeSplit = {
   readonly focus: number;
-  readonly scattered: number;
-  /** Screen time counted as neither focused nor scattered. */
+  /** Screen time outside focus blocks, stored as scattered minutes. */
+  readonly shortStretches: number;
+  /** Screen time counted as neither focused nor in short stretches. */
   readonly rest: number;
 };
 
@@ -186,17 +187,17 @@ export const screenTimeSplit = (
   const {
     activeMinutes: active,
     focusMinutes: focus,
-    scatteredMinutes: scattered,
+    scatteredMinutes: shortStretches,
   } = metrics;
   if (
     active === null ||
     focus === null ||
-    scattered === null ||
-    focus + scattered > active
+    shortStretches === null ||
+    focus + shortStretches > active
   ) {
     return;
   }
-  return { focus, scattered, rest: active - focus - scattered };
+  return { focus, shortStretches, rest: active - focus - shortStretches };
 };
 
 export type CategoryTotal = {

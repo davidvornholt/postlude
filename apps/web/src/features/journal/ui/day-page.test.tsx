@@ -114,11 +114,12 @@ it('keeps entry headings below the page and section headings', async () => {
     'h2: Morning scripture',
     'h3: Morning thought',
     'h4: What opened',
+    'h2: Rate the day',
+    'h3: Day report',
     'h2: Evening',
     'h3: Evening thought',
     'h4: What stayed',
     'h2: End of the day',
-    'h3: Day report',
     'h3: Agent note',
     'h2: On this day',
   ]);
@@ -189,8 +190,8 @@ it('ends on the same date in the years before the day being read', async () => {
 
   expect(text).toContain('On this dayThe same date, in earlier years.');
   expect(text).toContain('1 year ago · Sunday, August 24, 2025');
-  // The writing comes first and the memories last.
-  expect(text.indexOf('How did the day go?')).toBeLessThan(
+  // The memories come last, after the writing and the close.
+  expect(text.indexOf('Why you did what you did')).toBeLessThan(
     text.indexOf('End of the day'),
   );
   expect(text.indexOf('End of the day')).toBeLessThan(

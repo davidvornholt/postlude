@@ -76,7 +76,8 @@ const metricsOf = (metrics: DayMetrics) => ({
   firstActivityAt: metrics.firstActivityAt,
   lastActivityAt: metrics.lastActivityAt,
   focusMinutes: metrics.focusMinutes,
-  scatteredMinutes: metrics.scatteredMinutes,
+  // Stored as scatteredMinutes. The model gets the name the app shows.
+  shortStretchMinutes: metrics.scatteredMinutes,
   estimatedCategories: metrics.categories.map(({ label, minutes }) => ({
     label,
     minutes,
@@ -246,6 +247,7 @@ Rules:
 - Never judge David's writing, his feelings, or how much or how little he wrote, and never give the day a score or a verdict.
 - Use the journal text only to understand the day. Don't quote it or summarize it.
 - All metrics given were measured the same way and can be compared. An earlier day whose metrics were measured differently has metrics null. Ratings with a different ratingVersion are not comparable.
+- activeMinutes is the time David was active at the screen. focusMinutes is the part of it spent in focus blocks, each at least 25 minutes on one area, with switches of under two minutes counted as part of the block. shortStretchMinutes is the active screen time outside focus blocks. Call that time short stretches, not scattered or distracted time.
 - The estimatedCategories minutes are estimates. Say so when you use them.
 - A null value was not measured. Don't guess it, and don't treat it as zero. coverage says which sources were incomplete.
 - When the data is too thin for a comparison, say that in one sentence instead of stretching it.

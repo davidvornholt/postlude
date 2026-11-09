@@ -1,19 +1,22 @@
 /**
- * The end of the day, after the evening's writing: rate it, read what /wrap
- * measured, close it, and read what an agent made of it.
+ * The evening around the writing: the ratings and the day's report above it,
+ * and the close and the agent note below it.
  *
- * It comes after the writing because writing is what the page is for; the
- * look back is one calm step once that is done, not a set of controls the
- * writing has to get past. Its order is the order it is done in. Energy comes
- * first, before the report is open, so the numbers can't change how the day
- * felt. The report opens once energy is rated, and progress and the optional
- * "would you repeat it" follow, now with the numbers at hand. Closing the day
- * needs energy and progress and asks an agent for its note, which appears last.
+ * The page follows the evening as it is lived. /wrap is started first, and
+ * while it works the day is rated: energy, progress, and the optional "would
+ * you repeat it". The report /wrap leaves opens only once energy and progress
+ * are rated, so its numbers can't colour either rating. The report is a
+ * detailed log of the time at the computer, so the writing that follows it is
+ * for what the report can't know: why, what was thought and felt, and what
+ * happened away from the screen. When the writing is done the day is closed,
+ * which needs energy and progress and asks an agent for its note, shown last.
  *
- * A day that hasn't begun by the server's clock can't be rated at all.
+ * A day that hasn't begun by the server's clock can't be rated at all, and an
+ * evening that couldn't be read leaves a line saying so where the ratings go.
+ * Either way there is nothing to close.
  */
 
-import { useId } from 'react';
+import { type ReactNode, useId } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
 import {
@@ -26,40 +29,22 @@ import {
   progressOptions,
   repeatDayOptions,
 } from '../evening-labels.ts';
-import type { JournalDate } from '../journal-day.ts';
 import { canCloseDay } from '../schemas/day-rating.ts';
-import type { EveningActions, EveningView } from '../services/evening-fns.ts';
 import { AgentNote } from './agent-note.tsx';
 import { DayReport } from './day-report.tsx';
 import { RatingScale } from './rating-scale.tsx';
-import { type Evening, useEvening } from './use-evening.ts';
+import type { Evening, EveningFailure } from './use-evening.ts';
 
-type EveningFlowProps = {
-  readonly date: JournalDate;
-  readonly today: JournalDate;
-  /** Undefined when the evening couldn't be read with the day. */
-  readonly evening: EveningView | undefined;
-  readonly actions: EveningActions;
-  /** The entry's latest saved revision, which a note may have fallen behind. */
-  readonly entryRevision: number;
-  readonly journalIsEmpty: boolean;
-  readonly onBackToWriting: () => void;
-};
-
-type EveningStepsProps = Omit<EveningFlowProps, 'evening' | 'today'> & {
-  readonly evening: EveningView;
-};
-
-const LONGEST_CLOSE_HINT = 'Rate energy and progress to close the day.';
+const LONGEST_CLOSE_HINT = 'Rate energy and progress above to close the day.';
 
 const closeHint = (energy: boolean, progress: boolean): string | undefined => {
   if (energy && progress) {
     return;
   }
   if (energy) {
-    return 'Rate progress to close the day.';
+    return 'Rate progress above to close the day.';
   }
-  return progress ? 'Rate energy to close the day.' : LONGEST_CLOSE_HINT;
+  return progress ? 'Rate energy above to close the day.' : LONGEST_CLOSE_HINT;
 };
 
 /**
@@ -67,7 +52,7 @@ const closeHint = (energy: boolean, progress: boolean): string | undefined => {
  * what is still to rate. The line is always as tall as its longest wording
  * wraps to, so rating the day never moves the note below it.
  */
-const DayClosing = ({ evening }: { readonly evening: Evening }) => {
+const CloseButton = ({ evening }: { readonly evening: Evening }) => {
   const hintId = useId();
   const { rating, busy } = evening;
   const closed = rating.closedAt !== null;
@@ -113,18 +98,57 @@ const DayClosing = ({ evening }: { readonly evening: Evening }) => {
   );
 };
 
-const EveningSteps = ({
-  evening: initial,
-  actions,
-  entryRevision,
-  journalIsEmpty,
-  onBackToWriting,
-}: EveningStepsProps) => {
-  const evening = useEvening(initial, actions, entryRevision);
-  const { rating, busy } = evening;
-  const closed = rating.closedAt !== null;
-  const locked = closed || busy === 'closing' || busy === 'reopening';
+/** Says why a call made from one part of the page didn't go through. */
+const FailureLine = ({
+  failure,
+  part,
+}: {
+  readonly failure: EveningFailure | undefined;
+  readonly part: EveningFailure['part'];
+}) => (
+  <div aria-live="polite" role="status">
+    {failure?.part === part ? (
+      <p className="mt-3 text-critical">{failure.message}</p>
+    ) : null}
+  </div>
+);
 
+const EveningSection = ({
+  title,
+  intro,
+  children,
+}: {
+  readonly title: string;
+  readonly intro: string;
+  readonly children: ReactNode;
+}) => {
+  const headingId = useId();
+  return (
+    <PageFrame aria-labelledby={headingId} as="section" className="pt-12">
+      <div className={readingMeasureClass}>
+        <h2
+          className={[sectionHeadingClass, 'text-ink'].join(' ')}
+          id={headingId}
+        >
+          {title}
+        </h2>
+        <p className="mt-2 text-pretty text-ink-muted">{intro}</p>
+        {children}
+      </div>
+    </PageFrame>
+  );
+};
+
+const Ratings = ({
+  evening,
+  onToWriting,
+}: {
+  readonly evening: Evening;
+  readonly onToWriting: () => void;
+}) => {
+  const { rating, busy } = evening;
+  const locked =
+    rating.closedAt !== null || busy === 'closing' || busy === 'reopening';
   return (
     <div className="mt-8">
       <RatingScale
@@ -133,11 +157,6 @@ const EveningSteps = ({
         onChange={(energy) => evening.rate({ energy })}
         options={energyOptions}
         value={rating.energy}
-      />
-      <DayReport
-        onBackToWriting={onBackToWriting}
-        unlocked={rating.energy !== null}
-        wrap={evening.wrap}
       />
       <RatingScale
         disabled={locked}
@@ -155,62 +174,89 @@ const EveningSteps = ({
         options={repeatDayOptions}
         value={rating.repeatDay}
       />
-      <div className="mt-5 sm:pl-44">
-        <DayClosing evening={evening} />
-        <div aria-live="polite" role="status">
-          {evening.failure === undefined ? null : (
-            <p className="mt-3 text-critical">{evening.failure}</p>
-          )}
-        </div>
+      <div className="sm:pl-44">
+        <FailureLine failure={evening.failure} part="ratings" />
+      </div>
+      <DayReport
+        onToWriting={onToWriting}
+        unlocked={rating.energy !== null && rating.progress !== null}
+        wrap={evening.wrap}
+      />
+    </div>
+  );
+};
+
+const ratingsIntro =
+  'Rate it before you read the report, so its numbers can’t sway how the day felt.';
+
+const unavailableMessage =
+  'The ratings, report and agent note could not be loaded. Your writing is not affected. Reload the page to try again.';
+
+/** The ratings and the report, above the writing. */
+export const EveningRatings = ({
+  begun,
+  evening,
+  onToWriting,
+}: {
+  /** False for a day that hasn't begun by the server's clock. */
+  readonly begun: boolean;
+  /** Undefined when the evening couldn't be read with the day. */
+  readonly evening: Evening | undefined;
+  readonly onToWriting: () => void;
+}) => {
+  if (!begun || evening === undefined) {
+    return (
+      <EveningSection intro={ratingsIntro} title="Rate the day">
+        <p className="mt-8 text-ink-muted">
+          {begun
+            ? unavailableMessage
+            : 'This day has not begun yet. Rate it once it has.'}
+        </p>
+      </EveningSection>
+    );
+  }
+  return (
+    <EveningSection
+      intro={
+        evening.rating.closedAt === null
+          ? ratingsIntro
+          : 'The day is closed. To change a rating, reopen it below the writing.'
+      }
+      title="Rate the day"
+    >
+      <Ratings evening={evening} onToWriting={onToWriting} />
+    </EveningSection>
+  );
+};
+
+/** The close and the agent note, below the writing. */
+export const EveningClosing = ({
+  evening,
+  journalIsEmpty,
+}: {
+  readonly evening: Evening;
+  readonly journalIsEmpty: boolean;
+}) => {
+  const { rating, busy } = evening;
+  return (
+    <EveningSection
+      intro="When the writing is done, close the day."
+      title="End of the day"
+    >
+      <div className="mt-8">
+        <CloseButton evening={evening} />
+        <FailureLine failure={evening.failure} part="closing" />
       </div>
       <div className="mt-12">
         <AgentNote
           blocked={busy !== undefined && busy !== 'regenerating'}
-          closed={closed}
+          closed={rating.closedAt !== null}
           journalIsEmpty={journalIsEmpty}
           note={evening.agentNote}
           onRegenerate={evening.regenerate}
           regenerating={busy === 'regenerating'}
         />
       </div>
-    </div>
-  );
-};
-
-const unavailableMessage =
-  'The ratings, report and agent note could not be loaded. Your writing is not affected. Reload the page to try again.';
-
-export const EveningFlow = ({ today, ...props }: EveningFlowProps) => {
-  const headingId = useId();
-  const { date, evening } = props;
-  let content = (
-    <p className="mt-8 text-ink-muted">
-      This day has not begun yet. Rate and close it once it has.
-    </p>
-  );
-  if (date <= today) {
-    content =
-      evening === undefined ? (
-        <p className="mt-8 text-ink-muted">{unavailableMessage}</p>
-      ) : (
-        <EveningSteps {...props} evening={evening} />
-      );
-  }
-
-  return (
-    <PageFrame aria-labelledby={headingId} as="section" className="pt-12">
-      <div className={readingMeasureClass}>
-        <h2
-          className={[sectionHeadingClass, 'text-ink'].join(' ')}
-          id={headingId}
-        >
-          End of the day
-        </h2>
-        <p className="mt-2 text-pretty text-ink-muted">
-          When the writing is done, rate the day and close it.
-        </p>
-        {content}
-      </div>
-    </PageFrame>
+    </EveningSection>
   );
 };

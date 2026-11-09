@@ -1,11 +1,14 @@
 /**
  * One journal day, as a page.
  *
- * The page puts the writing first. Under the date come the morning scripture,
- * in the deep register, and then the evening's writing on the parchment, and
- * only after them the end of the day — the ratings, the report and the close —
- * and the same date in earlier years. Everything that looks back waits below
- * the words, so the page never asks which to do first.
+ * The page runs in the order the evening is spent. Under the date comes the
+ * morning scripture, in the deep register. Then the day is rated and the
+ * report /wrap leaves is read, a detailed log of the time at the computer.
+ * The evening's writing follows on the parchment, for what that log can't
+ * know: why, what was thought and felt, and what happened away from the
+ * screen. After the writing the day is closed and an agent's note on it
+ * appears (`evening-flow.tsx`), and the page ends on the same date in earlier
+ * years.
  *
  * There is no save button and no edit mode: the page opens on the words and
  * the words are already editable, because a journal that asks to be unlocked
@@ -29,13 +32,14 @@ import type { EveningActions, EveningView } from '../services/evening-fns.ts';
 import { DayHeader } from './day-header.tsx';
 import type { ReadWrittenDays } from './day-picker.tsx';
 import { EntryCounts } from './entry-counts.tsx';
-import { EveningFlow } from './evening-flow.tsx';
+import { EveningClosing, EveningRatings } from './evening-flow.tsx';
 import { type EditorFocus, MarkdownEditor } from './markdown-editor.tsx';
 import { OnThisDay } from './on-this-day.tsx';
 import { SaveStatusLine } from './save-status.tsx';
 import { ScriptureRegister } from './scripture-register.tsx';
 import { type SaveDraft, useAutosave } from './use-autosave.ts';
 import { useDaySteps } from './use-day-steps.ts';
+import { useEvening } from './use-evening.ts';
 import { WritingSection } from './writing-section.tsx';
 
 type DayPageProps = {
@@ -79,7 +83,7 @@ const DayBody = ({
   entry,
   today,
   save,
-  evening,
+  evening: eveningView,
   eveningActions,
   anniversaries,
   readWrittenDays,
@@ -90,6 +94,13 @@ const DayBody = ({
   );
   const eveningEditorRef = useRef<EditorFocus>(null);
   const { next, openDay, previous } = useDaySteps(entry.date, today);
+  const begun = entry.date <= today;
+  const evening = useEvening(
+    entry.date,
+    begun ? eveningView : undefined,
+    eveningActions,
+    autosave.draft.baseRevision,
+  );
 
   return (
     <article>
@@ -115,6 +126,12 @@ const DayBody = ({
         reference={autosave.draft.scriptureReference}
       />
 
+      <EveningRatings
+        begun={begun}
+        evening={evening}
+        onToWriting={() => eveningEditorRef.current?.focusEnd()}
+      />
+
       <WritingSection title="Evening" tone="page">
         {/* The frame is the one Insights uses, which is wider than anyone wants to
             write a paragraph across, so the writing keeps its own measure
@@ -127,7 +144,7 @@ const DayBody = ({
             label="Evening journal"
             onChange={(journalMarkdown) => autosave.edit({ journalMarkdown })}
             onLeave={autosave.flush}
-            placeholder="How did the day go?"
+            placeholder="Why you did what you did, what you thought and felt, and what happened away from the screen."
             proseClass="journal-prose"
             size="entry"
           />
@@ -150,15 +167,12 @@ const DayBody = ({
         </div>
       </WritingSection>
 
-      <EveningFlow
-        actions={eveningActions}
-        date={entry.date}
-        entryRevision={autosave.draft.baseRevision}
-        evening={evening}
-        journalIsEmpty={autosave.draft.journalMarkdown.trim() === ''}
-        onBackToWriting={() => eveningEditorRef.current?.focusEnd()}
-        today={today}
-      />
+      {evening === undefined ? null : (
+        <EveningClosing
+          evening={evening}
+          journalIsEmpty={autosave.draft.journalMarkdown.trim() === ''}
+        />
+      )}
 
       <OnThisDay anniversaries={anniversaries} today={today} />
     </article>
