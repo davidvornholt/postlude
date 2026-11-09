@@ -159,11 +159,6 @@ it("sets the found writing in the journal's language and its labels and passage 
   expect(html.match(languageAttribute)?.length).toBe(one);
 });
 
-/*
- * The day log is /wrap's account of the day. Its words must never pass for
- * David's: it says whose they are, comes after his, and is not set in his
- * language.
- */
 it("marks a day log's words as the agent's", async () => {
   const evening = hit(
     '2026-03-01',

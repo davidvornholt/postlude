@@ -3,9 +3,9 @@
  * paragraph per stretch of the day, each starting with its time range, in the
  * order the metrics' categories list them.
  *
- * It is built from the metrics alone, with no draws of its own, so adding it
- * changed none of the sample's other days. A version 1 day has no categories,
- * so its log is one paragraph for the whole active time.
+ * It is built from the metrics alone and takes no random draws, so the rest of
+ * the sample stays the same. A version 1 day has no categories, so its log is
+ * one paragraph for the whole active time.
  */
 
 import type { DayMetrics } from '../schemas/day-metrics.ts';

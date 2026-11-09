@@ -1,9 +1,4 @@
-/**
- * The day log /wrap stores beside its report, against a real Postgres: search
- * finds it when asked and says each window is the agent's, a new log replaces
- * the old one's index, the database refuses a log that breaks the contract,
- * and the export never carries it.
- */
+/** The day log /wrap stores beside its report, against a real Postgres. */
 
 import { expect, it } from 'bun:test';
 import { Effect, Stream } from 'effect';

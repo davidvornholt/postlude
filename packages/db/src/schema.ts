@@ -270,7 +270,6 @@ export const agentArea = pgTable(
     }),
     dayLog: text('day_log'),
     dayLogSearchTokenText: text('day_log_search_token_text'),
-    /** The day log's search index, built the way `entry.search_vector` is. */
     dayLogSearchVector: tsvector('day_log_search_vector').generatedAlwaysAs(
       sql`case when day_log_search_token_text = '' then ''::tsvector else array_to_tsvector(string_to_array(day_log_search_token_text, ' ')) end`,
     ),
@@ -343,9 +342,8 @@ export const agentArea = pgTable(
 );
 
 /**
- * Bounded windows of the day log for search results, one per distinct token,
- * shaped like `entry_search_evidence`. /wrap's role replaces them with the log,
- * and they go when the log's day does.
+ * The day log's search windows, in a table of their own so /wrap's role never
+ * writes `entry_search_evidence`, which holds David's words.
  */
 export const dayLogSearchEvidence = pgTable(
   'day_log_search_evidence',

@@ -6,9 +6,8 @@
  * morning notes, passage reference, and the day log /wrap wrote, so a result
  * never hides the source that contributed one of its terms.
  *
- * The day log is the agent's account of the day, not David's words. It comes
- * last, says "From the day report", sits behind a rule in quieter ink, and
- * keeps the page's English rather than the journal's language.
+ * The day log is the agent's account of the day, not David's words, so it is
+ * labelled and set apart from them.
  *
  * The marks are `<mark>` elements rather than a colour on a span. A reader who
  * cannot see the tint still hears the element, and the words are set a weight
