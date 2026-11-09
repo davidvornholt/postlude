@@ -28,11 +28,7 @@ const requestedModel = 'claude-sonnet-5-5';
  */
 const serverSideFallbackBeta = 'server-side-fallback-2026-07-01';
 
-/**
- * How the page names the models that may write a note: the requested one, and
- * the one the API falls back to after a decline. Any other model is named by
- * its ID.
- */
+/** Display names for the requested model and its default fallback. */
 const modelNames = new Map([
   [requestedModel, 'Claude Sonnet 5.5'],
   ['claude-sonnet-5', 'Claude Sonnet 5'],
@@ -81,11 +77,6 @@ type FailureSummary = {
   readonly requestId: string | null;
 };
 
-/**
- * `refused`: the key or the account is the problem, so another attempt can't
- * help. `transient`: throttling, overload, a server error or a lost
- * connection, which another attempt may get past. `failed`: anything else.
- */
 type FailureKind = 'refused' | 'transient' | 'failed';
 
 class RequestFailure extends Data.TaggedError('RequestFailure')<{
@@ -219,7 +210,7 @@ export const claudeCreateMessage = (
   const client = new Anthropic({
     apiKey: Redacted.value(apiKey),
     baseURL: apiBaseUrl,
-    // Effect owns the retries and the attempt timeout, so the SDK adds neither.
+    // Effect owns the retries; the SDK's timeout matches one attempt.
     maxRetries: 0,
     timeout: Duration.toMillis(attemptTimeout),
     // `ANTHROPIC_LOG=debug` would log each request, journal text included.

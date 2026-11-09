@@ -42,7 +42,6 @@ const fakeModel = (
   return { createMessage, requests, signals };
 };
 
-/** The model never answers; it only stops when its request is aborted. */
 const silentModel = () => {
   const signals: Array<AbortSignal> = [];
   const createMessage: CreateMessage = (_request, signal) => {
