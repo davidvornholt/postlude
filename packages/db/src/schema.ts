@@ -274,8 +274,26 @@ export const agentArea = pgTable(
     agentNoteGeneratedAt: timestamp('agent_note_generated_at', {
       withTimezone: true,
     }),
+    reportText: text('report_text').generatedAlwaysAs(
+      sql`report_plain_text(report_html)`,
+    ),
+    /**
+     * The report's words, folded the way `search-query.ts` folds a query:
+     * lowercased without changing the text's length, so search can find a
+     * word's place in `report_text` by the same fold, and split at every
+     * character that is not a letter or a digit. `pg_c_utf8` makes both the
+     * same in every locale. It reads the first 100,000 characters, because a
+     * tsvector can't exceed 1 MiB and a report of many distinct words can.
+     */
+    reportSearchVector: tsvector('report_search_vector').generatedAlwaysAs(
+      sql`to_tsvector('simple', regexp_replace(translate(lower(left(report_plain_text(report_html), 100000) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))`,
+    ),
   },
   (table) => [
+    index('agent_area_report_search_vector_index').using(
+      'gin',
+      table.reportSearchVector,
+    ),
     check(
       'agent_area_wrap_complete',
       sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, ${table.reportHtml}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 5)`,

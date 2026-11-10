@@ -15,7 +15,7 @@ import {
 import { databaseUrl } from './test-database-url.ts';
 
 const latestLegacyMigration = 2;
-const expectedMigrationCount = 13;
+const expectedMigrationCount = 14;
 const testTimeoutMilliseconds = 30_000;
 
 const closePool = (pool: Pool) =>

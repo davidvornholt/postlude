@@ -151,6 +151,31 @@ it('runs every CLI command', async () => {
   });
 });
 
+// Agents read a search hit as David's words, so the CLI never searches the
+// report /wrap wrote.
+it('searches David’s writing and not the day report', async () => {
+  const searches = await withEvening(({ sql, entries, areas }) =>
+    Effect.gen(function* () {
+      yield* entries.save(draft(day, 'Grace at the end of a long day.'));
+      yield* areas.putWrap(day, {
+        ...wrap,
+        reportHtml: '<p>Grace, and the parser merged.</p>',
+      });
+      yield* asAgent(sql);
+      const search = (query: string) =>
+        runCliCommand({ kind: 'search', query, limit: 5 }, noStdin);
+      return {
+        reportOnly: yield* search('parser'),
+        both: yield* search('grace'),
+      };
+    }),
+  );
+  expect(searches.reportOnly).toMatchObject({ hits: [] });
+  expect(searches.both).toMatchObject({
+    hits: [{ date: day, sources: [{ source: 'evening' }] }],
+  });
+});
+
 it('cannot change the journal or the ratings', async () => {
   const refusals = await withEvening(({ sql, entries, ratings }) =>
     Effect.gen(function* () {

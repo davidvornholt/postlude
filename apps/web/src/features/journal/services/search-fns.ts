@@ -43,7 +43,9 @@ export const searchJournalFn = createServerFn({ method: 'POST' })
       runJournalEffect(
         Effect.gen(function* () {
           const entries = yield* EntrySearch;
-          const matches = yield* entries.search(terms, searchLimit);
+          const matches = yield* entries.search(terms, searchLimit, {
+            dayReport: true,
+          });
           return {
             query,
             today,

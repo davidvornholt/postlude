@@ -25,10 +25,12 @@ const SearchExcerptSegment = Schema.Struct({
 });
 export type ExcerptSegment = Schema.Schema.Type<typeof SearchExcerptSegment>;
 
+/** Where a matched word was found. `day-report` is /wrap's text, not David's. */
 export const SearchHitSourceKind = Schema.Literals([
   'evening',
   'passage-reference',
   'scripture-notes',
+  'day-report',
 ]);
 export type SearchHitSourceKind = Schema.Schema.Type<
   typeof SearchHitSourceKind
@@ -99,7 +101,7 @@ export const searchHitOf = (match: SearchMatch): SearchHit => ({
   date: match.date,
   words: match.words,
   sources: (
-    ['evening', 'scripture-notes', 'passage-reference'] as const
+    ['evening', 'scripture-notes', 'passage-reference', 'day-report'] as const
   ).flatMap((kind) => {
     const groups = new Map<number, Array<SearchMatch['evidence'][number]>>();
     for (const evidence of match.evidence) {
