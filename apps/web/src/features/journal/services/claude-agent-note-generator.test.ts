@@ -84,7 +84,7 @@ describe('the request', () => {
     const [request] = model.requests;
     expect(request).toMatchObject({
       model: 'claude-sonnet-5-5',
-      max_tokens: 2048,
+      max_tokens: 8192,
       thinking: { type: 'adaptive' },
       output_config: { effort: 'low' },
       betas: ['server-side-fallback-2026-07-01'],

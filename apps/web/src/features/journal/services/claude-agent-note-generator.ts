@@ -37,10 +37,11 @@ const modelNames = new Map([
 const modelNameOf = (model: string) => modelNames.get(model) ?? model;
 
 /**
- * Room for the short thinking low effort does and for a note of a few
- * sentences. It also caps what one note can cost.
+ * Room for the thinking low effort does and for a note at
+ * `agentNoteCharacterLimit`, which in German is under 2,000 tokens. It also
+ * caps what one note can cost.
  */
-const outputTokens = 2048;
+const outputTokens = 8192;
 
 /** One attempt; with the retries this stays inside `agentNoteTimeout`. */
 const attemptTimeout = Duration.minutes(2);

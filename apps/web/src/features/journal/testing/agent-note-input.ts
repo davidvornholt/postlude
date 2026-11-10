@@ -21,12 +21,16 @@ export const excludedMarkers = {
   mailbox: 'MAILBOX-MARKER@example.test',
   imageKey: '0b6c3d7e-image-marker.png',
   linkTarget: 'LINK-TARGET-MARKER',
+  dayReportLinkTarget: 'DAY-REPORT-LINK-MARKER',
 } as const;
 
 export const journalText = `Heute war ein langer, guter Tag.
 
 ![Foto](/api/journal-images/${excludedMarkers.imageKey})
 Ich habe [den Plan](https://example.test/${excludedMarkers.linkTarget}) fertig.`;
+
+/** The text of /wrap's report, as the database derives it from the HTML. */
+export const dayReport = `Day report A long day on the garden planner, with a walk after lunch. 09:10–12:30 Worked on the planner's seed calendar and opened a pull request: https://example.test/${excludedMarkers.dayReportLinkTarget} 13:00–14:15 No screen activity; the calendar shows a walk. 14:30–18:30 Reviewed the pull request and fixed two tests.`;
 
 export const dayMetricsFor = (
   day: string,
@@ -103,6 +107,7 @@ export const agentNoteInput = (
     reportModel: excludedMarkers.reportModel,
     reportGeneratedAt: new Date('2026-10-09T20:00:00Z'),
   },
+  dayReport,
   history: [earlierDay(2), earlierDay(1)],
   ...overrides,
 });

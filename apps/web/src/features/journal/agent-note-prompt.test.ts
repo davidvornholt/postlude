@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'bun:test';
 
-import { agentNotePromptOf, journalTextLimit } from './agent-note-prompt.ts';
+import {
+  agentNoteCharacterLimit,
+  agentNotePromptOf,
+  journalTextLimit,
+} from './agent-note-prompt.ts';
 import { emptyJournalEntry } from './schemas/entry.ts';
 import {
   agentNoteInput,
@@ -14,6 +18,8 @@ const dataOpening = /^<day_data>\n/u;
 const dataClosing = /\n<\/day_data>$/u;
 // The image addresses and link targets below carry these, in any letter case.
 const privatePart = /secret|api\/journal/iu;
+// Wording that would cap the note by sentences instead of by its length.
+const sentenceCap = /at most five|few sentences|write a short note/iu;
 
 /** The JSON document the model is given, read back. */
 const dataOf = (prompt: ReturnType<typeof agentNotePromptOf>) =>
@@ -47,7 +53,7 @@ describe('what the model is given', () => {
     ]);
   });
 
-  it('leaves out the report, scripture, word counts, mailboxes, and closing times', () => {
+  it('leaves out the report’s HTML, scripture, word counts, mailboxes, and closing times', () => {
     const sent = everythingSent(agentNotePromptOf(agentNoteInput()));
     for (const marker of Object.values(excludedMarkers)) {
       expect(sent).not.toContain(marker);
@@ -316,5 +322,22 @@ describe('the instructions', () => {
     expect(instructions).toContain(
       'shortStretchMinutes is the active screen time outside focus blocks.',
     );
+  });
+
+  it('let the journal win over the day report', () => {
+    const [instructions] = agentNotePromptOf(agentNoteInput()).system;
+    expect(instructions).toContain(
+      'where the two disagree, journalText is right',
+    );
+    expect(instructions).toContain("don't retell the report");
+  });
+
+  it('ask for as much as the data supports, under a ceiling and no sentence count', () => {
+    const [instructions] = agentNotePromptOf(agentNoteInput()).system;
+    expect(instructions).toContain(
+      `stay under ${agentNoteCharacterLimit} characters; that is a ceiling, not a target`,
+    );
+    expect(instructions).toContain('Write as much as the data supports');
+    expect(instructions).not.toMatch(sentenceCap);
   });
 });

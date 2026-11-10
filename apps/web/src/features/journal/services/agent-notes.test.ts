@@ -6,11 +6,13 @@ import {
   closedDayNeededMessage,
   notConfiguredMessage,
 } from '../evening-messages.ts';
+import { shiftJournalDate } from '../journal-day.ts';
 import {
   abandonedNoteMessage,
   agentNoteViewOf,
   type StoredAgentNote,
 } from '../schemas/agent-area.ts';
+import { dayMetricsFor } from '../testing/agent-note-input.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import {
   type AgentNoteDraft,
@@ -78,6 +80,7 @@ describe('closing a day', () => {
     expect(given?.entry.journalMarkdown).toBe('Long walk, then work.');
     expect(given?.rating.energy).toBe('okay');
     expect(given?.wrap.dayMetrics).toBeNull();
+    expect(given?.dayReport).toBeNull();
     expect(given?.history).toHaveLength(agentNoteHistoryDays);
     expect(given?.history.at(-1)?.date).toBe('2026-10-08');
     expect(outcome.closed.rating.closedAt).toBeInstanceOf(Date);
@@ -89,6 +92,39 @@ describe('closing a day', () => {
       entryRevision: outcome.entry.revision,
       error: null,
     });
+  });
+
+  it("gives the model the text of the day's report, and no earlier day's", async () => {
+    const marker = 'Dayreportmarker';
+    const earlier = shiftJournalDate(day, -1);
+    const inputs: Array<AgentNoteInput> = [];
+    await withEvening(({ entries, ratings, areas }) =>
+      Effect.gen(function* () {
+        const notes = yield* notesWith((input) => {
+          inputs.push(input);
+          return Effect.succeed({ note: 'A steady day.', model: 'note-model' });
+        });
+        for (const date of [earlier, day]) {
+          yield* areas.putWrap(date, {
+            dayMetrics: dayMetricsFor(date),
+            metricsVersion: 2,
+            reportHtml: `<h1>Day report</h1><p>09:00–10:00 ${marker} on ${date}.</p>`,
+            reportModel: 'wrap-model',
+          });
+        }
+        yield* entries.save(draft(day, 'Long walk, then work.'));
+        yield* ratings.save({ date: day, energy: 'okay', progress: 'solid' });
+        yield* notes.closeDay(day);
+      }),
+    );
+    expect(inputs).toHaveLength(1);
+    const [given] = inputs;
+    expect(given?.dayReport).toBe(
+      `Day report 09:00–10:00 ${marker} on ${day}.`,
+    );
+    expect(given?.wrap.dayMetrics?.day).toBe(day);
+    expect(given?.history.at(-1)?.dayMetrics?.day).toBe(earlier);
+    expect(JSON.stringify(inputs)).not.toContain(`${marker} on ${earlier}`);
   });
 
   it('writes a note for a day with no entry from revision 0', async () => {

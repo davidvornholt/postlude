@@ -274,6 +274,7 @@ export const agentArea = pgTable(
     agentNoteGeneratedAt: timestamp('agent_note_generated_at', {
       withTimezone: true,
     }),
+    /** Text extracted from stored HTML, before the report runs its scripts. */
     reportText: text('report_text').generatedAlwaysAs(
       sql`report_plain_text(report_html)`,
     ),

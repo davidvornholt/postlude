@@ -67,7 +67,7 @@ const stateLine = (
     case 'none':
       return closed
         ? 'No note was asked for on this day.'
-        : 'When you close the day, an agent writes a short note on it from your ratings, your writing and the day’s numbers.';
+        : 'When you close the day, an agent writes a note on it from your ratings, your writing and the day report.';
     case 'pending':
       return 'An agent is writing a note on this day. It appears here when it is done.';
     case 'stale':

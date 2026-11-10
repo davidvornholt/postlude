@@ -91,7 +91,7 @@ describe('the API client', () => {
     );
     expect(JSON.parse(String(sent?.init?.body))).toMatchObject({
       model: 'claude-sonnet-5-5',
-      max_tokens: 2048,
+      max_tokens: 8192,
       fallbacks: 'default',
     });
   });
