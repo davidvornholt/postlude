@@ -114,10 +114,13 @@ for (const colorScheme of colorSchemes) {
     await expect(root).toHaveAttribute('data-storage', 'blocked');
     await expect(root).toHaveAttribute('data-parent-page', 'blocked');
 
-    // The frame takes the height the report asked for, within bounds.
+    // The frame takes the height the report asked for, within bounds, and
+    // its border on top, so the report has all of that height to itself.
     const requested = Number(await root.getAttribute('data-requested-height'));
-    const expected = `${Math.max(requested, reportHeightBounds.minimum)}px`;
+    const granted = Math.max(requested, reportHeightBounds.minimum);
+    const expected = `${granted + 2}px`;
     await expect.poll(() => frameHeight(page)).toBe(expected);
+    expect(await content?.evaluate(() => window.innerHeight)).toBe(granted);
     await scanPage(page);
 
     // A height request that doesn't come from the report's own window is

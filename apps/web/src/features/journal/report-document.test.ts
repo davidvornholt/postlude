@@ -4,12 +4,13 @@ import {
   dayMetricsMessageOf,
   reportContentSecurityPolicy,
   reportDocumentOf,
+  reportFrameStyle,
   reportHeightBounds,
   reportHeightOf,
 } from './report-document.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 
-const preamble = `<!doctype html><meta http-equiv="Content-Security-Policy" content="${reportContentSecurityPolicy}">`;
+const preamble = `<!doctype html><meta http-equiv="Content-Security-Policy" content="${reportContentSecurityPolicy}"><style>${reportFrameStyle}</style>`;
 
 describe('reportDocumentOf', () => {
   it('carries the contract policy exactly', () => {
@@ -18,7 +19,7 @@ describe('reportDocumentOf', () => {
     );
   });
 
-  it('puts a doctype and the policy in front of the whole report', () => {
+  it('puts a doctype, the policy and the frame style in front of the whole report', () => {
     for (const report of [
       '<!doctype html><html lang="en"><head></head></html>',
       '\n<!-- made by /wrap -->\n<!DOCTYPE html>\n<p>',

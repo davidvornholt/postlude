@@ -7,12 +7,18 @@
  * their height rather than appearing at once, so the writing below slides out
  * of the way instead of jumping. The report leaves the page once it is hidden,
  * so showing it again loads it afresh.
+ *
+ * The open report sits in the text column. Where the screen is wide enough for
+ * more room to help its timeline, a control at the end of its row widens it
+ * and narrows it again (`report-frame.tsx` says how). The browser remembers
+ * the choice (`report-width.ts`), so a report opens as wide as the last one.
  */
 
 import { useId, useState } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
 import { Collapsible } from '#/shared/ui/collapsible.tsx';
+import { browserReportWidthMemory, type ReportWidth } from '../report-width.ts';
 import type { WrapArea } from '../schemas/agent-area.ts';
 import { RowLabel } from './rating-scale.tsx';
 import { ReportFrame } from './report-frame.tsx';
@@ -29,6 +35,11 @@ const disabledQuietClass =
 
 export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   const [open, setOpen] = useState(false);
+  // Nothing that depends on the width is drawn before the report is shown, so
+  // the server, which has no storage, draws the same page as the browser.
+  const [width, setWidth] = useState<ReportWidth>(() =>
+    browserReportWidthMemory().read(),
+  );
   const headingId = useId();
   const regionId = useId();
   const lockId = useId();
@@ -52,6 +63,11 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   }
 
   const shown = open && unlocked;
+  const toggleWidth = (): void => {
+    const next = width === 'wide' ? 'column' : 'wide';
+    setWidth(next);
+    browserReportWidthMemory().remember(next);
+  };
   return (
     <section aria-labelledby={headingId} className={rowClass}>
       {heading}
@@ -70,6 +86,16 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
         {wrap.reportModel === null ? null : (
           <p className="text-ink-faint text-sm">By {wrap.reportModel}</p>
         )}
+        {shown ? (
+          <Button
+            aria-controls={regionId}
+            className="ml-auto max-lg:hidden"
+            onClick={toggleWidth}
+            variant="quiet"
+          >
+            {width === 'wide' ? 'Narrow the report' : 'Widen the report'}
+          </Button>
+        ) : null}
       </div>
       <Collapsible open={!unlocked} unmountWhenClosed={true}>
         <p className="mt-1 text-ink-muted text-sm sm:ml-44" id={lockId}>
@@ -87,6 +113,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
             dayMetrics={dayMetrics}
             metricsVersion={metricsVersion}
             reportHtml={reportHtml}
+            wide={width === 'wide'}
           />
           <Button className="mt-4" onClick={onToWriting} variant="quiet">
             Go to the writing

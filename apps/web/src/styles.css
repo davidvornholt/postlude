@@ -279,3 +279,12 @@
     translate: 0 0.25rem;
   }
 }
+
+/* The day report's frame widens by moving this number from 0 to 1, and its
+   width and margin follow it (`report-frame.tsx`). A browser eases a custom
+   property only when it knows the property's type; otherwise it would flip. */
+@property --report-wide {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
