@@ -22,27 +22,26 @@
  * The frame sits in the text column, and where the screen is wide enough it
  * can be shown wide, because the report's timeline can use more width than the
  * column has. The control for that is the report's own, beside its timeline.
- * A report that has one says so once it starts, and the frame is wide only for
- * such a report, so a report without one always keeps to the column. The frame
- * then tells it whether the screen has room to widen it and whether it is
- * wide, whenever either changes, and the report shows its control only while
- * there is room. A press asks for a width, which the frame takes only from its
- * own report and only while there is room.
+ * Once the report has loaded, the frame tells it how wide it is in the column,
+ * whether the screen has room to widen it and whether it is wide, and tells it
+ * again whenever any of that changes. A report with a control keeps everything
+ * but its timeline at the column's width, in the middle of its page, and only
+ * then says it has the control, which it shows only while there is room. The
+ * frame is wide only for a report that has said so, so a report without a
+ * control always keeps to the column, and a report with one has its text in
+ * place before the frame first widens. A press asks for a width, which the
+ * frame takes only from its own report and only while there is room.
  *
- * /wrap's template keeps the report's text in a column 720px wide at the
- * middle of its page, so the wide frame's middle sits 360px right of the text
- * column's edge, and the report's text then starts exactly where the page's
- * does. The frame grows to the template's widest page, 1480px and its border,
- * but no closer to the screen's left edge than the page's own margin.
+ * The wide frame grows out of the text column by the same amount on both
+ * sides, so the middle of the report's page stays where it is, and with it
+ * all the text the template keeps there: only the timeline grows with the
+ * frame. The frame grows to the template's widest page, 1480px and its
+ * border, but no closer to the screen's left edge than the page's own margin.
  *
  * Widening moves one number, `--report-wide`, from 0 to 1, and the width and
  * the margin are worked out from it, so every step of the way is a frame the
- * report can lay out. Narrower than the template's text column and its 20px
- * padding, the report's text starts 21px into the frame, so the margin then
- * moves only the 21px that brings the text to the page's edge; wider, the
- * margin keeps the frame's middle where the text ends up. The text slides
- * steadily in one direction while the frame opens around it. The report
- * reflows as it goes and asks for its new height, which the frame eases to.
+ * report can lay out. The width grows in steps of 2px, so the margin moves in
+ * whole pixels and the text in the middle never lands between two of them.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -93,14 +92,15 @@ const addFramePolicy = (): void => {
 /**
  * The frame's width and margin, worked out from `--report-wide` as the comment
  * at the top describes. A percentage is the text column's width, both in the
- * width and in the margin. The wide width is the screen less the page's frame
- * (56rem), with the report's text column (720px) added back, which leaves the
- * page's margin at the left.
+ * width and in the margin. The wide frame is wider than the column by what it
+ * takes to reach 1482px, but by no more than the screen less the page's frame
+ * (56rem), which leaves the page's margin at the left. Half of that goes to
+ * each side.
  */
 const frameGeometryClass = [
-  '[--report-width:calc(100%_+_var(--report-wide)_*_(min(1482px,100vw_-_56rem_+_720px)_-_100%))]',
+  '[--report-width:calc(100%_+_round(down,var(--report-wide)_*_min(1482px_-_100%,100vw_-_56rem),2px))]',
   'w-(--report-width)',
-  'ml-[calc(min(0px,381px_-_var(--report-width)_/_2)_-_21px_*_var(--report-wide))]',
+  'ml-[calc((100%_-_var(--report-width))_/_2)]',
 ].join(' ');
 
 /**
@@ -125,7 +125,7 @@ export const ReportFrame = ({
   const [height, setHeight] = useState<number>(reportHeightBounds.initial);
   const [navigatedAway, setNavigatedAway] = useState(false);
   const [framePolicyAdded, setFramePolicyAdded] = useState(false);
-  const { postWidth, widthClass } = useReportFrameWidth({
+  const { reportLoaded, widthClass } = useReportFrameWidth({
     frameRef,
     loadsRef,
     wide,
@@ -180,7 +180,7 @@ export const ReportFrame = ({
     loadsRef.current += 1;
     if (loadsRef.current === 1) {
       post();
-      postWidth();
+      reportLoaded();
       return;
     }
     setNavigatedAway(true);

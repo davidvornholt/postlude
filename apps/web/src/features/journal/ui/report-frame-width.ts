@@ -4,13 +4,7 @@
  */
 
 import type { RefObject } from 'react';
-import {
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useLayoutEffect,
-  useState,
-} from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useState } from 'react';
 
 import {
   reportOffersWidthOf,
@@ -32,6 +26,9 @@ const wideClass = 'lg:[--report-wide:1]';
  */
 const settlingDurations = '[transition-duration:300ms,0s]';
 const movingDurations = '[transition-duration:300ms,400ms]';
+
+/** The frame's border at its left and right, 1px each, which its width includes. */
+const frameBorderWidth = 2;
 
 /** Whether a message came from the report in this frame, and not from anything else on the page. */
 export const isFromFrame = (
@@ -57,29 +54,32 @@ export const useReportFrameWidth = ({
   wide,
   onWidthRequest,
 }: ReportFrameWidthOptions): {
-  /** Tells the report about the width, which the frame does once it loads. */
-  readonly postWidth: () => void;
+  /** Starts telling the report about the width, which the frame does once it loads. */
+  readonly reportLoaded: () => void;
   /** The frame's width and how it moves. */
   readonly widthClass: string;
 } => {
+  const [loaded, setLoaded] = useState(false);
+  const [column, setColumn] = useState<number>();
   const [roomToWiden, setRoomToWiden] = useState(false);
   const [offersWidth, setOffersWidth] = useState(false);
   const [widthMoves, setWidthMoves] = useState(false);
 
-  const postWidth = useCallback(() => {
-    const target = frameRef.current?.contentWindow;
-    if (
-      !offersWidth ||
-      target === null ||
-      target === undefined ||
-      loadsRef.current !== 1
-    ) {
+  useEffect(() => {
+    const holder = frameRef.current?.parentElement;
+    if (!loaded || holder === null || holder === undefined) {
       return;
     }
-    // As with the numbers, `*` is the only target origin that reaches the
-    // sandboxed report, and the load count keeps it to the first document.
-    target.postMessage(reportWidthMessageOf(roomToWiden, wide), '*');
-  }, [frameRef, loadsRef, offersWidth, roomToWiden, wide]);
+    // The frame's own width is the column's until it is wide, and the
+    // column's width doesn't change when the frame grows out of it.
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry !== undefined) {
+        setColumn(entry.contentRect.width - frameBorderWidth);
+      }
+    });
+    observer.observe(holder);
+    return () => observer.disconnect();
+  }, [frameRef, loaded]);
 
   useEffect(() => {
     const screen = globalThis.matchMedia?.(wideScreen);
@@ -93,8 +93,19 @@ export const useReportFrameWidth = ({
   }, []);
 
   useEffect(() => {
-    postWidth();
-  }, [postWidth]);
+    const target = frameRef.current?.contentWindow;
+    if (
+      column === undefined ||
+      target === null ||
+      target === undefined ||
+      loadsRef.current !== 1
+    ) {
+      return;
+    }
+    // As with the numbers, `*` is the only target origin that reaches the
+    // sandboxed report, and the load count keeps it to the first document.
+    target.postMessage(reportWidthMessageOf(roomToWiden, wide, column), '*');
+  }, [frameRef, loadsRef, column, roomToWiden, wide]);
 
   useLayoutEffect(() => {
     if (!offersWidth || widthMoves) {
@@ -131,7 +142,7 @@ export const useReportFrameWidth = ({
   }, [frameRef]);
 
   return {
-    postWidth,
+    reportLoaded: () => setLoaded(true),
     widthClass: [
       widthMoves ? movingDurations : settlingDurations,
       wide && offersWidth ? wideClass : '',

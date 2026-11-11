@@ -90,21 +90,24 @@ describe('dayMetricsMessageOf', () => {
 });
 
 describe('the width messages', () => {
-  it('tells the report whether the frame can be wide, and never that it is wide when it cannot be', () => {
-    expect(reportWidthMessageOf(true, true)).toEqual({
+  it('tells the report its column and whether the frame can be wide, and never that it is wide when it cannot be', () => {
+    expect(reportWidthMessageOf(true, true, 660)).toEqual({
       type: 'postlude:report-width',
       available: true,
       wide: true,
+      column: 660,
     });
-    expect(reportWidthMessageOf(true, false)).toEqual({
+    expect(reportWidthMessageOf(true, false, 660)).toEqual({
       type: 'postlude:report-width',
       available: true,
       wide: false,
+      column: 660,
     });
-    expect(reportWidthMessageOf(false, true)).toEqual({
+    expect(reportWidthMessageOf(false, true, 341.5)).toEqual({
       type: 'postlude:report-width',
       available: false,
       wide: false,
+      column: 341.5,
     });
   });
 
@@ -146,7 +149,12 @@ describe('the width messages', () => {
       { type: 'postlude:report-width-request' },
       { type: 'postlude:report-width-request', wide: 'true' },
       { type: 'postlude:report-width-request', wide: 1 },
-      { type: 'postlude:report-width', available: true, wide: true },
+      {
+        type: 'postlude:report-width',
+        available: true,
+        wide: true,
+        column: 660,
+      },
       { type: 'postlude:report-width-control' },
     ]) {
       expect(requestedReportWidthOf(data)).toBeUndefined();

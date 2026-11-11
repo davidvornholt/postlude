@@ -11,14 +11,17 @@ const widenAnything = /widen/iu;
 
 /** The report's widest page, 1480px, and the frame's border at each side. */
 const widestFrame = 1482;
-/** The page's frame, 56rem, less the report's text column, 720px. */
-const pageLessText = 896 - 720;
-/** Half the report's text column, which the wide frame's middle sits beyond the page's column edge. */
-const halfText = 360;
+/** The page's frame, 56rem, which the wide frame leaves of the screen. */
+const pageFrame = 896;
 
 type Box = { readonly left: number; readonly width: number };
-type Edges = ReadonlyArray<{ readonly left: number; readonly right: number }>;
-/** What `edgesWhile` keeps on the page's window while it records. */
+/** An element's left and right edge, and the width of the window it is in. */
+type Edges = ReadonlyArray<{
+  readonly left: number;
+  readonly right: number;
+  readonly window: number;
+}>;
+/** What `startRecording` keeps on the window it records in. */
 type EdgeRecorder = {
   postludeActed?: boolean;
   postludeEdges?: Promise<Edges>;
@@ -66,8 +69,13 @@ const columnOf = async (page: playwright.Page): Promise<Box> => {
   return frame;
 };
 
-const wideWidthAt = (viewportWidth: number): number =>
-  Math.min(widestFrame, viewportWidth - pageLessText);
+/** The column's width, and the room the wide frame adds, in whole steps of 2px. */
+const wideWidthAt = (viewportWidth: number, column: Box): number =>
+  column.width +
+  2 *
+    Math.floor(
+      Math.min(widestFrame - column.width, viewportWidth - pageFrame) / 2,
+    );
 
 const expectWide = async (
   page: playwright.Page,
@@ -75,10 +83,13 @@ const expectWide = async (
   viewportWidth: number,
 ): Promise<void> => {
   const frame = await boxOf(page.locator(frameSelector));
-  expect(frame.width).toBeCloseTo(wideWidthAt(viewportWidth), 0);
-  // The report's text column sits at the middle of its frame, so it starts
-  // where the page's column does.
-  expect(frame.left + frame.width / 2 - halfText).toBeCloseTo(column.left, 0);
+  expect(frame.width).toBeCloseTo(wideWidthAt(viewportWidth, column), 0);
+  // The frame grows out of the column equally to both sides, so the middle of
+  // the report's page, where its text is, stays where it was.
+  expect(frame.left + frame.width / 2).toBeCloseTo(
+    column.left + column.width / 2,
+    1,
+  );
   expect(frame.left).toBeGreaterThanOrEqual(32 - 0.5);
   expect(frame.left + frame.width).toBeLessThanOrEqual(viewportWidth - 32);
 };
@@ -93,24 +104,30 @@ const expectInColumn = async (
 };
 
 /**
- * Records the frame's left and right edge in each animation frame on the
- * page, until the frame has held still for a while after `postludeActed` is
- * set. It runs in the page, so it uses nothing from outside itself.
+ * Records an element's left and right edge, and its window's width, in each
+ * animation frame, until they have held still for a while after
+ * `postludeActed` is set. It runs in the page or in the report, so it uses
+ * nothing from outside itself.
  */
 const startRecording = (selector: string): void => {
   const recorder = globalThis as unknown as EdgeRecorder;
-  const edges: Array<{ left: number; right: number }> = [];
+  const edges: Array<{ left: number; right: number; window: number }> = [];
   let stillSince = performance.now();
   const sample = (): void => {
     const box = document.querySelector(selector)?.getBoundingClientRect();
     if (box === undefined) {
       return;
     }
+    const window = document.documentElement.getBoundingClientRect().width;
     const last = edges.at(-1);
-    if (last?.left !== box.left || last.right !== box.right) {
+    if (
+      last?.left !== box.left ||
+      last.right !== box.right ||
+      last.window !== window
+    ) {
       stillSince = performance.now();
     }
-    edges.push({ left: box.left, right: box.right });
+    edges.push({ left: box.left, right: box.right, window });
   };
   const settled = (): boolean =>
     recorder.postludeActed === true &&
@@ -128,6 +145,13 @@ const startRecording = (selector: string): void => {
   recorder.postludeEdges = record();
 };
 
+/** Says the recording may end once things hold still, and returns it. */
+const stopRecording = (): Promise<Edges> => {
+  const recorder = globalThis as unknown as EdgeRecorder;
+  recorder.postludeActed = true;
+  return recorder.postludeEdges ?? Promise.resolve([]);
+};
+
 /**
  * The frame's edges in each animation frame while `act` runs, and until the
  * frame has held still after it. The report's window is of another origin, so
@@ -140,16 +164,43 @@ const edgesWhile = async (
 ): Promise<Edges> => {
   await page.evaluate(startRecording, frameSelector);
   await act();
-  return page.evaluate(() => {
-    const recorder = globalThis as unknown as EdgeRecorder;
-    recorder.postludeActed = true;
-    return recorder.postludeEdges ?? [];
-  });
+  return page.evaluate(stopRecording);
+};
+
+/**
+ * The frame's edges, as `edgesWhile` has them, and those of the report's
+ * heading inside it, in each animation frame of the report's own.
+ */
+const motionWhile = async (
+  page: playwright.Page,
+  act: () => Promise<void>,
+): Promise<{ readonly frame: Edges; readonly text: Edges }> => {
+  const report = await (
+    await page.locator(frameSelector).elementHandle()
+  )?.contentFrame();
+  if (report === null || report === undefined) {
+    throw new Error('The frame has no report.');
+  }
+  await report.evaluate(startRecording, 'h1');
+  const frame = await edgesWhile(page, act);
+  return { frame, text: await report.evaluate(stopRecording) };
 };
 
 const widthsOf = (edges: Edges): ReadonlyArray<number> => [
   ...new Set(edges.map(({ left, right }) => Math.round(right - left))),
 ];
+
+/**
+ * The report's text keeps still on the screen. The frame keeps its middle
+ * (`expectSteadyMotion`), so the text does when it keeps its place from the
+ * middle of the report's window, in every frame the report draws while that
+ * window grows or shrinks.
+ */
+const expectStillText = (text: Edges): void => {
+  const fromMiddle = text.map(({ left, window }) => left - window / 2);
+  expect(Math.max(...fromMiddle) - Math.min(...fromMiddle)).toBeLessThan(0.01);
+  expect(new Set(text.map(({ window }) => window)).size).toBeGreaterThan(4);
+};
 
 const expectSteadyMotion = (edges: Edges, direction: 'out' | 'in'): void => {
   const sign = direction === 'out' ? 1 : -1;
@@ -163,8 +214,11 @@ const expectSteadyMotion = (edges: Edges, direction: 'out' | 'in'): void => {
     );
   });
   expect(Math.min(...steps)).toBeGreaterThanOrEqual(-0.01);
-  // It passes through widths between the two, rather than jumping.
+  // It passes through widths between the two, rather than jumping, and its
+  // middle stays where it is.
   expect(widthsOf(edges).length).toBeGreaterThan(4);
+  const middles = edges.map(({ left, right }) => (left + right) / 2);
+  expect(Math.max(...middles) - Math.min(...middles)).toBeLessThan(0.01);
 };
 
 /** Only ever the column's width or the wide one, and nothing between. */
@@ -177,12 +231,12 @@ const expectNoMotion = (
     widthsOf(edges).filter(
       (width) =>
         Math.abs(width - column.width) > 1 &&
-        Math.abs(width - wideWidthAt(viewportWidth)) > 1,
+        Math.abs(width - wideWidthAt(viewportWidth, column)) > 1,
     ),
   ).toEqual([]);
 };
 
-test("where the screen has room, the report's own control widens it to line its text up with the page, and narrows it again", async ({
+test("where the screen has room, the report's own control widens it equally to both sides of the column, and narrows it again", async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -234,7 +288,7 @@ test('where widening would gain the report little, its control is hidden and the
   await expectWide(page, column, 1280);
 });
 
-test('the report widens and narrows in one steady motion, or at once with reduced motion', async ({
+test('the report widens and narrows in one steady motion with its text kept still, or at once with reduced motion', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -243,16 +297,16 @@ test('the report widens and narrows in one steady motion, or at once with reduce
   await openReport(page);
   const column = await columnOf(page);
 
-  expectSteadyMotion(
-    await edgesWhile(page, () => control(page, widen).click()),
-    'out',
-  );
+  const widening = await motionWhile(page, () => control(page, widen).click());
+  expectSteadyMotion(widening.frame, 'out');
+  expectStillText(widening.text);
   await expectWide(page, column, 1400);
   await expect(control(page, narrow)).toBeFocused();
-  expectSteadyMotion(
-    await edgesWhile(page, () => control(page, narrow).click()),
-    'in',
+  const narrowing = await motionWhile(page, () =>
+    control(page, narrow).click(),
   );
+  expectSteadyMotion(narrowing.frame, 'in');
+  expectStillText(narrowing.text);
   await expectInColumn(page, column);
 
   await page.emulateMedia({ reducedMotion: 'reduce' });

@@ -97,25 +97,31 @@ export const reportHeightOf = (data: unknown): number | undefined => {
 };
 
 /**
- * Whether the frame can be shown wide, which needs a screen with room for it,
- * and whether it is. Only a report that has said it has a width control of
- * its own (`reportOffersWidthOf`) is told, and it shows that control only
- * after this says the frame can be wide, so a report never offers a width
- * Postlude can't give it.
+ * How wide the report is in the text column, whether the frame can be shown
+ * wide, which needs a screen with room for it, and whether it is. Every report
+ * is told. A report with a width control of its own keeps everything but its
+ * timeline at the column's width, so that only the timeline moves when the
+ * frame does, and only then says it has the control (`reportOffersWidthOf`).
+ * It shows the control only while this says the frame can be wide, so a
+ * report never offers a width Postlude can't give it.
  */
 export type ReportWidthMessage = {
   readonly type: 'postlude:report-width';
   readonly available: boolean;
   readonly wide: boolean;
+  /** The frame's width in the text column, less its border, in CSS pixels. */
+  readonly column: number;
 };
 
 export const reportWidthMessageOf = (
   available: boolean,
   wide: boolean,
+  column: number,
 ): ReportWidthMessage => ({
   type: 'postlude:report-width',
   available,
   wide: available && wide,
+  column,
 });
 
 const isMessageOfType = (

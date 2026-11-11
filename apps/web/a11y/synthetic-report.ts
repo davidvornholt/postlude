@@ -12,13 +12,23 @@
  * `syntheticReportHtml` has none, like the reports /wrap wrote before it had.
  */
 
-/** A timeline heading with the width control, which stays hidden until the page says it can widen the frame. Its row is as tall as the control, so showing it moves nothing. */
-const widthControl = `<div class="head"><h2>Timeline</h2><button type="button" data-width-toggle aria-label="Widen the timeline" hidden>&harr;</button></div>`;
+/**
+ * A timeline heading with the width control, which stays hidden until the
+ * page says it can widen the frame, over a track that stands in for the
+ * timeline. Its row is as tall as the control, so showing it moves nothing.
+ * Everything but the track keeps the width the page says the report has in
+ * its column, in the middle of the report's page, as /wrap's template does.
+ */
+const widthControl = `<style>
+  main > :not(.track) { max-width: calc(var(--column, 100vw) - 40px); margin-inline: auto; }
+  .track { height: 24px; background: #8a8a85; }
+</style>
+<div class="head"><h2>Timeline</h2><button type="button" data-width-toggle aria-label="Widen the timeline" hidden>&harr;</button></div>
+<div class="track"></div>`;
 
-/** Says the report has the control, keeps it to what the page says, and asks for the other width when pressed. */
+/** Takes the column, then says the report has the control; keeps the control to what the page says, and asks for the other width when pressed. */
 const widthScript = `<script>
   const widthToggle = document.querySelector('[data-width-toggle]');
-  window.parent.postMessage({ type: 'postlude:report-width-control' }, '*');
   widthToggle.addEventListener('click', () => {
     window.parent.postMessage({ type: 'postlude:report-width-request', wide: widthToggle.dataset.wide !== 'true' }, '*');
   });
@@ -26,10 +36,15 @@ const widthScript = `<script>
     if (event.source !== window.parent) { return; }
     const message = event.data;
     if (message === null || typeof message !== 'object' || message.type !== 'postlude:report-width') { return; }
-    document.documentElement.dataset.widthMessages = String(Number(document.documentElement.dataset.widthMessages ?? '0') + 1);
+    const probes = document.documentElement.dataset;
+    probes.widthMessages = String(Number(probes.widthMessages ?? '0') + 1);
+    document.documentElement.style.setProperty('--column', message.column + 'px');
     widthToggle.hidden = !message.available;
     widthToggle.dataset.wide = String(message.wide);
     widthToggle.setAttribute('aria-label', message.wide ? 'Narrow the timeline' : 'Widen the timeline');
+    if (probes.widthMessages === '1') {
+      window.parent.postMessage({ type: 'postlude:report-width-control' }, '*');
+    }
   });
 </script>`;
 
