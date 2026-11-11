@@ -123,6 +123,14 @@ const sectionSpace = {
   follows: 'pt-12',
 } as const;
 
+/**
+ * Each part is a query container, so the day report, which is wider than the
+ * text column where the screen has room, can centre itself on the page rather
+ * than on the column (`report-frame.tsx`).
+ */
+const sectionClass = (space: keyof typeof sectionSpace): string =>
+  `@container ${sectionSpace[space]}`;
+
 const EveningSection = ({
   title,
   intro,
@@ -139,7 +147,7 @@ const EveningSection = ({
     <PageFrame
       aria-labelledby={headingId}
       as="section"
-      className={sectionSpace[space]}
+      className={sectionClass(space)}
     >
       <div className={readingMeasureClass}>
         <h2

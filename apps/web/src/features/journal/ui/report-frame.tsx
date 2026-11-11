@@ -18,6 +18,12 @@
  *
  * A report that navigates its frame anyway has stopped being the report, so
  * the frame is taken down when it loads again and nothing more is sent to it.
+ *
+ * The report's timeline needs more width than the text column has, so where
+ * the screen has room the frame grows past the column, up to the report's own
+ * widest layout and leaving a margin at each side of the screen. It is centred
+ * on the page (the evening section is the query container that `cqw` measures)
+ * but never starts right of the column, and never gets narrower than it.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -140,7 +146,7 @@ export const ReportFrame = ({
   return (
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onLoad is the frame's own load event, not something a person does, so it needs no keyboard equivalent.
     <iframe
-      className="block w-full border border-border bg-surface transition-[height] duration-300 ease-standard motion-reduce:transition-none"
+      className="ml-[min(0px,calc(50cqw_-_var(--report-width)_/_2))] block w-(--report-width) border border-border bg-surface transition-[height] duration-300 ease-standard [--report-width:max(100%,min(92.5rem,calc(100vw_-_9rem)))] motion-reduce:transition-none"
       onLoad={loaded}
       ref={frameRef}
       referrerPolicy="no-referrer"
