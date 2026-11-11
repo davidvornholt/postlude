@@ -8,9 +8,11 @@
  * one, because a browser enforces every policy a document has.
  *
  * The page never carries numbers. They reach it after it has loaded, in one
- * message, and it fills them in itself.
+ * message, and it fills them in itself. A report may also have a control that
+ * widens its frame, and then it and the page tell each other about the width.
  */
 
+import type { ReportWidth } from './report-width.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 
 export const reportContentSecurityPolicy =
@@ -92,4 +94,63 @@ export const reportHeightOf = (data: unknown): number | undefined => {
     reportHeightBounds.maximum,
     Math.max(reportHeightBounds.minimum, Math.ceil(data.height)),
   );
+};
+
+/**
+ * Whether the frame can be shown wide, which needs a screen with room for it,
+ * and whether it is. Only a report that has said it has a width control of
+ * its own (`reportOffersWidthOf`) is told, and it shows that control only
+ * after this says the frame can be wide, so a report never offers a width
+ * Postlude can't give it.
+ */
+export type ReportWidthMessage = {
+  readonly type: 'postlude:report-width';
+  readonly available: boolean;
+  readonly wide: boolean;
+};
+
+export const reportWidthMessageOf = (
+  available: boolean,
+  wide: boolean,
+): ReportWidthMessage => ({
+  type: 'postlude:report-width',
+  available,
+  wide: available && wide,
+});
+
+const isMessageOfType = (
+  data: unknown,
+  type: string,
+): data is { readonly type: string } =>
+  typeof data === 'object' &&
+  data !== null &&
+  'type' in data &&
+  data.type === type;
+
+/**
+ * Whether the message is the report saying it has a width control. A report
+ * that never says so stays in the text column, because it has no way to bring
+ * itself back there.
+ */
+export const reportOffersWidthOf = (data: unknown): boolean =>
+  isMessageOfType(data, 'postlude:report-width-control');
+
+/**
+ * The width a `postlude:report-width-request` message asks for, or undefined
+ * when the message is anything else. As with the height, checking where it
+ * came from is the caller's job.
+ */
+export const requestedReportWidthOf = (
+  data: unknown,
+): ReportWidth | undefined => {
+  if (
+    !(
+      isMessageOfType(data, 'postlude:report-width-request') &&
+      'wide' in data &&
+      typeof data.wide === 'boolean'
+    )
+  ) {
+    return;
+  }
+  return data.wide ? 'wide' : 'column';
 };

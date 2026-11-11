@@ -9,9 +9,10 @@
  * so showing it again loads it afresh.
  *
  * The open report sits in the text column. Where the screen is wide enough for
- * more room to help its timeline, a control at the end of its row widens it
- * and narrows it again (`report-frame.tsx` says how). The browser remembers
- * the choice (`report-width.ts`), so a report opens as wide as the last one.
+ * more room to help its timeline, a control the report has beside its
+ * timeline widens it and narrows it again (`report-frame.tsx` says how). The
+ * browser remembers the choice (`report-width.ts`), so a report opens as wide
+ * as the last one.
  */
 
 import { useId, useState } from 'react';
@@ -63,8 +64,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   }
 
   const shown = open && unlocked;
-  const toggleWidth = (): void => {
-    const next = width === 'wide' ? 'column' : 'wide';
+  const changeWidth = (next: ReportWidth): void => {
     setWidth(next);
     browserReportWidthMemory().remember(next);
   };
@@ -86,16 +86,6 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
         {wrap.reportModel === null ? null : (
           <p className="text-ink-faint text-sm">By {wrap.reportModel}</p>
         )}
-        {shown ? (
-          <Button
-            aria-controls={regionId}
-            className="ml-auto max-lg:hidden"
-            onClick={toggleWidth}
-            variant="quiet"
-          >
-            {width === 'wide' ? 'Narrow the report' : 'Widen the report'}
-          </Button>
-        ) : null}
       </div>
       <Collapsible open={!unlocked} unmountWhenClosed={true}>
         <p className="mt-1 text-ink-muted text-sm sm:ml-44" id={lockId}>
@@ -112,6 +102,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
           <ReportFrame
             dayMetrics={dayMetrics}
             metricsVersion={metricsVersion}
+            onWidthRequest={changeWidth}
             reportHtml={reportHtml}
             wide={width === 'wide'}
           />

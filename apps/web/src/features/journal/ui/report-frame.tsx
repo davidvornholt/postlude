@@ -21,11 +21,19 @@
  *
  * The frame sits in the text column, and where the screen is wide enough it
  * can be shown wide, because the report's timeline can use more width than the
- * column has. /wrap's template keeps the report's text in a column 720px wide
- * at the middle of its page, so the wide frame's middle sits 360px right of
- * the text column's edge, and the report's text then starts exactly where the
- * page's does. The frame grows to the template's widest page, 1480px and its
- * border, but no closer to the screen's left edge than the page's own margin.
+ * column has. The control for that is the report's own, beside its timeline.
+ * A report that has one says so once it starts, and the frame is wide only for
+ * such a report, so a report without one always keeps to the column. The frame
+ * then tells it whether the screen has room to widen it and whether it is
+ * wide, whenever either changes, and the report shows its control only while
+ * there is room. A press asks for a width, which the frame takes only from its
+ * own report and only while there is room.
+ *
+ * /wrap's template keeps the report's text in a column 720px wide at the
+ * middle of its page, so the wide frame's middle sits 360px right of the text
+ * column's edge, and the report's text then starts exactly where the page's
+ * does. The frame grows to the template's widest page, 1480px and its border,
+ * but no closer to the screen's left edge than the page's own margin.
  *
  * Widening moves one number, `--report-wide`, from 0 to 1, and the width and
  * the margin are worked out from it, so every step of the way is a frame the
@@ -46,12 +54,19 @@ import {
   reportHeightBounds,
   reportHeightOf,
 } from '../report-document.ts';
+import type { ReportWidth } from '../report-width.ts';
 import type { DayMetrics } from '../schemas/day-metrics.ts';
+import { isFromFrame, useReportFrameWidth } from './report-frame-width.ts';
 
 type ReportFrameProps = {
   readonly reportHtml: string;
-  /** Wide where the screen is wide enough, and in the text column elsewhere. */
+  /**
+   * Wide where the screen is wide enough and the report has a width control,
+   * and in the text column elsewhere.
+   */
   readonly wide: boolean;
+  /** The width the report's control asks for. */
+  readonly onWidthRequest: (width: ReportWidth) => void;
   readonly dayMetrics: DayMetrics;
   readonly metricsVersion: number;
 };
@@ -95,15 +110,13 @@ const frameGeometryClass = [
  */
 const frameBorderHeight = 2;
 
-/** Wide from the width at which the wide frame gains the report real room. */
-const wideClass = 'lg:[--report-wide:1]';
-
 const pageTheme = (): ReportTheme =>
   globalThis.matchMedia?.(darkScheme).matches === true ? 'dark' : 'light';
 
 export const ReportFrame = ({
   reportHtml,
   wide,
+  onWidthRequest,
   dayMetrics,
   metricsVersion,
 }: ReportFrameProps) => {
@@ -112,6 +125,12 @@ export const ReportFrame = ({
   const [height, setHeight] = useState<number>(reportHeightBounds.initial);
   const [navigatedAway, setNavigatedAway] = useState(false);
   const [framePolicyAdded, setFramePolicyAdded] = useState(false);
+  const { postWidth, widthClass } = useReportFrameWidth({
+    frameRef,
+    loadsRef,
+    wide,
+    onWidthRequest,
+  });
   const srcDoc = useMemo(() => reportDocumentOf(reportHtml), [reportHtml]);
 
   /** Sends the numbers, only ever to the report's first document. */
@@ -136,8 +155,7 @@ export const ReportFrame = ({
 
   useEffect(() => {
     const resize = (event: MessageEvent): void => {
-      const own = frameRef.current?.contentWindow;
-      if (own === null || own === undefined || event.source !== own) {
+      if (!isFromFrame(frameRef, event)) {
         return;
       }
       const requested = reportHeightOf(event.data);
@@ -162,6 +180,7 @@ export const ReportFrame = ({
     loadsRef.current += 1;
     if (loadsRef.current === 1) {
       post();
+      postWidth();
       return;
     }
     setNavigatedAway(true);
@@ -184,9 +203,9 @@ export const ReportFrame = ({
     // biome-ignore lint/a11y/noNoninteractiveElementInteractions: onLoad is the frame's own load event, not something a person does, so it needs no keyboard equivalent.
     <iframe
       className={[
-        'block border border-border bg-surface transition-[height,--report-wide] ease-standard [transition-duration:300ms,400ms] motion-reduce:transition-none',
+        'block border border-border bg-surface transition-[height,--report-wide] ease-standard motion-reduce:transition-none',
         frameGeometryClass,
-        wide ? wideClass : '',
+        widthClass,
       ].join(' ')}
       onLoad={loaded}
       ref={frameRef}

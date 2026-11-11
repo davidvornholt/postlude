@@ -20,6 +20,7 @@ import { fixtureConfig, mountFixture, today } from './day-page-mount.ts';
 import {
   earlyScriptReportHtml,
   syntheticReportHtml,
+  widthControlReportHtml,
 } from './synthetic-report.ts';
 
 const closedAt = '2026-08-26T21:00:00.000Z';
@@ -104,6 +105,13 @@ const configs = {
   report: withEvening({
     rating: openRating,
     wrap: withReport,
+    agentNote: noNote,
+    settledNote: readyNote,
+  }),
+  /** The same, with a report that has a width control of its own. */
+  widthReport: withEvening({
+    rating: openRating,
+    wrap: { ...withReport, reportHtml: widthControlReportHtml },
     agentNote: noNote,
     settledNote: readyNote,
   }),

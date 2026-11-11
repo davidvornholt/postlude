@@ -7,6 +7,9 @@ import {
   reportFrameStyle,
   reportHeightBounds,
   reportHeightOf,
+  reportOffersWidthOf,
+  reportWidthMessageOf,
+  requestedReportWidthOf,
 } from './report-document.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 
@@ -83,5 +86,70 @@ describe('dayMetricsMessageOf', () => {
       dayMetrics,
       theme: 'dark',
     });
+  });
+});
+
+describe('the width messages', () => {
+  it('tells the report whether the frame can be wide, and never that it is wide when it cannot be', () => {
+    expect(reportWidthMessageOf(true, true)).toEqual({
+      type: 'postlude:report-width',
+      available: true,
+      wide: true,
+    });
+    expect(reportWidthMessageOf(true, false)).toEqual({
+      type: 'postlude:report-width',
+      available: true,
+      wide: false,
+    });
+    expect(reportWidthMessageOf(false, true)).toEqual({
+      type: 'postlude:report-width',
+      available: false,
+      wide: false,
+    });
+  });
+
+  it('hears a report say it has a width control, and nothing else as that', () => {
+    expect(reportOffersWidthOf({ type: 'postlude:report-width-control' })).toBe(
+      true,
+    );
+    for (const data of [
+      undefined,
+      null,
+      'postlude:report-width-control',
+      { type: 'postlude:report-width-request', wide: true },
+      { type: 'postlude:report-height', height: 900 },
+    ]) {
+      expect(reportOffersWidthOf(data)).toBe(false);
+    }
+  });
+
+  it('reads the width a request asks for', () => {
+    expect(
+      requestedReportWidthOf({
+        type: 'postlude:report-width-request',
+        wide: true,
+      }),
+    ).toBe('wide');
+    expect(
+      requestedReportWidthOf({
+        type: 'postlude:report-width-request',
+        wide: false,
+      }),
+    ).toBe('column');
+  });
+
+  it('ignores anything that is not a usable width request', () => {
+    for (const data of [
+      undefined,
+      null,
+      'postlude:report-width-request',
+      { type: 'postlude:report-width-request' },
+      { type: 'postlude:report-width-request', wide: 'true' },
+      { type: 'postlude:report-width-request', wide: 1 },
+      { type: 'postlude:report-width', available: true, wide: true },
+      { type: 'postlude:report-width-control' },
+    ]) {
+      expect(requestedReportWidthOf(data)).toBeUndefined();
+    }
   });
 });
