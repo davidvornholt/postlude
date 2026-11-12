@@ -53,7 +53,7 @@ describe('what the model is given', () => {
     ]);
   });
 
-  it('leaves out the report’s HTML, scripture, word counts, mailboxes, and closing times', () => {
+  it('leaves out the stored report, scripture, word counts, mailboxes, and closing times', () => {
     const sent = everythingSent(agentNotePromptOf(agentNoteInput()));
     for (const marker of Object.values(excludedMarkers)) {
       expect(sent).not.toContain(marker);
@@ -115,6 +115,7 @@ describe('what the model is given', () => {
         date: noteDay,
         dayMetrics: null,
         metricsVersion: null,
+        reportDocument: null,
         reportHtml: null,
         reportModel: null,
         reportGeneratedAt: null,

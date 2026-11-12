@@ -1,0 +1,87 @@
+{
+  "source": "Postlude 68629f2's sample report page (sample/sample-report.ts), with the made-up metrics of wrap-17",
+  "day": "2026-10-29",
+  "dayMetrics": {
+    "metricsVersion": 1,
+    "day": "2026-10-29",
+    "activeMinutes": 330,
+    "firstActivityAt": "2026-10-29T08:12:00+01:00",
+    "lastActivityAt": "2026-10-29T23:40:00+01:00",
+    "focusMinutes": 200,
+    "scatteredMinutes": 130,
+    "categories": [
+      {
+        "id": "code",
+        "label": "Code",
+        "minutes": 200
+      },
+      {
+        "id": "mail",
+        "label": "Mail",
+        "minutes": 80
+      },
+      {
+        "id": "admin",
+        "label": "Admin",
+        "minutes": 50
+      }
+    ],
+    "offComputerMinutes": 70,
+    "appointmentMinutes": 180,
+    "appointmentOffScreenMinutes": null,
+    "landedPrs": 2,
+    "sentMails": [
+      {
+        "mailbox": "a@example.com",
+        "count": null
+      },
+      {
+        "mailbox": "b@example.com",
+        "count": 2
+      },
+      {
+        "mailbox": "c@example.com",
+        "count": 2
+      }
+    ],
+    "coverage": [
+      {
+        "source": "activity:laptop",
+        "status": "partial"
+      },
+      {
+        "source": "activity:desktop",
+        "status": "complete"
+      },
+      {
+        "source": "sp",
+        "status": "complete"
+      },
+      {
+        "source": "github",
+        "status": "complete"
+      },
+      {
+        "source": "mail:a@example.com",
+        "status": "missing"
+      },
+      {
+        "source": "mail:b@example.com",
+        "status": "complete"
+      },
+      {
+        "source": "mail:c@example.com",
+        "status": "partial"
+      },
+      {
+        "source": "calendar:me@example.com",
+        "status": "complete"
+      },
+      {
+        "source": "calendar:work@example.com",
+        "status": "complete"
+      }
+    ]
+  },
+  "reportHtml": "<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Sample day report</title>\n<style>\n  :root { color-scheme: light; --ink: #1d1d1b; --faint: #6b6860; --bar: #4f6f52; --track: #e8e5dc; background: #ffffff; color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }\n  :root[data-theme=\"dark\"] { color-scheme: dark; --ink: #f1efe9; --faint: #a9a59b; --bar: #9cc29f; --track: #34322d; background: #1b1a18; }\n  body { margin: 0; }\n  main { padding: 16px 20px; }\n  h1 { font-size: 18px; margin: 0; }\n  .note { color: var(--faint); font-size: 13px; margin: 2px 0 14px; }\n  dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 16px; margin: 0 0 16px; }\n  dt { color: var(--faint); font-size: 13px; }\n  dd { margin: 0; font-size: 20px; font-variant-numeric: tabular-nums; }\n  h2 { font-size: 14px; margin: 0 0 8px; }\n  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }\n  li { display: grid; grid-template-columns: 120px 1fr 56px; gap: 8px; align-items: center; font-size: 13px; }\n  .track { background: var(--track); height: 8px; overflow: hidden; }\n  .fill { background: var(--bar); height: 100%; }\n  .minutes { text-align: right; font-variant-numeric: tabular-nums; }\n</style>\n</head>\n<body>\n<main>\n  <h1>Day report</h1>\n  <p class=\"note\">Sample data for a preview. Nothing here was measured.</p>\n  <dl>\n    <div><dt>Active</dt><dd data-minutes=\"activeMinutes\">…</dd></div>\n    <div><dt>Focused</dt><dd data-minutes=\"focusMinutes\">…</dd></div>\n    <div><dt>Short stretches</dt><dd data-minutes=\"scatteredMinutes\">…</dd></div>\n    <div><dt>Away from the computer</dt><dd data-minutes=\"offComputerMinutes\">…</dd></div>\n    <div><dt>In appointments</dt><dd data-minutes=\"appointmentMinutes\">…</dd></div>\n    <div><dt>First and last activity</dt><dd data-span>…</dd></div>\n    <div><dt>Landed pull requests</dt><dd data-count=\"landedPrs\">…</dd></div>\n    <div><dt>Mail sent</dt><dd data-mail>…</dd></div>\n  </dl>\n  <section data-categories hidden>\n    <h2>Where the time went (estimates)</h2>\n    <ul></ul>\n  </section>\n</main>\n<script>\n  const unmeasured = 'Not measured';\n  const minutes = (value) => {\n    if (value === null || value === undefined) { return unmeasured; }\n    const hours = Math.floor(value / 60);\n    return hours === 0 ? value + ' min' : hours + ' h ' + String(value % 60).padStart(2, '0') + ' min';\n  };\n  const clock = (instant) => instant === null ? unmeasured : instant.slice(11, 16);\n  const reportHeight = () => {\n    const height = Math.ceil(document.querySelector('main').getBoundingClientRect().height);\n    window.parent.postMessage({ type: 'postlude:report-height', height }, '*');\n  };\n  const show = (metrics) => {\n    for (const field of document.querySelectorAll('[data-minutes]')) {\n      field.textContent = minutes(metrics[field.dataset.minutes]);\n    }\n    for (const field of document.querySelectorAll('[data-count]')) {\n      const value = metrics[field.dataset.count];\n      field.textContent = value === null ? unmeasured : String(value);\n    }\n    document.querySelector('[data-span]').textContent =\n      clock(metrics.firstActivityAt) + ' to ' + clock(metrics.lastActivityAt);\n    const counts = metrics.sentMails.map((mailbox) => mailbox.count);\n    document.querySelector('[data-mail]').textContent =\n      counts.length === 0 || counts.includes(null) ? unmeasured : String(counts.reduce((sum, count) => sum + count, 0));\n    const section = document.querySelector('[data-categories]');\n    const list = section.querySelector('ul');\n    list.replaceChildren();\n    const largest = Math.max(1, ...metrics.categories.map((category) => category.minutes ?? 0));\n    for (const category of metrics.categories) {\n      const item = document.createElement('li');\n      const label = document.createElement('span');\n      label.textContent = category.label;\n      const track = document.createElement('span');\n      track.className = 'track';\n      const fill = document.createElement('span');\n      fill.className = 'fill';\n      fill.style.display = 'block';\n      fill.style.width = ((category.minutes ?? 0) / largest) * 100 + '%';\n      track.append(fill);\n      const value = document.createElement('span');\n      value.className = 'minutes';\n      value.textContent = minutes(category.minutes);\n      item.append(label, track, value);\n      list.append(item);\n    }\n    section.hidden = metrics.categories.length === 0;\n  };\n  window.addEventListener('message', (event) => {\n    if (event.source !== window.parent) { return; }\n    const message = event.data;\n    if (message === null || typeof message !== 'object' || message.type !== 'postlude:day-metrics') { return; }\n    document.documentElement.dataset.theme = message.theme;\n    show(message.dayMetrics);\n    reportHeight();\n  });\n  window.addEventListener('resize', reportHeight);\n</script>\n</body>\n</html>\n"
+}

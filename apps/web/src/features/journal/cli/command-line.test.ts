@@ -88,8 +88,15 @@ describe('reading a command', () => {
         since,
       });
     }
+  });
+
+  it('reads the agent area commands', () => {
     expect(commandOf('agent-area get 2026-10-30')).toEqual({
       kind: 'agent-area-get',
+      date: '2026-10-30',
+    });
+    expect(commandOf('agent-area check 2026-10-30')).toEqual({
+      kind: 'agent-area-check',
       date: '2026-10-30',
     });
     expect(commandOf('agent-area put 2026-10-30')).toEqual({
@@ -121,7 +128,9 @@ describe('reading a command', () => {
       limit: searchLimitDefault,
     });
   });
+});
 
+describe('refusing a command', () => {
   it('refuses a limit out of range', () => {
     expect(commandOf('search peace --limit 0')).toBeInstanceOf(UsageError);
     expect(commandOf('search peace --limit 51')).toBeInstanceOf(UsageError);

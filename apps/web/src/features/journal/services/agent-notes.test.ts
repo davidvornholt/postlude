@@ -108,7 +108,21 @@ describe('closing a day', () => {
           yield* areas.putWrap(date, {
             dayMetrics: dayMetricsFor(date),
             metricsVersion: 2,
-            reportHtml: `<h1>Day report</h1><p>09:00–10:00 ${marker} on ${date}.</p>`,
+            reportDocument: {
+              version: 1,
+              blocks: [
+                {
+                  kind: 'section',
+                  heading: 'Day report',
+                  blocks: [
+                    {
+                      kind: 'paragraph',
+                      text: [`09:00–10:00 ${marker} on ${date}.`],
+                    },
+                  ],
+                },
+              ],
+            },
             reportModel: 'wrap-model',
           });
         }

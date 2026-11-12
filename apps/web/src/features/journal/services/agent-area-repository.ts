@@ -10,7 +10,7 @@
 
 import { Context, Effect, Layer, Schema } from 'effect';
 import { SqlClient } from 'effect/sql';
-
+import { readReportDocument, reportPlainText } from '../day-report-reader.ts';
 import {
   JournalValidationError,
   journalReadError,
@@ -93,6 +93,56 @@ export type GeneratedNote = {
   readonly basedOnRevision: number;
 };
 
+/**
+ * Replaces the /wrap columns of a day together, and nothing else in its
+ * row. The report's time is the database clock's, not the caller's. A
+ * page the day's report was stored as before goes with the report it
+ * was: the new document replaces it.
+ */
+const putWrapWith =
+  (sql: SqlClient.SqlClient) => (date: string, input: WrapPut) =>
+    Effect.gen(function* () {
+      if (input.dayMetrics.day !== date) {
+        return yield* new JournalValidationError({
+          message: metricsDayMismatchMessage,
+        });
+      }
+      const reportText = reportPlainText(
+        readReportDocument(input.reportDocument),
+      );
+      const rows = yield* sql`
+        insert into agent_area (
+          entry_date, day_metrics, metrics_version, report_document, report_text,
+          report_model, report_generated_at
+        )
+        values (
+          ${date},
+          ${JSON.stringify(input.dayMetrics)}::jsonb,
+          ${input.metricsVersion},
+          ${JSON.stringify(input.reportDocument)}::jsonb,
+          ${reportText},
+          ${input.reportModel},
+          now()
+        )
+        on conflict (entry_date) do update set
+          day_metrics = excluded.day_metrics,
+          metrics_version = excluded.metrics_version,
+          report_document = excluded.report_document,
+          report_text = ${reportText},
+          report_html = null,
+          report_model = excluded.report_model,
+          report_generated_at = excluded.report_generated_at
+        returning entry_date, day_metrics, metrics_version, report_document, report_html, report_model, report_generated_at
+      `.pipe(
+        Effect.flatMap(decodeWrapRows),
+        Effect.mapError(journalWriteError),
+      );
+      const [stored] = rows;
+      return stored === undefined
+        ? yield* journalWriteError('The agent area returned no row.')
+        : stored;
+    });
+
 export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
   'journal/AgentAreaRepository',
   {
@@ -101,7 +151,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
 
       const readWrap = (date: string) =>
         sql`
-          select entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at
+          select entry_date, day_metrics, metrics_version, report_document, report_html, report_model, report_generated_at
           from agent_area
           where entry_date = ${date}
         `.pipe(
@@ -110,45 +160,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
           Effect.mapError(journalReadError),
         );
 
-      /**
-       * Replaces the /wrap columns of a day together, and nothing else in its
-       * row. The report's time is the database clock's, not the caller's.
-       */
-      const putWrap = (date: string, input: WrapPut) =>
-        Effect.gen(function* () {
-          if (input.dayMetrics.day !== date) {
-            return yield* new JournalValidationError({
-              message: metricsDayMismatchMessage,
-            });
-          }
-          const rows = yield* sql`
-            insert into agent_area (
-              entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at
-            )
-            values (
-              ${date},
-              ${JSON.stringify(input.dayMetrics)}::jsonb,
-              ${input.metricsVersion},
-              ${input.reportHtml},
-              ${input.reportModel},
-              now()
-            )
-            on conflict (entry_date) do update set
-              day_metrics = excluded.day_metrics,
-              metrics_version = excluded.metrics_version,
-              report_html = excluded.report_html,
-              report_model = excluded.report_model,
-              report_generated_at = excluded.report_generated_at
-            returning entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at
-          `.pipe(
-            Effect.flatMap(decodeWrapRows),
-            Effect.mapError(journalWriteError),
-          );
-          const [stored] = rows;
-          return stored === undefined
-            ? yield* journalWriteError('The agent area returned no row.')
-            : stored;
-        });
+      const putWrap = putWrapWith(sql);
 
       /** Every day from `from` through `to`, including days with nothing stored. */
       const listDays = (from: string, to: string) =>

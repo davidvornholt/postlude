@@ -247,10 +247,15 @@ export const dayRating = pgTable(
  * alone writes the agent note. `agent_note_revision` is the entry revision the
  * note was written from, so a newer entry revision makes the note stale.
  *
+ * The report is a document of blocks that Postlude draws (`report_document`).
+ * Reports /wrap stored before it wrote documents are whole pages
+ * (`report_html`); converting one gives it a document and keeps the page
+ * beside it, and a new report from /wrap replaces both.
+ *
  * The checks keep each group whole: metrics never arrive without their version
- * or their report, and a note's status always comes with what that status
- * needs to be shown. A note that is being rewritten, or whose rewrite failed,
- * keeps the previous note and the revision that note was written from.
+ * or a report, and a note's status always comes with what that status needs
+ * to be shown. A note that is being rewritten, or whose rewrite failed, keeps
+ * the previous note and the revision that note was written from.
  */
 export const agentArea = pgTable(
   'agent_area',
@@ -258,6 +263,7 @@ export const agentArea = pgTable(
     entryDate: date('entry_date').primaryKey(),
     dayMetrics: jsonb('day_metrics'),
     metricsVersion: integer('metrics_version'),
+    reportDocument: jsonb('report_document'),
     reportHtml: text('report_html'),
     reportModel: text('report_model'),
     reportGeneratedAt: timestamp('report_generated_at', {
@@ -274,10 +280,12 @@ export const agentArea = pgTable(
     agentNoteGeneratedAt: timestamp('agent_note_generated_at', {
       withTimezone: true,
     }),
-    /** Text extracted from stored HTML, before the report runs its scripts. */
-    reportText: text('report_text').generatedAlwaysAs(
-      sql`report_plain_text(report_html)`,
-    ),
+    /**
+     * The report's words, which the writer of the report stores beside it
+     * (`reportPlainText` in `day-report-reader.ts`). A report stored as a page
+     * has the text `report_plain_text` extracts from it.
+     */
+    reportText: text('report_text'),
     /**
      * The report's words, folded the way `search-query.ts` folds a query:
      * lowercased without changing the text's length, so search can find a
@@ -287,7 +295,7 @@ export const agentArea = pgTable(
      * tsvector can't exceed 1 MiB and a report of many distinct words can.
      */
     reportSearchVector: tsvector('report_search_vector').generatedAlwaysAs(
-      sql`to_tsvector('simple', regexp_replace(translate(lower(left(report_plain_text(report_html), 100000) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))`,
+      sql`to_tsvector('simple', regexp_replace(translate(lower(left(report_text, 100000) collate "pg_c_utf8"), 'ς', 'σ'), '[^[:alnum:]]+', ' ', 'g'))`,
     ),
   },
   (table) => [
@@ -297,7 +305,11 @@ export const agentArea = pgTable(
     ),
     check(
       'agent_area_wrap_complete',
-      sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, ${table.reportHtml}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 5)`,
+      sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, coalesce(${table.reportDocument}, to_jsonb(${table.reportHtml})), ${table.reportText}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 6)`,
+    ),
+    check(
+      'agent_area_report_document_object',
+      sql`${table.reportDocument} is null or jsonb_typeof(${table.reportDocument}) = 'object'`,
     ),
     check(
       'agent_area_day_metrics_object',

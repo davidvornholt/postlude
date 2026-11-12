@@ -40,7 +40,10 @@ const wrap: WrapPut = {
     coverage: [{ source: 'activitywatch', status: 'complete' }],
   },
   metricsVersion: 1,
-  reportHtml: '<p>The day.</p>',
+  reportDocument: {
+    version: 1,
+    blocks: [{ kind: 'paragraph', text: ['The day.'] }],
+  },
   reportModel: 'wrap-model',
 };
 
@@ -75,18 +78,32 @@ it('holds exactly the grants the contract gives it', async () => {
     { table: 'entry', privilege: 'SELECT' },
     { table: 'entry_search_evidence', privilege: 'SELECT' },
   ]);
-  const wrapColumns = [
+  // It writes a report's text beside its document but never reads it back,
+  // and it may clear a report stored as a page but never store one.
+  const written = [
     'day_metrics',
     'metrics_version',
+    'report_document',
+    'report_generated_at',
+    'report_model',
+    'report_text',
+  ];
+  const read = [
+    'day_metrics',
+    'entry_date',
+    'metrics_version',
+    'report_document',
     'report_generated_at',
     'report_html',
     'report_model',
   ];
-  const keyAndWrapColumns = ['entry_date', ...wrapColumns].sort();
+  const updated = [...written, 'report_html'].sort();
   expect(grants.columns).toEqual([
-    ...keyAndWrapColumns.map((column) => ({ column, privilege: 'INSERT' })),
-    ...keyAndWrapColumns.map((column) => ({ column, privilege: 'SELECT' })),
-    ...wrapColumns.map((column) => ({ column, privilege: 'UPDATE' })),
+    ...['entry_date', ...written]
+      .sort()
+      .map((column) => ({ column, privilege: 'INSERT' })),
+    ...read.map((column) => ({ column, privilege: 'SELECT' })),
+    ...updated.map((column) => ({ column, privilege: 'UPDATE' })),
   ]);
 });
 
@@ -110,6 +127,10 @@ it('runs every CLI command', async () => {
         search: yield* runCliCommand(
           { kind: 'search', query: 'grace', limit: 5 },
           noStdin,
+        ),
+        check: yield* runCliCommand(
+          { kind: 'agent-area-check', date: day },
+          stdin,
         ),
         put: yield* runCliCommand({ kind: 'agent-area-put', date: day }, stdin),
         putAgain: yield* runCliCommand(
@@ -143,10 +164,23 @@ it('runs every CLI command', async () => {
   expect(outcome.search).toMatchObject({
     hits: [{ date: day, sources: [{ source: 'evening' }] }],
   });
-  expect(outcome.put).toMatchObject({ date: day, reportHtmlBytes: 15 });
+  const documentBytes = JSON.stringify(wrap.reportDocument).length;
+  expect(outcome.check).toEqual({
+    date: day,
+    valid: true,
+    metricsVersion: 1,
+    reportDocumentVersion: 1,
+    reportDocumentBytes: documentBytes,
+  });
+  expect(outcome.put).toMatchObject({
+    date: day,
+    reportDocumentBytes: documentBytes,
+  });
+  expect(Object.keys(outcome.put as object)).not.toContain('reportDocument');
   expect(outcome.get).toMatchObject({
     date: day,
-    reportHtml: '<p>The day.</p>',
+    reportDocument: wrap.reportDocument,
+    reportHtml: null,
     reportModel: 'wrap-model',
   });
 });
@@ -159,7 +193,12 @@ it('searches David’s writing and not the day report', async () => {
       yield* entries.save(draft(day, 'Grace at the end of a long day.'));
       yield* areas.putWrap(day, {
         ...wrap,
-        reportHtml: '<p>Grace, and the parser merged.</p>',
+        reportDocument: {
+          version: 1,
+          blocks: [
+            { kind: 'paragraph', text: ['Grace, and the parser merged.'] },
+          ],
+        },
       });
       yield* asAgent(sql);
       const search = (query: string) =>

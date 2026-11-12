@@ -228,7 +228,7 @@ test("where the screen has room, the report's own control widens its timeline eq
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1280, height: 800 });
-  await mountEvening(page, 'widthReport');
+  await mountEvening(page, 'legacyWidthReport');
   await openReport(page);
 
   for (const width of [1024, 1280, 1400, 1920]) {
@@ -257,7 +257,7 @@ test('where widening would gain the report little, its control is hidden and the
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1280, height: 800 });
-  await mountEvening(page, 'widthReport');
+  await mountEvening(page, 'legacyWidthReport');
   await openReport(page);
   const column = await columnOf(page);
   await control(page, widen).click();
@@ -286,7 +286,7 @@ test('the covers slide in one steady motion while the frame and the text keep st
 }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.setViewportSize({ width: 1400, height: 800 });
-  await mountEvening(page, 'widthReport');
+  await mountEvening(page, 'legacyWidthReport');
   await openReport(page);
   const column = await columnOf(page);
   await expectInColumn(page, column);
@@ -315,7 +315,7 @@ test('the covers slide in one steady motion while the frame and the text keep st
 test('the report never shows a scrollbar of its own, which would take width from it', async ({
   page,
 }) => {
-  await mountEvening(page, 'report');
+  await mountEvening(page, 'legacyReport');
   await openReport(page);
   const content = await (
     await page.locator(frameSelector).elementHandle()
@@ -333,7 +333,7 @@ test('every report opens with its timeline in the column, and shows only the col
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1400, height: 800 });
 
-  await mountEvening(page, 'widthReport');
+  await mountEvening(page, 'legacyWidthReport');
   await openReport(page);
   const column = await columnOf(page);
   await control(page, widen).click();
@@ -341,7 +341,7 @@ test('every report opens with its timeline in the column, and shows only the col
   await expectWide(page, column, 1400);
 
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await mountEvening(page, 'widthReport');
+  await mountEvening(page, 'legacyWidthReport');
   await choose(page, 'Energy', 'Okay');
   await choose(page, 'Progress', 'Solid');
   await page.evaluate(startRecording, boxSelector);
@@ -357,7 +357,7 @@ test('a report without a control of its own keeps to the column', async ({
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1400, height: 800 });
 
-  await mountEvening(page, 'report');
+  await mountEvening(page, 'legacyReport');
   await openReport(page);
   const column = await columnOf(page);
   const { frame } = await page.evaluate(shownOf, boxSelector);

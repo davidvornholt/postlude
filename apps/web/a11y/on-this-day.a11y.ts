@@ -168,6 +168,11 @@ test('a year opens and folds without the years below it jumping', async ({
   expect(opening.travel).toBeGreaterThan(0);
   expect(opening.largestStep).toBeLessThan(opening.travel / 2);
 
+  // On a busy machine the year may still be opening after the frames above,
+  // and folding it then would count the rest of its opening as a jump.
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map(({ finished }) => finished)),
+  );
   const folding = steady(await pressAndTrack(), -1);
   expect(folding.pressed).toBe(1);
   expect(folding.backwards).toBe(0);

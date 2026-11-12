@@ -22,6 +22,7 @@ export type CliCommand =
   | { readonly kind: 'days-changed'; readonly since: string }
   | { readonly kind: 'search'; readonly query: string; readonly limit: number }
   | { readonly kind: 'agent-area-get'; readonly date: string }
+  | { readonly kind: 'agent-area-check'; readonly date: string }
   | { readonly kind: 'agent-area-put'; readonly date: string };
 
 export const usage = [
@@ -30,7 +31,8 @@ export const usage = [
   'days changed --since <instant>   (an ISO 8601 time with a zone, such as 2026-11-08T03:30:00Z)',
   `search <query> [--limit <1-${searchLimitMax}>]`,
   'agent-area get <date>',
-  'agent-area put <date>   (reads {dayMetrics, metricsVersion, reportHtml, reportModel} as JSON on stdin)',
+  'agent-area check <date>   (reads what put reads, and says whether put would take it, storing nothing)',
+  'agent-area put <date>   (reads {dayMetrics, metricsVersion, reportDocument, reportModel} as JSON on stdin)',
 ] as const;
 
 /** The command line could not be read as a command; the message says why. */
@@ -171,7 +173,7 @@ const dateArgument = (
 };
 
 const oneDate = (
-  kind: 'day-get' | 'agent-area-get' | 'agent-area-put',
+  kind: 'day-get' | 'agent-area-get' | 'agent-area-check' | 'agent-area-put',
   words: ReadonlyArray<string>,
 ): CliCommand | UsageError => {
   const parsed = parseOptions(words, []);
@@ -291,6 +293,8 @@ export const parseCommand = (
       return daysChanged(rest);
     case 'agent-area get':
       return oneDate('agent-area-get', rest);
+    case 'agent-area check':
+      return oneDate('agent-area-check', rest);
     case 'agent-area put':
       return oneDate('agent-area-put', rest);
     default:

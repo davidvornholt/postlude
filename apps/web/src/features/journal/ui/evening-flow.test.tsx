@@ -48,7 +48,10 @@ const eveningWith = ({
           ...empty.wrap,
           dayMetrics: sampleDayMetrics(today),
           metricsVersion: 2,
-          reportHtml: `<!doctype html><p>${reportMarker}</p>`,
+          reportDocument: {
+            version: 1,
+            blocks: [{ kind: 'paragraph', text: [reportMarker] }],
+          },
           reportModel: 'Synthetic Model 1',
           reportGeneratedAt: closedAt,
         }

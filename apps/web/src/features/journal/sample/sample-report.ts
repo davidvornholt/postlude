@@ -1,111 +1,297 @@
 /**
- * The /wrap report every sample day carries, written to the report contract
- * (Contract 5 in the personal-systems plan). It holds no numbers of its own: it
- * fills them in from the message the page sends, takes the colour scheme from
- * it, and asks for the height it needs. It says that it is sample data, so
- * nobody mistakes it for a measured day.
+ * The /wrap report every sample day carries, as a report document composed
+ * the way /wrap composes one: the measured blocks from the day's metrics and
+ * a made-up timeline, and a few words about them. It says that it is sample
+ * data, so nobody mistakes it for a measured day, and every name in it is
+ * made up.
  */
 
-export const sampleReportHtml = `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Sample day report</title>
-<style>
-  :root { color-scheme: light; --ink: #1d1d1b; --faint: #6b6860; --bar: #4f6f52; --track: #e8e5dc; background: #ffffff; color: var(--ink); font: 15px/1.5 system-ui, sans-serif; }
-  :root[data-theme="dark"] { color-scheme: dark; --ink: #f1efe9; --faint: #a9a59b; --bar: #9cc29f; --track: #34322d; background: #1b1a18; }
-  body { margin: 0; }
-  main { padding: 16px 20px; }
-  h1 { font-size: 18px; margin: 0; }
-  .note { color: var(--faint); font-size: 13px; margin: 2px 0 14px; }
-  dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px 16px; margin: 0 0 16px; }
-  dt { color: var(--faint); font-size: 13px; }
-  dd { margin: 0; font-size: 20px; font-variant-numeric: tabular-nums; }
-  h2 { font-size: 14px; margin: 0 0 8px; }
-  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-  li { display: grid; grid-template-columns: 120px 1fr 56px; gap: 8px; align-items: center; font-size: 13px; }
-  .track { background: var(--track); height: 8px; overflow: hidden; }
-  .fill { background: var(--bar); height: 100%; }
-  .minutes { text-align: right; font-variant-numeric: tabular-nums; }
-</style>
-</head>
-<body>
-<main>
-  <h1>Day report</h1>
-  <p class="note">Sample data for a preview. Nothing here was measured.</p>
-  <dl>
-    <div><dt>Active</dt><dd data-minutes="activeMinutes">…</dd></div>
-    <div><dt>Focused</dt><dd data-minutes="focusMinutes">…</dd></div>
-    <div><dt>Short stretches</dt><dd data-minutes="scatteredMinutes">…</dd></div>
-    <div><dt>Away from the computer</dt><dd data-minutes="offComputerMinutes">…</dd></div>
-    <div><dt>In appointments</dt><dd data-minutes="appointmentMinutes">…</dd></div>
-    <div><dt>First and last activity</dt><dd data-span>…</dd></div>
-    <div><dt>Landed pull requests</dt><dd data-count="landedPrs">…</dd></div>
-    <div><dt>Mail sent</dt><dd data-mail>…</dd></div>
-  </dl>
-  <section data-categories hidden>
-    <h2>Where the time went (estimates)</h2>
-    <ul></ul>
-  </section>
-</main>
-<script>
-  const unmeasured = 'Not measured';
-  const minutes = (value) => {
-    if (value === null || value === undefined) { return unmeasured; }
-    const hours = Math.floor(value / 60);
-    return hours === 0 ? value + ' min' : hours + ' h ' + String(value % 60).padStart(2, '0') + ' min';
+import { minutesText, offsetMinutesOf } from '../day-report-format.ts';
+import {
+  sentMailTable,
+  sourcesSection,
+} from '../day-report-measured-blocks.ts';
+import type { DayMetrics } from '../schemas/day-metrics.ts';
+import type {
+  ReportBlock,
+  ReportDocument,
+  TileValue,
+} from '../schemas/day-report-blocks.ts';
+import { reportDocumentVersion } from '../schemas/day-report-blocks.ts';
+import type {
+  TimelineBlock,
+  TimelineMark,
+} from '../schemas/day-report-timeline.ts';
+import { seededRandom } from './sample-random.ts';
+import {
+  partTitles,
+  type SamplePullRequest,
+  type SampleSpan,
+  samplePartsOf,
+  samplePullRequestsOf,
+  sampleTimelineOf,
+} from './sample-report-timeline.ts';
+
+const minuteMs = 60_000;
+const hourMs = 60 * minuteMs;
+/** A day without measured activity is drawn from nine to five. */
+const fallbackStartHour = 9;
+const fallbackEndHour = 17;
+
+const minutes = (value: number | null): TileValue =>
+  value === null ? null : { minutes: value };
+const count = (value: number | null): TileValue =>
+  value === null ? null : { count: value };
+
+const spanOf = (metrics: DayMetrics): SampleSpan => {
+  const day = Date.parse(`${metrics.day}T00:00:00Z`);
+  const start =
+    metrics.firstActivityAt === null
+      ? day + fallbackStartHour * hourMs
+      : Date.parse(metrics.firstActivityAt);
+  const end =
+    metrics.lastActivityAt === null
+      ? day + fallbackEndHour * hourMs
+      : Date.parse(metrics.lastActivityAt);
+  return {
+    start,
+    end: Math.max(end, start + minuteMs),
+    offsetMinutes:
+      metrics.firstActivityAt === null
+        ? 0
+        : offsetMinutesOf(metrics.firstActivityAt),
+    random: seededRandom(Number(metrics.day.replaceAll('-', ''))),
   };
-  const clock = (instant) => instant === null ? unmeasured : instant.slice(11, 16);
-  const reportHeight = () => {
-    const height = Math.ceil(document.querySelector('main').getBoundingClientRect().height);
-    window.parent.postMessage({ type: 'postlude:report-height', height }, '*');
+};
+
+type AgentTime = {
+  /** Clock time with at least one run going. */
+  readonly wallMinutes: number;
+  /** Every run's minutes added up. */
+  readonly runMinutes: number;
+  readonly threads: number;
+  /** The most runs going at once. */
+  readonly peak: number;
+};
+
+/** What the timeline's runs add up to, by the clock and by thread. */
+const agentTimeOf = (timeline: TimelineBlock): AgentTime => {
+  const rows = timeline.groups.flatMap((group) => group.rows);
+  const runs = rows.flatMap((row) =>
+    row.marks.flatMap((mark: TimelineMark) =>
+      mark.kind === 'run'
+        ? [{ start: Date.parse(mark.start), end: Date.parse(mark.end) }]
+        : [],
+    ),
+  );
+  const changes = runs
+    .flatMap(({ start, end }) => [
+      { at: start, by: 1 },
+      { at: end, by: -1 },
+    ])
+    .sort((a, b) => a.at - b.at || a.by - b.by);
+  let going = 0;
+  let peak = 0;
+  let wall = 0;
+  let since = 0;
+  for (const { at, by } of changes) {
+    if (going > 0) {
+      wall += at - since;
+    }
+    going += by;
+    peak = Math.max(peak, going);
+    since = at;
+  }
+  return {
+    wallMinutes: Math.round(wall / minuteMs),
+    runMinutes: Math.round(
+      runs.reduce((sum, { start, end }) => sum + end - start, 0) / minuteMs,
+    ),
+    threads: rows.filter((row) => row.marks.some((mark) => mark.kind === 'run'))
+      .length,
+    peak,
   };
-  const show = (metrics) => {
-    for (const field of document.querySelectorAll('[data-minutes]')) {
-      field.textContent = minutes(metrics[field.dataset.minutes]);
-    }
-    for (const field of document.querySelectorAll('[data-count]')) {
-      const value = metrics[field.dataset.count];
-      field.textContent = value === null ? unmeasured : String(value);
-    }
-    document.querySelector('[data-span]').textContent =
-      clock(metrics.firstActivityAt) + ' to ' + clock(metrics.lastActivityAt);
-    const counts = metrics.sentMails.map((mailbox) => mailbox.count);
-    document.querySelector('[data-mail]').textContent =
-      counts.length === 0 || counts.includes(null) ? unmeasured : String(counts.reduce((sum, count) => sum + count, 0));
-    const section = document.querySelector('[data-categories]');
-    const list = section.querySelector('ul');
-    list.replaceChildren();
-    const largest = Math.max(1, ...metrics.categories.map((category) => category.minutes ?? 0));
-    for (const category of metrics.categories) {
-      const item = document.createElement('li');
-      const label = document.createElement('span');
-      label.textContent = category.label;
-      const track = document.createElement('span');
-      track.className = 'track';
-      const fill = document.createElement('span');
-      fill.className = 'fill';
-      fill.style.display = 'block';
-      fill.style.width = ((category.minutes ?? 0) / largest) * 100 + '%';
-      track.append(fill);
-      const value = document.createElement('span');
-      value.className = 'minutes';
-      value.textContent = minutes(category.minutes);
-      item.append(label, track, value);
-      list.append(item);
-    }
-    section.hidden = metrics.categories.length === 0;
+};
+
+const promptsOf = (timeline: TimelineBlock) => {
+  const prompts = timeline.groups
+    .flatMap((group) => group.rows)
+    .flatMap((row) => row.marks)
+    .flatMap((mark) => (mark.kind === 'prompt' ? [mark] : []));
+  return {
+    count: prompts.length,
+    fromPhone: prompts.filter((prompt) => prompt.fromPhone === true).length,
   };
-  window.addEventListener('message', (event) => {
-    if (event.source !== window.parent) { return; }
-    const message = event.data;
-    if (message === null || typeof message !== 'object' || message.type !== 'postlude:day-metrics') { return; }
-    document.documentElement.dataset.theme = message.theme;
-    show(message.dayMetrics);
-    reportHeight();
-  });
-  window.addEventListener('resize', reportHeight);
-</script>
-</body>
-</html>
-`;
+};
+
+const sentMailsOf = (metrics: DayMetrics): number | null =>
+  metrics.sentMails.some((mailbox) => mailbox.count === null)
+    ? null
+    : metrics.sentMails.reduce((sum, mailbox) => sum + (mailbox.count ?? 0), 0);
+
+const tilesOf = (metrics: DayMetrics, timeline: TimelineBlock): ReportBlock => {
+  const agents = agentTimeOf(timeline);
+  const prompts = promptsOf(timeline);
+  return {
+    kind: 'tiles',
+    tiles: [
+      { label: 'Active', value: minutes(metrics.activeMinutes) },
+      { label: 'Focus', value: minutes(metrics.focusMinutes) },
+      {
+        label: 'Agent time',
+        value: { minutes: agents.wallMinutes },
+        note: [
+          `${minutesText(agents.runMinutes)} across ${agents.threads} threads · up to ${agents.peak} at once`,
+        ],
+      },
+      {
+        label: 'Prompts',
+        value: { count: prompts.count },
+        note: [`${prompts.fromPhone} from the phone`],
+      },
+      { label: 'In appointments', value: minutes(metrics.appointmentMinutes) },
+      { label: 'Pull requests landed', value: count(metrics.landedPrs) },
+      { label: 'Mail sent', value: count(sentMailsOf(metrics)) },
+    ],
+  };
+};
+
+const partTexts = [
+  'Mail first, then a slow look at what the day should hold.',
+  'The longest stretch of the day went into one change, with an agent alongside.',
+  'Reviews, a last pull request, and the notes for tomorrow.',
+] as const;
+
+const partsOf = (span: SampleSpan): ReportBlock => ({
+  kind: 'parts',
+  parts: samplePartsOf(span).map((part, index) => ({
+    ...part,
+    text: [[partTexts[index] ?? 'More of the same.']],
+  })),
+});
+
+const appointmentsSection = (
+  timeline: TimelineBlock,
+): ReadonlyArray<ReportBlock> => {
+  const appointments = timeline.groups
+    .flatMap((group) => group.rows)
+    .flatMap((row) => row.marks)
+    .flatMap((mark) => (mark.kind === 'appointment' ? [mark] : []));
+  return appointments.length === 0
+    ? []
+    : [
+        {
+          kind: 'section',
+          heading: 'Appointments',
+          blocks: [
+            {
+              kind: 'list',
+              items: appointments.map(({ title, start, end }) => ({
+                text: [title ?? 'Appointment'],
+                time: { start, end },
+              })),
+            },
+          ],
+        },
+      ];
+};
+
+const pullRequestsSection = (
+  landed: ReadonlyArray<SamplePullRequest>,
+): ReadonlyArray<ReportBlock> =>
+  landed.length === 0
+    ? []
+    : [
+        {
+          kind: 'section',
+          heading: 'Pull requests landed',
+          note: `${landed.length} landed`,
+          collapsed: true,
+          blocks: [
+            {
+              kind: 'list',
+              items: landed.map((pullRequest) => ({
+                text: [
+                  {
+                    link: pullRequest.title,
+                    href: `https://example.com/${pullRequest.repository}/pull/${pullRequest.number}`,
+                  },
+                ],
+                time: { at: pullRequest.at },
+                meta: `${pullRequest.repository} #${pullRequest.number}`,
+              })),
+            },
+          ],
+        },
+      ];
+
+const factsSection: ReportBlock = {
+  kind: 'section',
+  heading: 'How the day went',
+  blocks: [
+    {
+      kind: 'facts',
+      items: [
+        {
+          term: 'Output',
+          details: [['One change from start to finish, and a few small ones.']],
+        },
+        {
+          term: 'Focus',
+          details: [
+            [
+              'The long stretch held; the afternoon was ',
+              { emphasis: 'scattered' },
+              '.',
+            ],
+          ],
+        },
+        {
+          term: 'Direction',
+          details: [['Mostly the work planned in the morning.']],
+        },
+        {
+          term: 'Efficiency',
+          details: [
+            [
+              'Two runs went over the same ground; ',
+              { code: 'bun test' },
+              ' caught it.',
+            ],
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+/** The sample report for a day of sample metrics, the same every time for the same day. */
+export const sampleReportDocument = (metrics: DayMetrics): ReportDocument => {
+  const span = spanOf(metrics);
+  const landed = samplePullRequestsOf(span, metrics.landedPrs ?? 0);
+  const timeline = sampleTimelineOf(span, metrics, landed);
+  return {
+    version: reportDocumentVersion,
+    blocks: [
+      {
+        kind: 'callout',
+        tone: 'note',
+        text: ['Sample data for a preview. Nothing here was measured.'],
+      },
+      {
+        kind: 'paragraph',
+        text: [
+          `A day in ${partTitles.length} parts: a slow start, a long stretch on one change, and a tidy end.`,
+        ],
+      },
+      tilesOf(metrics, timeline),
+      { kind: 'section', heading: 'The day in parts', blocks: [partsOf(span)] },
+      timeline,
+      factsSection,
+      ...appointmentsSection(timeline),
+      ...pullRequestsSection(landed),
+      ...sentMailTable(metrics),
+      ...sourcesSection(metrics),
+    ],
+  };
+};

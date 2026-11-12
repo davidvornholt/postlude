@@ -14,20 +14,31 @@ import {
   JournalValidationError,
   JournalWriteError,
 } from '../errors/journal-errors.ts';
-import { WrapPutSchema } from '../schemas/agent-area.ts';
+import {
+  reportDocumentBytes,
+  type WrapPut,
+  WrapPutSchema,
+} from '../schemas/agent-area.ts';
+import {
+  reportBlockKinds,
+  unknownBlockKinds,
+} from '../schemas/day-report-blocks.ts';
 import { emptyJournalEntry } from '../schemas/entry.ts';
 import { formatScriptureReference } from '../scripture-reference.ts';
 import { searchHitOf } from '../search-contract.ts';
 import { searchTerms } from '../search-query.ts';
-import { AgentAreaRepository } from '../services/agent-area-repository.ts';
+import {
+  AgentAreaRepository,
+  metricsDayMismatchMessage,
+} from '../services/agent-area-repository.ts';
 import { DayRatingRepository } from '../services/day-rating-repository.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
 import { EntrySearch } from '../services/entry-search.ts';
 import { type CliCommand, UsageError, usage } from './command-line.ts';
 
 /**
- * The most stdin `agent-area put` reads, 4 MiB: a full report, JSON-escaped,
- * and the metrics beside it.
+ * The most stdin `agent-area put` and `check` read, 4 MiB: a full report and
+ * the metrics beside it.
  */
 export const stdinByteLimit = 4_194_304;
 
@@ -81,23 +92,70 @@ export type CliCommandError =
 
 const decodePut = Schema.decodeUnknownEffect(WrapPutSchema);
 
-/** Parses what `agent-area put` was given on stdin. */
-const wrapPutOf = (stdin: string) =>
-  Effect.try({
-    try: (): unknown => JSON.parse(stdin),
-    catch: () =>
-      new CliInputError({ message: 'stdin is not a JSON document.' }),
-  }).pipe(
-    Effect.flatMap((json) =>
-      decodePut(json, { onExcessProperty: 'error' }).pipe(
-        Effect.mapError(
-          (error) =>
-            new CliInputError({
-              message: `stdin does not match the agent-area input: ${error.message}`,
-            }),
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const inputError = (message: string) => new CliInputError({ message });
+
+/**
+ * Parses what `agent-area put` or `check` was given on stdin, for `date`.
+ *
+ * A block of a kind this Postlude doesn't draw is named on its own, with the
+ * kinds it does; the schema alone would say only that the block matches none
+ * of them. Every other way the input is wrong is listed with where it is.
+ */
+const wrapPutOf = (date: string, stdin: string) =>
+  Effect.gen(function* () {
+    const json = yield* Effect.try({
+      try: (): unknown => JSON.parse(stdin),
+      catch: () => inputError('stdin is not a JSON document.'),
+    });
+    const unknown = isRecord(json)
+      ? unknownBlockKinds(json.reportDocument)
+      : [];
+    if (unknown.length > 0) {
+      return yield* inputError(
+        `reportDocument has blocks this Postlude doesn't draw: ${unknown.join('; ')}. It draws ${reportBlockKinds.join(', ')}.`,
+      );
+    }
+    const input = yield* decodePut(json, {
+      onExcessProperty: 'error',
+      errors: 'all',
+    }).pipe(
+      Effect.mapError((error) =>
+        inputError(
+          `stdin does not match the agent-area input: ${error.message}`,
         ),
       ),
-    ),
+    );
+    if (input.dayMetrics.day !== date) {
+      return yield* new JournalValidationError({
+        message: metricsDayMismatchMessage,
+      });
+    }
+    return input;
+  });
+
+/** What `check` says of input `put` would store. */
+const checked = (date: string, input: WrapPut) => ({
+  date,
+  valid: true,
+  metricsVersion: input.metricsVersion,
+  reportDocumentVersion: input.reportDocument.version,
+  reportDocumentBytes: reportDocumentBytes(input.reportDocument),
+});
+
+/**
+ * `agent-area check`: reads the input `put` would, and says whether `put`
+ * would take it, without storing anything or reaching the database.
+ */
+export const checkWrap = <E>(
+  date: string,
+  readStdin: Effect.Effect<string, E>,
+) =>
+  readStdin.pipe(
+    Effect.flatMap((stdin) => wrapPutOf(date, stdin)),
+    Effect.map((input) => checked(date, input)),
   );
 
 const dayGet = (date: string) =>
@@ -189,17 +247,19 @@ export const runCliCommand = <E>(
       return AgentAreaRepository.pipe(
         Effect.flatMap((areas) => areas.readWrap(command.date)),
       );
+    case 'agent-area-check':
+      return checkWrap(command.date, readStdin);
     case 'agent-area-put':
       return Effect.gen(function* () {
-        const input = yield* readStdin.pipe(Effect.flatMap(wrapPutOf));
+        const stdin = yield* readStdin;
+        const input = yield* wrapPutOf(command.date, stdin);
         const areas = yield* AgentAreaRepository;
         const stored = yield* areas.putWrap(command.date, input);
         // The report goes in but doesn't come back out: it can be a megabyte.
-        const { reportHtml, ...rest } = stored;
+        const { reportDocument, reportHtml: _page, ...rest } = stored;
         return {
           ...rest,
-          reportHtmlBytes: new TextEncoder().encode(reportHtml ?? '')
-            .byteLength,
+          reportDocumentBytes: reportDocumentBytes(reportDocument),
         };
       });
     default:

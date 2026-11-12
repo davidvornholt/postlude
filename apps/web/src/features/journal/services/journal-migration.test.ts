@@ -1,13 +1,15 @@
 import { expect, it } from 'bun:test';
-import { createPool } from '@postlude/db/connections';
 import {
   migrateGeneratedThrough,
   searchProjectionColumnsMigrationTag,
 } from '@postlude/db/migrate';
 import { Effect } from 'effect';
-import { configuredDatabaseUrl } from '#/shared/testing/test-database.ts';
 import { searchTerms, searchTsQuery } from '../search-query.ts';
 import { searchHitFixture } from '../testing/search-hit-fixture.ts';
+import {
+  type MigrationPool,
+  withTemporaryDatabase,
+} from '../testing/temporary-database.ts';
 import {
   migrateJournalDatabase,
   searchBackfillBatchSize,
@@ -15,31 +17,10 @@ import {
 
 const databaseUpgradeTimeout = 30_000;
 const beforeSearchMigration = '0003_motionless_gauntlet';
-const expectedMigrationCount = 14;
+const expectedMigrationCount = 15;
 const chapter = 12;
 const verseStart = 5;
 const verseEnd = 13;
-
-type MigrationPool = ReturnType<typeof createPool>;
-
-const withTemporaryDatabase = async (
-  body: (pool: MigrationPool) => Promise<void>,
-): Promise<void> => {
-  const configured = await Effect.runPromise(configuredDatabaseUrl());
-  const databaseName = `postlude_search_migration_${crypto.randomUUID().replaceAll('-', '')}`;
-  const databaseUrl = new URL(configured);
-  databaseUrl.pathname = `/${databaseName}`;
-  const admin = createPool(configured);
-  const migrationPool = createPool(databaseUrl.toString());
-  await admin.query(`create database "${databaseName}"`);
-  try {
-    await body(migrationPool);
-  } finally {
-    await migrationPool.end();
-    await admin.query(`drop database "${databaseName}" with (force)`);
-    await admin.end();
-  }
-};
 
 const readOldWriterProjection = async (
   pool: MigrationPool,

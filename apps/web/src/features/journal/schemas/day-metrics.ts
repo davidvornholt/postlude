@@ -27,13 +27,13 @@ const Label = Schema.String.check(
 /** An instant with its offset, as `Date.prototype.toISOString` or /wrap writes it. */
 const isoInstantPattern =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?<seconds>:\d{2}(?<fraction>\.\d{1,9})?)?(?<offset>Z|[+-]\d{2}:\d{2})$/u;
-const IsoInstant = Schema.String.check(
+export const IsoInstantSchema = Schema.String.check(
   Schema.makeFilter(
     (value: string) =>
       isoInstantPattern.test(value) && !Number.isNaN(Date.parse(value)),
     {
       identifier: 'IsoInstant',
-      description: 'an ISO 8601 instant with a time zone offset',
+      expected: 'an ISO 8601 instant with a time zone offset',
     },
   ),
 );
@@ -51,8 +51,8 @@ export const DayMetricsSchema = Schema.Struct({
   metricsVersion: MetricsVersionSchema,
   day: JournalDateSchema,
   activeMinutes: Measured,
-  firstActivityAt: Schema.NullOr(IsoInstant),
-  lastActivityAt: Schema.NullOr(IsoInstant),
+  firstActivityAt: Schema.NullOr(IsoInstantSchema),
+  lastActivityAt: Schema.NullOr(IsoInstantSchema),
   focusMinutes: Measured,
   scatteredMinutes: Measured,
   /** Estimates, and labelled so in every view. */
