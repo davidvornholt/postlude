@@ -10,16 +10,16 @@
  *
  * The open report sits in the text column. Where the screen is wide enough for
  * more room to help its timeline, a control the report has beside its
- * timeline widens it and narrows it again (`report-frame.tsx` says how). The
- * browser remembers the choice (`report-width.ts`), so a report opens as wide
- * as the last one.
+ * timeline widens the timeline and narrows it again (`report-frame.tsx` says
+ * how). Every report opens in the column, and the timeline stays wide only
+ * until the page is left.
  */
 
 import { useId, useState } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
 import { Collapsible } from '#/shared/ui/collapsible.tsx';
-import { browserReportWidthMemory, type ReportWidth } from '../report-width.ts';
+import type { ReportWidth } from '../report-document.ts';
 import type { WrapArea } from '../schemas/agent-area.ts';
 import { RowLabel } from './rating-scale.tsx';
 import { ReportFrame } from './report-frame.tsx';
@@ -36,11 +36,7 @@ const disabledQuietClass =
 
 export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   const [open, setOpen] = useState(false);
-  // Nothing that depends on the width is drawn before the report is shown, so
-  // the server, which has no storage, draws the same page as the browser.
-  const [width, setWidth] = useState<ReportWidth>(() =>
-    browserReportWidthMemory().read(),
-  );
+  const [width, setWidth] = useState<ReportWidth>('column');
   const headingId = useId();
   const regionId = useId();
   const lockId = useId();
@@ -64,10 +60,6 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   }
 
   const shown = open && unlocked;
-  const changeWidth = (next: ReportWidth): void => {
-    setWidth(next);
-    browserReportWidthMemory().remember(next);
-  };
   return (
     <section aria-labelledby={headingId} className={rowClass}>
       {heading}
@@ -102,7 +94,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
           <ReportFrame
             dayMetrics={dayMetrics}
             metricsVersion={metricsVersion}
-            onWidthRequest={changeWidth}
+            onWidthRequest={setWidth}
             reportHtml={reportHtml}
             wide={width === 'wide'}
           />

@@ -14,19 +14,21 @@
 
 /**
  * A timeline heading with the width control, which stays hidden until the
- * page says it can widen the frame, over a track that stands in for the
+ * page says it can widen the timeline, over a track that stands in for the
  * timeline. Its row is as tall as the control, so showing it moves nothing.
- * Everything but the track keeps the width the page says the report has in
- * its column, in the middle of the report's page, as /wrap's template does.
+ * Everything keeps the width the page says the report has in its column, in
+ * the middle of the report's page, and the track too until the page says it is
+ * wide, as /wrap's template does. Both are rounded to whole pixels, as there,
+ * so the text sits where it would in a frame the column's width.
  */
 const widthControl = `<style>
-  main > :not(.track) { max-width: calc(var(--column, 100vw) - 40px); margin-inline: auto; }
+  main > :not(.track), [data-timeline="column"] .track { --text-width: round(var(--column, 100vw) - 40px, 1px); max-width: var(--text-width); margin-left: max(0px, round((100% - var(--text-width)) / 2, 1px)); }
   .track { height: 24px; background: #8a8a85; }
 </style>
 <div class="head"><h2>Timeline</h2><button type="button" data-width-toggle aria-label="Widen the timeline" hidden>&harr;</button></div>
 <div class="track"></div>`;
 
-/** Takes the column, then says the report has the control; keeps the control to what the page says, and asks for the other width when pressed. */
+/** Takes the column and the track's width, then says the report has the control; keeps the control to what the page says, and asks for the other width when pressed. */
 const widthScript = `<script>
   const widthToggle = document.querySelector('[data-width-toggle]');
   widthToggle.addEventListener('click', () => {
@@ -39,6 +41,7 @@ const widthScript = `<script>
     const probes = document.documentElement.dataset;
     probes.widthMessages = String(Number(probes.widthMessages ?? '0') + 1);
     document.documentElement.style.setProperty('--column', message.column + 'px');
+    document.documentElement.dataset.timeline = message.wide ? 'wide' : 'column';
     widthToggle.hidden = !message.available;
     widthToggle.dataset.wide = String(message.wide);
     widthToggle.setAttribute('aria-label', message.wide ? 'Narrow the timeline' : 'Widen the timeline');

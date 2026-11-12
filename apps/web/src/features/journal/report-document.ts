@@ -9,11 +9,14 @@
  *
  * The page never carries numbers. They reach it after it has loaded, in one
  * message, and it fills them in itself. A report may also have a control that
- * widens its frame, and then it and the page tell each other about the width.
+ * shows its timeline wider than the text column, and then it and the page tell
+ * each other about the width.
  */
 
-import type { ReportWidth } from './report-width.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
+
+/** Whether the report's timeline is shown in the text column or wide. */
+export type ReportWidth = 'column' | 'wide';
 
 export const reportContentSecurityPolicy =
   "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:";
@@ -97,13 +100,14 @@ export const reportHeightOf = (data: unknown): number | undefined => {
 };
 
 /**
- * How wide the report is in the text column, whether the frame can be shown
+ * How wide the report is in the text column, whether its timeline can be shown
  * wide, which needs a screen with room for it, and whether it is. Every report
- * is told. A report with a width control of its own keeps everything but its
- * timeline at the column's width, so that only the timeline moves when the
- * frame does, and only then says it has the control (`reportOffersWidthOf`).
- * It shows the control only while this says the frame can be wide, so a
- * report never offers a width Postlude can't give it.
+ * is told. A report with a width control of its own keeps everything at the
+ * column's width, in the middle of its page, and its timeline too until this
+ * says it is wide, and only then says it has the control
+ * (`reportOffersWidthOf`); the frame is wider than the column only for a
+ * report that has said so. The report shows the control only while this says
+ * the timeline can be wide, so it never offers a width Postlude can't give it.
  */
 export type ReportWidthMessage = {
   readonly type: 'postlude:report-width';
