@@ -19,11 +19,6 @@ import type {
   FixtureEvening,
 } from './day-page-fixture-contract.ts';
 import { fixtureConfig, mountFixture, today } from './day-page-mount.ts';
-import {
-  earlyScriptReportHtml,
-  syntheticReportHtml,
-  widthControlReportHtml,
-} from './synthetic-report.ts';
 
 const closedAt = '2026-08-26T21:00:00.000Z';
 const entryRevision = 1;
@@ -79,7 +74,6 @@ const noReport: FixtureEvening['wrap'] = {
   dayMetrics: null,
   metricsVersion: null,
   reportDocument: null,
-  reportHtml: null,
   reportModel: null,
   reportGeneratedAt: null,
 };
@@ -121,16 +115,8 @@ const withReport: FixtureEvening['wrap'] = {
       { kind: 'chart', title: 'Later', caption: unknownBlockText },
     ],
   },
-  reportHtml: null,
   reportModel: 'Synthetic Model 1',
   reportGeneratedAt: closedAt,
-};
-
-/** A report stored as a whole page, as /wrap stored them before documents. */
-const withLegacyReport: FixtureEvening['wrap'] = {
-  ...withReport,
-  reportDocument: null,
-  reportHtml: syntheticReportHtml,
 };
 
 const withEvening = (
@@ -147,26 +133,6 @@ const configs = {
     wrap: withReport,
     agentNote: noNote,
     settledNote: readyNote,
-  }),
-  /** The same, with the report stored as a page before documents. */
-  legacyReport: withEvening({
-    rating: openRating,
-    wrap: withLegacyReport,
-    agentNote: noNote,
-    settledNote: readyNote,
-  }),
-  /** The same, with a stored page that has a width control of its own. */
-  legacyWidthReport: withEvening({
-    rating: openRating,
-    wrap: { ...withLegacyReport, reportHtml: widthControlReportHtml },
-    agentNote: noNote,
-    settledNote: readyNote,
-  }),
-  /** The same, with a stored page that tries to run a script before its policy. */
-  legacyEarlyScriptReport: withEvening({
-    rating: openRating,
-    wrap: { ...withLegacyReport, reportHtml: earlyScriptReportHtml },
-    agentNote: noNote,
   }),
   /** Closed while no note generator is set up. */
   notConfigured: withEvening({

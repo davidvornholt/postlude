@@ -61,17 +61,13 @@ export type WrapPut = Schema.Schema.Type<typeof WrapPutSchema>;
  * The /wrap columns of one day. Every field is null until /wrap writes the day.
  *
  * The report is a document, held as stored: the page reads it block by block
- * (`day-report-reader.ts`), so a document from a newer /wrap still shows. A
- * report /wrap stored as a page, before it wrote documents, is in
- * `reportHtml`. Postlude frames it until the conversion has given it a
- * document, and the page stays stored beside that document.
+ * (`day-report-reader.ts`), so a document from a newer /wrap still shows.
  */
 export const WrapAreaSchema = Schema.Struct({
   date: JournalDateSchema,
   dayMetrics: Schema.NullOr(DayMetricsSchema),
   metricsVersion: Schema.NullOr(MetricsVersionSchema),
   reportDocument: Schema.NullOr(Schema.Json),
-  reportHtml: Schema.NullOr(Schema.String),
   reportModel: Schema.NullOr(Schema.String),
   reportGeneratedAt: Schema.NullOr(Schema.Date),
 });
@@ -84,7 +80,6 @@ export const WrapAreaFromRow = WrapAreaSchema.pipe(
     dayMetrics: 'day_metrics',
     metricsVersion: 'metrics_version',
     reportDocument: 'report_document',
-    reportHtml: 'report_html',
     reportModel: 'report_model',
     reportGeneratedAt: 'report_generated_at',
   }),
@@ -95,7 +90,6 @@ export const emptyWrapArea = (date: string): WrapArea => ({
   dayMetrics: null,
   metricsVersion: null,
   reportDocument: null,
-  reportHtml: null,
   reportModel: null,
   reportGeneratedAt: null,
 });

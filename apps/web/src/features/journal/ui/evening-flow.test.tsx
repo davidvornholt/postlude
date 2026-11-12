@@ -146,7 +146,6 @@ it.each([
     expect(isDisabled(toggle)).toBe(true);
     expect(attributeValue(toggle, 'aria-expanded')).toBe('false');
     expect(plainText(html)).toContain(lockReason);
-    expect(html).not.toContain('<iframe');
     expect(html).not.toContain(reportMarker);
     expect(closeHintOf(html)).toBe(hint);
   },

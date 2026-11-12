@@ -30,14 +30,13 @@ const landedPullRequest = /Landed postlude #\d+: /u;
 const pastHideDelayMs = 600;
 
 for (const colorScheme of colorSchemes) {
-  test(`a report document is drawn by Postlude itself, with its parts in words and a block it doesn't know as words, in ${colorScheme} mode`, async ({
+  test(`a report document is drawn, with its parts in words and a block it doesn't know as words, in ${colorScheme} mode`, async ({
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
     await mountEvening(page, 'report');
     await openReport(page);
 
-    await expect(page.locator('iframe')).toHaveCount(0);
     await expect(
       page.getByRole('group', { name: 'The day in numbers' }),
     ).toBeVisible();

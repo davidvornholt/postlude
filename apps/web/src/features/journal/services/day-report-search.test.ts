@@ -165,21 +165,6 @@ it('reads only the words a reader of the report sees', async () => {
   ).toEqual([]);
 });
 
-it('keeps reading the text of a report stored as a page', async () => {
-  const page = [
-    '<title>Titlehidden</title>',
-    '<style>.stylehidden { color: red }</style>',
-    '<svg viewBox="0 0 1 1"><text>drawinghidden</text></svg>',
-    '<script>const scripthidden = "</style>";</script>',
-    '<p class="attributehidden">Tom &amp; Jerry &lt;3 na&#xEF;ve&nbsp;caf&#233;</p>',
-  ].join('\n');
-  const text = await withEveryService(
-    ({ sql }) =>
-      sql<{ readonly text: string }>`select report_plain_text(${page}) as text`,
-  );
-  expect(text).toEqual([{ text: 'Tom & Jerry <3 naïve café' }]);
-});
-
 it('puts the days David wrote the words on before the days only a report holds them', async () => {
   const days = [
     { date: '2026-03-01', writing: 'Rain all night.' },

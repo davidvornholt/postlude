@@ -66,7 +66,6 @@ it('reads a day /wrap has not written as empty', async () => {
     dayMetrics: null,
     metricsVersion: null,
     reportDocument: null,
-    reportHtml: null,
     reportModel: null,
     reportGeneratedAt: null,
   });
@@ -86,7 +85,6 @@ it('stores the /wrap columns with the database clock, and replaces them', async 
   expect(outcome.read).toEqual(outcome.second);
   expect(outcome.read.dayMetrics).toEqual(metricsFor(day, 200));
   expect(outcome.read.reportDocument).toEqual(reportFor(200));
-  expect(outcome.read.reportHtml).toBeNull();
 });
 
 it("stores the report's words beside it, without its links' addresses", async () => {
@@ -97,38 +95,6 @@ it("stores the report's words beside it, without its links' addresses", async ()
     }),
   );
   expect(text).toBe('Summary 100 minutes, one PR.');
-});
-
-it('replaces a report stored as a page with the new document', async () => {
-  const outcome = await withEvening(({ areas, sql }) =>
-    Effect.gen(function* () {
-      const page = '<!doctype html><p>A page of a report.</p>';
-      yield* sql`
-        insert into agent_area (
-          entry_date, day_metrics, metrics_version, report_html, report_text,
-          report_model, report_generated_at
-        )
-        values (
-          ${day}, ${JSON.stringify(metricsFor(day, 50))}::jsonb, 1, ${page},
-          report_plain_text(${page}), 'page-model', now()
-        )
-      `;
-      const before = yield* areas.readWrap(day);
-      yield* areas.putWrap(day, wrapFor(day, 100));
-      return {
-        before,
-        after: yield* areas.readWrap(day),
-        text: yield* areas.readReportText(day),
-      };
-    }),
-  );
-  expect(outcome.before.reportHtml).toBe(
-    '<!doctype html><p>A page of a report.</p>',
-  );
-  expect(outcome.before.reportDocument).toBeNull();
-  expect(outcome.after.reportHtml).toBeNull();
-  expect(outcome.after.reportDocument).toEqual(reportFor(100));
-  expect(outcome.text).toBe('Summary 100 minutes, one PR.');
 });
 
 it('refuses a document stored without its words, or one that is not an object', async () => {
@@ -348,7 +314,7 @@ it('lets the database refuse an incoherent agent area', async () => {
       ),
       refusalOf(
         sql,
-        sql`insert into agent_area (entry_date, day_metrics, metrics_version, report_html, report_model, report_generated_at) values (${day}, '[]'::jsonb, 1, 'x', 'm', now())`,
+        sql`insert into agent_area (entry_date, day_metrics, metrics_version, report_document, report_text, report_model, report_generated_at) values (${day}, '[]'::jsonb, 1, '{}'::jsonb, 'x', 'm', now())`,
       ),
       refusalOf(
         sql,

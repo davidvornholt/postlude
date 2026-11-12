@@ -78,8 +78,7 @@ it('holds exactly the grants the contract gives it', async () => {
     { table: 'entry', privilege: 'SELECT' },
     { table: 'entry_search_evidence', privilege: 'SELECT' },
   ]);
-  // It writes a report's text beside its document but never reads it back,
-  // and it may clear a report stored as a page but never store one.
+  // It writes a report's text beside its document but never reads it back.
   const written = [
     'day_metrics',
     'metrics_version',
@@ -94,16 +93,14 @@ it('holds exactly the grants the contract gives it', async () => {
     'metrics_version',
     'report_document',
     'report_generated_at',
-    'report_html',
     'report_model',
   ];
-  const updated = [...written, 'report_html'].sort();
   expect(grants.columns).toEqual([
     ...['entry_date', ...written]
       .sort()
       .map((column) => ({ column, privilege: 'INSERT' })),
     ...read.map((column) => ({ column, privilege: 'SELECT' })),
-    ...updated.map((column) => ({ column, privilege: 'UPDATE' })),
+    ...written.map((column) => ({ column, privilege: 'UPDATE' })),
   ]);
 });
 
@@ -180,7 +177,6 @@ it('runs every CLI command', async () => {
   expect(outcome.get).toMatchObject({
     date: day,
     reportDocument: wrap.reportDocument,
-    reportHtml: null,
     reportModel: 'wrap-model',
   });
 });

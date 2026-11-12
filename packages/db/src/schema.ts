@@ -248,9 +248,6 @@ export const dayRating = pgTable(
  * note was written from, so a newer entry revision makes the note stale.
  *
  * The report is a document of blocks that Postlude draws (`report_document`).
- * Reports /wrap stored before it wrote documents are whole pages
- * (`report_html`); converting one gives it a document and keeps the page
- * beside it, and a new report from /wrap replaces both.
  *
  * The checks keep each group whole: metrics never arrive without their version
  * or a report, and a note's status always comes with what that status needs
@@ -264,7 +261,6 @@ export const agentArea = pgTable(
     dayMetrics: jsonb('day_metrics'),
     metricsVersion: integer('metrics_version'),
     reportDocument: jsonb('report_document'),
-    reportHtml: text('report_html'),
     reportModel: text('report_model'),
     reportGeneratedAt: timestamp('report_generated_at', {
       withTimezone: true,
@@ -282,8 +278,7 @@ export const agentArea = pgTable(
     }),
     /**
      * The report's words, which the writer of the report stores beside it
-     * (`reportPlainText` in `day-report-reader.ts`). A report stored as a page
-     * has the text `report_plain_text` extracts from it.
+     * (`reportPlainText` in `day-report-reader.ts`).
      */
     reportText: text('report_text'),
     /**
@@ -305,7 +300,7 @@ export const agentArea = pgTable(
     ),
     check(
       'agent_area_wrap_complete',
-      sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, coalesce(${table.reportDocument}, to_jsonb(${table.reportHtml})), ${table.reportText}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 6)`,
+      sql`num_nonnulls(${table.dayMetrics}, ${table.metricsVersion}, ${table.reportDocument}, ${table.reportText}, ${table.reportModel}, ${table.reportGeneratedAt}) in (0, 6)`,
     ),
     check(
       'agent_area_report_document_object',
