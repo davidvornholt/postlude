@@ -10,9 +10,7 @@
  *
  * The report is a document /wrap composed of blocks, which Postlude draws
  * itself (`day-report-view.tsx`), so every change to how a report looks
- * reaches every day. A day /wrap wrote before it wrote documents, and that the
- * conversion hasn't reached yet, still has its page, which is framed as it
- * was (`report-frame.tsx`).
+ * reaches every day.
  *
  * The open report sits in the text column. Where the screen is wide enough
  * for more room to help its timeline, a control beside the timeline's heading
@@ -28,18 +26,6 @@ import { readReportDocument } from '../day-report-reader.ts';
 import type { WrapArea } from '../schemas/agent-area.ts';
 import { DayReportView } from './day-report-view.tsx';
 import { RowLabel } from './rating-scale.tsx';
-import { ReportFrame } from './report-frame.tsx';
-
-/** What the day has to show: a document, a page from before documents, or neither. */
-const reportOf = (wrap: WrapArea) => {
-  if (wrap.reportDocument !== null) {
-    return { kind: 'document', document: wrap.reportDocument } as const;
-  }
-  const { reportHtml, dayMetrics, metricsVersion } = wrap;
-  return reportHtml === null || dayMetrics === null || metricsVersion === null
-    ? undefined
-    : ({ kind: 'page', reportHtml, dayMetrics, metricsVersion } as const);
-};
 
 type DayReportProps = {
   readonly wrap: WrapArea;
@@ -57,7 +43,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   const headingId = useId();
   const regionId = useId();
   const lockId = useId();
-  const report = reportOf(wrap);
+  const { reportDocument } = wrap;
   const heading = (
     <RowLabel as="h3" id={headingId}>
       Day report
@@ -65,7 +51,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   );
   const rowClass = 'flow-root py-3';
 
-  if (report === undefined) {
+  if (reportDocument === null) {
     return (
       <section aria-labelledby={headingId} className={rowClass}>
         {heading}
@@ -108,21 +94,11 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
         unmountWhenClosed={true}
       >
         <div className="pt-4">
-          {report.kind === 'document' ? (
-            <DayReportView
-              document={readReportDocument(report.document)}
-              onWideChange={setWide}
-              wide={wide}
-            />
-          ) : (
-            <ReportFrame
-              dayMetrics={report.dayMetrics}
-              metricsVersion={report.metricsVersion}
-              onWidthRequest={(width) => setWide(width === 'wide')}
-              reportHtml={report.reportHtml}
-              wide={wide}
-            />
-          )}
+          <DayReportView
+            document={readReportDocument(reportDocument)}
+            onWideChange={setWide}
+            wide={wide}
+          />
           <Button className="mt-4" onClick={onToWriting} variant="quiet">
             Go to the writing
           </Button>

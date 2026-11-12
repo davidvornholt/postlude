@@ -95,9 +95,7 @@ export type GeneratedNote = {
 
 /**
  * Replaces the /wrap columns of a day together, and nothing else in its
- * row. The report's time is the database clock's, not the caller's. A
- * page the day's report was stored as before goes with the report it
- * was: the new document replaces it.
+ * row. The report's time is the database clock's, not the caller's.
  */
 const putWrapWith =
   (sql: SqlClient.SqlClient) => (date: string, input: WrapPut) =>
@@ -129,10 +127,9 @@ const putWrapWith =
           metrics_version = excluded.metrics_version,
           report_document = excluded.report_document,
           report_text = ${reportText},
-          report_html = null,
           report_model = excluded.report_model,
           report_generated_at = excluded.report_generated_at
-        returning entry_date, day_metrics, metrics_version, report_document, report_html, report_model, report_generated_at
+        returning entry_date, day_metrics, metrics_version, report_document, report_model, report_generated_at
       `.pipe(
         Effect.flatMap(decodeWrapRows),
         Effect.mapError(journalWriteError),
@@ -151,7 +148,7 @@ export class AgentAreaRepository extends Context.Service<AgentAreaRepository>()(
 
       const readWrap = (date: string) =>
         sql`
-          select entry_date, day_metrics, metrics_version, report_document, report_html, report_model, report_generated_at
+          select entry_date, day_metrics, metrics_version, report_document, report_model, report_generated_at
           from agent_area
           where entry_date = ${date}
         `.pipe(

@@ -116,7 +116,6 @@ describe('what the model is given', () => {
         dayMetrics: null,
         metricsVersion: null,
         reportDocument: null,
-        reportHtml: null,
         reportModel: null,
         reportGeneratedAt: null,
       },

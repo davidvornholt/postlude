@@ -93,13 +93,6 @@ describe('agent-area check', () => {
     expect(message).toStartWith('stdin does not match the agent-area input: ');
   });
 
-  it('refuses a page beside the document', async () => {
-    const message = await refusal(
-      JSON.stringify({ ...wrap, reportHtml: '<p>The day.</p>' }),
-    );
-    expect(message).toContain('reportHtml');
-  });
-
   it('refuses input that is not JSON, and metrics for another day', async () => {
     expect(await refusal('<html>')).toBe('stdin is not a JSON document.');
     expect(

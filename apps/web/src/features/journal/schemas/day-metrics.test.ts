@@ -165,11 +165,6 @@ describe('agent area input', () => {
     ).toBe(true);
   });
 
-  it('refuses a report stored as a page', () => {
-    const { reportDocument: _document, ...rest } = put;
-    expect(putDecodes({ ...rest, reportHtml: '<p>The day.</p>' })).toBe(false);
-  });
-
   it('refuses the columns only Postlude writes', () => {
     expect(putDecodes({ ...put, reportGeneratedAt: '2026-10-30' })).toBe(false);
     expect(putDecodes({ ...put, agentNote: 'Hello' })).toBe(false);

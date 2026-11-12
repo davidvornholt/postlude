@@ -256,7 +256,7 @@ export const runCliCommand = <E>(
         const areas = yield* AgentAreaRepository;
         const stored = yield* areas.putWrap(command.date, input);
         // The report goes in but doesn't come back out: it can be a megabyte.
-        const { reportDocument, reportHtml: _page, ...rest } = stored;
+        const { reportDocument, ...rest } = stored;
         return {
           ...rest,
           reportDocumentBytes: reportDocumentBytes(reportDocument),
