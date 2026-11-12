@@ -18,6 +18,7 @@ import { pgClientLayer } from '@postlude/db/connections';
 import { Cause, Effect, Layer, References } from 'effect';
 import {
   CliInputError,
+  checkWrap,
   cliFailureOf,
   helpOutput,
   runCliCommand,
@@ -76,6 +77,10 @@ const program = Effect.gen(function* () {
   }
   if (command.kind === 'help') {
     return helpOutput();
+  }
+  // A check reads only stdin, so it works where the journal can't be reached.
+  if (command.kind === 'agent-area-check') {
+    return yield* checkWrap(command.date, readStdin);
   }
   const databaseUrl = Bun.env.DATABASE_URL;
   if (databaseUrl === undefined || databaseUrl === '') {

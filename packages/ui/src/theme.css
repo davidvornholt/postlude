@@ -106,6 +106,20 @@
     --pl-deep-ink: oklch(0.94 0.015 85);
     --pl-deep-ink-muted: oklch(0.76 0.016 80);
     --pl-deep-rule: oklch(0.54 0.02 60);
+
+    /*
+     * The day report's timeline. Its bars are screen time, an agent running,
+     * and an appointment, and its points are a prompt (in ink), a landed pull
+     * request, and a sent mail. Each family is told apart by color as well as
+     * by its rows and shapes, so `theme-audit.ts` holds every pair in a family
+     * apart under each kind of color vision, and every mark to 3:1 against
+     * the page and the sunken ground.
+     */
+    --pl-timeline-screen: oklch(0.4 0.09 155);
+    --pl-timeline-run: oklch(0.6 0.045 60);
+    --pl-timeline-appointment: oklch(0.5 0.11 255);
+    --pl-timeline-pr: oklch(0.46 0.15 320);
+    --pl-timeline-mail: oklch(0.6 0.12 65);
   }
 }
 
@@ -171,6 +185,14 @@
       --pl-deep-ink: oklch(0.95 0.015 85);
       --pl-deep-ink-muted: oklch(0.78 0.016 80);
       --pl-deep-rule: oklch(0.6 0.02 60);
+
+      /* Screen time lifts furthest, where the agent's bar stays low, so the
+         two keep apart for a reader who can't tell green from brown. */
+      --pl-timeline-screen: oklch(0.8 0.11 155);
+      --pl-timeline-run: oklch(0.58 0.045 60);
+      --pl-timeline-appointment: oklch(0.7 0.1 255);
+      --pl-timeline-pr: oklch(0.72 0.15 320);
+      --pl-timeline-mail: oklch(0.58 0.12 65);
     }
   }
 }
@@ -233,6 +255,11 @@
   --color-deep-ink: var(--pl-deep-ink);
   --color-deep-ink-muted: var(--pl-deep-ink-muted);
   --color-deep-rule: var(--pl-deep-rule);
+  --color-timeline-screen: var(--pl-timeline-screen);
+  --color-timeline-run: var(--pl-timeline-run);
+  --color-timeline-appointment: var(--pl-timeline-appointment);
+  --color-timeline-pr: var(--pl-timeline-pr);
+  --color-timeline-mail: var(--pl-timeline-mail);
 }
 
 @layer base {

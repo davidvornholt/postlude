@@ -1,11 +1,12 @@
 /**
  * Search through the report /wrap stored, against a real Postgres, because the
- * report's text and its index are columns the database derives from the HTML.
+ * report's index is a column the database derives from its text.
  */
 
 import { expect, it } from 'bun:test';
 import { Effect } from 'effect';
 
+import type { ReportDocument } from '../schemas/day-report-blocks.ts';
 import { type SearchHit, searchHitOf } from '../search-contract.ts';
 import { searchTerms } from '../search-query.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
@@ -20,8 +21,14 @@ const withReport: SearchScope = { dayReport: true };
 type Day = {
   readonly date: string;
   readonly writing?: string;
-  readonly report?: string;
+  /** The report, as a document or as one paragraph of text. */
+  readonly report?: string | ReportDocument;
 };
+
+const paragraphs = (...texts: ReadonlyArray<string>): ReportDocument => ({
+  version: 1,
+  blocks: texts.map((text) => ({ kind: 'paragraph', text: [text] })),
+});
 
 const searched = (
   days: ReadonlyArray<Day>,
@@ -34,11 +41,13 @@ const searched = (
         if (writing !== undefined) {
           yield* entries.save(draft(date, writing));
         }
-        if (report !== undefined) {
+        const reportDocument =
+          typeof report === 'string' ? paragraphs(report) : report;
+        if (reportDocument !== undefined) {
           yield* areas.putWrap(date, {
             dayMetrics: sampleDayMetrics(date),
             metricsVersion: 2,
-            reportHtml: report,
+            reportDocument,
             reportModel: 'wrap-model',
           });
         }
@@ -63,7 +72,18 @@ it('finds a day by a word only its report holds, and says where it was', async (
       {
         date: '2026-03-01',
         writing: 'A quiet evening.',
-        report: '<h2>Work</h2><p>Merged the parser refactor.</p>',
+        report: {
+          version: 1,
+          blocks: [
+            {
+              kind: 'section',
+              heading: 'Work',
+              blocks: [
+                { kind: 'paragraph', text: ['Merged the parser refactor.'] },
+              ],
+            },
+          ],
+        },
       },
     ],
     'parse',
@@ -79,7 +99,7 @@ it('shows the words around a match deep in a long report', async () => {
   const before = 'early '.repeat(40);
   const after = ' late'.repeat(80);
   const [hit] = await searched(
-    [{ date: '2026-03-01', report: `<p>${before}parser${after}</p>` }],
+    [{ date: '2026-03-01', report: `${before}parser${after}` }],
     'parser',
   );
   const [excerpt = ''] = marked(hit)[0]?.excerpts ?? [];
@@ -91,7 +111,7 @@ it('shows the words around a match deep in a long report', async () => {
 
 it('finds a report on a day David wrote nothing', async () => {
   const hits = await searched(
-    [{ date: '2026-03-01', report: '<p>Fixed the parser.</p>' }],
+    [{ date: '2026-03-01', report: 'Fixed the parser.' }],
     'parser',
   );
   expect(hits.map(({ date, words }) => ({ date, words }))).toEqual([
@@ -105,7 +125,7 @@ it('leaves the report out of a search of David’s writing alone', async () => {
       {
         date: '2026-03-01',
         writing: 'A quiet evening.',
-        report: '<p>Merged the parser refactor.</p>',
+        report: 'Merged the parser refactor.',
       },
     ],
     'parser',
@@ -114,31 +134,57 @@ it('leaves the report out of a search of David’s writing alone', async () => {
   expect(hits).toEqual([]);
 });
 
-it('reads only the text a reader of the report sees', async () => {
-  const report = [
-    '<title>Titlehidden</title>',
-    '<style>.stylehidden { color: red }</style>',
-    '<svg viewBox="0 0 1 1"><text>drawinghidden</text></svg>',
-    '<script>const scripthidden = "</style>";</script>',
-    '<p class="attributehidden">Tom &amp; Jerry &lt;3 na&#xEF;ve&nbsp;caf&#233;</p>',
-  ].join('\n');
+it('reads only the words a reader of the report sees', async () => {
+  const report: ReportDocument = {
+    version: 1,
+    blocks: [
+      {
+        kind: 'paragraph',
+        text: [
+          'Tom & Jerry <3 ',
+          { emphasis: 'naïve' },
+          ' ',
+          { link: 'café', href: 'https://example.test/addresshidden' },
+          { code: ' ok' },
+        ],
+      },
+    ],
+  };
   const hits = await searched([{ date: '2026-03-01', report }], 'naïve café');
   // The report is short enough for its excerpt to be all of its text.
   expect(hits.map(marked)).toEqual([
     [
       {
         kind: 'day-report',
-        excerpts: ['Tom & Jerry <3 [naïve] [café]'],
+        excerpts: ['Tom & Jerry <3 [naïve] [café] ok'],
       },
     ],
   ]);
+  expect(
+    await searched([{ date: '2026-03-01', report }], 'addresshidden'),
+  ).toEqual([]);
+});
+
+it('keeps reading the text of a report stored as a page', async () => {
+  const page = [
+    '<title>Titlehidden</title>',
+    '<style>.stylehidden { color: red }</style>',
+    '<svg viewBox="0 0 1 1"><text>drawinghidden</text></svg>',
+    '<script>const scripthidden = "</style>";</script>',
+    '<p class="attributehidden">Tom &amp; Jerry &lt;3 na&#xEF;ve&nbsp;caf&#233;</p>',
+  ].join('\n');
+  const text = await withEveryService(
+    ({ sql }) =>
+      sql<{ readonly text: string }>`select report_plain_text(${page}) as text`,
+  );
+  expect(text).toEqual([{ text: 'Tom & Jerry <3 naïve café' }]);
 });
 
 it('puts the days David wrote the words on before the days only a report holds them', async () => {
   const days = [
     { date: '2026-03-01', writing: 'Rain all night.' },
-    { date: '2026-03-02', writing: 'Rain again.', report: '<p>Rain.</p>' },
-    { date: '2026-03-05', writing: 'Sun.', report: '<p>Rain at noon.</p>' },
+    { date: '2026-03-02', writing: 'Rain again.', report: 'Rain.' },
+    { date: '2026-03-05', writing: 'Sun.', report: 'Rain at noon.' },
   ];
   const hits = await searched(days, 'rain');
   expect(hits.map(({ date }) => date)).toEqual([
@@ -162,7 +208,7 @@ it('finds a day whose writing holds one word and its report the other', async ()
       {
         date: '2026-03-01',
         writing: 'Rain all night.',
-        report: '<p>Merged the parser.</p>',
+        report: 'Merged the parser.',
       },
       { date: '2026-03-02', writing: 'Rain again.' },
     ],
@@ -183,8 +229,16 @@ it('stores and finds a report whose words would overflow a search vector', async
     { length: 90_000 },
     (_, index) => `word${index.toString(36)}`,
   );
+  const wordsPerParagraph = 1000;
+  const texts = Array.from(
+    { length: words.length / wordsPerParagraph },
+    (_, index) =>
+      words
+        .slice(index * wordsPerParagraph, (index + 1) * wordsPerParagraph)
+        .join(' '),
+  );
   const hits = await searched(
-    [{ date: '2026-03-01', report: `<p>Kingfisher ${words.join(' ')}</p>` }],
+    [{ date: '2026-03-01', report: paragraphs('Kingfisher', ...texts) }],
     'kingfisher',
   );
   expect(hits.map(({ date }) => date)).toEqual(['2026-03-01']);

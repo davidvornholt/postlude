@@ -56,7 +56,7 @@ test('the hidden report leaves the page when reduced motion is switched on while
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await mountEvening(page, 'report');
+  await mountEvening(page, 'legacyReport');
   await openReport(page);
   await expect(page.locator(frameSelector)).toHaveCount(1);
 
@@ -73,7 +73,7 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountEvening(page, 'report');
+    await mountEvening(page, 'legacyReport');
     await openReport(page);
 
     const frame = page.locator(frameSelector);
@@ -143,7 +143,7 @@ for (const colorScheme of colorSchemes) {
 test('the open report leads straight on to the writing below it', async ({
   page,
 }) => {
-  await mountEvening(page, 'report');
+  await mountEvening(page, 'legacyReport');
   await openReport(page);
   const onward = page.getByRole('button', { name: 'Go to the writing' });
   await expect(onward).toHaveCount(1);
@@ -158,7 +158,7 @@ test('a report runs nothing before its policy, even behind a comment that ends e
   page,
 }) => {
   const leaked = await leakedRequests(page);
-  await mountEvening(page, 'earlyScriptReport');
+  await mountEvening(page, 'legacyEarlyScriptReport');
   await openReport(page);
 
   const report = page.frameLocator(frameSelector);
@@ -173,7 +173,7 @@ test('a report that navigates its frame away sends nothing and is taken down', a
   page,
 }) => {
   const leaked = await leakedRequests(page);
-  await mountEvening(page, 'report');
+  await mountEvening(page, 'legacyReport');
   await openReport(page);
   const report = page.frameLocator(frameSelector);
   const takenDown = page.getByText(

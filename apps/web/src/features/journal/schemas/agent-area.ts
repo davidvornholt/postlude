@@ -8,21 +8,22 @@
  */
 
 import { Schema } from 'effect';
-
 import { DayMetricsSchema, MetricsVersionSchema } from './day-metrics.ts';
+import { ReportDocumentSchema } from './day-report-blocks.ts';
 import { JournalDateSchema, RevisionSchema } from './entry.ts';
 
-/** A report is a self-contained page; a mebibyte leaves room for inline art. */
-export const reportHtmlByteLimit = 1_048_576;
+/** The most a stored report may take as JSON: a long day, with room to spare. */
+export const reportDocumentByteLimit = 1_048_576;
 
-const ReportHtml = Schema.String.check(
+export const reportDocumentBytes = (document: unknown): number =>
+  new TextEncoder().encode(JSON.stringify(document)).byteLength;
+
+const ReportDocument = ReportDocumentSchema.check(
   Schema.makeFilter(
-    (value: string) =>
-      value.trim() !== '' &&
-      new TextEncoder().encode(value).byteLength <= reportHtmlByteLimit,
+    (document) => reportDocumentBytes(document) <= reportDocumentByteLimit,
     {
-      identifier: 'ReportHtml',
-      description: `non-empty HTML of at most ${reportHtmlByteLimit} bytes`,
+      identifier: 'ReportDocumentSize',
+      expected: `a document of at most ${reportDocumentByteLimit} bytes as JSON`,
     },
   ),
 );
@@ -42,25 +43,34 @@ const ModelName = Schema.String.check(
 export const WrapPutSchema = Schema.Struct({
   dayMetrics: DayMetricsSchema,
   metricsVersion: MetricsVersionSchema,
-  reportHtml: ReportHtml,
+  reportDocument: ReportDocument,
   reportModel: ModelName,
 }).check(
   Schema.makeFilter(
     (input) => input.dayMetrics.metricsVersion === input.metricsVersion,
     {
       identifier: 'MatchingMetricsVersion',
-      description: 'a metricsVersion equal to dayMetrics.metricsVersion',
+      expected: 'a metricsVersion equal to dayMetrics.metricsVersion',
     },
   ),
 );
 
 export type WrapPut = Schema.Schema.Type<typeof WrapPutSchema>;
 
-/** The /wrap columns of one day. Every field is null until /wrap writes the day. */
+/**
+ * The /wrap columns of one day. Every field is null until /wrap writes the day.
+ *
+ * The report is a document, held as stored: the page reads it block by block
+ * (`day-report-reader.ts`), so a document from a newer /wrap still shows. A
+ * report /wrap stored as a page, before it wrote documents, is in
+ * `reportHtml`. Postlude frames it until the conversion has given it a
+ * document, and the page stays stored beside that document.
+ */
 export const WrapAreaSchema = Schema.Struct({
   date: JournalDateSchema,
   dayMetrics: Schema.NullOr(DayMetricsSchema),
   metricsVersion: Schema.NullOr(MetricsVersionSchema),
+  reportDocument: Schema.NullOr(Schema.Json),
   reportHtml: Schema.NullOr(Schema.String),
   reportModel: Schema.NullOr(Schema.String),
   reportGeneratedAt: Schema.NullOr(Schema.Date),
@@ -73,6 +83,7 @@ export const WrapAreaFromRow = WrapAreaSchema.pipe(
     date: 'entry_date',
     dayMetrics: 'day_metrics',
     metricsVersion: 'metrics_version',
+    reportDocument: 'report_document',
     reportHtml: 'report_html',
     reportModel: 'report_model',
     reportGeneratedAt: 'report_generated_at',
@@ -83,6 +94,7 @@ export const emptyWrapArea = (date: string): WrapArea => ({
   date,
   dayMetrics: null,
   metricsVersion: null,
+  reportDocument: null,
   reportHtml: null,
   reportModel: null,
   reportGeneratedAt: null,

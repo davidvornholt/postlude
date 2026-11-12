@@ -8,6 +8,8 @@ import { scanWcag22AaViolations } from '@davidvornholt/a11y-testing/axe';
 import type * as playwright from '@playwright/test';
 import { expect } from '@playwright/test';
 import { notConfiguredMessage } from '../src/features/journal/evening-messages.ts';
+import { sampleReportDocument } from '../src/features/journal/sample/sample-report.ts';
+import type { TimelineBlock } from '../src/features/journal/schemas/day-report-timeline.ts';
 import { sampleDayMetrics } from '../src/features/journal/testing/evening-view.ts';
 import { buildDayPageFixtures } from './day-page-fixture-build.ts';
 import type {
@@ -76,6 +78,7 @@ const noReport: FixtureEvening['wrap'] = {
   date: today,
   dayMetrics: null,
   metricsVersion: null,
+  reportDocument: null,
   reportHtml: null,
   reportModel: null,
   reportGeneratedAt: null,
@@ -84,13 +87,50 @@ const noReport: FixtureEvening['wrap'] = {
 /** Every number made up, and one of them unmeasured, as /wrap leaves a gap. */
 export const reportMetrics = { ...sampleDayMetrics(today), landedPrs: null };
 
+/** What a later Postlude might add to the catalogue, which this one draws as words. */
+export const unknownBlockText = 'A block from a later version of Postlude.';
+
+/**
+ * The document /wrap composed for the report's day: it lands pull requests, so
+ * the timeline has marks of every kind, and leaves focus unmeasured instead.
+ */
+export const reportDocument = sampleReportDocument({
+  ...sampleDayMetrics(today),
+  focusMinutes: null,
+});
+
+/** The document's timeline, which the tests walk mark by mark. */
+export const reportTimeline = (): TimelineBlock => {
+  const timeline = reportDocument.blocks.find(
+    (block): block is TimelineBlock => block.kind === 'timeline',
+  );
+  if (timeline === undefined) {
+    throw new Error('The report document has no timeline.');
+  }
+  return timeline;
+};
+
 const withReport: FixtureEvening['wrap'] = {
   date: today,
   dayMetrics: reportMetrics,
   metricsVersion: reportMetrics.metricsVersion,
-  reportHtml: syntheticReportHtml,
+  reportDocument: {
+    ...reportDocument,
+    blocks: [
+      ...reportDocument.blocks,
+      { kind: 'chart', title: 'Later', caption: unknownBlockText },
+    ],
+  },
+  reportHtml: null,
   reportModel: 'Synthetic Model 1',
   reportGeneratedAt: closedAt,
+};
+
+/** A report stored as a whole page, as /wrap stored them before documents. */
+const withLegacyReport: FixtureEvening['wrap'] = {
+  ...withReport,
+  reportDocument: null,
+  reportHtml: syntheticReportHtml,
 };
 
 const withEvening = (
@@ -108,17 +148,24 @@ const configs = {
     agentNote: noNote,
     settledNote: readyNote,
   }),
-  /** The same, with a report that has a width control of its own. */
-  widthReport: withEvening({
+  /** The same, with the report stored as a page before documents. */
+  legacyReport: withEvening({
     rating: openRating,
-    wrap: { ...withReport, reportHtml: widthControlReportHtml },
+    wrap: withLegacyReport,
     agentNote: noNote,
     settledNote: readyNote,
   }),
-  /** The same, with a report that tries to run a script before its policy. */
-  earlyScriptReport: withEvening({
+  /** The same, with a stored page that has a width control of its own. */
+  legacyWidthReport: withEvening({
     rating: openRating,
-    wrap: { ...withReport, reportHtml: earlyScriptReportHtml },
+    wrap: { ...withLegacyReport, reportHtml: widthControlReportHtml },
+    agentNote: noNote,
+    settledNote: readyNote,
+  }),
+  /** The same, with a stored page that tries to run a script before its policy. */
+  legacyEarlyScriptReport: withEvening({
+    rating: openRating,
+    wrap: { ...withLegacyReport, reportHtml: earlyScriptReportHtml },
     agentNote: noNote,
   }),
   /** Closed while no note generator is set up. */

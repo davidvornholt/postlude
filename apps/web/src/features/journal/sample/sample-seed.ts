@@ -13,12 +13,13 @@
 import { Effect } from 'effect';
 import { SqlClient } from 'effect/sql';
 
+import { readReportDocument, reportPlainText } from '../day-report-reader.ts';
 import { currentRatingVersion } from '../schemas/day-rating.ts';
 import { EntryRepository } from '../services/entry-repository.ts';
 import { agentNoteModel } from './sample-agent-note.ts';
 import type { SampleDay, SampleEntry } from './sample-day.ts';
 import type { SamplePlan } from './sample-plan.ts';
-import { sampleReportHtml } from './sample-report.ts';
+import { sampleReportDocument } from './sample-report.ts';
 import { reportModel } from './sample-wrap.ts';
 
 export type SeedOutcome =
@@ -152,21 +153,29 @@ const insertRatings = (
   `.pipe(Effect.as(ratings.length));
 };
 
-const agentAreaOf = ({ date, wrap, note }: SampleDay) => ({
-  date,
-  dayMetrics: wrap?.dayMetrics ?? null,
-  metricsVersion: wrap?.dayMetrics.metricsVersion ?? null,
-  reportHtml: wrap === undefined ? null : sampleReportHtml,
-  reportModel: wrap === undefined ? null : reportModel,
-  reportGeneratedAt: iso(wrap?.generatedAt ?? null),
-  noteStatus: note?.status ?? null,
-  note: note?.status === 'ready' ? note.note : null,
-  noteModel: note?.status === 'ready' ? agentNoteModel : null,
-  noteRevision: note?.status === 'ready' ? note.basedOnRevision : null,
-  noteError: note?.status === 'failed' ? note.error : null,
-  noteRequestedAt: iso(note?.requestedAt ?? null),
-  noteGeneratedAt: iso(note?.status === 'ready' ? note.generatedAt : null),
-});
+const agentAreaOf = ({ date, wrap, note }: SampleDay) => {
+  const reportDocument =
+    wrap === undefined ? null : sampleReportDocument(wrap.dayMetrics);
+  return {
+    date,
+    dayMetrics: wrap?.dayMetrics ?? null,
+    metricsVersion: wrap?.dayMetrics.metricsVersion ?? null,
+    reportDocument,
+    reportText:
+      reportDocument === null
+        ? null
+        : reportPlainText(readReportDocument(reportDocument)),
+    reportModel: wrap === undefined ? null : reportModel,
+    reportGeneratedAt: iso(wrap?.generatedAt ?? null),
+    noteStatus: note?.status ?? null,
+    note: note?.status === 'ready' ? note.note : null,
+    noteModel: note?.status === 'ready' ? agentNoteModel : null,
+    noteRevision: note?.status === 'ready' ? note.basedOnRevision : null,
+    noteError: note?.status === 'failed' ? note.error : null,
+    noteRequestedAt: iso(note?.requestedAt ?? null),
+    noteGeneratedAt: iso(note?.status === 'ready' ? note.generatedAt : null),
+  };
+};
 
 const insertAgentAreas = (
   sql: SqlClient.SqlClient,
@@ -177,13 +186,15 @@ const insertAgentAreas = (
     .map(agentAreaOf);
   return sql`
     insert into agent_area (
-      entry_date, day_metrics, metrics_version, report_html, report_model,
+      entry_date, day_metrics, metrics_version, report_document, report_text,
+      report_model,
       report_generated_at, agent_note_status, agent_note, agent_note_model,
       agent_note_revision, agent_note_error, agent_note_requested_at,
       agent_note_generated_at
     )
     select
-      date, "dayMetrics", "metricsVersion", "reportHtml", "reportModel",
+      date, "dayMetrics", "metricsVersion", "reportDocument", "reportText",
+      "reportModel",
       "reportGeneratedAt", "noteStatus", note, "noteModel", "noteRevision",
       "noteError", "noteRequestedAt", "noteGeneratedAt"
     from jsonb_to_recordset(${JSON.stringify(areas)}::jsonb)
@@ -191,7 +202,8 @@ const insertAgentAreas = (
         date date,
         "dayMetrics" jsonb,
         "metricsVersion" integer,
-        "reportHtml" text,
+        "reportDocument" jsonb,
+        "reportText" text,
         "reportModel" text,
         "reportGeneratedAt" timestamptz,
         "noteStatus" text,

@@ -253,18 +253,19 @@ const deficientVisionMinimum = 8;
 const distanceDecimals = 1;
 
 /**
- * The rating steps are ordered, but each is named by its color rather than by
- * a step of lightness, so they are judged on being told apart: every pair has
- * to stay far enough apart with full color vision and under each simulated
- * dichromacy, and every mark has to clear WCAG's non-text minimum against the
- * ground it is drawn on, as the ramp's steps do.
+ * Marks named by their color rather than by a step of lightness are judged on
+ * being told apart: every pair in a set has to stay far enough apart with full
+ * color vision and under each simulated dichromacy, and every mark has to
+ * clear WCAG's non-text minimum against the ground it is drawn on, as the
+ * ramp's steps do.
  */
-export const ratingFindings = (
+export const markSetFindings = (
   label: string,
   palette: Palette,
   ground: string,
+  marks: ReadonlyArray<string>,
 ): ReadonlyArray<string> => {
-  const contrast = ratingMarkNames.flatMap((mark) => {
+  const contrast = marks.flatMap((mark) => {
     const measured = ratio(palette, mark, ground);
     return measured >= markMinimum
       ? []
@@ -272,8 +273,8 @@ export const ratingFindings = (
           `${label}: ${mark} on ${ground} = ${measured.toFixed(reportedDecimals)}:1`,
         ];
   });
-  const pairs = ratingMarkNames.flatMap((first, index) =>
-    ratingMarkNames.slice(index + 1).map((second) => [first, second] as const),
+  const pairs = marks.flatMap((first, index) =>
+    marks.slice(index + 1).map((second) => [first, second] as const),
   );
   const separation = pairs.flatMap(([first, second]) =>
     visions.flatMap((vision) => {
@@ -293,3 +294,34 @@ export const ratingFindings = (
   );
   return [...contrast, ...separation];
 };
+
+/** The rating steps are ordered, but each is named by its color. */
+export const ratingFindings = (
+  label: string,
+  palette: Palette,
+  ground: string,
+): ReadonlyArray<string> =>
+  markSetFindings(label, palette, ground, ratingMarkNames);
+
+/**
+ * The day report timeline's marks, in the families that share a shape: bars
+ * for screen time, an agent running, and an appointment, and points for a
+ * prompt, which is drawn in ink, a landed pull request, and a sent mail.
+ */
+export const timelineMarkFamilies = {
+  bars: [
+    '--pl-timeline-screen',
+    '--pl-timeline-run',
+    '--pl-timeline-appointment',
+  ],
+  points: ['--pl-ink', '--pl-timeline-pr', '--pl-timeline-mail'],
+} as const;
+
+export const timelineFindings = (
+  label: string,
+  palette: Palette,
+  ground: string,
+): ReadonlyArray<string> =>
+  Object.entries(timelineMarkFamilies).flatMap(([family, marks]) =>
+    markSetFindings(`${label} ${family}`, palette, ground, marks),
+  );

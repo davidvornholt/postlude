@@ -10,6 +10,8 @@ import {
   schemeDeclarations,
   shadowTokenNames,
   textPairFindings,
+  timelineFindings,
+  timelineMarkFamilies,
 } from './theme-audit.ts';
 
 const squareElementDefault =
@@ -198,6 +200,31 @@ it('rejects rating marks that blend into the page', () => {
         ratingFindings(`mutated ${scheme}`, mutated, '--pl-background'),
       ).toContain(`mutated ${scheme}: ${token} on --pl-background = 1.000:1`);
     }
+  }
+});
+
+it('keeps the timeline marks of one shape apart for every common kind of color vision', () => {
+  expect([
+    ...timelineFindings('light', light, '--pl-background'),
+    ...timelineFindings('light', light, '--pl-surface-sunken'),
+    ...timelineFindings('dark', dark, '--pl-background'),
+    ...timelineFindings('dark', dark, '--pl-surface-sunken'),
+  ]).toEqual([]);
+});
+
+it('rejects a pull request mark in the ink of the prompts beside it', () => {
+  const inked = { ...light, '--pl-timeline-pr': light['--pl-ink'] ?? '' };
+  expect(timelineFindings('inked', inked, '--pl-background')).toContain(
+    'inked points: --pl-ink and --pl-timeline-pr are 0.0 apart with full color vision',
+  );
+});
+
+it('rejects timeline marks that blend into the page', () => {
+  for (const token of timelineMarkFamilies.bars) {
+    const mutated = { ...dark, [token]: dark['--pl-background'] };
+    expect(timelineFindings('mutated', mutated, '--pl-background')).toContain(
+      `mutated bars: ${token} on --pl-background = 1.000:1`,
+    );
   }
 });
 

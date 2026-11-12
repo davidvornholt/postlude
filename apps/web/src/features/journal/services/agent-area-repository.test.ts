@@ -3,6 +3,7 @@ import { Effect } from 'effect';
 
 import type { WrapPut } from '../schemas/agent-area.ts';
 import type { DayMetrics } from '../schemas/day-metrics.ts';
+import type { ReportDocument } from '../schemas/day-report-blocks.ts';
 import { draft, journalDatabase } from '../testing/database-harness.ts';
 import { refusalOf } from '../testing/sql-refusal.ts';
 import {
@@ -31,10 +32,30 @@ const metricsFor = (date: string, activeMinutes: number): DayMetrics => ({
   coverage: [{ source: 'activitywatch', status: 'complete' }],
 });
 
+const reportFor = (activeMinutes: number): ReportDocument => ({
+  version: 1,
+  blocks: [
+    {
+      kind: 'section',
+      heading: 'Summary',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: [
+            `${activeMinutes} minutes, `,
+            { link: 'one PR', href: 'https://example.test/pr' },
+            '.',
+          ],
+        },
+      ],
+    },
+  ],
+});
+
 const wrapFor = (date: string, activeMinutes = 312): WrapPut => ({
   dayMetrics: metricsFor(date, activeMinutes),
   metricsVersion: 1,
-  reportHtml: `<!doctype html><p>${activeMinutes} minutes.</p>`,
+  reportDocument: reportFor(activeMinutes),
   reportModel: 'test-model',
 });
 
@@ -44,6 +65,7 @@ it('reads a day /wrap has not written as empty', async () => {
     date: day,
     dayMetrics: null,
     metricsVersion: null,
+    reportDocument: null,
     reportHtml: null,
     reportModel: null,
     reportGeneratedAt: null,
@@ -63,7 +85,83 @@ it('stores the /wrap columns with the database clock, and replaces them', async 
   expect(outcome.first.dayMetrics?.activeMinutes).toBe(100);
   expect(outcome.read).toEqual(outcome.second);
   expect(outcome.read.dayMetrics).toEqual(metricsFor(day, 200));
-  expect(outcome.read.reportHtml).toBe('<!doctype html><p>200 minutes.</p>');
+  expect(outcome.read.reportDocument).toEqual(reportFor(200));
+  expect(outcome.read.reportHtml).toBeNull();
+});
+
+it("stores the report's words beside it, without its links' addresses", async () => {
+  const text = await withEvening(({ areas }) =>
+    Effect.gen(function* () {
+      yield* areas.putWrap(day, wrapFor(day, 100));
+      return yield* areas.readReportText(day);
+    }),
+  );
+  expect(text).toBe('Summary 100 minutes, one PR.');
+});
+
+it('replaces a report stored as a page with the new document', async () => {
+  const outcome = await withEvening(({ areas, sql }) =>
+    Effect.gen(function* () {
+      const page = '<!doctype html><p>A page of a report.</p>';
+      yield* sql`
+        insert into agent_area (
+          entry_date, day_metrics, metrics_version, report_html, report_text,
+          report_model, report_generated_at
+        )
+        values (
+          ${day}, ${JSON.stringify(metricsFor(day, 50))}::jsonb, 1, ${page},
+          report_plain_text(${page}), 'page-model', now()
+        )
+      `;
+      const before = yield* areas.readWrap(day);
+      yield* areas.putWrap(day, wrapFor(day, 100));
+      return {
+        before,
+        after: yield* areas.readWrap(day),
+        text: yield* areas.readReportText(day),
+      };
+    }),
+  );
+  expect(outcome.before.reportHtml).toBe(
+    '<!doctype html><p>A page of a report.</p>',
+  );
+  expect(outcome.before.reportDocument).toBeNull();
+  expect(outcome.after.reportHtml).toBeNull();
+  expect(outcome.after.reportDocument).toEqual(reportFor(100));
+  expect(outcome.text).toBe('Summary 100 minutes, one PR.');
+});
+
+it('refuses a document stored without its words, or one that is not an object', async () => {
+  const refusals = await withEvening(({ sql }) =>
+    Effect.gen(function* () {
+      const metrics = JSON.stringify(metricsFor(day, 50));
+      const withoutText = yield* refusalOf(
+        sql,
+        sql`
+        insert into agent_area (
+          entry_date, day_metrics, metrics_version, report_document,
+          report_model, report_generated_at
+        )
+        values (${day}, ${metrics}::jsonb, 1, '{"version":1,"blocks":[]}'::jsonb, 'm', now())
+      `,
+      );
+      const notAnObject = yield* refusalOf(
+        sql,
+        sql`
+        insert into agent_area (
+          entry_date, day_metrics, metrics_version, report_document, report_text,
+          report_model, report_generated_at
+        )
+        values (${day}, ${metrics}::jsonb, 1, '[1]'::jsonb, 'x', 'm', now())
+      `,
+      );
+      return { withoutText, notAnObject };
+    }),
+  );
+  expect(refusals.withoutText.constraint).toBe('agent_area_wrap_complete');
+  expect(refusals.notAnObject.constraint).toBe(
+    'agent_area_report_document_object',
+  );
 });
 
 it('refuses metrics measured for another day', async () => {

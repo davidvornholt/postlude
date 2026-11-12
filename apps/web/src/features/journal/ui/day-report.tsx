@@ -6,23 +6,40 @@
  * The report and the line that says why it is locked both grow and shrink to
  * their height rather than appearing at once, so the writing below slides out
  * of the way instead of jumping. The report leaves the page once it is hidden,
- * so showing it again loads it afresh.
+ * so showing it again draws it afresh.
  *
- * The open report sits in the text column. Where the screen is wide enough for
- * more room to help its timeline, a control the report has beside its
- * timeline widens the timeline and narrows it again (`report-frame.tsx` says
- * how). Every report opens in the column, and the timeline stays wide only
- * until the page is left.
+ * The report is a document /wrap composed of blocks, which Postlude draws
+ * itself (`day-report-view.tsx`), so every change to how a report looks
+ * reaches every day. A day /wrap wrote before it wrote documents, and that the
+ * conversion hasn't reached yet, still has its page, which is framed as it
+ * was (`report-frame.tsx`).
+ *
+ * The open report sits in the text column. Where the screen is wide enough
+ * for more room to help its timeline, a control beside the timeline's heading
+ * widens the timeline and narrows it again. Every report opens in the column,
+ * and the timeline stays wide only until the page is left.
  */
 
 import { useId, useState } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
 import { Collapsible } from '#/shared/ui/collapsible.tsx';
-import type { ReportWidth } from '../report-document.ts';
+import { readReportDocument } from '../day-report-reader.ts';
 import type { WrapArea } from '../schemas/agent-area.ts';
+import { DayReportView } from './day-report-view.tsx';
 import { RowLabel } from './rating-scale.tsx';
 import { ReportFrame } from './report-frame.tsx';
+
+/** What the day has to show: a document, a page from before documents, or neither. */
+const reportOf = (wrap: WrapArea) => {
+  if (wrap.reportDocument !== null) {
+    return { kind: 'document', document: wrap.reportDocument } as const;
+  }
+  const { reportHtml, dayMetrics, metricsVersion } = wrap;
+  return reportHtml === null || dayMetrics === null || metricsVersion === null
+    ? undefined
+    : ({ kind: 'page', reportHtml, dayMetrics, metricsVersion } as const);
+};
 
 type DayReportProps = {
   readonly wrap: WrapArea;
@@ -36,11 +53,11 @@ const disabledQuietClass =
 
 export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   const [open, setOpen] = useState(false);
-  const [width, setWidth] = useState<ReportWidth>('column');
+  const [wide, setWide] = useState(false);
   const headingId = useId();
   const regionId = useId();
   const lockId = useId();
-  const { reportHtml, dayMetrics, metricsVersion } = wrap;
+  const report = reportOf(wrap);
   const heading = (
     <RowLabel as="h3" id={headingId}>
       Day report
@@ -48,7 +65,7 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   );
   const rowClass = 'flow-root py-3';
 
-  if (reportHtml === null || dayMetrics === null || metricsVersion === null) {
+  if (report === undefined) {
     return (
       <section aria-labelledby={headingId} className={rowClass}>
         {heading}
@@ -91,13 +108,21 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
         unmountWhenClosed={true}
       >
         <div className="pt-4">
-          <ReportFrame
-            dayMetrics={dayMetrics}
-            metricsVersion={metricsVersion}
-            onWidthRequest={setWidth}
-            reportHtml={reportHtml}
-            wide={width === 'wide'}
-          />
+          {report.kind === 'document' ? (
+            <DayReportView
+              document={readReportDocument(report.document)}
+              onWideChange={setWide}
+              wide={wide}
+            />
+          ) : (
+            <ReportFrame
+              dayMetrics={report.dayMetrics}
+              metricsVersion={report.metricsVersion}
+              onWidthRequest={(width) => setWide(width === 'wide')}
+              reportHtml={report.reportHtml}
+              wide={wide}
+            />
+          )}
           <Button className="mt-4" onClick={onToWriting} variant="quiet">
             Go to the writing
           </Button>

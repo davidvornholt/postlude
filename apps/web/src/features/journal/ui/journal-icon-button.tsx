@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
-import { type ComponentProps, useId, useState } from 'react';
+import { type ComponentProps, useId } from 'react';
 
 import {
   deepFocusRingClass,
   focusRingClass,
 } from '#/shared/ui/design-classes.ts';
+import { useTip } from './use-tip.ts';
 
 /** The ground a control is set on: the page, or the deep register's band. */
 export type WritingTone = 'deep' | 'page';
@@ -30,20 +31,24 @@ export const JournalIconButton = ({
   className = tone === 'deep' ? deepFocusRingClass : focusRingClass,
   onKeyDown,
   onFocus,
+  onBlur,
+  onPointerDown,
+  onPointerUp,
   ...props
 }: JournalIconButtonProps) => {
-  const [dismissed, setDismissed] = useState(false);
   const hintId = useId();
+  const tip = useTip();
   return (
     <span
       className={[
-        'group/icon relative inline-flex min-w-0',
+        'relative inline-flex min-w-0',
         inToolbar ? 'max-w-11 flex-1' : 'w-11 shrink-0',
         divider
           ? `ml-1.5 box-content border-l pl-1.5 ${tone === 'deep' ? 'border-deep-rule' : 'border-border'}`
           : '',
       ].join(' ')}
-      onPointerEnter={() => setDismissed(false)}
+      ref={tip.holderRef}
+      {...tip.holderHandlers}
     >
       <button
         {...props}
@@ -57,15 +62,25 @@ export const JournalIconButton = ({
           'after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:bg-current after:opacity-0 after:transition-opacity aria-pressed:after:opacity-100 motion-reduce:after:transition-none',
           className,
         ].join(' ')}
+        onBlur={(event) => {
+          tip.controlHandlers.onBlur();
+          onBlur?.(event);
+        }}
         onFocus={(event) => {
-          setDismissed(false);
+          tip.controlHandlers.onFocus(event);
           onFocus?.(event);
         }}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            setDismissed(true);
-          }
+          tip.controlHandlers.onKeyDown(event);
           onKeyDown?.(event);
+        }}
+        onPointerDown={(event) => {
+          tip.controlHandlers.onPointerDown(event);
+          onPointerDown?.(event);
+        }}
+        onPointerUp={(event) => {
+          tip.controlHandlers.onPointerUp(event);
+          onPointerUp?.(event);
         }}
         type="button"
       >
@@ -73,11 +88,9 @@ export const JournalIconButton = ({
       </button>
       <span
         className={[
-          'invisible absolute top-full z-40 flex w-max max-w-48 flex-col gap-0.5 bg-ink px-3 py-2 text-background text-xs leading-normal',
+          'absolute top-full z-40 flex w-max max-w-48 flex-col gap-0.5 bg-ink px-3 py-2 text-background text-xs leading-normal',
           hintAlign === 'end' ? 'right-0' : 'left-0',
-          dismissed
-            ? ''
-            : 'group-focus-within/icon:visible group-hover/icon:visible',
+          tip.shown ? 'visible' : 'invisible',
         ].join(' ')}
         id={hintId}
         role="tooltip"

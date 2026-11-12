@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { Schema } from 'effect';
 
-import { reportHtmlByteLimit, WrapPutSchema } from './agent-area.ts';
+import { reportDocumentByteLimit, WrapPutSchema } from './agent-area.ts';
 import { type DayMetrics, DayMetricsSchema } from './day-metrics.ts';
 
 const metrics: DayMetrics = {
@@ -123,7 +123,10 @@ describe('agent area input', () => {
   const put = {
     dayMetrics: metrics,
     metricsVersion: 1,
-    reportHtml: '<!doctype html><p>The day.</p>',
+    reportDocument: {
+      version: 1,
+      blocks: [{ kind: 'paragraph', text: ['The day.'] }],
+    },
     reportModel: 'gpt-6-astra',
   };
 
@@ -136,14 +139,35 @@ describe('agent area input', () => {
   });
 
   it('refuses an empty report or one without a model', () => {
-    expect(putDecodes({ ...put, reportHtml: '  ' })).toBe(false);
+    expect(
+      putDecodes({ ...put, reportDocument: { version: 1, blocks: [] } }),
+    ).toBe(false);
     expect(putDecodes({ ...put, reportModel: '' })).toBe(false);
   });
 
   it('refuses a report over the size limit', () => {
+    const words = 'x'.repeat(9000);
+    const paragraphs = Array.from(
+      { length: Math.ceil(reportDocumentByteLimit / words.length) + 1 },
+      () => ({ kind: 'paragraph', text: [words] }),
+    );
     expect(
-      putDecodes({ ...put, reportHtml: 'x'.repeat(reportHtmlByteLimit + 1) }),
+      putDecodes({
+        ...put,
+        reportDocument: { version: 1, blocks: paragraphs },
+      }),
     ).toBe(false);
+    expect(
+      putDecodes({
+        ...put,
+        reportDocument: { version: 1, blocks: paragraphs.slice(0, 100) },
+      }),
+    ).toBe(true);
+  });
+
+  it('refuses a report stored as a page', () => {
+    const { reportDocument: _document, ...rest } = put;
+    expect(putDecodes({ ...rest, reportHtml: '<p>The day.</p>' })).toBe(false);
   });
 
   it('refuses the columns only Postlude writes', () => {
