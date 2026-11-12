@@ -7,8 +7,9 @@
  * markup is already the right height. Closed, the content is invisible and
  * inert: out of the tab order and the accessibility tree, as folded content
  * should be. It clips what overflows it only while it moves or stays closed, so
- * once it is open a focus ring at its edge is drawn whole. With reduced motion
- * it opens and closes at once.
+ * once it is open a focus ring at its edge is drawn whole, and it clips only
+ * the height, so content wider than it, such as the day report, keeps its
+ * sides while it opens. With reduced motion it opens and closes at once.
  *
  * Content that has to start afresh each time it opens, such as a frame that
  * loads a document, can leave the page once it has finished closing. It starts
@@ -117,7 +118,7 @@ export const Collapsible = ({
       ref={attach}
     >
       <Tag
-        className={['min-h-0', open && settled ? '' : 'overflow-hidden'].join(
+        className={['min-h-0', open && settled ? '' : 'overflow-y-clip'].join(
           ' ',
         )}
         // Each opening is a new piece of content when it is to start afresh.

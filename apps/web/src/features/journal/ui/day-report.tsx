@@ -7,12 +7,19 @@
  * their height rather than appearing at once, so the writing below slides out
  * of the way instead of jumping. The report leaves the page once it is hidden,
  * so showing it again loads it afresh.
+ *
+ * The open report sits in the text column. Where the screen is wide enough for
+ * more room to help its timeline, a control the report has beside its
+ * timeline widens the timeline and narrows it again (`report-frame.tsx` says
+ * how). Every report opens in the column, and the timeline stays wide only
+ * until the page is left.
  */
 
 import { useId, useState } from 'react';
 
 import { Button } from '#/shared/ui/action.tsx';
 import { Collapsible } from '#/shared/ui/collapsible.tsx';
+import type { ReportWidth } from '../report-document.ts';
 import type { WrapArea } from '../schemas/agent-area.ts';
 import { RowLabel } from './rating-scale.tsx';
 import { ReportFrame } from './report-frame.tsx';
@@ -29,6 +36,7 @@ const disabledQuietClass =
 
 export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
   const [open, setOpen] = useState(false);
+  const [width, setWidth] = useState<ReportWidth>('column');
   const headingId = useId();
   const regionId = useId();
   const lockId = useId();
@@ -86,7 +94,9 @@ export const DayReport = ({ wrap, unlocked, onToWriting }: DayReportProps) => {
           <ReportFrame
             dayMetrics={dayMetrics}
             metricsVersion={metricsVersion}
+            onWidthRequest={setWidth}
             reportHtml={reportHtml}
+            wide={width === 'wide'}
           />
           <Button className="mt-4" onClick={onToWriting} variant="quiet">
             Go to the writing

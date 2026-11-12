@@ -6,9 +6,58 @@
  * sends, takes the colour scheme from that message, and asks for the height it
  * needs. Along the way it records on its root element what it could and
  * couldn't do from inside the sandbox, so a test can read that back.
+ *
+ * `widthControlReportHtml` adds a width control beside a timeline heading, as
+ * /wrap's template has one, and speaks the frame's width messages.
+ * `syntheticReportHtml` has none, like the reports /wrap wrote before it had.
  */
 
-export const syntheticReportHtml = `<!-- A synthetic report for tests. -->
+/**
+ * A timeline heading with the width control, which stays hidden until the
+ * page says it can widen the timeline, over a track that stands in for the
+ * timeline. Its row is as tall as the control, so showing it moves nothing.
+ * Everything keeps the width the page says the report has in its column, in
+ * the middle of the report's page, and the track too until the page says it is
+ * wide, as /wrap's template does. Both are rounded to whole pixels, as there,
+ * so the text sits where it would in a frame the column's width.
+ */
+const widthControl = `<style>
+  main > :not(.track), [data-timeline="column"] .track { --text-width: round(var(--column, 100vw) - 40px, 1px); max-width: var(--text-width); margin-left: max(0px, round((100% - var(--text-width)) / 2, 1px)); }
+  .track { height: 24px; background: #8a8a85; }
+</style>
+<div class="head"><h2>Timeline</h2><button type="button" data-width-toggle aria-label="Widen the timeline" hidden>&harr;</button></div>
+<div class="track"></div>`;
+
+/** Takes the column and the track's width, then says the report has the control; keeps the control to what the page says, and asks for the other width when pressed. */
+const widthScript = `<script>
+  const widthToggle = document.querySelector('[data-width-toggle]');
+  widthToggle.addEventListener('click', () => {
+    window.parent.postMessage({ type: 'postlude:report-width-request', wide: widthToggle.dataset.wide !== 'true' }, '*');
+  });
+  window.addEventListener('message', (event) => {
+    if (event.source !== window.parent) { return; }
+    const message = event.data;
+    if (message === null || typeof message !== 'object' || message.type !== 'postlude:report-width') { return; }
+    const probes = document.documentElement.dataset;
+    probes.widthMessages = String(Number(probes.widthMessages ?? '0') + 1);
+    document.documentElement.style.setProperty('--column', message.column + 'px');
+    document.documentElement.dataset.timeline = message.wide ? 'wide' : 'column';
+    widthToggle.hidden = !message.available;
+    widthToggle.dataset.wide = String(message.wide);
+    widthToggle.setAttribute('aria-label', message.wide ? 'Narrow the timeline' : 'Widen the timeline');
+    if (probes.widthMessages === '1') {
+      window.parent.postMessage({ type: 'postlude:report-width-control' }, '*');
+    }
+  });
+</script>`;
+
+const reportHtmlWith = ({
+  timeline,
+  script,
+}: {
+  readonly timeline: string;
+  readonly script: string;
+}): string => `<!-- A synthetic report for tests. -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -22,6 +71,9 @@ export const syntheticReportHtml = `<!-- A synthetic report for tests. -->
   h1 { font-size: 20px; margin: 0 0 8px; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
   dd { margin: 0; }
+  .head { display: flex; align-items: center; gap: 8px; height: 32px; margin: 16px 0 0; }
+  h2 { font-size: 16px; margin: 0; }
+  [data-width-toggle] { width: 32px; height: 32px; }
 </style>
 </head>
 <body>
@@ -33,6 +85,7 @@ export const syntheticReportHtml = `<!-- A synthetic report for tests. -->
     <dt>Focus minutes</dt><dd data-metric="focusMinutes">Waiting</dd>
     <dt>Landed pull requests</dt><dd data-metric="landedPrs">Waiting</dd>
   </dl>
+  ${timeline}
 </main>
 <script>
   const probes = document.documentElement.dataset;
@@ -63,9 +116,17 @@ export const syntheticReportHtml = `<!-- A synthetic report for tests. -->
     window.parent.postMessage({ type: 'postlude:report-height', height }, '*');
   });
 </script>
+${script}
 </body>
 </html>
 `;
+
+export const syntheticReportHtml = reportHtmlWith({ timeline: '', script: '' });
+
+export const widthControlReportHtml = reportHtmlWith({
+  timeline: widthControl,
+  script: widthScript,
+});
 
 /** A made-up outside address, for reports that try to reach one. */
 export const leakHost = 'leak.invalid';
