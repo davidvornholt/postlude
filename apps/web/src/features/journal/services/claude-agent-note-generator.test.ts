@@ -234,6 +234,15 @@ describe('a failed request', () => {
     expect(model.requests).toHaveLength(3);
   });
 
+  it('is not tried again after an error of its own that is not a lost connection', async () => {
+    const model = fakeModel(new TypeError('Cannot read properties of null'));
+    const failure = failureOf(
+      await generateWith(model.createMessage, '1 minute'),
+    );
+    expect(failure.message).toBe(requestFailedMessage);
+    expect(model.requests).toHaveLength(1);
+  });
+
   it('writes the note when a retry succeeds', async () => {
     const model = fakeModel(
       apiError(503, 'api_error'),

@@ -85,6 +85,15 @@ class RequestFailure extends Data.TaggedError('RequestFailure')<{
   readonly summary: FailureSummary;
 }> {}
 
+/**
+ * The SDK wraps errors from opening the request as `APIConnectionError`, but a
+ * connection lost while the answer is read reaches us unwrapped. Bun reports
+ * that as an error with this code, whether the server reset the connection or
+ * closed it early, mid-body or mid-chunk.
+ */
+const connectionLostWhileReading = (error: unknown) =>
+  error instanceof Error && 'code' in error && error.code === 'ECONNRESET';
+
 const kindOf = (error: unknown): FailureKind => {
   if (
     error instanceof Anthropic.AuthenticationError ||
@@ -98,7 +107,8 @@ const kindOf = (error: unknown): FailureKind => {
     error instanceof Anthropic.RateLimitError ||
     error instanceof Anthropic.InternalServerError ||
     error instanceof Anthropic.APIConnectionError ||
-    error instanceof Anthropic.RequestTimeoutError
+    error instanceof Anthropic.RequestTimeoutError ||
+    connectionLostWhileReading(error)
   ) {
     return 'transient';
   }
