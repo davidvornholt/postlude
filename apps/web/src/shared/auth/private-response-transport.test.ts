@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  getResponseHeaders,
-  requestHandler,
-} from '@tanstack/react-start/server';
+import { setResponseHeader } from '@tanstack/react-start/server';
 import { Schema } from 'effect';
+
+import { startRequestHandler } from '#/shared/testing/start-request.ts';
 
 import { applyPrivateResponseHeaders } from './private-response.ts';
 import { runProtectedCall } from './protected-call.ts';
@@ -32,12 +31,13 @@ const transportedCall = ({
   readonly authorize: () => Promise<boolean>;
   readonly next: () => Promise<Response>;
 }): Promise<Response> => {
-  const handler = requestHandler(async () => {
+  const handler = startRequestHandler(async () => {
     try {
       return await runProtectedCall({
         authorize,
         next,
-        publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
+        publishHeaders: () =>
+          applyPrivateResponseHeaders({ set: setResponseHeader }),
       });
     } catch (error) {
       if (error instanceof Response) {
@@ -46,9 +46,7 @@ const transportedCall = ({
       throw error;
     }
   });
-  return Promise.resolve(
-    handler(new Request('https://postlude.test/server-function'), {}),
-  );
+  return handler(new Request('https://postlude.test/server-function'));
 };
 
 describe('private response production transport', () => {

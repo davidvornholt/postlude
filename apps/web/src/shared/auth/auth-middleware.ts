@@ -1,7 +1,7 @@
 import { createMiddleware } from '@tanstack/react-start';
 import {
   getRequest,
-  getResponseHeaders,
+  setResponseHeader,
   setResponseStatus,
 } from '@tanstack/react-start/server';
 
@@ -19,7 +19,9 @@ export const sessionRequired = createMiddleware().server(
       transport: serverFnMeta === undefined ? 'route' : 'server-function',
       authorize: () => hasAuthorizedSession(request.headers),
       next: async () => next(),
-      publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
+      // `getResponseHeaders` returns a copy; only the setters reach the response.
+      publishHeaders: () =>
+        applyPrivateResponseHeaders({ set: setResponseHeader }),
       publishStatus: (status) => setResponseStatus(status),
     });
   },
