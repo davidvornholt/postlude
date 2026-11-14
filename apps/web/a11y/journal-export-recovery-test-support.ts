@@ -1,11 +1,10 @@
 import type * as playwright from '@playwright/test';
-import {
-  getResponseHeaders,
-  requestHandler,
-} from '@tanstack/react-start/server';
+import { setResponseHeader } from '@tanstack/react-start/server';
 
 import viteReact from '@vitejs/plugin-react';
 import { createServer } from 'vite';
+
+import { startRequestHandler } from '../src/shared/testing/start-request.ts';
 
 const exportFileName = 'postlude-2026-08-26-daily.zip';
 const styleSheetAssets = [
@@ -77,16 +76,17 @@ export const answerWithUnavailableExport = async (
       styleSheetHrefs,
     });
     const request = new Request(route.request().url(), { method: 'POST' });
-    const handler = requestHandler(() =>
+    const handler = startRequestHandler(() =>
       runSessionRequired({
         transport: 'route',
         authorize: () => Promise.resolve(true),
         next: () => Promise.resolve(recovery),
-        publishHeaders: () => applyPrivateResponseHeaders(getResponseHeaders()),
+        publishHeaders: () =>
+          applyPrivateResponseHeaders({ set: setResponseHeader }),
         publishStatus: () => undefined,
       }),
     );
-    const result = await handler(request, {});
+    const result = await handler(request);
     await route.fulfill({
       body: await result.text(),
       headers: Object.fromEntries(result.headers),

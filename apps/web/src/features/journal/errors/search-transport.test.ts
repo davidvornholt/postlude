@@ -78,12 +78,14 @@ it('keeps internal database details out of TanStack Start transport', async () =
   const { runWithStartContext } = await import(
     `${directoryOf(storagePackage)}/dist/esm/index.js`
   );
-  const { requestHandler } = await import('@tanstack/react-start/server');
+  const { startRequestHandler } = await import(
+    '#/shared/testing/start-request.ts'
+  );
   const request = new Request('http://localhost/_server/search-probe', {
     method: 'POST',
     headers: { 'x-tsr-serverFn': 'true' },
   });
-  const handler = requestHandler((runtimeRequest: Request) =>
+  const handler = startRequestHandler((runtimeRequest: Request) =>
     runWithStartContext(
       {
         getRouter: () => {
@@ -105,7 +107,7 @@ it('keeps internal database details out of TanStack Start transport', async () =
   );
   const info = spyOn(console, 'info').mockImplementation(() => undefined);
   const error = spyOn(console, 'error').mockImplementation(() => undefined);
-  const response = await handler(request, {});
+  const response = await handler(request);
   const transported = await response.text();
   info.mockRestore();
   error.mockRestore();
