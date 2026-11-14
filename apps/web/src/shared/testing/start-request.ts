@@ -1,8 +1,3 @@
-/**
- * Runs a test's handler the way Start serves a request, for tests of what
- * reaches the browser through Start's response helpers.
- */
-
 import {
   createServerEntry,
   handleStartError,
