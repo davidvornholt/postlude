@@ -1,6 +1,6 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import Anthropic from '@anthropic-ai/sdk';
-import { env } from 'bun';
+import { env, listen } from 'bun';
 import { Effect, Exit, Redacted } from 'effect';
 import { agentNoteInput } from '../testing/agent-note-input.ts';
 import { answer, testKey } from '../testing/claude-message.ts';
@@ -28,6 +28,52 @@ const network = (status: number, body: unknown) => {
     );
   }) as typeof globalThis.fetch;
   return { fetch, sent };
+};
+
+/**
+ * A local HTTP server that answers each connection with a 200 and `body`, but
+ * on the first connection drops the socket partway through the body. `fetch`
+ * sends the Claude API's requests to it.
+ */
+const serverThatDropsTheFirstAnswer = (body: string) => {
+  let connections = 0;
+  const server = listen({
+    hostname: '127.0.0.1',
+    port: 0,
+    socket: {
+      open: () => {
+        connections += 1;
+      },
+      data: (socket) => {
+        const head = [
+          'HTTP/1.1 200 OK',
+          'content-type: application/json',
+          `content-length: ${Buffer.byteLength(body)}`,
+          `request-id: request-${connections}`,
+          '',
+          '',
+        ].join('\r\n');
+        if (connections === 1) {
+          socket.write(head + body.slice(0, body.length / 2));
+          socket.terminate();
+        } else {
+          socket.end(head + body);
+        }
+      },
+    },
+  });
+  const fetch = ((input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    return globalThis.fetch(
+      `http://127.0.0.1:${server.port}${url.pathname}${url.search}`,
+      init,
+    );
+  }) as typeof globalThis.fetch;
+  return {
+    fetch,
+    connections: () => connections,
+    stop: () => server.stop(true),
+  };
 };
 
 /** Runs `body` with these environment variables set, then restores them. */
@@ -117,4 +163,27 @@ describe('the API client', () => {
     expect(failure).toBeInstanceOf(Anthropic.OverloadedError);
     expect(http.sent).toHaveLength(1);
   });
+
+  // The generator waits two seconds before it tries again.
+  it('tries again when the connection drops while the answer is read, and writes the note', async () => {
+    const server = serverThatDropsTheFirstAnswer(
+      JSON.stringify(answer('Ein ruhiger Tag.')),
+    );
+    try {
+      const exit = await Effect.runPromiseExit(
+        claudeAgentNoteGenerator(
+          claudeCreateMessage(Redacted.make(testKey), server.fetch),
+        ).generate(agentNoteInput()),
+      );
+      expect(exit).toEqual(
+        Exit.succeed({
+          note: 'Ein ruhiger Tag.',
+          model: 'Claude Sonnet 5.5',
+        }),
+      );
+      expect(server.connections()).toBe(2);
+    } finally {
+      server.stop();
+    }
+  }, 10_000);
 });
