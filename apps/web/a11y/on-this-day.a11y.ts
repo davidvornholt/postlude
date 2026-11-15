@@ -4,6 +4,7 @@ import { buildDayPageFixture } from './day-page-fixture-build.ts';
 import type { DayPageFixtureConfig } from './day-page-fixture-contract.ts';
 import { fixtureConfig, mountFixture } from './day-page-mount.ts';
 import { mountDayPage, scan } from './day-page-test-support.ts';
+import { largestRetreat, layoutRoundingTolerance } from './fold-motion.ts';
 
 const colorSchemes = ['light', 'dark'] as const;
 const lastYearToggle = /^1 year ago/u;
@@ -148,11 +149,12 @@ test('a year opens and folds without the years below it jumping', async ({
     direction: 1 | -1,
   ) => ({
     pressed: new Set(tops.map(({ pressed }) => pressed)).size,
-    // Each frame moves the next year on in one direction only.
-    backwards: tops.filter(
-      ({ next }, index) =>
-        index > 0 && (next - (tops[index - 1]?.next ?? next)) * direction < 0,
-    ).length,
+    // The next year moves on in one direction only. It may settle back by
+    // layout rounding, but not by anything more.
+    retreat: largestRetreat(
+      tops.map(({ next }) => next),
+      direction,
+    ),
     // And no single frame carries it most of the way.
     largestStep: Math.max(
       ...tops.map(({ next }, index) =>
@@ -164,7 +166,7 @@ test('a year opens and folds without the years below it jumping', async ({
 
   const opening = steady(await pressAndTrack(), 1);
   expect(opening.pressed).toBe(1);
-  expect(opening.backwards).toBe(0);
+  expect(opening.retreat).toBeLessThanOrEqual(layoutRoundingTolerance);
   expect(opening.travel).toBeGreaterThan(0);
   expect(opening.largestStep).toBeLessThan(opening.travel / 2);
 
@@ -175,6 +177,6 @@ test('a year opens and folds without the years below it jumping', async ({
   );
   const folding = steady(await pressAndTrack(), -1);
   expect(folding.pressed).toBe(1);
-  expect(folding.backwards).toBe(0);
+  expect(folding.retreat).toBeLessThanOrEqual(layoutRoundingTolerance);
   expect(folding.largestStep).toBeLessThan(folding.travel / 2);
 });
