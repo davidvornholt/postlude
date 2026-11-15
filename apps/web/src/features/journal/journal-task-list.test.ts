@@ -17,6 +17,24 @@ const saveFiveTimes = (markdown: string): Array<string> =>
     [],
   );
 
+const checkedItemWithHeading = {
+  type: 'taskList',
+  content: [
+    {
+      type: 'taskItem',
+      attrs: { checked: true },
+      content: [
+        { type: 'paragraph' },
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [{ type: 'text', text: 'alpha' }],
+        },
+      ],
+    },
+  ],
+};
+
 describe('journal checklists', () => {
   it('keeps each item ticked or open through an edit', () => {
     expect(roundTrip('Intro\n\n- [x] finished\n- [ ] waiting')).toBe(
@@ -51,6 +69,14 @@ describe('journal checklists', () => {
         saves.map(() => document),
       );
       expect(saves).toEqual(saves.map(() => saves[0]));
+    }
+  });
+
+  it('keeps a heading below an empty item a heading through repeated saves', () => {
+    for (const markdown of saveFiveTimes('- [x]\n\n  # alpha')) {
+      expect(parseJournalMarkdown(markdown).content?.[0]).toEqual(
+        checkedItemWithHeading,
+      );
     }
   });
 

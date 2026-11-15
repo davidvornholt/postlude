@@ -95,12 +95,17 @@ const checklistItemOf = (item: MarkdownToken): ChecklistItem | undefined => {
     : { checked: mark !== ' ', item: { ...item, tokens: rest } };
 };
 
+// Tiptap's list item parser turns a heading that opens an item into the item's
+// text, so a heading below an empty checklist item is read as blocks here and
+// keeps its level instead of becoming the item's text on the next save.
 const parseTaskItem = (
   { checked, item }: ChecklistItem,
   helpers: MarkdownParseHelpers,
 ): JSONContent => {
   const content: Array<JSONContent> =
-    helpers.parseChildren([item])[0]?.content ?? [];
+    item.tokens?.[0]?.type === 'heading'
+      ? helpers.parseChildren(item.tokens)
+      : (helpers.parseChildren([item])[0]?.content ?? []);
   return {
     type: 'taskItem',
     attrs: { checked },
