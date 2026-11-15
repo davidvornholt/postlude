@@ -32,7 +32,26 @@ describe('journal checklists', () => {
   });
 
   it('keeps a line break inside its item', () => {
-    expect(roundTrip('- [x] call  \nBob')).toBe('- [x] call  \nBob');
+    expect(roundTrip('- [x] call  \nBob')).toBe('- [x] call  \n  Bob');
+  });
+
+  it('keeps the text after a line break in an item through repeated saves', () => {
+    for (const markdown of [
+      '- [x] call  \nBob',
+      '- [x] a  \nb  \nc\n- [ ] d',
+      '- [ ] a\n  - [x] b  \n  c\n- [ ] d  \ne',
+      '> - [ ] a  \n> b',
+      '- [ ] a  \n    indented',
+      '- [ ] a  \n\tafter a tab',
+    ]) {
+      const document = parseJournalMarkdown(markdown);
+      const saves = saveFiveTimes(markdown);
+
+      expect(saves.map(parseJournalMarkdown)).toEqual(
+        saves.map(() => document),
+      );
+      expect(saves).toEqual(saves.map(() => saves[0]));
+    }
   });
 
   it('leaves an indented code block as code', () => {
