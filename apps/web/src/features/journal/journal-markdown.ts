@@ -13,6 +13,7 @@ import StarterKit from '@tiptap/starter-kit';
 
 import { JournalImage } from './journal-image-extension.ts';
 import { JournalTableKit } from './journal-table-extension.ts';
+import { retickConvertedItems } from './journal-task-list-conversion.ts';
 
 const headingTags = ['h3', 'h4', 'h5', 'h6', 'h6', 'h6'] as const;
 const firstMarkdownHeadingLevel = 1;
@@ -95,12 +96,17 @@ const checklistItemOf = (item: MarkdownToken): ChecklistItem | undefined => {
     : { checked: mark !== ' ', item: { ...item, tokens: rest } };
 };
 
+// Tiptap's list item parser turns a heading that opens an item into the item's
+// text, so a heading below an empty checklist item is read as blocks here and
+// keeps its level instead of becoming the item's text on the next save.
 const parseTaskItem = (
   { checked, item }: ChecklistItem,
   helpers: MarkdownParseHelpers,
 ): JSONContent => {
   const content: Array<JSONContent> =
-    helpers.parseChildren([item])[0]?.content ?? [];
+    item.tokens?.[0]?.type === 'heading'
+      ? helpers.parseChildren(item.tokens)
+      : (helpers.parseChildren([item])[0]?.content ?? []);
   return {
     type: 'taskItem',
     attrs: { checked },
@@ -169,6 +175,24 @@ const switchedOff = null as never;
 const JournalTaskList = TaskList.extend({
   markdownTokenizer: switchedOff,
   parseMarkdown: switchedOff,
+  addCommands() {
+    return {
+      // biome-ignore lint/nursery/noThisOutsideOfClass: Tiptap binds the extension instance as this when invoking addCommands.
+      ...this.parent?.(),
+      toggleTaskList:
+        () =>
+        ({ chain }) =>
+          chain()
+            // biome-ignore lint/nursery/noThisOutsideOfClass: Tiptap binds the extension instance as this when invoking addCommands.
+            .toggleList(this.name, this.options.itemTypeName)
+            .command(({ tr }) => {
+              // biome-ignore lint/nursery/noThisOutsideOfClass: Tiptap binds the extension instance as this when invoking addCommands.
+              retickConvertedItems(tr, this.name);
+              return true;
+            })
+            .run(),
+    };
+  },
 });
 
 const remapStarterExtension = (extension: AnyExtension): AnyExtension => {
