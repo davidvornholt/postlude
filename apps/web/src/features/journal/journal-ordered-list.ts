@@ -11,11 +11,9 @@ import {
 
 // Reads numbered lists the way the tokenizer in @tiptap/extension-list 3.34
 // does, except that a continuation line of an item loses the whole width of
-// the item's marker. Tiptap leaves the `.` or `)` out of that width, so under
-// `1. first` each later line kept one of its three spaces, every save wrote it
-// one space deeper, and a paragraph after the item's second one became code and
-// was then dropped. Go back to Tiptap's tokenizer once it counts the separator
-// and `journal-ordered-list.test.ts` passes without this file.
+// the item's marker, where Tiptap leaves out the `.` or `)`. Go back to
+// Tiptap's tokenizer once it counts the separator and
+// `journal-ordered-list.test.ts` passes without this file.
 
 const orderedItemLine = new RegExp(
   `^(\\s*)(${ORDERED_LIST_MARKER_PATTERN})([.)])(\\s+)(.*)$`,
@@ -240,10 +238,11 @@ const nestedListItems = (
     if (item.indent !== baseIndent) {
       return [];
     }
-    const end = items.findIndex(
-      (next, nextIndex) => nextIndex > index && next.indent <= baseIndent,
-    );
-    const nested = items.slice(index + 1, end === -1 ? undefined : end);
+    let end = index + 1;
+    while ((items[end]?.indent ?? baseIndent) > baseIndent) {
+      end += 1;
+    }
+    const nested = items.slice(index + 1, end);
     const [firstNested] = nested;
     const nestedList =
       firstNested === undefined
