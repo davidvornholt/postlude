@@ -17,6 +17,13 @@ export type AutosaveState = {
   readonly inFlight: EntryDraft | undefined;
   /** Conflicts stay actionable and block writes until current prose matches. */
   readonly failure: AutosaveFailure | undefined;
+  /**
+   * A network failure may have hidden a committed write, so the last confirmed
+   * copy proves nothing and even an undo back to it has to be sent. Later
+   * failures, such as an expired sign-in, say nothing about that write, so only
+   * a confirmed save or a fresh server copy clears this.
+   */
+  readonly unconfirmedWrite: boolean;
 };
 
 export type ConfirmedDraft = {
@@ -44,20 +51,13 @@ export const sameDraft = (a: EntryDraft, b: EntryDraft): boolean =>
   a.scriptureMarkdown === b.scriptureMarkdown &&
   a.scriptureReference === b.scriptureReference;
 
-/**
- * After a network failure the server's copy is unknown, because the failed
- * write may have been committed. The last confirmed copy then proves nothing,
- * so even an undo back to it has to be sent.
- */
-const serverCopyUnknown = (state: AutosaveState): boolean =>
-  state.failure?.kind === 'network';
-
 /** A page that has just opened: what is on screen is what the table holds. */
 export const openAutosave = (stored: ConfirmedDraft): AutosaveState => ({
   draft: stored.draft,
   stored,
   inFlight: undefined,
   failure: undefined,
+  unconfirmedWrite: false,
 });
 
 export const saveStatus = (state: AutosaveState): SaveStatus => {
@@ -77,7 +77,7 @@ const beginSave = (state: AutosaveState): Step => {
   if (state.failure?.kind === 'conflict') {
     return [state, [{ _tag: 'cancel' }]];
   }
-  if (!serverCopyUnknown(state) && sameDraft(state.draft, state.stored.draft)) {
+  if (!state.unconfirmedWrite && sameDraft(state.draft, state.stored.draft)) {
     return [state, [{ _tag: 'cancel' }]];
   }
   return [
@@ -99,6 +99,7 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
     stored: { draft: confirmedDraft, revision },
     inFlight: undefined,
     failure: undefined,
+    unconfirmedWrite: false,
   };
   return sameDraft(settled.draft, settled.stored.draft)
     ? [settled, []]
@@ -133,7 +134,7 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   }
   if (
     failure.kind === 'authentication' &&
-    !serverCopyUnknown(state) &&
+    !state.unconfirmedWrite &&
     sameDraft(state.draft, state.stored.draft)
   ) {
     // A refused sign-in wrote nothing, so the undo is what the server holds.
@@ -142,13 +143,18 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
       [{ _tag: 'cancel' }],
     ];
   }
+  const failed: AutosaveState = {
+    ...state,
+    failure,
+    unconfirmedWrite: state.unconfirmedWrite || failure.kind === 'network',
+  };
   if (!sameDraft(state.draft, state.inFlight)) {
     return [
-      { ...state, inFlight: state.draft, failure },
+      { ...failed, inFlight: state.draft },
       [{ _tag: 'save', draft: state.draft }],
     ];
   }
-  return [{ ...state, inFlight: undefined, failure }, []];
+  return [{ ...failed, inFlight: undefined }, []];
 };
 
 const settling: Record<
@@ -167,7 +173,7 @@ const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
 
   if (
     state.inFlight === undefined &&
-    !serverCopyUnknown(state) &&
+    !state.unconfirmedWrite &&
     sameDraft(draft, state.stored.draft)
   ) {
     return state.failure?.kind === 'conflict'

@@ -129,3 +129,20 @@ it('calls an undo saved after a refused sign-in, which wrote nothing', () => {
   expect(state.failure).toBeUndefined();
   expect(saveStatus(state)).toBe('saved');
 });
+
+it('keeps an undo unconfirmed when a refused sign-in follows a failed save', () => {
+  const { state } = run([
+    { _tag: 'edited', draft: wrote('maybe committed') },
+    { _tag: 'quiet' },
+    { _tag: 'failed', failure: networkFailure },
+    { _tag: 'edited', draft: blank },
+    { _tag: 'quiet' },
+    {
+      _tag: 'failed',
+      failure: { kind: 'authentication', message: 'Sign in again.' },
+    },
+    { _tag: 'edited', draft: blank },
+  ]);
+  expect(state.unconfirmedWrite).toBe(true);
+  expect(saveStatus(state)).toBe('failed');
+});

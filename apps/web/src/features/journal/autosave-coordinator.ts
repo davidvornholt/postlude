@@ -54,9 +54,10 @@ const reconcileServerState = (
   ) {
     return undefined;
   }
-  // After a conflict or a network failure the old confirmed copy says nothing
-  // about the server, so only a fresh copy matching the screen settles it.
-  if (state.failure?.kind === 'conflict' || state.failure?.kind === 'network') {
+  // After a conflict or a possibly committed write the old confirmed copy says
+  // nothing about the server, so only a fresh copy matching the screen settles
+  // it.
+  if (state.failure?.kind === 'conflict' || state.unconfirmedWrite) {
     return sameDraft(state.draft, nextStored.draft)
       ? openAutosave(nextStored)
       : { ...state, stored: nextStored };

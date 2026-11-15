@@ -38,7 +38,13 @@ const fakeServer = () => {
   let held = { draft: original, revision: 1 };
   const lost: Array<() => void> = [];
   let loseNextResponse = false;
+  let expiredSessionStatus: number | undefined;
   const save = (draft: EntryDraft): Promise<SaveConfirmation> => {
+    if (expiredSessionStatus !== undefined) {
+      return decodeSaveConfirmation(
+        new Response('Sign in again', { status: expiredSessionStatus }),
+      );
+    }
     if (draft.baseRevision !== held.revision) {
       return decodeSaveConfirmation(
         new Response(journalWriteConflictMessage, {
@@ -61,6 +67,9 @@ const fakeServer = () => {
     held: () => held,
     loseNextResponse: () => {
       loseNextResponse = true;
+    },
+    expireSession: (status: number) => {
+      expiredSessionStatus = status;
     },
     dropResponses: () => {
       for (const drop of lost.splice(0)) {
@@ -189,6 +198,55 @@ describe('a save whose response was lost after it committed', () => {
     );
   });
 });
+
+describe.each([401, 403])(
+  'a lost committed save followed by a refused sign-in (%d)',
+  (status) => {
+    const loseThenRefuse = async (
+      server: ReturnType<typeof fakeServer>,
+      coordinator: ReturnType<typeof createAutosaveCoordinator>,
+    ): Promise<void> => {
+      server.loseNextResponse();
+      coordinator.edit({ journalMarkdown: undone });
+      coordinator.flush();
+      server.dropResponses();
+      await settleEffects();
+      server.expireSession(status);
+      coordinator.flush();
+      await settleEffects();
+      coordinator.edit({ journalMarkdown: original.journalMarkdown });
+      await settleEffects();
+    };
+
+    it('does not confirm the undo', async () => {
+      const day = openDay();
+      await loseThenRefuse(day.server, day.coordinator);
+
+      expect(day.server.held().draft.journalMarkdown).toBe(undone);
+      expect(day.coordinator.snapshot().failure?.kind).toBe('authentication');
+      expect(observe(day)).toEqual(unconfirmedUndo);
+    });
+
+    it('keeps navigation waiting and the day in memory', async () => {
+      const server = fakeServer();
+      const registry = createTestAutosaveRegistry();
+      const coordinator = registry.acquire(
+        { draft: original, revision: 1 },
+        server.save,
+      );
+      const unsubscribe = coordinator.subscribe(() => undefined);
+      await loseThenRefuse(server, coordinator);
+      unsubscribe();
+
+      await expect(registry.settle()).rejects.toMatchObject({
+        failure: { kind: 'authentication' },
+      });
+      expect(
+        registry.acquire({ draft: original, revision: 1 }, server.save),
+      ).toBe(coordinator);
+    });
+  },
+);
 
 describe('a save that failed before it reached the database', () => {
   it('stores the undo on the next attempt', async () => {
