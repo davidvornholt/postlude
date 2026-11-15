@@ -12,6 +12,7 @@ import {
   type AutosaveState,
   advanceAutosave,
   type ConfirmedDraft,
+  hasUnconfirmedWrite,
   openAutosave,
   sameDraft,
   saveStatus,
@@ -44,6 +45,22 @@ export type AutosaveCoordinator = {
 
 const defaultQuietPeriodMs = 1200;
 
+/**
+ * The server copy is exactly a snapshot this tab sent without learning the
+ * outcome, at the revision that send would have created. Even if another tab
+ * happened to write the same text at that revision, building on it loses
+ * nothing of theirs.
+ */
+const isOwnLostWrite = (
+  state: AutosaveState,
+  nextStored: ConfirmedDraft,
+): boolean =>
+  state.unconfirmedWrites.some(
+    (sent) =>
+      nextStored.revision === sent.baseRevision + 1 &&
+      sameDraft(sent, nextStored.draft),
+  );
+
 const reconcileServerState = (
   state: AutosaveState,
   nextStored: ConfirmedDraft,
@@ -55,12 +72,21 @@ const reconcileServerState = (
     return undefined;
   }
   // After a conflict or a possibly committed write the old confirmed copy says
-  // nothing about the server, so only a fresh copy matching the screen settles
-  // it.
-  if (state.failure?.kind === 'conflict' || state.unconfirmedWrite) {
-    return sameDraft(state.draft, nextStored.draft)
-      ? openAutosave(nextStored)
-      : { ...state, stored: nextStored };
+  // nothing about the server. A fresh copy matching the screen settles it, and
+  // one that is this tab's own lost write becomes the base for the screen.
+  // Any other copy keeps the old base, so the next send is refused rather
+  // than overwriting a write this tab never saw.
+  if (state.failure?.kind === 'conflict' || hasUnconfirmedWrite(state)) {
+    if (sameDraft(state.draft, nextStored.draft)) {
+      return openAutosave(nextStored);
+    }
+    if (isOwnLostWrite(state, nextStored)) {
+      return {
+        ...openAutosave(nextStored),
+        draft: { ...state.draft, baseRevision: nextStored.revision },
+      };
+    }
+    return { ...state, stored: nextStored };
   }
   return sameDraft(state.draft, state.stored.draft)
     ? openAutosave(nextStored)

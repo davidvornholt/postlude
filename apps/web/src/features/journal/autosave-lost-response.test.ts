@@ -125,6 +125,34 @@ const observe = ({ tab, coordinator }: ReturnType<typeof openDay>) => ({
   closingIsQuestioned: tab.closingIsQuestioned(),
 });
 
+/** What the day route does when its loader returns a fresh server copy. */
+const reloadRoute = ({ server, coordinator }: ReturnType<typeof openDay>) => {
+  coordinator.update(server.held(), server.save);
+  coordinator.flush();
+};
+
+const saveFromAnotherTab = async (
+  server: ReturnType<typeof fakeServer>,
+  journalMarkdown: string,
+): Promise<void> => {
+  const { draft, revision } = server.held();
+  await server.save({ ...draft, journalMarkdown, baseRevision: revision });
+};
+
+const savedAs = (journalMarkdown: string) => ({
+  displayed: journalMarkdown,
+  status: 'saved' as const,
+  recovery: undefined,
+  closingIsQuestioned: false,
+});
+
+const conflictKeeping = (journalMarkdown: string) => ({
+  displayed: journalMarkdown,
+  status: 'failed' as const,
+  recovery: journalMarkdown,
+  closingIsQuestioned: true,
+});
+
 const unconfirmedUndo = {
   displayed: original.journalMarkdown,
   status: 'failed' as const,
@@ -164,7 +192,7 @@ describe('a save whose response was lost after it committed', () => {
     expect(observe(day)).toEqual(unconfirmedUndo);
   });
 
-  it('keeps the undo when a fresh read shows the lost write', async () => {
+  it('saves the undo once a fresh read shows the lost write', async () => {
     const day = openDay();
     day.server.loseNextResponse();
     day.coordinator.edit({ journalMarkdown: undone });
@@ -173,10 +201,15 @@ describe('a save whose response was lost after it committed', () => {
     await settleEffects();
     day.coordinator.edit({ journalMarkdown: original.journalMarkdown });
     await settleEffects();
+    expect(day.coordinator.snapshot().failure?.kind).toBe('conflict');
 
-    day.coordinator.update(day.server.held(), day.server.save);
-    expect(day.coordinator.snapshot().stored).toEqual(day.server.held());
-    expect(observe(day)).toEqual(unconfirmedUndo);
+    reloadRoute(day);
+    await settleEffects();
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: original.journalMarkdown },
+      revision: 3,
+    });
+    expect(observe(day)).toEqual(savedAs(original.journalMarkdown));
   });
 
   it('keeps navigation waiting while the server copy is unknown', async () => {
@@ -196,6 +229,95 @@ describe('a save whose response was lost after it committed', () => {
     await expect(registry.settle()).rejects.toThrow(
       journalWriteConflictMessage,
     );
+  });
+});
+
+describe('a fresh read after a lost save', () => {
+  const loseSave = async (day: ReturnType<typeof openDay>): Promise<void> => {
+    day.server.loseNextResponse();
+    day.coordinator.edit({ journalMarkdown: 'A' });
+    day.coordinator.flush();
+    day.server.dropResponses();
+    await settleEffects();
+  };
+
+  it("rebases onto the lost write when it is this tab's own", async () => {
+    const day = openDay();
+    await loseSave(day);
+    day.coordinator.edit({ journalMarkdown: 'AB' });
+    reloadRoute(day);
+    await settleEffects();
+
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: 'AB' },
+      revision: 3,
+    });
+    expect(observe(day)).toEqual(savedAs('AB'));
+  });
+
+  it('rebases after the retry was already refused', async () => {
+    const day = openDay();
+    await loseSave(day);
+    day.coordinator.edit({ journalMarkdown: 'AB' });
+    await settleEffects();
+    expect(day.coordinator.snapshot().failure?.kind).toBe('conflict');
+
+    reloadRoute(day);
+    await settleEffects();
+
+    expect(day.server.held().draft.journalMarkdown).toBe('AB');
+    expect(observe(day)).toEqual(savedAs('AB'));
+  });
+
+  it('reports a newer save from another tab', async () => {
+    const day = openDay();
+    await loseSave(day);
+    await saveFromAnotherTab(day.server, 'Other tab');
+    day.coordinator.edit({ journalMarkdown: 'AB' });
+    reloadRoute(day);
+    await settleEffects();
+
+    expect(day.server.held().draft.journalMarkdown).toBe('Other tab');
+    expect(day.coordinator.snapshot().failure?.kind).toBe('conflict');
+    expect(observe(day)).toEqual(conflictKeeping('AB'));
+  });
+
+  it('reports another tab when the lost save never committed', async () => {
+    const day = openDay(
+      (server) => (draft) =>
+        draft.journalMarkdown === 'A'
+          ? Promise.reject(new TypeError('Failed to fetch'))
+          : server.save(draft),
+    );
+    day.coordinator.edit({ journalMarkdown: 'A' });
+    day.coordinator.flush();
+    await settleEffects();
+    await saveFromAnotherTab(day.server, 'Other tab');
+    day.coordinator.edit({ journalMarkdown: 'AB' });
+    reloadRoute(day);
+    await settleEffects();
+
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: 'Other tab' },
+      revision: 2,
+    });
+    expect(observe(day)).toEqual(conflictKeeping('AB'));
+  });
+
+  it('reports another tab that wrote the same text later', async () => {
+    const day = openDay();
+    await loseSave(day);
+    await saveFromAnotherTab(day.server, 'Other tab');
+    await saveFromAnotherTab(day.server, 'A');
+    day.coordinator.edit({ journalMarkdown: 'AB' });
+    reloadRoute(day);
+    await settleEffects();
+
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: 'A' },
+      revision: 4,
+    });
+    expect(observe(day)).toEqual(conflictKeeping('AB'));
   });
 });
 

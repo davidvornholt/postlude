@@ -18,12 +18,14 @@ export type AutosaveState = {
   /** Conflicts stay actionable and block writes until current prose matches. */
   readonly failure: AutosaveFailure | undefined;
   /**
-   * A network failure may have hidden a committed write, so the last confirmed
-   * copy proves nothing and even an undo back to it has to be sent. Later
-   * failures, such as an expired sign-in, say nothing about that write, so only
-   * a confirmed save or a fresh server copy clears this.
+   * Sent snapshots whose network failure may have hidden a committed write.
+   * While there are any, the last confirmed copy proves nothing and even an
+   * undo back to it has to be sent. Later failures, such as an expired
+   * sign-in, say nothing about those writes, so only a confirmed save or a
+   * fresh server copy clears them. A fresh copy that equals one of them at the
+   * revision it would have created is this tab's own write.
    */
-  readonly unconfirmedWrite: boolean;
+  readonly unconfirmedWrites: ReadonlyArray<EntryDraft>;
 };
 
 export type ConfirmedDraft = {
@@ -57,8 +59,30 @@ export const openAutosave = (stored: ConfirmedDraft): AutosaveState => ({
   stored,
   inFlight: undefined,
   failure: undefined,
-  unconfirmedWrite: false,
+  unconfirmedWrites: [],
 });
+
+export const hasUnconfirmedWrite = (state: AutosaveState): boolean =>
+  state.unconfirmedWrites.length > 0;
+
+const rememberedUnconfirmedWrites = 10;
+
+/**
+ * Keep the first unconfirmed write and the latest ones. The first is the
+ * likeliest to have committed, because a dropped connection usually fails every
+ * later send before it reaches the server; the latest cover a flaky
+ * connection. A write that falls out only means its fresh copy is reported as
+ * a conflict, as for another tab's save.
+ */
+const rememberUnconfirmedWrite = (
+  writes: ReadonlyArray<EntryDraft>,
+  sent: EntryDraft,
+): ReadonlyArray<EntryDraft> => {
+  const remembered = [...writes, sent];
+  return remembered.length <= rememberedUnconfirmedWrites
+    ? remembered
+    : [remembered[0], ...remembered.slice(1 - rememberedUnconfirmedWrites)];
+};
 
 export const saveStatus = (state: AutosaveState): SaveStatus => {
   if (state.inFlight !== undefined) {
@@ -77,7 +101,10 @@ const beginSave = (state: AutosaveState): Step => {
   if (state.failure?.kind === 'conflict') {
     return [state, [{ _tag: 'cancel' }]];
   }
-  if (!state.unconfirmedWrite && sameDraft(state.draft, state.stored.draft)) {
+  if (
+    !hasUnconfirmedWrite(state) &&
+    sameDraft(state.draft, state.stored.draft)
+  ) {
     return [state, [{ _tag: 'cancel' }]];
   }
   return [
@@ -99,7 +126,7 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
     stored: { draft: confirmedDraft, revision },
     inFlight: undefined,
     failure: undefined,
-    unconfirmedWrite: false,
+    unconfirmedWrites: [],
   };
   return sameDraft(settled.draft, settled.stored.draft)
     ? [settled, []]
@@ -134,7 +161,7 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   }
   if (
     failure.kind === 'authentication' &&
-    !state.unconfirmedWrite &&
+    !hasUnconfirmedWrite(state) &&
     sameDraft(state.draft, state.stored.draft)
   ) {
     // A refused sign-in wrote nothing, so the undo is what the server holds.
@@ -146,7 +173,10 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   const failed: AutosaveState = {
     ...state,
     failure,
-    unconfirmedWrite: state.unconfirmedWrite || failure.kind === 'network',
+    unconfirmedWrites:
+      failure.kind === 'network'
+        ? rememberUnconfirmedWrite(state.unconfirmedWrites, state.inFlight)
+        : state.unconfirmedWrites,
   };
   if (!sameDraft(state.draft, state.inFlight)) {
     return [
@@ -173,7 +203,7 @@ const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
 
   if (
     state.inFlight === undefined &&
-    !state.unconfirmedWrite &&
+    !hasUnconfirmedWrite(state) &&
     sameDraft(draft, state.stored.draft)
   ) {
     return state.failure?.kind === 'conflict'
