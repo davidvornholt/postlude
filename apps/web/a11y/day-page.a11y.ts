@@ -116,7 +116,7 @@ for (const colorScheme of colorSchemes) {
     page,
   }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountDayPage(page, ['failed']);
+    await mountDayPage(page, ['failed', 'stored']);
     await editAndLeave(page, 'Evening journal', 'Keep these words.');
     await expect(
       page.getByText(connectionMessage, { exact: true }),
@@ -130,9 +130,15 @@ for (const colorScheme of colorSchemes) {
     await page.keyboard.press('a');
     await page.keyboard.up('Control');
     await page.keyboard.press('Backspace');
+    // The failed save may have been committed, so the undo is saved as well,
+    // and only its confirmation settles the page.
     await expect(page.getByText('Autosave on', { exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(
       0,
+    );
+    await expect(page.locator('html')).toHaveAttribute(
+      'data-save-attempts',
+      '2',
     );
   });
 
