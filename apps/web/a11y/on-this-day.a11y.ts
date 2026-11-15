@@ -148,10 +148,14 @@ test('a year opens and folds without the years below it jumping', async ({
     direction: 1 | -1,
   ) => ({
     pressed: new Set(tops.map(({ pressed }) => pressed)).size,
-    // Each frame moves the next year on in one direction only.
+    // Each frame moves the next year on in one direction only. The year and
+    // the words that fold under the date grow and shrink as two separate
+    // heights, each rounded to a sixty-fourth of a pixel. Where the sum comes
+    // to rest the next year can settle a hair back the way it came, which no
+    // one can see, so only a step of a whole pixel against the direction counts.
     backwards: tops.filter(
       ({ next }, index) =>
-        index > 0 && (next - (tops[index - 1]?.next ?? next)) * direction < 0,
+        index > 0 && (next - (tops[index - 1]?.next ?? next)) * direction < -1,
     ).length,
     // And no single frame carries it most of the way.
     largestStep: Math.max(
