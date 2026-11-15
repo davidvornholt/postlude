@@ -10,7 +10,7 @@ import { Data } from 'effect';
 import {
   type AutosaveFailure,
   type ConfirmedDraft,
-  sameDraft,
+  saveStatus,
 } from './autosave.ts';
 import {
   type AutosaveCoordinator,
@@ -52,7 +52,7 @@ const settleCoordinator = (coordinator: AutosaveCoordinator): Promise<void> =>
         return;
       }
       unsubscribe();
-      if (sameDraft(state.draft, state.stored.draft)) {
+      if (saveStatus(state) === 'saved') {
         resolve();
         return;
       }
@@ -79,13 +79,7 @@ export const createAutosaveRegistry = (
   const settle = async (): Promise<void> => {
     await Promise.all(Array.from(coordinators.values(), settleCoordinator));
     const allSettled = Array.from(coordinators.values()).every(
-      (coordinator) => {
-        const state = coordinator.snapshot();
-        return (
-          state.inFlight === undefined &&
-          sameDraft(state.draft, state.stored.draft)
-        );
-      },
+      (coordinator) => saveStatus(coordinator.snapshot()) === 'saved',
     );
     if (!allSettled) {
       return settle();

@@ -79,24 +79,52 @@ it('clears the failure once a later save gets through', () => {
   expect(saveStatus(state)).toBe('saved');
 });
 
-it('clears a failed save when undo returns to the stored draft', () => {
+it('sends an undo after a failed save instead of calling it saved', () => {
   const { state, commands } = run([
     { _tag: 'edited', draft: wrote('unlucky') },
     { _tag: 'quiet' },
     { _tag: 'failed', failure: networkFailure },
     { _tag: 'edited', draft: blank },
+    { _tag: 'quiet' },
   ]);
-  expect(commands.at(-1)).toEqual({ _tag: 'cancel' });
-  expect(state.failure).toBeUndefined();
-  expect(saveStatus(state)).toBe('saved');
+  // The failed write may have been committed, so the server may hold 'unlucky'.
+  expect(commands.at(-1)).toEqual({ _tag: 'save', draft: blank });
+  expect(state.failure).toBe(networkFailure);
+  expect(saveStatus(state)).toBe('saving');
 });
 
-it('ignores a failed reply after undo returned to the stored draft', () => {
+it('sends an undo made while the failed save was in flight', () => {
+  const { state, commands } = run([
+    { _tag: 'edited', draft: wrote('unlucky') },
+    { _tag: 'quiet' },
+    { _tag: 'edited', draft: blank },
+    { _tag: 'failed', failure: networkFailure },
+  ]);
+  expect(commands.at(-1)).toEqual({ _tag: 'save', draft: blank });
+  expect(state.inFlight).toEqual(blank);
+  expect(state.failure).toBe(networkFailure);
+});
+
+it('keeps saying failed when the undo cannot be sent either', () => {
   const { state } = run([
     { _tag: 'edited', draft: wrote('unlucky') },
     { _tag: 'quiet' },
     { _tag: 'edited', draft: blank },
     { _tag: 'failed', failure: networkFailure },
+    { _tag: 'failed', failure: networkFailure },
+  ]);
+  expect(saveStatus(state)).toBe('failed');
+});
+
+it('calls an undo saved after a refused sign-in, which wrote nothing', () => {
+  const { state } = run([
+    { _tag: 'edited', draft: wrote('unlucky') },
+    { _tag: 'quiet' },
+    { _tag: 'edited', draft: blank },
+    {
+      _tag: 'failed',
+      failure: { kind: 'authentication', message: 'Sign in again.' },
+    },
   ]);
   expect(state.failure).toBeUndefined();
   expect(saveStatus(state)).toBe('saved');

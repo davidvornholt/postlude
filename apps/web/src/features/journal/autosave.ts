@@ -3,6 +3,7 @@ import type { EntryDraft } from './schemas/entry.ts';
 export type SaveStatus = 'saving' | 'failed' | 'unsaved' | 'saved';
 
 export type AutosaveFailure = {
+  /** `network` is any failure without a clear answer, so it may have committed. */
   readonly kind: 'authentication' | 'conflict' | 'network';
   readonly message: string;
 };
@@ -43,6 +44,14 @@ export const sameDraft = (a: EntryDraft, b: EntryDraft): boolean =>
   a.scriptureMarkdown === b.scriptureMarkdown &&
   a.scriptureReference === b.scriptureReference;
 
+/**
+ * After a network failure the server's copy is unknown, because the failed
+ * write may have been committed. The last confirmed copy then proves nothing,
+ * so even an undo back to it has to be sent.
+ */
+const serverCopyUnknown = (state: AutosaveState): boolean =>
+  state.failure?.kind === 'network';
+
 /** A page that has just opened: what is on screen is what the table holds. */
 export const openAutosave = (stored: ConfirmedDraft): AutosaveState => ({
   draft: stored.draft,
@@ -68,7 +77,7 @@ const beginSave = (state: AutosaveState): Step => {
   if (state.failure?.kind === 'conflict') {
     return [state, [{ _tag: 'cancel' }]];
   }
-  if (sameDraft(state.draft, state.stored.draft)) {
+  if (!serverCopyUnknown(state) && sameDraft(state.draft, state.stored.draft)) {
     return [state, [{ _tag: 'cancel' }]];
   }
   return [
@@ -99,7 +108,11 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
       ];
 };
 
-/** Ignore a stale failure or an in-flight failure after an undo. */
+/**
+ * Ignore a stale failure. Newer prose, an undo included, is sent against the
+ * same base revision: if the failed write was committed, the server refuses it
+ * as a conflict instead of overwriting anything.
+ */
 const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
@@ -118,7 +131,12 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
       [{ _tag: 'cancel' }],
     ];
   }
-  if (sameDraft(state.draft, state.stored.draft)) {
+  if (
+    failure.kind === 'authentication' &&
+    !serverCopyUnknown(state) &&
+    sameDraft(state.draft, state.stored.draft)
+  ) {
+    // A refused sign-in wrote nothing, so the undo is what the server holds.
     return [
       { ...state, inFlight: undefined, failure: undefined },
       [{ _tag: 'cancel' }],
@@ -147,7 +165,11 @@ const settling: Record<
 const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
   const edited: AutosaveState = { ...state, draft };
 
-  if (state.inFlight === undefined && sameDraft(draft, state.stored.draft)) {
+  if (
+    state.inFlight === undefined &&
+    !serverCopyUnknown(state) &&
+    sameDraft(draft, state.stored.draft)
+  ) {
     return state.failure?.kind === 'conflict'
       ? [edited, [{ _tag: 'cancel' }]]
       : [{ ...edited, failure: undefined }, [{ _tag: 'cancel' }]];
