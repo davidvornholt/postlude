@@ -2,7 +2,6 @@ import type {
   AnyExtension,
   JSONContent,
   MarkdownParseHelpers,
-  MarkdownRendererHelpers,
   MarkdownToken,
   NodeConfig,
   RenderContext,
@@ -12,6 +11,7 @@ import { Markdown, MarkdownManager } from '@tiptap/markdown';
 import StarterKit from '@tiptap/starter-kit';
 
 import { JournalImage } from './journal-image-extension.ts';
+import { journalOrderedListTokenizer } from './journal-ordered-list.ts';
 import { JournalTableKit } from './journal-table-extension.ts';
 import { retickConvertedItems } from './journal-task-list-conversion.ts';
 
@@ -153,20 +153,8 @@ const parseBulletList = (
 };
 
 // Inside a list item blocks sit on consecutive lines, where `---` under a
-// paragraph would make it a heading. Anywhere in a numbered list the rule stays
-// `---`: the list serializer shifts nested lines there on each save, and with
-// `***` that shift turns the text beside the rule into code and then drops it.
+// paragraph would make it a heading.
 const listItemTypes = new Set(['listItem', 'taskItem']);
-const inNumberedList = 'inNumberedList';
-
-const withNumberedRules = (node: JSONContent): JSONContent => {
-  if (node.type === 'horizontalRule') {
-    return { ...node, attrs: { ...node.attrs, [inNumberedList]: true } };
-  }
-  return node.content === undefined
-    ? node
-    : { ...node, content: node.content.map(withNumberedRules) };
-};
 
 // Tiptap reads a `null` field as switched off, though its types only offer a
 // replacement.
@@ -211,26 +199,15 @@ const remapStarterExtension = (extension: AnyExtension): AnyExtension => {
       return extension.extend(readHtmlLineBreaks);
     case 'orderedList':
       return extension.extend({
-        renderMarkdown(
-          node: JSONContent,
-          helpers: MarkdownRendererHelpers,
-          context: RenderContext,
-        ) {
-          // biome-ignore lint/nursery/noThisOutsideOfClass: Tiptap binds the extension context as this when invoking renderMarkdown.
-          return this.parent?.(withNumberedRules(node), helpers, context);
-        },
+        markdownTokenizer: journalOrderedListTokenizer,
       });
     case 'horizontalRule':
       return extension.extend({
         renderMarkdown: (
-          node: JSONContent,
+          _node: JSONContent,
           _helpers: unknown,
           context: RenderContext,
-        ) =>
-          listItemTypes.has(context.parentType ?? '') &&
-          node.attrs?.[inNumberedList] !== true
-            ? '***'
-            : '---',
+        ) => (listItemTypes.has(context.parentType ?? '') ? '***' : '---'),
       });
     default:
       return extension;
