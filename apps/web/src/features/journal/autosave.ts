@@ -3,6 +3,7 @@ import type { EntryDraft } from './schemas/entry.ts';
 export type SaveStatus = 'saving' | 'failed' | 'unsaved' | 'saved';
 
 export type AutosaveFailure = {
+  /** `network` is any failure without a clear answer, so it may have committed. */
   readonly kind: 'authentication' | 'conflict' | 'network';
   readonly message: string;
 };
@@ -16,6 +17,13 @@ export type AutosaveState = {
   readonly inFlight: EntryDraft | undefined;
   /** Conflicts stay actionable and block writes until current prose matches. */
   readonly failure: AutosaveFailure | undefined;
+  /**
+   * A network failure may have hidden a committed write, so the last confirmed
+   * copy proves nothing and even an undo back to it has to be sent. Later
+   * failures, such as an expired sign-in, say nothing about that write, so only
+   * a confirmed save or a fresh server copy clears this.
+   */
+  readonly unconfirmedWrite: boolean;
 };
 
 export type ConfirmedDraft = {
@@ -49,6 +57,7 @@ export const openAutosave = (stored: ConfirmedDraft): AutosaveState => ({
   stored,
   inFlight: undefined,
   failure: undefined,
+  unconfirmedWrite: false,
 });
 
 export const saveStatus = (state: AutosaveState): SaveStatus => {
@@ -68,7 +77,7 @@ const beginSave = (state: AutosaveState): Step => {
   if (state.failure?.kind === 'conflict') {
     return [state, [{ _tag: 'cancel' }]];
   }
-  if (sameDraft(state.draft, state.stored.draft)) {
+  if (!state.unconfirmedWrite && sameDraft(state.draft, state.stored.draft)) {
     return [state, [{ _tag: 'cancel' }]];
   }
   return [
@@ -90,6 +99,7 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
     stored: { draft: confirmedDraft, revision },
     inFlight: undefined,
     failure: undefined,
+    unconfirmedWrite: false,
   };
   return sameDraft(settled.draft, settled.stored.draft)
     ? [settled, []]
@@ -99,7 +109,11 @@ const settleStored = (state: AutosaveState, revision: number): Step => {
       ];
 };
 
-/** Ignore a stale failure or an in-flight failure after an undo. */
+/**
+ * Ignore a stale failure. Newer prose, an undo included, is sent against the
+ * same base revision: if the failed write was committed, the server refuses it
+ * as a conflict instead of overwriting anything.
+ */
 const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
   if (state.inFlight === undefined) {
     return [state, []];
@@ -118,19 +132,29 @@ const settleFailed = (state: AutosaveState, failure: AutosaveFailure): Step => {
       [{ _tag: 'cancel' }],
     ];
   }
-  if (sameDraft(state.draft, state.stored.draft)) {
+  if (
+    failure.kind === 'authentication' &&
+    !state.unconfirmedWrite &&
+    sameDraft(state.draft, state.stored.draft)
+  ) {
+    // A refused sign-in wrote nothing, so the undo is what the server holds.
     return [
       { ...state, inFlight: undefined, failure: undefined },
       [{ _tag: 'cancel' }],
     ];
   }
+  const failed: AutosaveState = {
+    ...state,
+    failure,
+    unconfirmedWrite: state.unconfirmedWrite || failure.kind === 'network',
+  };
   if (!sameDraft(state.draft, state.inFlight)) {
     return [
-      { ...state, inFlight: state.draft, failure },
+      { ...failed, inFlight: state.draft },
       [{ _tag: 'save', draft: state.draft }],
     ];
   }
-  return [{ ...state, inFlight: undefined, failure }, []];
+  return [{ ...failed, inFlight: undefined }, []];
 };
 
 const settling: Record<
@@ -147,7 +171,11 @@ const settling: Record<
 const editDraft = (state: AutosaveState, draft: EntryDraft): Step => {
   const edited: AutosaveState = { ...state, draft };
 
-  if (state.inFlight === undefined && sameDraft(draft, state.stored.draft)) {
+  if (
+    state.inFlight === undefined &&
+    !state.unconfirmedWrite &&
+    sameDraft(draft, state.stored.draft)
+  ) {
     return state.failure?.kind === 'conflict'
       ? [edited, [{ _tag: 'cancel' }]]
       : [{ ...edited, failure: undefined }, [{ _tag: 'cancel' }]];

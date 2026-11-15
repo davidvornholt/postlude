@@ -14,6 +14,7 @@ import {
   type ConfirmedDraft,
   openAutosave,
   sameDraft,
+  saveStatus,
 } from './autosave.ts';
 import { autosaveFailureOf } from './autosave-error.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
@@ -53,7 +54,10 @@ const reconcileServerState = (
   ) {
     return undefined;
   }
-  if (state.failure?.kind === 'conflict') {
+  // After a conflict or a possibly committed write the old confirmed copy says
+  // nothing about the server, so only a fresh copy matching the screen settles
+  // it.
+  if (state.failure?.kind === 'conflict' || state.unconfirmedWrite) {
     return sameDraft(state.draft, nextStored.draft)
       ? openAutosave(nextStored)
       : { ...state, stored: nextStored };
@@ -112,8 +116,7 @@ export const createAutosaveCoordinator = ({
     if (
       listeners.size === 0 &&
       scheduled === undefined &&
-      state.inFlight === undefined &&
-      sameDraft(state.draft, state.stored.draft)
+      saveStatus(state) === 'saved'
     ) {
       onIdle?.();
     }

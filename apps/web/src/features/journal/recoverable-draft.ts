@@ -3,8 +3,9 @@
  *
  * `sessionStorage` survives reloads and internal navigation but belongs to one
  * tab and disappears when that tab closes. Journal prose therefore does not
- * acquire localStorage's indefinite lifetime. A confirmed save or a full undo
- * removes the copy immediately.
+ * acquire localStorage's indefinite lifetime. A confirmed save, or a full undo
+ * while no failed save might have been committed, removes the copy
+ * immediately.
  */
 
 import { Schema } from 'effect';

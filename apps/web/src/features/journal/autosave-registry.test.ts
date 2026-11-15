@@ -98,10 +98,14 @@ it('rejects a cached stale acquisition after a confirmed checkpoint is released'
   expect(remounted.snapshot().stored).toEqual(current);
 });
 
-it('retains a failed recoverable draft until it is undone', async () => {
+it('retains a failed recoverable draft until the server confirms the undo', async () => {
   const recovery = memoryRecovery();
   const registry = createTestAutosaveRegistry(() => recovery);
-  const save = () => Promise.reject(new TypeError('offline'));
+  let online = false;
+  const save = () =>
+    online
+      ? Promise.resolve({ revision: stored.revision + 1 })
+      : Promise.reject(new TypeError('offline'));
   const first = registry.acquire(stored, save);
   const unsubscribe = first.subscribe(() => undefined);
   first.edit({ journalMarkdown: 'Recover me.' });
@@ -111,6 +115,16 @@ it('retains a failed recoverable draft until it is undone', async () => {
 
   expect(registry.acquire(stored, save)).toBe(first);
 
+  // The failed write may have been committed, so the undo has to be sent too.
   first.edit({ journalMarkdown: '' });
-  expect(registry.acquire(stored, save)).not.toBe(first);
+  first.flush();
+  await settleEffects();
+  expect(registry.acquire(stored, save)).toBe(first);
+
+  online = true;
+  first.flush();
+  await settleEffects();
+  const confirmed = first.snapshot().stored;
+  expect(confirmed.revision).toBe(stored.revision + 1);
+  expect(registry.acquire(confirmed, save)).not.toBe(first);
 });
