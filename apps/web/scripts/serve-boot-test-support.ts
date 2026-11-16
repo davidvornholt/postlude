@@ -37,6 +37,21 @@ export default {
 };
 `;
 
+/**
+ * What the app is while PostgreSQL is down: the health route answers 503, and
+ * the sign-in page still renders signed out.
+ */
+export const databaseDownBundle = `
+export default {
+  fetch(request) {
+    const { pathname } = new URL(request.url);
+    if (pathname === '/api/healthz') return new Response(null, { status: 503 });
+    return new Response(${JSON.stringify(ssrMarker)} + ' ' + pathname);
+  },
+  async closeDatabase() {},
+};
+`;
+
 const bundleAnswering = (statement: string) =>
   `export default { fetch() { ${statement} }, async closeDatabase() {} };`;
 

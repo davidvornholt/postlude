@@ -8,6 +8,7 @@ const redirectStatus = 303;
 const okStatus = 200;
 const emptyStatus = 204;
 const serverErrorStatus = 500;
+const unavailableStatus = 503;
 
 const ssrMarker = 'ssr-handled';
 const assetPath = '/assets/app-abcd1234.js';
@@ -146,7 +147,20 @@ describe('bootSelfCheckFailure', () => {
     expect(failure).toBeNull();
   });
 
-  it('reports the liveness route and never reaches the page', async () => {
+  it('lets the process start while the database is down', async () => {
+    const failure = await bootSelfCheckFailure(
+      (request) =>
+        new URL(request.url).pathname === '/api/healthz'
+          ? new Response(null, { status: unavailableStatus })
+          : new Response('login page'),
+      bootPort,
+      timeoutMs,
+    );
+
+    expect(failure).toBeNull();
+  });
+
+  it('reports the health route and never reaches the page', async () => {
     const asked: Array<string> = [];
     const failure = await bootSelfCheckFailure(
       (request) => {
@@ -157,11 +171,11 @@ describe('bootSelfCheckFailure', () => {
       timeoutMs,
     );
 
-    expect(failure).toBe('/api/healthz answered 204 instead of 200');
+    expect(failure).toBe('/api/healthz answered 204 instead of 200 or 503');
     expect(asked).toEqual(['/api/healthz']);
   });
 
-  it('reports the page when liveness answers but the page render fails', async () => {
+  it('reports the page when the health route answers but the page render fails', async () => {
     const failure = await bootSelfCheckFailure(
       (request) =>
         new URL(request.url).pathname === '/api/healthz'

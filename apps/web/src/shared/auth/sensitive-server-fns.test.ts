@@ -74,9 +74,8 @@ const privateServerFunctions = [
 
 /**
  * Request handlers that answer without a session, each because it owns that
- * decision itself. `routes/api/healthz.ts` is the container liveness probe: it
- * answers before anyone signs in and returns a fixed status with no data behind
- * it. `routes/api/auth/$.ts` is better-auth's catch-all, where signing in
+ * decision itself. `routes/api/healthz.ts` is the container health probe: it
+ * answers before anyone signs in and returns only a status, never journal data. `routes/api/auth/$.ts` is better-auth's catch-all, where signing in
  * happens and where better-auth authenticates every request it handles. A verb
  * that appears without being listed here fails the scan.
  */
