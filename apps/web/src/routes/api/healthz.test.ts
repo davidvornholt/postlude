@@ -56,8 +56,8 @@ try {
   result.before = await health();
   await allowConnections(false);
   await admin.query(
-    'select pg_terminate_backend(pid) from pg_stat_activity where application_name = $1',
-    [appName],
+    'select pg_terminate_backend(pid) from pg_stat_activity where application_name = $1 and datname = $2',
+    [appName, database],
   );
   result.readableDuringOutage = await readable();
   result.during = await health();
