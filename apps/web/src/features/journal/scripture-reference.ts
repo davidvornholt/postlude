@@ -208,6 +208,16 @@ export const scriptureLineOf = ({
     : formatScriptureReference(scriptureReference);
 
 /**
+ * The line a stored day shows after a save of `line`: the repository parses the
+ * line it is sent, and the page renders what it stored.
+ */
+export const storedScriptureLineOf = (line: string): string =>
+  scriptureLineOf({
+    scriptureReference: parseScriptureReference(line),
+    scriptureTopic: scriptureTopicOf(line),
+  });
+
+/**
  * Where the reference opens. The NeÜ is the translation Postlude reads, and
  * bibleserver.com addresses a passage as book, chapter, then the verse range
  * after a comma — German punctuation, because it is a German site.

@@ -22,8 +22,7 @@ export type AutosaveState = {
    * While there are any, the last confirmed copy proves nothing and even an
    * undo back to it has to be sent. Later failures, such as an expired
    * sign-in, say nothing about those writes, so only a confirmed save or a
-   * fresh server copy clears them. A fresh copy that equals one of them at the
-   * revision it would have created is this tab's own write.
+   * fresh server copy clears them.
    */
   readonly unconfirmedWrites: ReadonlyArray<EntryDraft>;
 };

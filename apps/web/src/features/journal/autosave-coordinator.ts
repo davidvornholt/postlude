@@ -9,6 +9,7 @@
 import { Effect, Fiber } from 'effect';
 import {
   type AutosaveCommand,
+  type AutosaveEvent,
   type AutosaveState,
   advanceAutosave,
   type ConfirmedDraft,
@@ -21,6 +22,7 @@ import { autosaveFailureOf } from './autosave-error.ts';
 import type { DraftRecovery } from './recoverable-draft.ts';
 import { decodeSaveConfirmation } from './save-confirmation.ts';
 import type { EntryDraft } from './schemas/entry.ts';
+import { storedScriptureLineOf } from './scripture-reference.ts';
 
 export type SaveDraft = (draft: EntryDraft) => Promise<unknown>;
 
@@ -47,9 +49,9 @@ const defaultQuietPeriodMs = 1200;
 
 /**
  * The server copy is exactly a snapshot this tab sent without learning the
- * outcome, at the revision that send would have created. Even if another tab
- * happened to write the same text at that revision, building on it loses
- * nothing of theirs.
+ * outcome, as the repository stores it, at the revision that send would have
+ * created. Even if another tab happened to write the same text at that
+ * revision, building on it loses nothing of theirs.
  */
 const isOwnLostWrite = (
   state: AutosaveState,
@@ -58,17 +60,20 @@ const isOwnLostWrite = (
   state.unconfirmedWrites.some(
     (sent) =>
       nextStored.revision === sent.baseRevision + 1 &&
-      sameDraft(sent, nextStored.draft),
+      sameDraft(
+        {
+          ...sent,
+          scriptureReference: storedScriptureLineOf(sent.scriptureReference),
+        },
+        nextStored.draft,
+      ),
   );
 
 const reconcileServerState = (
   state: AutosaveState,
   nextStored: ConfirmedDraft,
 ): AutosaveState | undefined => {
-  if (
-    nextStored.revision <= state.stored.revision ||
-    state.inFlight !== undefined
-  ) {
+  if (nextStored.revision <= state.stored.revision) {
     return undefined;
   }
   // After a conflict or a possibly committed write the old confirmed copy says
@@ -93,6 +98,45 @@ const reconcileServerState = (
     : undefined;
 };
 
+const newerServerState = (
+  kept: ConfirmedDraft | undefined,
+  arrived: ConfirmedDraft,
+): ConfirmedDraft =>
+  kept === undefined || arrived.revision > kept.revision ? arrived : kept;
+
+const keepRecoveryInStep = (
+  state: AutosaveState,
+  recovery: DraftRecovery,
+): void => {
+  if (
+    state.inFlight === undefined &&
+    state.failure === undefined &&
+    sameDraft(state.draft, state.stored.draft)
+  ) {
+    recovery.clear(state.draft.date);
+    return;
+  }
+  recovery.retain(state.draft);
+};
+
+const sendSave = (
+  saving: SaveDraft,
+  draft: EntryDraft,
+  dispatch: (event: AutosaveEvent) => void,
+): void => {
+  Effect.runFork(
+    Effect.tryPromise({
+      try: async () => decodeSaveConfirmation(await saving(draft)),
+      catch: autosaveFailureOf,
+    }).pipe(
+      Effect.match({
+        onFailure: (failure) => dispatch({ _tag: 'failed', failure }),
+        onSuccess: ({ revision }) => dispatch({ _tag: 'stored', revision }),
+      }),
+    ),
+  );
+};
+
 export const createAutosaveCoordinator = ({
   stored,
   save,
@@ -107,6 +151,9 @@ export const createAutosaveCoordinator = ({
     draft: recovered ?? stored.draft,
   };
   let saving = save;
+  // A server copy that arrived while a save was in flight, weighed once the
+  // save settles, because its answer may be the conflict this copy resolves.
+  let deferredServerState: ConfirmedDraft | undefined;
   let scheduled: Fiber.Fiber<void, never> | undefined;
   const listeners = new Set<() => void>();
 
@@ -114,18 +161,6 @@ export const createAutosaveCoordinator = ({
     for (const listener of listeners) {
       listener();
     }
-  };
-
-  const keepRecoveryInStep = (): void => {
-    if (
-      state.inFlight === undefined &&
-      state.failure === undefined &&
-      sameDraft(state.draft, state.stored.draft)
-    ) {
-      recovery.clear(state.draft.date);
-      return;
-    }
-    recovery.retain(state.draft);
   };
 
   const cancelScheduled = (): void => {
@@ -136,7 +171,34 @@ export const createAutosaveCoordinator = ({
     }
   };
 
-  let dispatch: (event: Parameters<typeof advanceAutosave>[1]) => void;
+  let dispatch: (event: AutosaveEvent) => void;
+
+  const acceptServerState = (nextStored: ConfirmedDraft): boolean => {
+    if (state.inFlight !== undefined) {
+      deferredServerState = newerServerState(deferredServerState, nextStored);
+      return false;
+    }
+    const reconciled = reconcileServerState(state, nextStored);
+    if (reconciled === undefined) {
+      return false;
+    }
+    state = reconciled;
+    keepRecoveryInStep(state, recovery);
+    publish();
+    return true;
+  };
+
+  /** Weigh a deferred server copy, then save on whatever base it left. */
+  const acceptDeferredServerState = (): void => {
+    const deferred = deferredServerState;
+    if (deferred === undefined || state.inFlight !== undefined) {
+      return;
+    }
+    deferredServerState = undefined;
+    if (acceptServerState(deferred)) {
+      dispatch({ _tag: 'flush' });
+    }
+  };
 
   const reportIdle = (): void => {
     if (
@@ -166,25 +228,14 @@ export const createAutosaveCoordinator = ({
       );
       return;
     }
-
-    Effect.runFork(
-      Effect.tryPromise({
-        try: async () => decodeSaveConfirmation(await saving(command.draft)),
-        catch: autosaveFailureOf,
-      }).pipe(
-        Effect.match({
-          onFailure: (failure) => dispatch({ _tag: 'failed', failure }),
-          onSuccess: ({ revision }) => dispatch({ _tag: 'stored', revision }),
-        }),
-      ),
-    );
+    sendSave(saving, command.draft, dispatch);
   };
 
   dispatch = (event) => {
     const wasSaving = state.inFlight !== undefined;
     const [next, commands] = advanceAutosave(state, event);
     state = next;
-    keepRecoveryInStep();
+    keepRecoveryInStep(state, recovery);
     publish();
     if (event._tag === 'stored' && wasSaving) {
       onConfirmed?.(state.stored);
@@ -192,10 +243,11 @@ export const createAutosaveCoordinator = ({
     for (const command of commands) {
       runCommand(command);
     }
+    acceptDeferredServerState();
     reportIdle();
   };
 
-  keepRecoveryInStep();
+  keepRecoveryInStep(state, recovery);
 
   return {
     snapshot: () => state,
@@ -214,12 +266,7 @@ export const createAutosaveCoordinator = ({
     visibilityChanged: () => dispatch({ _tag: 'flush' }),
     update: (nextStored, nextSave) => {
       saving = nextSave;
-      const reconciled = reconcileServerState(state, nextStored);
-      if (reconciled !== undefined) {
-        state = reconciled;
-        keepRecoveryInStep();
-        publish();
-      }
+      acceptServerState(nextStored);
     },
   };
 };
