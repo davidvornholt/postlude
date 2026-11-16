@@ -19,7 +19,9 @@ const logUnavailable = (reason: DatabaseUnavailableReason) =>
  * pool opens new connections by itself after an outage, so the app reports
  * itself healthy again without a restart. A connection of its own just for the
  * check would exceed the four connections a pull request preview's database
- * allows the app's role (`@postlude/db/connections`).
+ * allows the app's role (`@postlude/db/connections`). The timeout here only
+ * makes sure the check cleans up; callers stop waiting at the same deadline
+ * through `boundedAt`.
  */
 export const databaseAnswers = Effect.gen(function* () {
   const sql = yield* SqlClient;
@@ -28,7 +30,8 @@ export const databaseAnswers = Effect.gen(function* () {
   Effect.timeoutOption(databaseHealthDeadlineMs),
   Effect.flatMap(
     Option.match({
-      onNone: () => logUnavailable('timeout').pipe(Effect.as(false)),
+      // The caller logs the timeout when it stops waiting.
+      onNone: () => Effect.succeed(false),
       onSome: () => Effect.succeed(true),
     }),
   ),
@@ -36,20 +39,53 @@ export const databaseAnswers = Effect.gen(function* () {
 );
 
 /**
+ * Stops waiting for a check at the deadline. The check's own timeout cannot do
+ * that: interrupting a query the database never answers waits for the driver
+ * to cancel it, which takes several seconds more, so the answer is bounded here
+ * and the check is left to clean up in the background.
+ */
+const boundedAt = (
+  work: Promise<boolean>,
+  onTimeout: () => void,
+): Promise<boolean> =>
+  new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      onTimeout();
+      resolve(false);
+    }, databaseHealthDeadlineMs);
+    work
+      .then(resolve, () => resolve(false))
+      .finally(() => {
+        clearTimeout(timer);
+      });
+  });
+
+/**
  * Concurrent calls share one query, so the public health route cannot fill the
- * app's small connection pool with health queries. A run that fails outright,
- * such as a client that cannot be built, counts as unavailable.
+ * app's small connection pool with health queries. The check stays shared until
+ * it has cleaned up, even if callers stopped waiting for it, so a database that
+ * hangs cannot pile up queries. A run that fails outright, such as a client
+ * that cannot be built, counts as unavailable.
  */
 export const makeDatabaseCheck = (
   run: (check: typeof databaseAnswers) => Promise<boolean>,
 ): (() => Promise<boolean>) => {
-  let inFlight: Promise<boolean> | undefined;
+  let inFlight: { work: Promise<boolean>; timeoutLogged: boolean } | undefined;
   return () => {
-    inFlight ??= run(databaseAnswers)
-      .catch(() => false)
-      .finally(() => {
-        inFlight = undefined;
-      });
-    return inFlight;
+    inFlight ??= {
+      work: run(databaseAnswers)
+        .catch(() => false)
+        .finally(() => {
+          inFlight = undefined;
+        }),
+      timeoutLogged: false,
+    };
+    const check = inFlight;
+    return boundedAt(check.work, () => {
+      if (!check.timeoutLogged) {
+        check.timeoutLogged = true;
+        Effect.runSync(logUnavailable('timeout'));
+      }
+    });
   };
 };
