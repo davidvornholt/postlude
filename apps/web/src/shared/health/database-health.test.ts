@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'bun:test';
+import { afterEach, describe, expect, it, spyOn } from 'bun:test';
 import { pgClientLayer } from '@postlude/db/connections';
 import { listen, sleep, type TCPSocketListener } from 'bun';
 import { Effect } from 'effect';
@@ -169,6 +169,28 @@ describe('database health check', () => {
 
     await check();
     expect(runs.count).toBe(2);
+  }, 30_000);
+
+  it('logs the timeout once for a check, however it ends', async () => {
+    const port = listenSilently(() => undefined);
+    const lines: Array<string> = [];
+    const sinks = (['log', 'warn', 'error'] as const).map((method) =>
+      spyOn(console, method).mockImplementation((...args: Array<unknown>) => {
+        lines.push(args.join(' '));
+      }),
+    );
+    const check = checkAgainst(urlFor(port));
+
+    await Promise.all([check(), check(), check()]);
+    await waitUntil(() => lines.length > 0, performance.now() + 10_000);
+    await sleep(500);
+    for (const sink of sinks) {
+      sink.mockRestore();
+    }
+
+    expect(
+      lines.filter((line) => line.includes('database unavailable (timeout)')),
+    ).toHaveLength(1);
   }, 30_000);
 
   it('reports unavailable at once when nothing listens', async () => {
