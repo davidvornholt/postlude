@@ -4,6 +4,7 @@ import { rm, symlink } from 'node:fs/promises';
 import {
   createSandbox,
   databaseClosedMarker,
+  databaseDownBundle,
   emptyAnswerBundle,
   healthyBundle,
   root,
@@ -13,6 +14,7 @@ import {
 
 const okStatus = 200;
 const serverErrorStatus = 500;
+const unavailableStatus = 503;
 const successExit = 0;
 /** Bun's development-mode debug page is ~67 KB; a plain 500 is a few dozen bytes. */
 const debugPageFloor = 1024;
@@ -172,7 +174,22 @@ describe('stopping', () => {
 });
 
 describe('booting', () => {
-  it('refuses to listen when the liveness route degrades to an empty 204', async () => {
+  it('listens while the database is down and the health route answers 503', async () => {
+    const { child, origin: downOrigin } = await startServing(
+      await createSandbox(databaseDownBundle),
+      bindAttempts,
+    );
+    try {
+      const health = await fetch(`${downOrigin}/api/healthz`);
+
+      expect(health.status).toBe(unavailableStatus);
+    } finally {
+      child.kill();
+      await child.exited;
+    }
+  });
+
+  it('refuses to listen when the health route degrades to an empty 204', async () => {
     const { exitCode, stderr } = await bootFailure(
       emptyAnswerBundle,
       await freePort(),
@@ -180,7 +197,7 @@ describe('booting', () => {
 
     expect(exitCode).not.toBe(successExit);
     expect(stderr).toContain('/api/healthz');
-    expect(stderr).toContain('answered 204');
+    expect(stderr).toContain('answered 204 instead of 200 or 503');
   });
 
   it('refuses to listen when the SSR handler throws', async () => {
