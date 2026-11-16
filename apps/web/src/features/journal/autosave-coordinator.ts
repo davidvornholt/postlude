@@ -79,12 +79,13 @@ const reconcileServerState = (
     return undefined;
   }
   // After a conflict or a possibly committed write the old confirmed copy says
-  // nothing about the server. A fresh copy matching the screen settles it, and
-  // one that is this tab's own lost write becomes the base for the screen.
+  // nothing about the server. A fresh copy matching what the writer meant
+  // settles it, and one that is this tab's own lost write becomes the base
+  // for it.
   // Any other copy keeps the old base, so the next send is refused rather
   // than overwriting a write this tab never saw.
   if (state.failure?.kind === 'conflict' || hasUnconfirmedWrite(state)) {
-    if (sameDraft(state.draft, nextStored.draft)) {
+    if (sameDraft(writerDraft, nextStored.draft)) {
       return openAutosave(nextStored);
     }
     if (isOwnLostWrite(state, nextStored)) {

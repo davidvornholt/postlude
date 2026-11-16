@@ -117,6 +117,25 @@ describe('building on the own lost save keeps what the writer meant', () => {
     expect(observe(day)).toEqual(savedAs(original.journalMarkdown));
   });
 
+  it('saves an undo made while a retry of the lost text was in flight', async () => {
+    const day = openDay();
+    await loseSave(day);
+    day.server.holdNextResponse();
+    day.coordinator.flush();
+    await settleEffects();
+    day.coordinator.edit({ journalMarkdown: original.journalMarkdown });
+
+    reloadRoute(day);
+    day.server.releaseResponses();
+    await settleEffects();
+
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: original.journalMarkdown },
+      revision: 3,
+    });
+    expect(observe(day)).toEqual(savedAs(original.journalMarkdown));
+  });
+
   it.each(['John 3:16-16', 'Johannes 3:16', 'joh 3,16'])(
     'rebases while the stored passage line %p stays as it was',
     async (line) => {
