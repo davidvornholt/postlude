@@ -7,123 +7,20 @@
 import { describe, expect, it } from 'bun:test';
 
 import { saveStatus } from './autosave.ts';
+import type { createAutosaveCoordinator } from './autosave-coordinator.ts';
 import {
-  createAutosaveCoordinator,
-  type SaveDraft,
-} from './autosave-coordinator.ts';
+  fakeServer,
+  observe,
+  openDay,
+  original,
+  reloadRoute,
+  savedAs,
+  settleEffects,
+} from './autosave-lost-response.test-support.ts';
 import { createTestAutosaveRegistry } from './autosave-registry.test-support.ts';
 import { journalWriteConflictMessage } from './errors/journal-errors.ts';
-import { createLeaveGuard } from './leave-guard.ts';
-import type { DraftRecovery } from './recoverable-draft.ts';
-import { decodeSaveConfirmation } from './save-confirmation.ts';
-import type { EntryDraft, SaveConfirmation } from './schemas/entry.ts';
 
-const original: EntryDraft = {
-  date: '2026-11-15',
-  journalMarkdown: 'Original words',
-  scriptureMarkdown: '',
-  scriptureReference: '',
-  baseRevision: 1,
-};
 const undone = 'Words I subsequently undo';
-const writeConflictStatus = 409;
-
-const settleEffects = async (): Promise<void> => {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
-};
-
-/** Commits like the entry repository, then lets a test lose the response. */
-const fakeServer = () => {
-  let held = { draft: original, revision: 1 };
-  const lost: Array<() => void> = [];
-  let loseNextResponse = false;
-  let expiredSessionStatus: number | undefined;
-  const save = (draft: EntryDraft): Promise<SaveConfirmation> => {
-    if (expiredSessionStatus !== undefined) {
-      return decodeSaveConfirmation(
-        new Response('Sign in again', { status: expiredSessionStatus }),
-      );
-    }
-    if (draft.baseRevision !== held.revision) {
-      return decodeSaveConfirmation(
-        new Response(journalWriteConflictMessage, {
-          status: writeConflictStatus,
-        }),
-      );
-    }
-    const revision = held.revision + 1;
-    held = { draft: { ...draft, baseRevision: revision }, revision };
-    if (!loseNextResponse) {
-      return Promise.resolve({ revision });
-    }
-    loseNextResponse = false;
-    return new Promise((_, reject) => {
-      lost.push(() => reject(new TypeError('Connection closed after commit')));
-    });
-  };
-  return {
-    save,
-    held: () => held,
-    loseNextResponse: () => {
-      loseNextResponse = true;
-    },
-    expireSession: (status: number) => {
-      expiredSessionStatus = status;
-    },
-    dropResponses: () => {
-      for (const drop of lost.splice(0)) {
-        drop();
-      }
-    },
-  };
-};
-
-const guardedTab = () => {
-  const target = new EventTarget();
-  let retained: EntryDraft | undefined;
-  const memory: DraftRecovery = {
-    read: () => retained,
-    retain: (draft) => {
-      retained = draft;
-    },
-    clear: () => {
-      retained = undefined;
-    },
-  };
-  return {
-    recovery: createLeaveGuard(() => target)(memory),
-    retained: () => retained,
-    closingIsQuestioned: () => {
-      const closing = new Event('beforeunload', { cancelable: true });
-      target.dispatchEvent(closing);
-      return closing.defaultPrevented;
-    },
-  };
-};
-
-const openDay = (
-  save: (server: ReturnType<typeof fakeServer>) => SaveDraft = (server) =>
-    server.save,
-) => {
-  const server = fakeServer();
-  const tab = guardedTab();
-  const coordinator = createAutosaveCoordinator({
-    stored: { draft: original, revision: 1 },
-    save: save(server),
-    recovery: tab.recovery,
-    quietPeriodMs: 0,
-  });
-  return { server, tab, coordinator };
-};
-
-/** What the writer would see, keep and be asked when closing the tab. */
-const observe = ({ tab, coordinator }: ReturnType<typeof openDay>) => ({
-  displayed: coordinator.snapshot().draft.journalMarkdown,
-  status: saveStatus(coordinator.snapshot()),
-  recovery: tab.retained()?.journalMarkdown,
-  closingIsQuestioned: tab.closingIsQuestioned(),
-});
 
 const unconfirmedUndo = {
   displayed: original.journalMarkdown,
@@ -164,7 +61,7 @@ describe('a save whose response was lost after it committed', () => {
     expect(observe(day)).toEqual(unconfirmedUndo);
   });
 
-  it('keeps the undo when a fresh read shows the lost write', async () => {
+  it('saves the undo once a fresh read shows the lost write', async () => {
     const day = openDay();
     day.server.loseNextResponse();
     day.coordinator.edit({ journalMarkdown: undone });
@@ -173,10 +70,15 @@ describe('a save whose response was lost after it committed', () => {
     await settleEffects();
     day.coordinator.edit({ journalMarkdown: original.journalMarkdown });
     await settleEffects();
+    expect(day.coordinator.snapshot().failure?.kind).toBe('conflict');
 
-    day.coordinator.update(day.server.held(), day.server.save);
-    expect(day.coordinator.snapshot().stored).toEqual(day.server.held());
-    expect(observe(day)).toEqual(unconfirmedUndo);
+    reloadRoute(day);
+    await settleEffects();
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: original.journalMarkdown },
+      revision: 3,
+    });
+    expect(observe(day)).toEqual(savedAs(original.journalMarkdown));
   });
 
   it('keeps navigation waiting while the server copy is unknown', async () => {

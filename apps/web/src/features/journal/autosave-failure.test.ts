@@ -143,6 +143,25 @@ it('keeps an undo unconfirmed when a refused sign-in follows a failed save', () 
     },
     { _tag: 'edited', draft: blank },
   ]);
-  expect(state.unconfirmedWrite).toBe(true);
+  expect(state.unconfirmedWrites.map((sent) => sent.journalMarkdown)).toEqual([
+    'maybe committed',
+  ]);
   expect(saveStatus(state)).toBe('failed');
+});
+
+it('remembers the first and the latest writes a long outage hid', () => {
+  const attempts = Array.from({ length: 12 }, (_, index) => `attempt ${index}`);
+  const { state } = run(
+    attempts.flatMap(
+      (text): ReadonlyArray<AutosaveEvent> => [
+        { _tag: 'edited', draft: wrote(text) },
+        { _tag: 'quiet' },
+        { _tag: 'failed', failure: networkFailure },
+      ],
+    ),
+  );
+  expect(state.unconfirmedWrites.map((sent) => sent.journalMarkdown)).toEqual([
+    'attempt 0',
+    ...attempts.slice(3),
+  ]);
 });
