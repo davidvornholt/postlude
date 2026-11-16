@@ -208,8 +208,9 @@ export const scriptureLineOf = ({
     : formatScriptureReference(scriptureReference);
 
 /**
- * The line a stored day shows after a save of `line`: the repository parses the
- * line it is sent, and the page renders what it stored.
+ * The line a stored day shows after a save of a changed `line`: the
+ * repository parses the line it is sent, and the page renders what it stored.
+ * A line equal to the stored one is kept as it was instead.
  */
 export const storedScriptureLineOf = (line: string): string =>
   scriptureLineOf({

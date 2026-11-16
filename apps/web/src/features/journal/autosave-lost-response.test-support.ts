@@ -45,8 +45,8 @@ const readBack = (line: string): string =>
  * Commits like the entry repository, then lets a test lose the response or
  * hold it back.
  */
-export const fakeServer = () => {
-  let held = { draft: original, revision: 1 };
+export const fakeServer = (start: EntryDraft = original) => {
+  let held = { draft: start, revision: 1 };
   const lost: Array<() => void> = [];
   const heldBack: Array<() => void> = [];
   let loseNextResponse = false;
@@ -82,7 +82,11 @@ export const fakeServer = () => {
     held = {
       draft: {
         ...draft,
-        scriptureReference: readBack(draft.scriptureReference),
+        // Like the repository, an unchanged stored line is kept as it was.
+        scriptureReference:
+          draft.scriptureReference.trim() === held.draft.scriptureReference
+            ? held.draft.scriptureReference
+            : readBack(draft.scriptureReference),
         baseRevision: revision,
       },
       revision,
@@ -146,11 +150,12 @@ const guardedTab = () => {
 export const openDay = (
   save: (server: ReturnType<typeof fakeServer>) => SaveDraft = (server) =>
     server.save,
+  start: EntryDraft = original,
 ) => {
-  const server = fakeServer();
+  const server = fakeServer(start);
   const tab = guardedTab();
   const coordinator = createAutosaveCoordinator({
-    stored: { draft: original, revision: 1 },
+    stored: { draft: start, revision: 1 },
     save: save(server),
     recovery: tab.recovery,
     quietPeriodMs: 0,

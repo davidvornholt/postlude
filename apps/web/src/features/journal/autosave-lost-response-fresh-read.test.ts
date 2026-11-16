@@ -10,6 +10,7 @@ import {
   conflictKeeping,
   observe,
   openDay,
+  original,
   reloadRoute,
   savedAs,
   saveFromAnotherTab,
@@ -94,6 +95,46 @@ describe("a fresh read showing the tab's own lost save", () => {
     });
     expect(saveStatus(day.coordinator.snapshot())).toBe('saved');
   });
+});
+
+describe('building on the own lost save keeps what the writer meant', () => {
+  it('saves an undo made while the refused retry was in flight', async () => {
+    const day = openDay();
+    await loseSave(day);
+    day.server.holdNextResponse();
+    day.coordinator.edit({ journalMarkdown: 'AB' });
+    await settleEffects();
+    day.coordinator.edit({ journalMarkdown: original.journalMarkdown });
+
+    reloadRoute(day);
+    day.server.releaseResponses();
+    await settleEffects();
+
+    expect(day.server.held()).toMatchObject({
+      draft: { journalMarkdown: original.journalMarkdown },
+      revision: 3,
+    });
+    expect(observe(day)).toEqual(savedAs(original.journalMarkdown));
+  });
+
+  it.each(['John 3:16-16', 'Johannes 3:16', 'joh 3,16'])(
+    'rebases while the stored passage line %p stays as it was',
+    async (line) => {
+      const day = openDay(undefined, { ...original, scriptureReference: line });
+      await loseSave(day);
+      expect(day.server.held().draft.scriptureReference).toBe(line);
+
+      day.coordinator.edit({ journalMarkdown: 'AB' });
+      reloadRoute(day);
+      await settleEffects();
+
+      expect(day.server.held()).toMatchObject({
+        draft: { journalMarkdown: 'AB', scriptureReference: line },
+        revision: 3,
+      });
+      expect(observe(day)).toEqual(savedAs('AB'));
+    },
+  );
 });
 
 describe("a fresh read showing another tab's save", () => {

@@ -50,8 +50,10 @@ const defaultQuietPeriodMs = 1200;
 /**
  * The server copy is exactly a snapshot this tab sent without learning the
  * outcome, as the repository stores it, at the revision that send would have
- * created. Even if another tab happened to write the same text at that
- * revision, building on it loses nothing of theirs.
+ * created. The repository keeps an unchanged stored passage line as it was
+ * and rewrites any other in house style, so either form can come back. Even
+ * if another tab happened to write the same text at that revision, building
+ * on it loses nothing of theirs.
  */
 const isOwnLostWrite = (
   state: AutosaveState,
@@ -60,18 +62,18 @@ const isOwnLostWrite = (
   state.unconfirmedWrites.some(
     (sent) =>
       nextStored.revision === sent.baseRevision + 1 &&
-      sameDraft(
-        {
-          ...sent,
-          scriptureReference: storedScriptureLineOf(sent.scriptureReference),
-        },
-        nextStored.draft,
+      [
+        sent.scriptureReference.trim(),
+        storedScriptureLineOf(sent.scriptureReference),
+      ].some((scriptureReference) =>
+        sameDraft({ ...sent, scriptureReference }, nextStored.draft),
       ),
   );
 
 const reconcileServerState = (
   state: AutosaveState,
   nextStored: ConfirmedDraft,
+  writerDraft: EntryDraft,
 ): AutosaveState | undefined => {
   if (nextStored.revision <= state.stored.revision) {
     return undefined;
@@ -88,7 +90,7 @@ const reconcileServerState = (
     if (isOwnLostWrite(state, nextStored)) {
       return {
         ...openAutosave(nextStored),
-        draft: { ...state.draft, baseRevision: nextStored.revision },
+        draft: { ...writerDraft, baseRevision: nextStored.revision },
       };
     }
     return { ...state, stored: nextStored };
@@ -118,6 +120,17 @@ const keepRecoveryInStep = (
   }
   recovery.retain(state.draft);
 };
+
+/**
+ * What the writer meant once `event` settled a save. A refused save can swap
+ * the writer's undo for the words it could not write; if a deferred copy then
+ * proves the save was this tab's own, the undo goes on the new base.
+ */
+const writerDraftAfter = (
+  before: AutosaveState,
+  event: AutosaveEvent,
+  after: AutosaveState,
+): EntryDraft => (event._tag === 'failed' ? before.draft : after.draft);
 
 const sendSave = (
   saving: SaveDraft,
@@ -171,14 +184,15 @@ export const createAutosaveCoordinator = ({
     }
   };
 
-  let dispatch: (event: AutosaveEvent) => void;
-
-  const acceptServerState = (nextStored: ConfirmedDraft): boolean => {
+  const acceptServerState = (
+    nextStored: ConfirmedDraft,
+    writerDraft: EntryDraft = state.draft,
+  ): boolean => {
     if (state.inFlight !== undefined) {
       deferredServerState = newerServerState(deferredServerState, nextStored);
       return false;
     }
-    const reconciled = reconcileServerState(state, nextStored);
+    const reconciled = reconcileServerState(state, nextStored, writerDraft);
     if (reconciled === undefined) {
       return false;
     }
@@ -189,13 +203,13 @@ export const createAutosaveCoordinator = ({
   };
 
   /** Weigh a deferred server copy, then save on whatever base it left. */
-  const acceptDeferredServerState = (): void => {
+  const acceptDeferredServerState = (writerDraft: EntryDraft): void => {
     const deferred = deferredServerState;
     if (deferred === undefined || state.inFlight !== undefined) {
       return;
     }
     deferredServerState = undefined;
-    if (acceptServerState(deferred)) {
+    if (acceptServerState(deferred, writerDraft)) {
       dispatch({ _tag: 'flush' });
     }
   };
@@ -231,19 +245,19 @@ export const createAutosaveCoordinator = ({
     sendSave(saving, command.draft, dispatch);
   };
 
-  dispatch = (event) => {
-    const wasSaving = state.inFlight !== undefined;
+  const dispatch = (event: AutosaveEvent): void => {
+    const before = state;
     const [next, commands] = advanceAutosave(state, event);
     state = next;
     keepRecoveryInStep(state, recovery);
     publish();
-    if (event._tag === 'stored' && wasSaving) {
+    if (event._tag === 'stored' && before.inFlight !== undefined) {
       onConfirmed?.(state.stored);
     }
     for (const command of commands) {
       runCommand(command);
     }
-    acceptDeferredServerState();
+    acceptDeferredServerState(writerDraftAfter(before, event, state));
     reportIdle();
   };
 
