@@ -81,7 +81,7 @@ const boundedAt = (check: InFlightCheck): Promise<boolean> =>
  * that cannot be built, counts as unavailable.
  */
 export const makeDatabaseCheck = (
-  run: (check: typeof databaseAnswers) => Promise<boolean>,
+  run: (check: typeof databaseAnswers) => Promise<DatabaseState>,
 ): (() => Promise<boolean>) => {
   let inFlight: InFlightCheck | undefined;
   return () => {
