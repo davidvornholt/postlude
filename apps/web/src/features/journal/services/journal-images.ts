@@ -77,6 +77,10 @@ export const makeJournalImages = (
         yield* Effect.tryPromise({
           try: async (abortSignal) => {
             const { storage, bucket } = await client();
+            // FetchHttpHandler neither aborts a request whose timeout passed nor
+            // closes connections on destroy(), so each operation aborts its own
+            // requests once it ends.
+            const operation = new AbortController();
             try {
               await storage.send(
                 new PutObjectCommand({
@@ -85,9 +89,12 @@ export const makeJournalImages = (
                   Body: bytes,
                   ContentType: imageContentType(key),
                 }),
-                { abortSignal },
+                {
+                  abortSignal: AbortSignal.any([abortSignal, operation.signal]),
+                },
               );
             } finally {
+              operation.abort();
               storage.destroy();
             }
           },
@@ -105,10 +112,15 @@ export const makeJournalImages = (
         return yield* Effect.tryPromise({
           try: async (abortSignal) => {
             const { storage, bucket } = await client();
+            // Aborts the requests once the read ends, as in upload. A successful
+            // read has consumed the whole body by then.
+            const operation = new AbortController();
             try {
               const result = await storage.send(
                 new GetObjectCommand({ Bucket: bucket, Key: key }),
-                { abortSignal },
+                {
+                  abortSignal: AbortSignal.any([abortSignal, operation.signal]),
+                },
               );
               if (
                 !result.Body ||
@@ -121,6 +133,7 @@ export const makeJournalImages = (
               }
               return await result.Body.transformToByteArray();
             } finally {
+              operation.abort();
               storage.destroy();
             }
           },

@@ -1,5 +1,5 @@
-import { expect, it } from 'bun:test';
-import { env, listen, serve } from 'bun';
+import { expect, it, spyOn } from 'bun:test';
+import { env, listen, serve, sleep } from 'bun';
 import { Effect } from 'effect';
 import { imageRoute, maximumImageBytes } from '../images.ts';
 import { type ImageStorage, makeJournalImages } from './journal-images.ts';
@@ -153,27 +153,61 @@ it('refuses a stored image larger than the limit', async () => {
   }
 });
 
-it('fails a request the store leaves unanswered once the timeout passes', async () => {
-  let connections = 0;
-  const silent = listen({
+/**
+ * A store on loopback that answers each request with `reply`, or never when it is
+ * absent, and counts the connections it sees open and close.
+ */
+const rawStore = (reply?: string) => {
+  const connections = { opened: 0, closed: 0 };
+  const server = listen({
     hostname: '127.0.0.1',
     port: 0,
     socket: {
       open: () => {
-        connections += 1;
+        connections.opened += 1;
       },
-      data: () => undefined,
+      close: () => {
+        connections.closed += 1;
+      },
+      data: (socket, data) => {
+        if (reply !== undefined && data.toString().includes('\r\n\r\n')) {
+          socket.write(reply);
+        }
+      },
     },
   });
+  const storage = (requestTimeout: number): ImageStorage => ({
+    endpoint: `http://127.0.0.1:${server.port}`,
+    bucket,
+    ...credentials,
+    requestTimeout,
+  });
+  return { server, storage, connections };
+};
+
+type Connections = { readonly opened: number; readonly closed: number };
+
+/** Waits up to a second for every connection that opened to close. */
+const allClosed = async (
+  connections: Connections,
+  deadline = performance.now() + 1000,
+): Promise<Connections> => {
+  if (
+    connections.closed >= connections.opened ||
+    performance.now() >= deadline
+  ) {
+    return connections;
+  }
+  await sleep(10);
+  return allClosed(connections, deadline);
+};
+
+it('fails a request the store leaves unanswered once the timeout passes', async () => {
+  const store = rawStore();
   try {
     await withoutProxy(async () => {
       const images = makeJournalImages(() =>
-        Promise.resolve({
-          endpoint: `http://127.0.0.1:${silent.port}`,
-          bucket,
-          ...credentials,
-          requestTimeout: 200,
-        }),
+        Promise.resolve(store.storage(200)),
       );
       const started = performance.now();
       const result = await run(images.read(pngKey()));
@@ -187,10 +221,45 @@ it('fails a request the store leaves unanswered once the timeout passes', async 
       });
       // Two attempts of 200 ms each plus the SDK's retry delay.
       expect(performance.now() - started).toBeLessThan(3000);
-      expect(connections).toBe(2);
+      // Both attempts' connections close once the read has failed.
+      expect(await allClosed(store.connections)).toEqual({
+        opened: 2,
+        closed: 2,
+      });
     });
   } finally {
-    silent.stop(true);
+    store.server.stop(true);
+  }
+});
+
+it('closes the connection of a stored image it refuses as too large', async () => {
+  // The headers announce one byte over the limit and the body never finishes.
+  const store = rawStore(
+    `HTTP/1.1 200 OK\r\ncontent-length: ${maximumImageBytes + 1}\r\ncontent-type: image/png\r\n\r\nGIF89a`,
+  );
+  // Recording every response keeps it reachable, as it would be until the next
+  // garbage collection, which would otherwise close a dropped one's connection.
+  const fetches = spyOn(globalThis, 'fetch');
+  try {
+    await withoutProxy(async () => {
+      const images = makeJournalImages(() =>
+        Promise.resolve(store.storage(5000)),
+      );
+      expect(await run(images.read(pngKey()))).toMatchObject({
+        _tag: 'Failure',
+        failure: {
+          _tag: 'JournalImageError',
+          message: 'The stored image is missing or too large to read.',
+        },
+      });
+      expect(await allClosed(store.connections)).toEqual({
+        opened: 1,
+        closed: 1,
+      });
+    });
+  } finally {
+    fetches.mockRestore();
+    store.server.stop(true);
   }
 });
 
