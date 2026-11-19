@@ -16,7 +16,6 @@ const proxyVariables = [
 
 type Variables = ReadonlyArray<readonly [string, string | undefined]>;
 
-/** Runs `body` with these environment variables set or unset, then restores them. */
 const withEnv = async <A>(variables: Variables, body: () => Promise<A>) => {
   const before: Variables = variables.map(([name]) => [name, env[name]]);
   const assign = (values: Variables) => {

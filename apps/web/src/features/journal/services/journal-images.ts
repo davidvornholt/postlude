@@ -41,7 +41,6 @@ const imageStorageClient = (storage: ImageStorage) =>
     maxAttempts: 2,
   });
 
-/** Stores journal images in the S3-compatible bucket that `storage` resolves to. */
 export const makeJournalImages = (
   resolveStorage: () => Promise<ImageStorage>,
 ) => {
