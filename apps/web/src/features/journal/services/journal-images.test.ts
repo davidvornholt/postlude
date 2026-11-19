@@ -50,7 +50,7 @@ type Stored = {
 };
 
 /** An S3 store on loopback that keeps objects in memory. */
-const fakeStore = (objects = new Map<string, Uint8Array>()) => {
+const fakeStore = (objects = new Map<string, Uint8Array<ArrayBuffer>>()) => {
   const puts: Array<Stored> = [];
   const server = serve({
     hostname: '127.0.0.1',
