@@ -174,7 +174,7 @@ describe('a failed request', () => {
   it.each([
     ['the key', 401, 'authentication_error', 'AuthenticationError'],
     ['permission', 403, 'permission_error', 'PermissionDeniedError'],
-    ['billing', 402, 'billing_error', 'APIError'],
+    ['billing', 402, 'billing_error', 'PaymentRequiredError'],
   ])(
     'says access was refused over %s, keeping only the name, status and request ID',
     async (_case, status, type, name) => {

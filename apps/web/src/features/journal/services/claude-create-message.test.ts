@@ -1,10 +1,11 @@
 import { describe, expect, it, spyOn } from 'bun:test';
 import Anthropic from '@anthropic-ai/sdk';
 import { env, listen } from 'bun';
-import { Effect, Exit, Redacted } from 'effect';
+import { Cause, Effect, Exit, Redacted } from 'effect';
 import { agentNoteInput } from '../testing/agent-note-input.ts';
 import { answer, testKey } from '../testing/claude-message.ts';
 import {
+  accessDeniedMessage,
   claudeAgentNoteGenerator,
   claudeCreateMessage,
   type MessageRequest,
@@ -186,4 +187,48 @@ describe('the API client', () => {
       server.stop();
     }
   }, 10_000);
+});
+
+describe('a billing refusal from the API', () => {
+  it.each([
+    ['without an error code', undefined, 'PaymentRequiredError'],
+    [
+      'with an error code',
+      'linked_organization_spend_limit_reached',
+      'LinkedOrganizationSpendLimitReachedError',
+    ],
+  ])(
+    'says access was refused %s, keeping only the name, status and request ID',
+    async (_case, errorCode, name) => {
+      const http = network(402, {
+        type: 'error',
+        error: {
+          type: 'billing_error',
+          message: 'Your credit balance is too low.',
+          ...(errorCode === undefined
+            ? {}
+            : { details: { error_code: errorCode } }),
+        },
+      });
+      const exit = await Effect.runPromiseExit(
+        claudeAgentNoteGenerator(
+          claudeCreateMessage(Redacted.make(testKey), http.fetch),
+        ).generate(agentNoteInput()),
+      );
+      if (Exit.isSuccess(exit)) {
+        throw new Error('Expected the generator to fail.');
+      }
+      const failure = Cause.findErrorOption(exit.cause);
+      if (failure._tag === 'None') {
+        throw new Error(`Expected a failure, got ${Cause.pretty(exit.cause)}`);
+      }
+      expect(failure.value.message).toBe(accessDeniedMessage);
+      expect(failure.value.cause).toEqual({
+        name,
+        status: 402,
+        requestId: 'request-http',
+      });
+      expect(http.sent).toHaveLength(1);
+    },
+  );
 });

@@ -98,8 +98,9 @@ const kindOf = (error: unknown): FailureKind => {
   if (
     error instanceof Anthropic.AuthenticationError ||
     error instanceof Anthropic.PermissionDeniedError ||
-    // A 402 has no class of its own; its error type is stable.
-    (error instanceof Anthropic.APIError && error.type === 'billing_error')
+    // A billing refusal is a 402. Its subclasses for specific error codes
+    // carry their own names.
+    error instanceof Anthropic.PaymentRequiredError
   ) {
     return 'refused';
   }
