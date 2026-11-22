@@ -1,3 +1,4 @@
+import { mobileDeviceTag } from '@davidvornholt/a11y-testing/playwright-config';
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
@@ -39,62 +40,67 @@ const expectKeyboardFocus = async (
 };
 
 for (const colorScheme of colorSchemes) {
-  test(`the writing frame and register preserve reading comfort in ${colorScheme} mode`, async ({
-    page,
-  }, testInfo) => {
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountDayPage(page, ['stored']);
+  test(
+    `the writing frame and register preserve reading comfort in ${colorScheme} mode`,
+    { tag: mobileDeviceTag },
+    async ({ page }, testInfo) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await mountDayPage(page, ['stored']);
 
-    const date = page.getByRole('heading', { level: 1 });
-    const evening = page.getByRole('textbox', { name: 'Evening journal' });
-    await expectPageFrameGeometry(date.locator('xpath=ancestor::header'));
-    // The area, the editor's mount, the frame it shares with its prompt, and
-    // then the measure.
-    await expectReadingMeasureGeometry(page, evening.locator('xpath=../../..'));
-    await expectKeyboardFocus(
-      page,
-      page.getByRole('link', { name: 'Previous day' }),
-    );
+      const date = page.getByRole('heading', { level: 1 });
+      const evening = page.getByRole('textbox', { name: 'Evening journal' });
+      await expectPageFrameGeometry(date.locator('xpath=ancestor::header'));
+      // The area, the editor's mount, the frame it shares with its prompt, and
+      // then the measure.
+      await expectReadingMeasureGeometry(
+        page,
+        evening.locator('xpath=../../..'),
+      );
+      await expectKeyboardFocus(
+        page,
+        page.getByRole('link', { name: 'Previous day' }),
+      );
 
-    const dateLines = await date.evaluate((element) => {
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      const lines = new Set<number>();
-      let text = walker.nextNode();
-      while (text !== null) {
-        const range = document.createRange();
-        range.selectNodeContents(text);
-        // A phone leaves the comma after the weekday to screen readers, in a
-        // one-pixel box that is not a line anyone reads.
-        const shown =
-          (text.parentElement?.getBoundingClientRect().width ?? 0) > 1;
-        for (const rectangle of shown ? range.getClientRects() : []) {
-          lines.add(Math.round(rectangle.top));
+      const dateLines = await date.evaluate((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const lines = new Set<number>();
+        let text = walker.nextNode();
+        while (text !== null) {
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          // A phone leaves the comma after the weekday to screen readers, in a
+          // one-pixel box that is not a line anyone reads.
+          const shown =
+            (text.parentElement?.getBoundingClientRect().width ?? 0) > 1;
+          for (const rectangle of shown ? range.getClientRects() : []) {
+            lines.add(Math.round(rectangle.top));
+          }
+          text = walker.nextNode();
         }
-        text = walker.nextNode();
-      }
-      return lines.size;
-    });
-    // The date's halves never break inside themselves: one line beside the
-    // arrows from a tablet up, and the weekday over the rest on a phone.
-    expect(dateLines).toBe(testInfo.project.name.includes('mobile') ? 2 : 1);
+        return lines.size;
+      });
+      // The date's halves never break inside themselves: one line beside the
+      // arrows from a tablet up, and the weekday over the rest on a phone.
+      expect(dateLines).toBe(testInfo.project.name.includes('mobile') ? 2 : 1);
 
-    const register = page
-      .getByRole('heading', {
-        name: 'Morning scripture',
-      })
-      .locator('xpath=../..');
-    await expectViewportBandGeometry(register);
-    await expectPageFrameGeometry(
-      page.getByRole('heading', { name: 'Morning scripture' }).locator('..'),
-    );
-    const registerColors = await register.evaluate((element) => ({
-      ground: getComputedStyle(element).backgroundColor,
-      page: getComputedStyle(document.body).backgroundColor,
-    }));
-    expect(registerColors.ground).not.toBe(registerColors.page);
-    expect(registerColors.ground).toMatch(deepGround);
-    await scan(page);
-  });
+      const register = page
+        .getByRole('heading', {
+          name: 'Morning scripture',
+        })
+        .locator('xpath=../..');
+      await expectViewportBandGeometry(register);
+      await expectPageFrameGeometry(
+        page.getByRole('heading', { name: 'Morning scripture' }).locator('..'),
+      );
+      const registerColors = await register.evaluate((element) => ({
+        ground: getComputedStyle(element).backgroundColor,
+        page: getComputedStyle(document.body).backgroundColor,
+      }));
+      expect(registerColors.ground).not.toBe(registerColors.page);
+      expect(registerColors.ground).toMatch(deepGround);
+      await scan(page);
+    },
+  );
 
   test(`Insights keeps the shared frame and reading measure in ${colorScheme} mode`, async ({
     page,

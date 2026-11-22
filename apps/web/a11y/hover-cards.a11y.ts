@@ -4,6 +4,7 @@
  * one open, and a tap elsewhere or a scroll closes one a tap opened.
  */
 
+import { mobileDeviceTag } from '@davidvornholt/a11y-testing/playwright-config';
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
@@ -100,10 +101,9 @@ const tapTheControl = async (
   return tip;
 };
 
-test("a control's tip shows for a resting pointer, keyboard focus or a tap, and a click never leaves it open", async ({
-  page,
-  hasTouch,
-}) => {
+test("a control's tip shows for a resting pointer, keyboard focus or a tap, and a click never leaves it open", {
+  tag: mobileDeviceTag,
+}, async ({ page, hasTouch }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const tip = await (hasTouch ? tapTheControl(page) : clickTheControl(page));
   await expect(tip).toBeHidden();
@@ -132,10 +132,9 @@ const tapAMarkAndScroll = async (page: playwright.Page): Promise<void> => {
   await scrollDown(page);
 };
 
-test("a mark's card never stays after a click, and a tapped one goes on scroll", async ({
-  page,
-  hasTouch,
-}) => {
+test("a mark's card never stays after a click, and a tapped one goes on scroll", {
+  tag: mobileDeviceTag,
+}, async ({ page, hasTouch }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await mountEvening(page, 'report');
   await openReport(page);
