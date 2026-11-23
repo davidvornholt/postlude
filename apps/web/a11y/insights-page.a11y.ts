@@ -1,3 +1,4 @@
+import { mobileDeviceTag } from '@davidvornholt/a11y-testing/playwright-config';
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
@@ -48,61 +49,65 @@ for (const colorScheme of colorSchemes) {
     await scanInsights(page);
   });
 
-  test(`a year reads out from the keyboard and passes WCAG 2.2 AA with every fold open in ${colorScheme} mode`, async ({
-    page,
-  }, testInfo) => {
-    await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
-    await mountInsightsPage(page, insightsFixtureConfigs.year);
+  test(
+    `a year reads out from the keyboard and passes WCAG 2.2 AA with every fold open in ${colorScheme} mode`,
+    { tag: mobileDeviceTag },
+    async ({ page }, testInfo) => {
+      await page.emulateMedia({ colorScheme, reducedMotion: 'reduce' });
+      await mountInsightsPage(page, insightsFixtureConfigs.year);
 
-    const activityRegion = page.getByRole('region', {
-      name: 'Journal activity grid',
-    });
-    await activityRegion.focus();
-    await expect(activityRegion).toBeFocused();
-    const previousWeek = page.locator('[data-activity-date="2026-08-19"]');
-    const previousWeekDetails = await previousWeek.getAttribute('title');
-    await page.keyboard.press('ArrowLeft');
-    await expect(
-      page.getByText(previousWeekDetails ?? '', { exact: true }),
-    ).toBeVisible();
-    const hoveredDay = page.locator('[data-activity-date="2026-08-25"]');
-    const hoveredDetails = await hoveredDay.getAttribute('title');
-    await hoveredDay.hover();
-    await expect(
-      page.getByText(hoveredDetails ?? '', { exact: true }),
-    ).toBeVisible();
-    const activityOverflows = await activityRegion.evaluate(
-      (element) => element.scrollWidth > element.clientWidth,
-    );
-    expect(activityOverflows).toBe(testInfo.project.name.includes('mobile'));
+      const activityRegion = page.getByRole('region', {
+        name: 'Journal activity grid',
+      });
+      await activityRegion.focus();
+      await expect(activityRegion).toBeFocused();
+      const previousWeek = page.locator('[data-activity-date="2026-08-19"]');
+      const previousWeekDetails = await previousWeek.getAttribute('title');
+      await page.keyboard.press('ArrowLeft');
+      await expect(
+        page.getByText(previousWeekDetails ?? '', { exact: true }),
+      ).toBeVisible();
+      const hoveredDay = page.locator('[data-activity-date="2026-08-25"]');
+      const hoveredDetails = await hoveredDay.getAttribute('title');
+      await hoveredDay.hover();
+      await expect(
+        page.getByText(hoveredDetails ?? '', { exact: true }),
+      ).toBeVisible();
+      const activityOverflows = await activityRegion.evaluate(
+        (element) => element.scrollWidth > element.clientWidth,
+      );
+      expect(activityOverflows).toBe(testInfo.project.name.includes('mobile'));
 
-    const legend = page.locator('figcaption').filter({ hasText: 'No writing' });
-    await expect(legend).toBeVisible();
-    await page.getByRole('radio', { name: 'Writing' }).focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(page.getByRole('radio', { name: 'Energy' })).toBeChecked();
-    await expect(legend).toHaveCount(0);
-    await expect(
-      page.locator('figcaption').filter({ hasText: 'Not rated' }),
-    ).toContainText('Drained');
+      const legend = page
+        .locator('figcaption')
+        .filter({ hasText: 'No writing' });
+      await expect(legend).toBeVisible();
+      await page.getByRole('radio', { name: 'Writing' }).focus();
+      await page.keyboard.press('ArrowRight');
+      await expect(page.getByRole('radio', { name: 'Energy' })).toBeChecked();
+      await expect(legend).toHaveCount(0);
+      await expect(
+        page.locator('figcaption').filter({ hasText: 'Not rated' }),
+      ).toContainText('Drained');
 
-    await page.getByText(everyDayWritten).click();
-    const dayRegion = page.getByRole('region', {
-      name: 'Days written, scrollable',
-    });
-    await dayRegion.focus();
-    await expect(dayRegion).toBeFocused();
+      await page.getByText(everyDayWritten).click();
+      const dayRegion = page.getByRole('region', {
+        name: 'Days written, scrollable',
+      });
+      await dayRegion.focus();
+      await expect(dayRegion).toBeFocused();
 
-    await openFold(page, 'Entry length');
-    const sizeChart = page.getByRole('region', { name: 'Entry size chart' });
-    await sizeChart.focus();
-    await page.keyboard.press('ArrowLeft');
-    await expect(sizeChart).toBeFocused();
-    await expect(sizeChart).toHaveAttribute('aria-describedby');
+      await openFold(page, 'Entry length');
+      const sizeChart = page.getByRole('region', { name: 'Entry size chart' });
+      await sizeChart.focus();
+      await page.keyboard.press('ArrowLeft');
+      await expect(sizeChart).toBeFocused();
+      await expect(sizeChart).toHaveAttribute('aria-describedby');
 
-    await openEveryFold(page);
-    await scanInsights(page);
-  });
+      await openEveryFold(page);
+      await scanInsights(page);
+    },
+  );
 
   test(`all time is a grid of months the arrow keys walk, and passes WCAG 2.2 AA in ${colorScheme} mode`, async ({
     page,

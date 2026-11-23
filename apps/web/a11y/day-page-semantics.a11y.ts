@@ -1,3 +1,4 @@
+import { mobileDeviceTag } from '@davidvornholt/a11y-testing/playwright-config';
 import { expect, test } from '@playwright/test';
 
 import {
@@ -29,84 +30,86 @@ const subordinateHeadingSizes = [
   headingLevelSixSize,
 ];
 
-test('the hydrated editor keeps the production viewport and Markdown setting', async ({
-  page,
-}, testInfo) => {
-  await mountSemanticDayPage(page);
+test(
+  'the hydrated editor keeps the production viewport and Markdown setting',
+  { tag: mobileDeviceTag },
+  async ({ page }, testInfo) => {
+    await mountSemanticDayPage(page);
 
-  expect(await page.evaluate(() => globalThis.innerWidth)).toBe(
-    cssViewportByProject[testInfo.project.name],
-  );
+    expect(await page.evaluate(() => globalThis.innerWidth)).toBe(
+      cssViewportByProject[testInfo.project.name],
+    );
 
-  const evening = page.getByRole('textbox', { name: 'Evening journal' });
-  const headings = evening.locator('h3, h4, h5, h6');
-  await expect(headings).toHaveText([
-    'Entry heading',
-    'Entry subheading',
-    'Entry detail',
-    'Entry note',
-    'Entry aside',
-    'Entry footnote',
-  ]);
-  const headingStyles = await headings.evaluateAll((elements) =>
-    elements.map((element) => {
-      const style = getComputedStyle(element);
-      return {
-        family: style.fontFamily,
-        size: Number.parseFloat(style.fontSize),
-        weight: style.fontWeight,
-      };
-    }),
-  );
-  expect(headingStyles.map(({ size }) => size)).toEqual(
-    subordinateHeadingSizes,
-  );
-  expect(
-    headingStyles.every(({ family }) => family.includes(displayTypeface)),
-  ).toBe(true);
-  expect(headingStyles.at(-1)?.weight).toBe(levelSixWeight);
-  await Promise.all(
-    markdownSemanticsLinks.map((link) =>
-      expect(evening.getByRole('link', { name: link.name })).toHaveAttribute(
-        'href',
-        link.href,
-      ),
-    ),
-  );
-  const table = evening.getByRole('table');
-  await expect(table.getByRole('columnheader')).toHaveText(['Hour', 'Mood']);
-  await expect(table.getByRole('cell', { name: 'Dusk' })).toBeVisible();
-  await expect(table.getByRole('cell', { name: 'Tired' })).toHaveCSS(
-    'text-align',
-    'right',
-  );
-  await Promise.all(
-    markdownSemanticsChecklist.map((item) =>
-      expect(evening.getByRole('checkbox', { name: item.name })).toBeChecked({
-        checked: item.checked,
+    const evening = page.getByRole('textbox', { name: 'Evening journal' });
+    const headings = evening.locator('h3, h4, h5, h6');
+    await expect(headings).toHaveText([
+      'Entry heading',
+      'Entry subheading',
+      'Entry detail',
+      'Entry note',
+      'Entry aside',
+      'Entry footnote',
+    ]);
+    const headingStyles = await headings.evaluateAll((elements) =>
+      elements.map((element) => {
+        const style = getComputedStyle(element);
+        return {
+          family: style.fontFamily,
+          size: Number.parseFloat(style.fontSize),
+          weight: style.fontWeight,
+        };
       }),
-    ),
-  );
-  for (const colorScheme of colorSchemes) {
-    await page.emulateMedia({ colorScheme });
-    const accents = await evening
-      .getByRole('checkbox')
-      .evaluateAll((boxes) =>
-        boxes.map((box) => getComputedStyle(box).accentColor),
-      );
-    // A probe resolves the token to the same serialization as `accentColor`.
-    const primary = await page.evaluate(() => {
-      const probe = document.createElement('span');
-      probe.style.color = 'var(--pl-primary)';
-      document.body.append(probe);
-      const { color } = getComputedStyle(probe);
-      probe.remove();
-      return color;
-    });
-    expect(accents).toEqual(markdownSemanticsChecklist.map(() => primary));
-    await scan(page);
-  }
-});
+    );
+    expect(headingStyles.map(({ size }) => size)).toEqual(
+      subordinateHeadingSizes,
+    );
+    expect(
+      headingStyles.every(({ family }) => family.includes(displayTypeface)),
+    ).toBe(true);
+    expect(headingStyles.at(-1)?.weight).toBe(levelSixWeight);
+    await Promise.all(
+      markdownSemanticsLinks.map((link) =>
+        expect(evening.getByRole('link', { name: link.name })).toHaveAttribute(
+          'href',
+          link.href,
+        ),
+      ),
+    );
+    const table = evening.getByRole('table');
+    await expect(table.getByRole('columnheader')).toHaveText(['Hour', 'Mood']);
+    await expect(table.getByRole('cell', { name: 'Dusk' })).toBeVisible();
+    await expect(table.getByRole('cell', { name: 'Tired' })).toHaveCSS(
+      'text-align',
+      'right',
+    );
+    await Promise.all(
+      markdownSemanticsChecklist.map((item) =>
+        expect(evening.getByRole('checkbox', { name: item.name })).toBeChecked({
+          checked: item.checked,
+        }),
+      ),
+    );
+    for (const colorScheme of colorSchemes) {
+      await page.emulateMedia({ colorScheme });
+      const accents = await evening
+        .getByRole('checkbox')
+        .evaluateAll((boxes) =>
+          boxes.map((box) => getComputedStyle(box).accentColor),
+        );
+      // A probe resolves the token to the same serialization as `accentColor`.
+      const primary = await page.evaluate(() => {
+        const probe = document.createElement('span');
+        probe.style.color = 'var(--pl-primary)';
+        document.body.append(probe);
+        const { color } = getComputedStyle(probe);
+        probe.remove();
+        return color;
+      });
+      expect(accents).toEqual(markdownSemanticsChecklist.map(() => primary));
+      await scan(page);
+    }
+  },
+);
 
 test('editor copy keeps Markdown in plain text and rendered HTML for rich destinations', async ({
   page,

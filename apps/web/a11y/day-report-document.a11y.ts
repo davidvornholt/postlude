@@ -1,3 +1,4 @@
+import { mobileDeviceTag } from '@davidvornholt/a11y-testing/playwright-config';
 import type * as playwright from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
@@ -171,10 +172,9 @@ const tapMarks = async (page: playwright.Page): Promise<void> => {
   await expect(card).toBeHidden();
 };
 
-test("a mark's card shows for a pointer or a tap, and goes again", async ({
-  page,
-  hasTouch,
-}) => {
+test("a mark's card shows for a pointer or a tap, and goes again", {
+  tag: mobileDeviceTag,
+}, async ({ page, hasTouch }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await mountEvening(page, 'report');
   await openReport(page);
@@ -204,10 +204,9 @@ const widestCardOf = async (
 };
 
 for (const width of [320, 390]) {
-  test(`at ${width}px the hour labels keep apart, and the report keeps to the screen`, async ({
-    page,
-    hasTouch,
-  }) => {
+  test(`at ${width}px the hour labels keep apart, and the report keeps to the screen`, {
+    tag: mobileDeviceTag,
+  }, async ({ page, hasTouch }) => {
     await page.setViewportSize({ width, height: 800 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await mountEvening(page, 'report');
