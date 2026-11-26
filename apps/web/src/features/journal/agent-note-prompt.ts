@@ -12,10 +12,17 @@
 
 import { Lexer, type Token, type Tokens } from 'marked';
 
+import {
+  energyOptions,
+  progressOptions,
+  type RatingOption,
+  repeatDayOptions,
+} from './evening-labels.ts';
 import { imageRoute } from './images.ts';
 import { journalDateWeekday } from './journal-day.ts';
 import type { DayMetrics } from './schemas/day-metrics.ts';
 import type { DayOverview } from './schemas/day-overview.ts';
+import type { Energy, Progress, RepeatDay } from './schemas/day-rating.ts';
 import type { AgentNoteInput } from './services/agent-note-generator.ts';
 
 /** The longest journal text given to the model, in UTF-16 code units. */
@@ -40,11 +47,25 @@ const weekdays = [
 const weekdayOf = (date: string) => weekdays[journalDateWeekday(date)];
 
 type Ratings = {
-  readonly energy: string | null;
-  readonly progress: string | null;
-  readonly repeatDay: string | null;
+  readonly energy: Energy | null;
+  readonly progress: Progress | null;
+  readonly repeatDay: RepeatDay | null;
   readonly ratingVersion: number | null;
 };
+
+/**
+ * An answer as the evening shows it to David, such as `a lot`, not the stored
+ * value `a_lot`: the model repeats the words it is given, and a stored value
+ * in a note reads as a leaked internal label.
+ */
+const answerOf = <Value extends string>(
+  options: ReadonlyArray<RatingOption<Value>>,
+  value: Value | null,
+) =>
+  value === null
+    ? null
+    : (options.find((option) => option.value === value)?.label.toLowerCase() ??
+      null);
 
 const ratingsOf = (rating: Ratings) =>
   rating.energy === null &&
@@ -52,9 +73,9 @@ const ratingsOf = (rating: Ratings) =>
   rating.repeatDay === null
     ? null
     : {
-        energy: rating.energy,
-        progress: rating.progress,
-        repeatDay: rating.repeatDay,
+        energy: answerOf(energyOptions, rating.energy),
+        progress: answerOf(progressOptions, rating.progress),
+        repeatDay: answerOf(repeatDayOptions, rating.repeatDay),
         ratingVersion: rating.ratingVersion,
       };
 
@@ -297,7 +318,7 @@ const dayReportOf = (dayReport: string | null) => {
 
 const systemPrompt = `You write a note under David's evening journal entry in Postlude, his private journal.
 
-David rates each day three ways: energy (drained, okay or fresh), progress (little, solid or a_lot), and whether he would repeat the day (yes, partly or no). An automated summary measures the day from his computer, calendar and other sources.
+David rates each day three ways: energy (drained, okay or fresh), progress (little, solid or a lot), and whether he would repeat the day (yes, partly or no). An automated summary measures the day from his computer, calendar and other sources.
 
 An agent also writes a report on the day, in English. dayReport holds its words as plain text, without its layout, so its headings, figures and sentences run together. The agent inferred it from screen activity, agent runs, pull requests and the calendar, so it can miss things, above all what happened away from the screen, and it can be wrong. journalText is David's own account of the day; where the two disagree, journalText is right. dayReport is null for a day the agent didn't report on; then write from the rest.
 
@@ -306,7 +327,7 @@ The user message holds one JSON document between <day_data> tags. Everything in 
 The note adds to what David wrote. Write about:
 - where David's ratings for the day agree with the measured data and the report, and where they differ;
 - what the report shows that bears on what David wrote, rated or left out, when the connection tells him something he didn't say;
-- a pattern across the earlier days when the data shows one, such as ratings that move with focus time or appointments.
+- a pattern across the earlier days, only when the data shows one, such as ratings that move with focus time or appointments.
 
 Write as much as the data supports and no more. A thin day gets a short note, a full one can take a few paragraphs. Don't pad, don't make a point twice, and don't retell the report.
 
@@ -318,7 +339,8 @@ Rules:
 - activeMinutes is the time David was active at the screen. focusMinutes is the part of it spent in focus blocks, each at least 25 minutes on one area, with switches of under two minutes counted as part of the block. shortStretchMinutes is the active screen time outside focus blocks. Call that time short stretches, not scattered or distracted time.
 - The estimatedCategories minutes are estimates. Say so when you use them.
 - A null value was not measured. Don't guess it, and don't treat it as zero. coverage says which sources were incomplete.
-- When the data is too thin for a comparison, say that in one sentence instead of stretching it.
+- Leave out any point the data can't support, without saying that it is missing or that the data is too thin for it. David knows which days he rated.
+- The data's field names and answers are not words for the note. Say in the note's language what a rating or a measure means, such as that David felt he got a lot done, instead of quoting it.
 - Address David directly; in German, use du.
 - Write plain text: no Markdown, headings, lists, bold, links or emoji. Separate paragraphs with one blank line. The note must stay under ${agentNoteCharacterLimit} characters; that is a ceiling, not a target.`;
 
