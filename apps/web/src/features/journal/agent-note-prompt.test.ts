@@ -35,7 +35,7 @@ describe('what the model is given', () => {
     expect(data.weekday).toBe('Friday');
     expect(data.ratings).toEqual({
       energy: 'drained',
-      progress: 'a_lot',
+      progress: 'a lot',
       repeatDay: 'partly',
       ratingVersion: 1,
     });
@@ -330,6 +330,24 @@ describe('the instructions', () => {
       'where the two disagree, journalText is right',
     );
     expect(instructions).toContain("don't retell the report");
+  });
+
+  it('leave out what the data cannot support instead of saying so', () => {
+    const [instructions] = agentNotePromptOf(agentNoteInput()).system;
+    expect(instructions).toContain('only when the data shows one');
+    expect(instructions).toContain(
+      'without saying that it is missing or that the data is too thin for it',
+    );
+    expect(instructions).not.toContain('say that in one sentence');
+  });
+
+  it('ask for ratings in the note’s own words, not the data’s', () => {
+    const [instructions] = agentNotePromptOf(agentNoteInput()).system;
+    expect(instructions).toContain('little, solid or a lot');
+    expect(instructions).not.toContain('a_lot');
+    expect(instructions).toContain(
+      "The data's field names and answers are not words for the note.",
+    );
   });
 
   it('ask for as much as the data supports, under a ceiling and no sentence count', () => {
