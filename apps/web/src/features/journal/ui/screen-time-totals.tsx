@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { type DayMeasures, type Tally, tally } from '../day-measures.ts';
 import { durationLabel } from '../insights-labels.ts';
 import { journalCountLabel, journalNumberLabel } from '../journal-labels.ts';
+import { Figure } from './figure.tsx';
 
 const percent = 100;
 
@@ -10,7 +11,7 @@ const coverage = (counted: Tally): string =>
     ? `over ${journalCountLabel(counted.measured, 'day')}`
     : `over ${journalCountLabel(counted.measured, 'day')}, not measured on ${journalCountLabel(counted.missing, 'day')}`;
 
-const Figure = ({
+const CountedFigure = ({
   label,
   counted,
   value,
@@ -21,20 +22,18 @@ const Figure = ({
   readonly value: (total: number) => string;
   readonly note?: ReactNode;
 }) => (
-  <div className="border-border border-t pt-3">
-    <dt className="text-ink-muted text-sm">{label}</dt>
-    <dd className="mt-1">
-      <span className="block font-display text-2xl text-ink tabular-nums">
-        {counted.measured === 0 ? 'Not measured' : value(counted.total)}
-      </span>
-      <span className="mt-1 block text-ink-faint text-sm">
+  <Figure
+    label={label}
+    note={
+      <>
         {counted.measured === 0
           ? `on ${journalCountLabel(counted.missing, 'day')}`
           : coverage(counted)}
         {note}
-      </span>
-    </dd>
-  </div>
+      </>
+    }
+    value={counted.measured === 0 ? 'Not measured' : value(counted.total)}
+  />
 );
 
 export const ScreenTimeTotals = ({
@@ -65,7 +64,7 @@ export const ScreenTimeTotals = ({
 
   return (
     <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-3">
-      <Figure
+      <CountedFigure
         counted={active}
         label="At the screen"
         note={
@@ -75,18 +74,18 @@ export const ScreenTimeTotals = ({
         }
         value={durationLabel}
       />
-      <Figure
+      <CountedFigure
         counted={focus}
         label="Focused"
         note={share === undefined ? null : `, ${share}% of the screen time`}
         value={durationLabel}
       />
-      <Figure
+      <CountedFigure
         counted={tally(metrics, (day) => day.offComputerMinutes)}
         label="Off-computer work"
         value={durationLabel}
       />
-      <Figure
+      <CountedFigure
         counted={appointments}
         label="In appointments"
         note={
@@ -97,12 +96,12 @@ export const ScreenTimeTotals = ({
         }
         value={durationLabel}
       />
-      <Figure
+      <CountedFigure
         counted={tally(metrics, (day) => day.landedPrs)}
         label="Pull requests landed"
         value={journalNumberLabel}
       />
-      <Figure
+      <CountedFigure
         counted={tally(metrics, (day) => day.sentMail)}
         label="Mail sent"
         value={journalNumberLabel}

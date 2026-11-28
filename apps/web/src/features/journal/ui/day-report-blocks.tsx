@@ -23,6 +23,7 @@ import type {
   TilesBlock,
 } from '../schemas/day-report-blocks.ts';
 import { type Depth, ReportHeading, RichText } from './day-report-text.tsx';
+import { Figure } from './figure.tsx';
 
 export type BlockProps<Block> = {
   readonly block: Block;
@@ -156,26 +157,18 @@ export const ListView = ({ block }: BlockProps<ListBlock>) => {
 export const TilesView = ({ block }: BlockProps<TilesBlock>) => (
   // biome-ignore lint/a11y/useSemanticElements: a fieldset groups form controls, and these are figures.
   <div aria-label={block.label ?? 'The day in numbers'} role="group">
-    <dl className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-3">
+    {/* Columns sit a little closer than on Insights, so two figures still fit side by side on a phone. */}
+    <dl className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-6">
       {block.tiles.map((tile, tileIndex) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: labels may repeat, and stored tiles never move.
-        <div className="border border-border px-4 py-3" key={tileIndex}>
-          <dt className={metaClass}>{tile.label}</dt>
-          <dd
-            className={
-              tile.value === null
-                ? 'mt-1 text-ink-muted text-lg'
-                : 'mt-0.5 font-semibold text-2xl text-ink tabular-nums'
-            }
-          >
-            {tileValueText(tile.value)}
-          </dd>
-          {tile.note === undefined ? null : (
-            <dd className="mt-1 text-ink-muted text-xs leading-normal">
-              <RichText text={tile.note} />
-            </dd>
-          )}
-        </div>
+        <Figure
+          // biome-ignore lint/suspicious/noArrayIndexKey: labels may repeat, and stored tiles never move.
+          key={tileIndex}
+          label={tile.label}
+          note={
+            tile.note === undefined ? undefined : <RichText text={tile.note} />
+          }
+          value={tileValueText(tile.value)}
+        />
       ))}
     </dl>
   </div>
